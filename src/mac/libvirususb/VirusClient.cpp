@@ -18,6 +18,7 @@
 #include <sys/un.h>
 #include <cstdio>
 #include <ctime>
+#include <mutex>
 #include <pthread.h>
 #include <unistd.h>
 
@@ -88,6 +89,9 @@ enum { MSG_HELLO = 1, MSG_CONTROL = 3, MSG_RX = 0x81, MSG_CONTROL_REPLY = 0x83, 
 static int g_fd = -1;
 static volatile int g_connected;           // broker reports the Virus open
 static pthread_mutex_t g_wr = PTHREAD_MUTEX_INITIALIZER, g_ctl = PTHREAD_MUTEX_INITIALIZER;
+// The reply fields hold one transaction. Keep concurrent callers from replacing
+// its sequence or payload before the waiting caller consumes the response.
+static std::mutex g_control_transaction;
 static pthread_cond_t g_ctl_cv = PTHREAD_COND_INITIALIZER;
 static uint32_t g_ctl_seq, g_ctl_done_seq;
 static int32_t g_ctl_result;
@@ -171,6 +175,7 @@ static int broker_connect()
 // USB control request through the broker; returns bytes transferred or -1
 static int broker_control(uint8_t type, uint8_t req, uint16_t value, uint16_t index, uint8_t *data, uint16_t len)
 {
+    std::lock_guard<std::mutex> transaction(g_control_transaction);
     if (broker_connect())
         return -1;
     uint8_t hdr[12];

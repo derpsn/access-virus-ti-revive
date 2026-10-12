@@ -32,7 +32,7 @@ components with small, clear interfaces (all x86_64 + i386, symbols kept):
 
 | Direction | Interface | Access component (driver package) |
 |---|---|---|
-| Device, audio, USB control requests | C++ class `VirusClient` in `/Library/Application Support/Access Music/Virus TI/Common/libVirusUSB.dylib` (absolute install name, hard-linked by Virus Control): 20 methods used (`vc_init`, `vc_open(void *deviceID)`, `vc_start(rate)`, `vc_stop`, `vc_close`, `vc_term`, `vc_getNumDevices`, `vc_getDeviceInfo`, `vc_getDeviceID`, `vc_request(dir, level, recipient, request, value, index, data, length)`, `vc_getBuffersize`, `vc_get/setSamplerate`, `vc_getLatencies`, `vc_setIntParam`, `vc_isPluginMaster`, version/status queries) | libVirusUSB.dylib (Ploytec PGOSXDevice / OSXDeviceManager, talks to the kext) |
+| Device, audio, USB control requests | C++ class `VirusClient` in `/Library/Application Support/Access Music/Virus TI/Common/libVirusUSB.dylib` (absolute install name, hard-linked by Virus Control): 20 methods used (`vc_init`, `vc_open(void *deviceID)`, `vc_start(framesize)`, `vc_stop`, `vc_close`, `vc_term`, `vc_getNumDevices`, `vc_getDeviceInfo`, `vc_getDeviceID`, `vc_request(dir, level, recipient, request, value, index, data, length)`, `vc_getBuffersize`, `vc_get/setSamplerate`, `vc_getLatencies`, `vc_setIntParam`, `vc_isPluginMaster`, version/status queries) | libVirusUSB.dylib (Ploytec PGOSXDevice / OSXDeviceManager, talks to the kext) |
 | Audio to/from the plug-in | Core Audio style IOProc registered in `vc_open`; calls the client's virtual method at vtable +0x18 with (device, in channels, in bytes, in data, out channels, out bytes, out data, sample time) | same |
 | MIDI plug-in -> Virus | CFMessagePort named **"VirusTIWritePort"** (Virus Control: `CFMessagePortCreateRemote` + `CFMessagePortSendRequest`) | "Virus TI MIDI Driver.plugin" (Core MIDI driver, creates the port locally) |
 | MIDI Virus -> plug-in | probably POSIX shared memory "VirusTISharedMem" + named semaphores (shm_open/mmap/sem_* in both; the MIDI driver's VirusTIUSBMIDIDevice handles the "hidden port" = the plug-in channel MI_04); Virus Control itself also has "VirusTICommMem" (Access::Threading::IPC::SharedMemory, likely instance coordination). To confirm at runtime on the Mac (which shm segments the DAW opens) | "Virus TI MIDI Driver.plugin" |
@@ -118,6 +118,36 @@ plug-in bridges like jBridge / AudioGridder do) - the hardest part, to prototype
 8. **Packaging**: .pkg (unsigned first: Gatekeeper "Open Anyway"; signing/notarisation needs an Apple Developer
    account), uninstall script.
 9. **Tests**: DAW under Rosetta (sync, presets, audio, timing like E078).
+
+## Hardware-free control transaction check
+
+The Mac compatibility library has one shared control-reply slot. Concurrent requests must serialize
+until the waiting caller consumes its sequence, result and payload. `broker_control` holds a transaction
+mutex across connection, send and reply consumption; the receive thread still uses its own short reply lock.
+This addresses concurrent control requests only, not every prototype connection or device-lifecycle race.
+
+`src/mac/libvirususb/tests/test_control_transactions.cpp` tests the actual client over a socket pair with
+32 simultaneous callers and ordinary buffered, in-order protocol replies. It needs no USB device or Access
+binary. Run from the repository root with a C++17 compiler:
+
+```sh
+c++ -std=c++17 -pthread -O2 src/mac/libvirususb/tests/test_control_transactions.cpp -o /tmp/tirevive-control-test
+/tmp/tirevive-control-test
+```
+
+On an x86 Linux compute container, the base client at `b44981b` returned correct replies to 3/32 callers;
+the transaction-lock fix returned 32/32. This is a portable control-transport regression check, not a
+macOS ABI, CoreAudio, real-device or DAW validation. The library's audio/MIDI prototype gaps remain open.
+
+## Prior research leads
+
+`prior-work-candidates.tsv` indexes earlier independent Virus TI research supplied by the fork owner.
+Every row is an unaudited lead, with the prior source revision/hash and its limitations; these are not
+new TI Revive evidence entries. The `virus-os-decompile/` paths name the owner’s separate local research
+checkout, not files included in this repository. No proprietary binaries, captures or old implementation
+code are copied here. The highest-priority Mac leads are the HAL configuration path and the later
+correction to the shared OEM `VendorAsyncPort` attribution. Bank-sync and capture-method leads also apply
+to Windows/Linux work. Current source and evidence should be checked before adopting any old claim.
 
 ## Needed from the user
 
