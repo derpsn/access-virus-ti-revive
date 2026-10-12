@@ -21,6 +21,7 @@
 #include <unistd.h>
 #ifdef __APPLE__
 #include "vtimidi_mac.h"
+#include <launch.h>
 #endif
 
 #define VTI_SOCK_FMT "/tmp/vtibroker-%u.sock"
@@ -259,18 +260,32 @@ int main(int argc, char **argv)
     vti_log = on_vti_log;
     struct sockaddr_un sa = {.sun_family = AF_UNIX};
     snprintf(sa.sun_path, sizeof sa.sun_path, VTI_SOCK_FMT, (unsigned)getuid());
-    int s = socket(AF_UNIX, SOCK_STREAM, 0);
-    // single instance: if a broker answers on the socket, leave; else remove a stale socket file
-    if (connect(s, (struct sockaddr *)&sa, sizeof sa) == 0) {
-        blog("another vtibroker is running, exiting");
-        return 0;
+    int s = -1;
+#ifdef __APPLE__
+    // Started by launchd socket activation (LaunchAgent with a "Listeners" socket, scripts/mac-install-broker.sh):
+    // launchd owns the socket and starts us on the first connect; after the idle exit it starts us again.
+    int *fds = NULL;
+    size_t nfds = 0;
+    if (launch_activate_socket("Listeners", &fds, &nfds) == 0 && nfds > 0) {
+        s = fds[0];
+        free(fds);
+        blog("socket from launchd");
     }
-    close(s);
-    unlink(sa.sun_path);
-    s = socket(AF_UNIX, SOCK_STREAM, 0);
-    if (bind(s, (struct sockaddr *)&sa, sizeof sa) || chmod(sa.sun_path, 0600) || listen(s, 8)) {
-        blog("socket %s: %s", sa.sun_path, strerror(errno));
-        return 1;
+#endif
+    if (s < 0) {
+        s = socket(AF_UNIX, SOCK_STREAM, 0);
+        // single instance: if a broker answers on the socket, leave; else remove a stale socket file
+        if (connect(s, (struct sockaddr *)&sa, sizeof sa) == 0) {
+            blog("another vtibroker is running, exiting");
+            return 0;
+        }
+        close(s);
+        unlink(sa.sun_path);
+        s = socket(AF_UNIX, SOCK_STREAM, 0);
+        if (bind(s, (struct sockaddr *)&sa, sizeof sa) || chmod(sa.sun_path, 0600) || listen(s, 8)) {
+            blog("socket %s: %s", sa.sun_path, strerror(errno));
+            return 1;
+        }
     }
     blog("vtibroker starting (protocol %d, %s)", VTI_PROTO_VERSION, sa.sun_path);
 #ifdef __APPLE__
