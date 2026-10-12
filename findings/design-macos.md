@@ -121,37 +121,27 @@ plug-in bridges like jBridge / AudioGridder do) - the hardest part, to prototype
 
 ## Hardware-free control transaction check
 
-The Mac compatibility library has one shared control-reply slot. Concurrent requests must serialize
-until the waiting caller consumes its sequence, result and payload. `broker_control` holds a transaction
-mutex across connection, send and reply consumption; the receive thread still uses its own short reply lock.
-This addresses concurrent control requests only, not every prototype connection or device-lifecycle race.
-
-`src/mac/libvirususb/tests/test_control_transactions.cpp` tests the actual client over a socket pair with
-32 simultaneous callers and ordinary buffered, in-order protocol replies. It needs no USB device or Access
-binary. Run from the repository root with a C++17 compiler:
+`broker_control` serializes the shared reply slot through send, wait and reply consumption.
+The socket-pair test exercises 32 concurrent callers against buffered, in-order broker replies.
+On Linux (C++17 compiler required):
 
 ```sh
 python3 src/mac/libvirususb/tests/run_control_test.py
 ```
 
-The runner extracts the current control and logging blocks verbatim, with existence/order checks, so Linux
-can exercise the real transport code without compiling the unrelated CoreAudio implementation.
-On macOS, the complete client can alternatively be compiled into the C++ test with CoreAudio and
-CoreFoundation framework linkage.
-
-On an x86 Linux compute container, the base client at `b44981b` returned correct replies to 3/32 callers;
-the transaction-lock fix returned 32/32. This is a portable control-transport regression check, not a
-macOS ABI, CoreAudio, real-device or DAW validation. The library's audio/MIDI prototype gaps remain open.
+The runner extracts the current control code verbatim. On macOS, compile
+`src/mac/libvirususb/tests/test_control_transactions.cpp` directly with
+`-std=c++17 -pthread -framework CoreAudio -framework CoreFoundation`.
+The full-client test passed 32/32 three times each on arm64 and x86_64/Rosetta
+(M4 Max, macOS 26.7.1, Apple clang 21); both dylibs built. The unmodified Linux
+baseline failed the same regression. USB, audio and DAW behavior were not tested.
 
 ## Prior research leads
 
-`prior-work-candidates.tsv` indexes earlier independent Virus TI research supplied by the fork owner.
-Every row is an unaudited lead, with the prior source revision/hash and its limitations; these are not
-new TI Revive evidence entries. The `virus-os-decompile/` paths name the owner’s separate local research
-checkout, not files included in this repository. No proprietary binaries, captures or old implementation
-code are copied here. The highest-priority Mac leads are the HAL configuration path and the later
-correction to the shared OEM `VendorAsyncPort` attribution. Bank-sync and capture-method leads also apply
-to Windows/Linux work. Current source and evidence should be checked before adopting any old claim.
+`prior-work-candidates.tsv` lists eight unaudited leads from the fork owner’s earlier research,
+with pinned source hashes and limitations. Its `virus-os-decompile/` paths refer to a separate
+local checkout. Check current evidence before adopting these claims; no old implementation
+code, proprietary binaries or firmware bytes are included.
 
 ## Needed from the user
 
