@@ -19,6 +19,9 @@
 #include <sys/un.h>
 #include <time.h>
 #include <unistd.h>
+#ifdef __APPLE__
+#include "vtimidi_mac.h"
+#endif
 
 #define VTI_SOCK_FMT "/tmp/vtibroker-%u.sock"
 #ifdef MSG_NOSIGNAL
@@ -117,8 +120,22 @@ static void broadcast(uint16_t type, const void *a, int alen, const void *b, int
 static void on_rx(void *user, uint8_t ep, const uint8_t *data, int len)
 {
     (void)user;
+#ifdef __APPLE__
+    if (ep == VTI_EP_MI04_IN)
+        vtimidi_rx(data, len);
+#endif
     broadcast(VTIMSG_RX, &ep, 1, data, len);
 }
+
+#ifdef __APPLE__
+static int midi_write(const uint8_t *data, int len) // pump thread: plug-in channel packets from the MDW ring
+{
+    pthread_mutex_lock(&g_cs_dev);
+    int r = g_dev ? vti_write(g_dev, VTI_EP_MI04_OUT, data, len) : -1;
+    pthread_mutex_unlock(&g_cs_dev);
+    return r;
+}
+#endif
 
 static int client_count(void)
 {
@@ -256,6 +273,10 @@ int main(int argc, char **argv)
         return 1;
     }
     blog("vtibroker starting (protocol %d, %s)", VTI_PROTO_VERSION, sa.sun_path);
+#ifdef __APPLE__
+    if (vtimidi_start(midi_write)) // stands in for Access' MIDI driver towards Virus Control (E100)
+        blog("MIDI slot memory could not be created");
+#endif
     pthread_t t;
     pthread_create(&t, NULL, device_thread, NULL);
     pthread_detach(t);

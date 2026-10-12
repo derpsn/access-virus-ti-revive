@@ -3,13 +3,16 @@
 // and calls these VirusClient methods; the class itself (vtable, typeinfo, data members) is defined in Virus Control,
 // so only the non-virtual member functions are provided here, with the exact signatures (= the same mangled names).
 //
-// Stage 1 / POC: every call is logged with its arguments to /tmp/tirevive-libvirususb.log. Step 2: device presence,
-// device info and USB control requests go through vtibroker (Unix socket /tmp/vtibroker-<uid>.sock, vtiproto.h);
-// audio (Core Audio IOProc) and the client callbacks follow.
+// Calls are logged to /tmp/tirevive-libvirususb.log. Device presence, device info and USB control requests go
+// through vtibroker (Unix socket /tmp/vtibroker-<uid>.sock, vtiproto.h); MIDI goes through the broker's stand-in for
+// the Access MIDI driver (src/broker/vtimidi_mac.c). Audio: an IOProc on Apple's class-compliant "Virus TI" Core
+// Audio device (AppleUSBAudio, 6 in / 2 out) feeds the client callback at vtable +0x18 like Access' HAL did (E102).
 //
 // Build (on the Mac, x86_64 for the Rosetta process that hosts the Intel-only Access plug-in):
 //   clang++ -arch x86_64 -dynamiclib -std=c++17 -O2 -install_name \
-//     "/Library/Application Support/Access Music/Virus TI/Common/libVirusUSB.dylib" -o libVirusUSB.dylib VirusClient.cpp
+//     "/Library/Application Support/Access Music/Virus TI/Common/libVirusUSB.dylib" -o libVirusUSB.dylib \
+//     VirusClient.cpp -framework CoreAudio -framework CoreFoundation
+#include <CoreAudio/CoreAudio.h>
 #include <cerrno>
 #include <cstdarg>
 #include <cstdint>
@@ -20,6 +23,7 @@
 #include <ctime>
 #include <mutex>
 #include <pthread.h>
+#include <map>
 #include <unistd.h>
 
 // Types as used in the mangled names of the Access library (sizes from the decompiled code)
@@ -207,16 +211,190 @@ __attribute__((constructor)) static void loaded() { vlog("TI Revive libVirusUSB 
 
 int VirusClient::vc_init() { vlog("%p vc_init", this); return 1; }
 int VirusClient::vc_term() { vlog("%p vc_term", this); return 1; }
+// ------------------------------------------------------------------------------------------- audio
+// Client callback (Virus Control VirusDeviceObject vtable +0x18, FUN_000ec434; E102):
+//   (this, frames, in channels, in bytes, in data, out channels, out bytes, out data, sample time)
+// Access' HAL passed the frame count where Core Audio passes the device ID. Samples are int32 interleaved, 6 in
+// (channels 2/3 audio, 4/5 the Virus' sync timestamps) and 2 out; the Virus must run at 44.1 kHz (E070).
+typedef void (*audio_cb)(VirusClient *, unsigned long frames, unsigned long in_ch, unsigned long in_bytes,
+                         const int32_t *in, unsigned long out_ch, unsigned long out_bytes, int32_t *out,
+                         unsigned long long sample_time);
+enum { IN_CH = 6, OUT_CH = 2, MAX_FRAMES = 8192 };
+
+struct audio_client {
+    VirusClient *vc;
+    AudioDeviceIOProcID proc = nullptr;
+    unsigned long calls = 0, peak = 0; // diagnostics, logged at vc_stop
+    bool running = false;
+    int32_t in[MAX_FRAMES * IN_CH], out[MAX_FRAMES * OUT_CH];
+};
+static std::map<VirusClient *, audio_client *> g_clients;
+static pthread_mutex_t g_clients_mx = PTHREAD_MUTEX_INITIALIZER;
+static AudioObjectID g_dev;
+
+static AudioObjectID find_virus_device()
+{
+    AudioObjectPropertyAddress a = {kAudioHardwarePropertyDevices, kAudioObjectPropertyScopeGlobal,
+                                    kAudioObjectPropertyElementMain};
+    UInt32 size = 0;
+    if (AudioObjectGetPropertyDataSize(kAudioObjectSystemObject, &a, 0, nullptr, &size))
+        return 0;
+    AudioObjectID ids[64];
+    size = size > sizeof ids ? sizeof ids : size;
+    if (AudioObjectGetPropertyData(kAudioObjectSystemObject, &a, 0, nullptr, &size, ids))
+        return 0;
+    for (UInt32 i = 0; i < size / sizeof(AudioObjectID); i++) {
+        CFStringRef name = nullptr;
+        UInt32 n = sizeof name;
+        AudioObjectPropertyAddress na = {kAudioObjectPropertyName, kAudioObjectPropertyScopeGlobal,
+                                         kAudioObjectPropertyElementMain};
+        if (AudioObjectGetPropertyData(ids[i], &na, 0, nullptr, &n, &name) || !name)
+            continue;
+        char buf[128] = "";
+        CFStringGetCString(name, buf, sizeof buf, kCFStringEncodingUTF8);
+        CFRelease(name);
+        if (!strcmp(buf, "Virus TI"))
+            return ids[i];
+    }
+    return 0;
+}
+
+template <class T> static bool dev_get(AudioObjectPropertySelector sel, AudioObjectPropertyScope scope, T &v)
+{
+    AudioObjectPropertyAddress a = {sel, scope, kAudioObjectPropertyElementMain};
+    UInt32 n = sizeof v;
+    return g_dev && !AudioObjectGetPropertyData(g_dev, &a, 0, nullptr, &n, &v);
+}
+template <class T> static bool dev_set(AudioObjectPropertySelector sel, T v)
+{
+    AudioObjectPropertyAddress a = {sel, kAudioObjectPropertyScopeGlobal, kAudioObjectPropertyElementMain};
+    return g_dev && !AudioObjectSetPropertyData(g_dev, &a, 0, nullptr, sizeof v, &v);
+}
+
+static OSStatus ioproc(AudioObjectID, const AudioTimeStamp *now, const AudioBufferList *inl, const AudioTimeStamp *intime,
+                       AudioBufferList *outl, const AudioTimeStamp *, void *user)
+{
+    (void)now;
+    audio_client *c = (audio_client *)user;
+    if (!inl || !inl->mNumberBuffers || !intime)
+        return 0;
+    // gather the device's float input (one interleaved buffer or several) into int32 frames
+    UInt32 frames = 0, ch = 0;
+    for (UInt32 b = 0; b < inl->mNumberBuffers; b++) {
+        const AudioBuffer &ab = inl->mBuffers[b];
+        if (!ab.mNumberChannels || !ab.mData)
+            continue;
+        UInt32 f = ab.mDataByteSize / (ab.mNumberChannels * 4);
+        if (!frames)
+            frames = f > MAX_FRAMES ? MAX_FRAMES : f;
+        const float *src = (const float *)ab.mData;
+        for (UInt32 k = 0; k < ab.mNumberChannels && ch < IN_CH; k++, ch++)
+            for (UInt32 i = 0; i < frames; i++) {
+                float x = src[i * ab.mNumberChannels + k] * 2147483648.0f;
+                c->in[i * IN_CH + ch] = x >= 2147483647.0f ? INT32_MAX : x <= -2147483648.0f ? INT32_MIN : (int32_t)x;
+            }
+    }
+    for (; ch < IN_CH; ch++)
+        for (UInt32 i = 0; i < frames; i++)
+            c->in[i * IN_CH + ch] = 0;
+    if (!frames)
+        return 0;
+    if (!c->calls++)
+        vlog("%p   first IOProc: %u buffers, buffer 0 %u ch %u bytes, %u frames", c->vc, inl->mNumberBuffers,
+             inl->mBuffers[0].mNumberChannels, inl->mBuffers[0].mDataByteSize, frames);
+    for (UInt32 i = 0; i < frames; i++) { // input peak of the audio pair (device channels 2/3)
+        int32_t a = c->in[i * IN_CH + 2], b = c->in[i * IN_CH + 3];
+        unsigned long m = (unsigned long)(a < 0 ? -(int64_t)a : a) | (unsigned long)(b < 0 ? -(int64_t)b : b);
+        if (m > c->peak)
+            c->peak = m;
+    }
+    audio_cb cb = (audio_cb)(*(void ***)c->vc)[3];
+    cb(c->vc, frames, IN_CH, frames * IN_CH * 4, c->in, OUT_CH, frames * OUT_CH * 4, c->out,
+       (unsigned long long)intime->mSampleTime);
+    // the plug-in's 2 output channels to the device (summed into Core Audio's output, not exclusive)
+    if (outl)
+        for (UInt32 b = 0, och = 0; b < outl->mNumberBuffers && och < OUT_CH; b++) {
+            AudioBuffer &ab = outl->mBuffers[b];
+            float *dst = (float *)ab.mData;
+            UInt32 f = ab.mDataByteSize / (ab.mNumberChannels * 4);
+            f = f < frames ? f : frames;
+            for (UInt32 k = 0; k < ab.mNumberChannels && och < OUT_CH; k++, och++)
+                for (UInt32 i = 0; i < f; i++)
+                    dst[i * ab.mNumberChannels + k] = c->out[i * OUT_CH + och] * (1.0f / 2147483648.0f);
+        }
+    return 0;
+}
+
 int VirusClient::vc_open(void *id)
 {
-    g_open = id == &g_device && g_connected;
-    vlog("%p vc_open %p -> %d", this, id, g_open);
-    return g_open;
+    if (id != &g_device || !g_connected) {
+        vlog("%p vc_open %p -> 0 (no device)", this, id);
+        return 0;
+    }
+    if (!g_dev)
+        g_dev = find_virus_device();
+    pthread_mutex_lock(&g_clients_mx);
+    audio_client *c = g_clients.count(this) ? g_clients[this] : (g_clients[this] = new audio_client);
+    c->vc = this;
+    OSStatus st = 0;
+    if (g_dev && !c->proc)
+        st = AudioDeviceCreateIOProcID(g_dev, ioproc, c, &c->proc);
+    pthread_mutex_unlock(&g_clients_mx);
+    g_open = 1;
+    vlog("%p vc_open %p -> 1 (Core Audio device %u, IOProc %s)", this, id, g_dev, c->proc ? "ok" : "FAILED");
+    if (st)
+        vlog("%p   AudioDeviceCreateIOProcID: %d", this, (int)st);
+    return 1;
 }
-int VirusClient::vc_close() { vlog("%p vc_close", this); g_open = 0; return 1; }
+int VirusClient::vc_close()
+{
+    vlog("%p vc_close", this);
+    vc_stop();
+    pthread_mutex_lock(&g_clients_mx);
+    if (g_clients.count(this)) {
+        audio_client *c = g_clients[this];
+        if (c->proc)
+            AudioDeviceDestroyIOProcID(g_dev, c->proc);
+        g_clients.erase(this);
+        delete c;
+    }
+    pthread_mutex_unlock(&g_clients_mx);
+    return 1;
+}
 bool VirusClient::vc_isOpen() { return g_open; }
-int VirusClient::vc_start(unsigned long fs) { vlog("%p vc_start framesize %lu", this, fs); return 0; }
-int VirusClient::vc_stop() { vlog("%p vc_stop", this); return 1; }
+int VirusClient::vc_start(unsigned long fs)
+{
+    pthread_mutex_lock(&g_clients_mx);
+    audio_client *c = g_clients.count(this) ? g_clients[this] : nullptr;
+    pthread_mutex_unlock(&g_clients_mx);
+    if (!c || !c->proc) {
+        vlog("%p vc_start framesize %lu -> no device", this, fs);
+        return 0xbad10; // as the original when the stream does not start
+    }
+    if (fs)
+        dev_set(kAudioDevicePropertyBufferFrameSize, (UInt32)fs);
+    OSStatus st = c->running ? 0 : AudioDeviceStart(g_dev, c->proc);
+    c->running = !st;
+    Float64 rate = 0;
+    dev_get(kAudioDevicePropertyNominalSampleRate, kAudioObjectPropertyScopeGlobal, rate);
+    vlog("%p vc_start framesize %lu -> %s (device at %.0f Hz)", this, fs, st ? "FAILED" : "running", rate);
+    return st ? 0xbad10 : 0;
+}
+int VirusClient::vc_stop()
+{
+    pthread_mutex_lock(&g_clients_mx);
+    audio_client *c = g_clients.count(this) ? g_clients[this] : nullptr;
+    pthread_mutex_unlock(&g_clients_mx);
+    if (c && c->running) {
+        AudioDeviceStop(g_dev, c->proc);
+        c->running = false;
+        vlog("%p vc_stop after %lu IOProc calls, input peak (ch 2/3) 0x%08lx", this, c->calls, c->peak);
+        c->calls = c->peak = 0;
+        return 1;
+    }
+    vlog("%p vc_stop", this);
+    return 1;
+}
 unsigned long VirusClient::vc_getNumDevices()
 {
     broker_connect();
@@ -250,7 +428,7 @@ bool VirusClient::vc_getDeviceInfo(unsigned long i, VC_DeviceInfo &info)
         pid = (uint16_t)(dd[10] | dd[11] << 8);
         rel = (uint16_t)(dd[12] | dd[13] << 8);
     }
-    uint32_t key = 0x00100000;
+    uint32_t key = 0x00100000; // = VTI_MAC_DEVKEY (src/broker/vtimidi_mac.h): pairs the device with MIDI slot 0
     memcpy(p + 4, &vid, 2);
     memcpy(p + 6, &pid, 2);
     memcpy(p + 8, &rel, 2);
@@ -269,14 +447,44 @@ bool VirusClient::vc_request(EReqDirection d, EReqLevel l, EReqRecipient r, EReq
          l, r, q, v, x, n, rr);
     return rr >= 0;
 }
-unsigned long VirusClient::vc_getBuffersize() { vlog("%p vc_getBuffersize", this); return 0; }
-unsigned long VirusClient::vc_getSamplerate() { vlog("%p vc_getSamplerate", this); return 44100; }
-bool VirusClient::vc_setSamplerate(unsigned long r) { vlog("%p vc_setSamplerate %lu", this, r); return false; }
+unsigned long VirusClient::vc_getBuffersize()
+{
+    UInt32 fs = 0;
+    dev_get(kAudioDevicePropertyBufferFrameSize, kAudioObjectPropertyScopeGlobal, fs);
+    vlog("%p vc_getBuffersize -> %u", this, fs);
+    return fs;
+}
+unsigned long VirusClient::vc_getSamplerate()
+{
+    Float64 r = 0;
+    dev_get(kAudioDevicePropertyNominalSampleRate, kAudioObjectPropertyScopeGlobal, r);
+    vlog("%p vc_getSamplerate -> %.0f", this, r);
+    return (unsigned long)r;
+}
+bool VirusClient::vc_setSamplerate(unsigned long r)
+{
+    if (!g_dev)
+        g_dev = find_virus_device();
+    Float64 cur = 0;
+    dev_get(kAudioDevicePropertyNominalSampleRate, kAudioObjectPropertyScopeGlobal, cur);
+    bool ok = cur == (Float64)r || dev_set(kAudioDevicePropertyNominalSampleRate, (Float64)r);
+    for (int i = 0; ok && i < 100 && cur != (Float64)r; i++) { // the change is asynchronous
+        usleep(10000);
+        dev_get(kAudioDevicePropertyNominalSampleRate, kAudioObjectPropertyScopeGlobal, cur);
+    }
+    vlog("%p vc_setSamplerate %lu -> %d (device at %.0f Hz)", this, r, ok, cur);
+    return ok;
+}
 bool VirusClient::vc_getLatencies(unsigned long &in, unsigned long &out)
 {
-    vlog("%p vc_getLatencies", this);
-    in = out = 0;
-    return false;
+    UInt32 li = 0, lo = 0, si = 0, so = 0;
+    dev_get(kAudioDevicePropertyLatency, kAudioObjectPropertyScopeInput, li);
+    dev_get(kAudioDevicePropertyLatency, kAudioObjectPropertyScopeOutput, lo);
+    dev_get(kAudioDevicePropertySafetyOffset, kAudioObjectPropertyScopeInput, si);
+    dev_get(kAudioDevicePropertySafetyOffset, kAudioObjectPropertyScopeOutput, so);
+    in = li + si, out = lo + so;
+    vlog("%p vc_getLatencies -> in %lu out %lu", this, in, out);
+    return g_dev != 0;
 }
 long VirusClient::vc_getIntParam(E_VC_INT_PARAM p) { vlog("%p vc_getIntParam %d", this, p); return -1; }
 long VirusClient::vc_setIntParam(E_VC_INT_PARAM p, long v) { vlog("%p vc_setIntParam %d %ld", this, p, v); return -1; }
