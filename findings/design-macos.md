@@ -136,13 +136,6 @@ The full-client test passed 32/32 three times each on arm64 and x86_64/Rosetta
 (M4 Max, macOS 26.7.1, Apple clang 21); both dylibs built. The unmodified Linux
 baseline failed the same regression. USB, audio and DAW behavior were not tested.
 
-## Prior research leads
-
-`prior-work-candidates.tsv` lists eight unaudited leads from the fork owner’s earlier research,
-with pinned source hashes and limitations. Its `virus-os-decompile/` paths refer to a separate
-local checkout. Check current evidence before adopting these claims; no old implementation
-code, proprietary binaries or firmware bytes are included.
-
 ## Needed from the user
 
 - MacBook Air M3: macOS version, Ableton installed (+ Rosetta), the Access software installed **without** its
