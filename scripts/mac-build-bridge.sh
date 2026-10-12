@@ -22,12 +22,14 @@ mkdir -p "$OUT"
 CXX="clang++ -std=c++17 -O2 -Wall -Wno-unused-parameter -I $VST3SDK -I $REPO/src/mac/common"
 
 echo "== helper (x86_64)"
-$CXX -arch x86_64 -o "$OUT/vtihelper" "$REPO/src/mac/helper/vtihelper.cpp" "$P/base/funknown.cpp" \
-    "$P/base/coreiids.cpp" -framework CoreFoundation
+$CXX -arch x86_64 -I "$REPO/src/mac/helper" -o "$OUT/vtihelper" "$REPO/src/mac/helper/vtihelper.cpp" \
+    -fobjc-arc -x objective-c++ "$REPO/src/mac/helper/vtihelper_editor.mm" -x none \
+    "$P/base/funknown.cpp" "$P/base/coreiids.cpp" -framework CoreFoundation -framework Cocoa
 
 echo "== bridge (arm64)"
 $CXX -arch arm64 -bundle -fvisibility=hidden -o "$OUT/tirbridge" "$REPO/src/mac/bridge/tirbridge_vst3.cpp" \
-    "$P/base/funknown.cpp" "$P/base/coreiids.cpp" -framework CoreFoundation
+    -fobjc-arc -x objective-c++ "$REPO/src/mac/bridge/tirbridge_view.mm" -x none \
+    "$P/base/funknown.cpp" "$P/base/coreiids.cpp" -framework CoreFoundation -framework Cocoa
 
 echo "== libVirusUSB.dylib (x86_64)"
 clang++ -arch x86_64 -dynamiclib -std=c++17 -O2 -Wall \

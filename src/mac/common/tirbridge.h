@@ -29,16 +29,16 @@ enum {
     TIRB_ACTIVE,           // -> u32 on                            <- i32 result
     TIRB_GET_PARAM,        // -> u32 id                            <- f64 normalized value
     TIRB_PARAM_STRING,     // -> u32 id, f64 value                 <- utf8 string
-    TIRB_EDITOR_OPEN,      // -> i32 x, y (screen, top-left)       <- tirb_editor_reply
+    TIRB_EDITOR_OPEN,      // -> f64 x, y (Cocoa screen coords of the view's top-left), f64 scale  <- tirb_editor_reply
     TIRB_EDITOR_CLOSE,     // -> (none)                            <- (none)
     TIRB_EDITOR_EVENT,     // -> tirb_input (no reply)
-    TIRB_EDITOR_MOVE,      // -> i32 x, y (no reply)
+    TIRB_EDITOR_MOVE,      // -> f64 x, y (as EDITOR_OPEN, no reply)
     TIRB_MIDI_MAPPING,     // -> (none)                            <- u32 n, tirb_midimap[n] (IMidiMapping table)
     TIRB_SET_PARAM,        // -> u32 id, f64 value (controller side, no reply)
     // notifications helper -> bridge (no reply)
     TIRB_N_PARAM_EDIT = 0x100, // tirb_param_edit
     TIRB_N_RESTART,            // i32 flags
-    TIRB_N_EDITOR_RESIZE,      // i32 w, h
+    TIRB_N_EDITOR_RESIZE,      // tirb_editor_reply (new size, new pixel shm)
 };
 
 typedef struct {
@@ -68,9 +68,17 @@ typedef struct {
 } tirb_setup;
 
 typedef struct {
-    int32_t width, height;
-    char pixels_shm[32]; // BGRA premultiplied, width * height * 4, rewritten on every frame
+    int32_t width, height; // view size in points
+    char pixels_shm[32];   // tirb_pixels
 } tirb_editor_reply;
+
+// Editor pixels: two frames (double buffer) of width*scale x height*scale BGRA premultiplied (kCGImageAlphaPremultiplied
+// First | kCGBitmapByteOrder32Little); the helper renders into the back frame, then publishes it in `front` and bumps
+// `frame`. Frame k starts at data + k * pw * ph * 4.
+typedef struct {
+    uint32_t pw, ph, scale, front, frame, pad[3];
+    uint8_t data[];
+} tirb_pixels;
 
 typedef struct {
     int32_t kind; // 1 down, 2 up, 3 drag, 4 move, 5 wheel, 6 key down, 7 key up, 8 enter, 9 exit

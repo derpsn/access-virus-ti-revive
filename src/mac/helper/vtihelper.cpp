@@ -47,6 +47,7 @@
 #include "pluginterfaces/vst/ivstparameterchanges.h"
 #include "pluginterfaces/vst/ivstprocesscontext.h"
 #include "tirbridge.h"
+#include "vtihelper_editor.h"
 
 using namespace Steinberg;
 using namespace Steinberg::Vst;
@@ -293,6 +294,7 @@ struct Instance : IComponentHandler {
     EventList events;
     ParamChanges pin, pout;
     ProcessContext ctx{};
+    HelperEditor *editor = nullptr; // main thread only
 
     // IComponentHandler: edits from the original's UI -> the bridge (-> DAW automation)
     tresult PLUGIN_API beginEdit(ParamID p) override { return edit(0, p, 0); }
@@ -502,6 +504,8 @@ static void destroy_instance(Instance *in)
     os_sync_wake_by_address_any(&in->shm->req_seq, 4, OS_SYNC_WAKE_BY_ADDRESS_SHARED);
     pthread_join(in->thread, nullptr);
     on_main([&] {
+        editor_close(in->editor);
+        in->editor = nullptr;
         in->proc->setProcessing(false);
         in->comp->setActive(false);
         if (in->ctl && (void *)in->ctl != (void *)in->comp)
@@ -703,9 +707,57 @@ static void *conn_thread(void *arg)
                                  });
             }
             break;
-        default: // editor messages: next step (findings/design-macos-bridge.md)
-            if (!(h.type == TIRB_EDITOR_EVENT || h.type == TIRB_EDITOR_MOVE))
-                send_msg(fd, rt, h.instance, h.seq, nullptr, 0);
+        case TIRB_EDITOR_OPEN: {
+            tirb_editor_reply rep{};
+            if (in && in->ctl && h.len >= 24) {
+                double q[3];
+                memcpy(q, buf.data(), sizeof q);
+                on_main([&] {
+                    if (in->editor)
+                        editor_close(in->editor);
+                    in->editor = editor_open(in->ctl, in->shm_name, q[0], q[1], q[2], rep,
+                                             [](void *ctx, const tirb_editor_reply &r) {
+                                                 notify((Instance *)ctx, TIRB_N_EDITOR_RESIZE, &r, sizeof r);
+                                             },
+                                             in);
+                });
+            }
+            send_msg(fd, rt, h.instance, h.seq, &rep, sizeof rep);
+            break;
+        }
+        case TIRB_EDITOR_CLOSE:
+            if (in)
+                on_main([&] {
+                    editor_close(in->editor);
+                    in->editor = nullptr;
+                });
+            send_msg(fd, rt, h.instance, h.seq, nullptr, 0);
+            break;
+        case TIRB_EDITOR_MOVE:
+        case TIRB_EDITOR_EVENT: // no reply; asynchronous on the main thread, in order
+            if (in) {
+                auto *a = new std::pair<Instance *, std::vector<uint8_t>>(in, buf);
+                a->second.resize(std::max<size_t>(a->second.size(), sizeof(tirb_input)));
+                if (h.type == TIRB_EDITOR_MOVE)
+                    dispatch_async_f(dispatch_get_main_queue(), a, [](void *p) {
+                        auto *a = (std::pair<Instance *, std::vector<uint8_t>> *)p;
+                        double q[2];
+                        memcpy(q, a->second.data(), sizeof q);
+                        editor_move(a->first->editor, q[0], q[1]);
+                        delete a;
+                    });
+                else
+                    dispatch_async_f(dispatch_get_main_queue(), a, [](void *p) {
+                        auto *a = (std::pair<Instance *, std::vector<uint8_t>> *)p;
+                        tirb_input ev;
+                        memcpy(&ev, a->second.data(), sizeof ev);
+                        editor_input(a->first->editor, ev);
+                        delete a;
+                    });
+            }
+            break;
+        default:
+            send_msg(fd, rt, h.instance, h.seq, nullptr, 0);
         }
     }
     for (Instance *in : owned) // bridge gone (DAW closed the plug-in or crashed)

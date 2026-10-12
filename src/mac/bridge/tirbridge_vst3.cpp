@@ -45,6 +45,7 @@
 #include "pluginterfaces/vst/ivstparameterchanges.h"
 #include "pluginterfaces/vst/ivstprocesscontext.h"
 #include "tirbridge.h"
+#include "tirbridge_view.h"
 
 using namespace Steinberg;
 using namespace Steinberg::Vst;
@@ -258,7 +259,7 @@ struct Conn { // one control connection per bridge instance
 };
 
 // ------------------------------------------------------------------------------- the plug-in
-class Bridge : public IComponent, public IAudioProcessor, public IEditController, public IMidiMapping {
+class Bridge : public IComponent, public IAudioProcessor, public IEditController, public IMidiMapping, public EditorLink {
   public:
     std::atomic<uint32> refs{1};
     Conn conn;
@@ -642,7 +643,33 @@ class Bridge : public IComponent, public IAudioProcessor, public IEditController
         handler = h;
         return kResultOk;
     }
-    IPlugView *PLUGIN_API createView(FIDString) override { return nullptr; } // editor mirror: next step
+    IPlugView *PLUGIN_API createView(FIDString name) override
+    {
+        if (!ok || (name && strcmp(name, ViewType::kEditor)) || view)
+            return nullptr;
+        view = bridge_create_view(this);
+        return view;
+    }
+
+    // EditorLink (called by the view on the DAW's main thread)
+    IPlugView *view = nullptr;
+    bool editor_open(double x, double y, double scale, tirb_editor_reply &rep) override
+    {
+        double q[3] = {x, y, scale};
+        std::vector<uint8_t> r;
+        if (!conn.call(TIRB_EDITOR_OPEN, inst, q, sizeof q, &r, 30) || r.size() < sizeof rep)
+            return false;
+        memcpy(&rep, r.data(), sizeof rep);
+        return rep.width > 0 && rep.pixels_shm[0];
+    }
+    void editor_close() override { conn.call(TIRB_EDITOR_CLOSE, inst, nullptr, 0, nullptr, 10); }
+    void editor_move(double x, double y) override
+    {
+        double q[2] = {x, y};
+        conn.post(TIRB_EDITOR_MOVE, inst, q, sizeof q);
+    }
+    void editor_input(const tirb_input &in) override { conn.post(TIRB_EDITOR_EVENT, inst, &in, sizeof in); }
+    void editor_view_gone() override { view = nullptr; }
 
     // IMidiMapping
     tresult PLUGIN_API getMidiControllerAssignment(int32 bus, int16 channel, CtrlNumber cc, ParamID &id) override
@@ -698,6 +725,11 @@ class Bridge : public IComponent, public IAudioProcessor, public IEditController
                 c->first->release();
                 delete c;
             });
+        } else if (h.type == TIRB_N_EDITOR_RESIZE && b.size() >= sizeof(tirb_editor_reply)) {
+            tirb_editor_reply rep;
+            memcpy(&rep, b.data(), sizeof rep);
+            if (view)
+                bridge_view_resized(view, rep);
         } else if (h.type == TIRB_N_RESTART && b.size() >= 4) {
             int32 flags;
             memcpy(&flags, b.data(), 4);
