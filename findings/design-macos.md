@@ -131,9 +131,13 @@ This addresses concurrent control requests only, not every prototype connection 
 binary. Run from the repository root with a C++17 compiler:
 
 ```sh
-c++ -std=c++17 -pthread -O2 src/mac/libvirususb/tests/test_control_transactions.cpp -o /tmp/tirevive-control-test
-/tmp/tirevive-control-test
+python3 src/mac/libvirususb/tests/run_control_test.py
 ```
+
+The runner extracts the current control and logging blocks verbatim, with existence/order checks, so Linux
+can exercise the real transport code without compiling the unrelated CoreAudio implementation.
+On macOS, the complete client can alternatively be compiled into the C++ test with CoreAudio and
+CoreFoundation framework linkage.
 
 On an x86 Linux compute container, the base client at `b44981b` returned correct replies to 3/32 callers;
 the transaction-lock fix returned 32/32. This is a portable control-transport regression check, not a

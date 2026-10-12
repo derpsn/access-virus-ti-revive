@@ -1,6 +1,10 @@
 // Hardware-free test of concurrent Mac broker control requests.
 // Uses the actual client implementation with an ordinary socket pair and protocol replies.
+#ifdef TIREVIVE_CONTROL_TEST_SOURCE
+#include TIREVIVE_CONTROL_TEST_SOURCE
+#else
 #include "../VirusClient.cpp"
+#endif
 #include <algorithm>
 #include <array>
 #include <atomic>
