@@ -93,8 +93,7 @@ enum { MSG_HELLO = 1, MSG_CONTROL = 3, MSG_RX = 0x81, MSG_CONTROL_REPLY = 0x83, 
 static int g_fd = -1;
 static volatile int g_connected;           // broker reports the Virus open
 static pthread_mutex_t g_wr = PTHREAD_MUTEX_INITIALIZER, g_ctl = PTHREAD_MUTEX_INITIALIZER;
-// The reply fields hold one transaction. Keep concurrent callers from replacing
-// its sequence or payload before the waiting caller consumes the response.
+// Serialize the shared control-reply slot until its caller consumes it.
 static std::mutex g_control_transaction;
 static pthread_cond_t g_ctl_cv = PTHREAD_COND_INITIALIZER;
 static uint32_t g_ctl_seq, g_ctl_done_seq;

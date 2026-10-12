@@ -1,9 +1,5 @@
 #!/usr/bin/env python3
-"""Run the current portable control-client code without linking Mac audio APIs.
-
-The implementation is extracted verbatim from VirusClient.cpp, not reimplemented.
-This checks control transport only; it does not validate the Mac dylib or audio.
-"""
+"""Test verbatim control-client code without linking Mac audio APIs."""
 import argparse
 import json
 import os

@@ -1,5 +1,4 @@
-// Hardware-free test of concurrent Mac broker control requests.
-// Uses the actual client implementation with an ordinary socket pair and protocol replies.
+// Concurrent control requests through the actual client and a fake broker.
 #ifdef TIREVIVE_CONTROL_TEST_SOURCE
 #include TIREVIVE_CONTROL_TEST_SOURCE
 #else
