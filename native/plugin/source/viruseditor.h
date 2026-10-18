@@ -14,7 +14,8 @@ namespace vti {
 class VirusPlugin;
 
 // Size: the original layout (907 x 513) times the display scale the host reports (Windows/Linux: e.g. 1.5 at
-// 150 %; macOS: 1, it scales itself) times the user's choice (right-click menu: 100..200 %, kept per user).
+// 150 %; macOS: 1, it scales itself) times the user's choice: the right-click menu's steps (75..200 %) or any size
+// the window is dragged to (50..300 %, in the layout's proportions; editor/editorsize.h), kept per user.
 class VirusEditor : public Steinberg::Vst::VSTGUIEditor, public Steinberg::IPlugViewContentScaleSupport {
 public:
     explicit VirusEditor(VirusPlugin *plugin);
@@ -23,8 +24,9 @@ public:
 
     // IPlugViewContentScaleSupport: the host's display scale
     Steinberg::tresult PLUGIN_API setContentScaleFactor(ScaleFactor factor) override;
-    // only our own size steps (the menu), no free resizing by dragging
-    Steinberg::tresult PLUGIN_API canResize() override { return Steinberg::kResultFalse; }
+    // the host may let the user drag the window's edges; checkSizeConstraint keeps the proportions and the limits
+    Steinberg::tresult PLUGIN_API canResize() override { return Steinberg::kResultTrue; }
+    Steinberg::tresult PLUGIN_API checkSizeConstraint(Steinberg::ViewRect *rect) override;
     Steinberg::tresult PLUGIN_API onSize(Steinberg::ViewRect *newSize) override;
     bool beforeSizeChange(const VSTGUI::CRect &newSize, const VSTGUI::CRect &oldSize) override;
 
@@ -38,9 +40,11 @@ public:
 private:
     VirusPlugin *plugin_;
     double user_zoom_ = 1.0, content_scale_ = 1.0;
-    bool resizing_ = false; // inside our own resize request
+    bool resizing_ = false;   // inside our own resize request
+    bool zoom_dirty_ = false; // dragged to a new size: saved when the editor closes, not at every step of the drag
     double zoom() const { return user_zoom_ * content_scale_; }
     void apply_zoom();
+    void save_zoom();
 };
 
 } // namespace vti

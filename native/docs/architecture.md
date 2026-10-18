@@ -140,10 +140,16 @@ Access is installed or registered. These are the files it loads:
 ### Editor size
 - The editor's size = the original layout (907 x 513) x the display scale the host reports
   (`IPlugViewContentScaleSupport`: Windows/Linux hosts pass e.g. 1.5 at 150 % display scaling; macOS scales itself
-  and passes 1) x the user's choice. A right-click where there is no control opens "Size 100 % .. 200 %"; the choice
-  is kept per user in `<plug-in folder>/ui-zoom` (`VTI_NATIVE_ZOOM` overrides it for tests).
+  and passes 1) x the user's choice. A right-click where there is no control opens "Size 75 % .. 200 %"; the choice
+  is kept per user in `<plug-in folder>/ui-zoom` (`VTI_NATIVE_ZOOM` overrides it for tests and is not saved).
 - `CFrame::setZoom` scales drawing and mouse events; the new size goes to the host with `IPlugFrame::resizeView`
-  (from `beforeSizeChange`); a host that refuses keeps the old size. No free resizing by dragging (`canResize` false).
+  (from `beforeSizeChange`); a host that refuses keeps the old size.
+- Free resizing (`canResize` true): while the user drags the window, `checkSizeConstraint` snaps the size to the
+  layout's proportions and to 50 .. 300 % (`src/editor/editorsize.h`: the edge that moved more decides); `onSize`
+  from the host (not from our own `resizeView`) sets the matching zoom, closes an open menu and saves the size when
+  the editor closes. A host that skips `checkSizeConstraint` gets the largest size that fits (the rest stays empty).
+  The Audio Unit (Steinberg's AU wrapper) passes a change of its NSView's frame on as `onSize` (the same path);
+  whether Logic / GarageBand let the user drag the window is not tested.
 - The original images exist at one size only: enlarged they are interpolated (soft at 200 %); the displays (filter,
   envelopes) and values are drawn as lines and text and stay sharp.
 

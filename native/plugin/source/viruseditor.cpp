@@ -27,6 +27,7 @@ extern char **environ;
 #include "editor/helptext.h"
 #include "editor/popupmenu.h"
 #include "popupwindow.h"
+#include "editor/editorsize.h"
 #include "editor/upscale.h"
 #include "vstgui/lib/cfont.h"
 #include "vstgui/lib/cgraphicspath.h"
@@ -2103,7 +2104,7 @@ private:
 
     void size_menu(const CPoint &where)
     {
-        static const double sizes[] = {1.0, 1.25, 1.5, 1.75, 2.0};
+        static const double sizes[] = {0.75, 1.0, 1.25, 1.5, 1.75, 2.0}; // a dragged size checks none
         std::vector<vti::PopupItem> items;
         int checked = -1;
         for (double z : sizes) {
@@ -2147,7 +2148,7 @@ static double load_zoom()
             z = 1.0;
         fclose(f);
     }
-    return z >= 0.5 && z <= 4.0 ? z : 1.0;
+    return z >= vti::kMinZoom && z <= vti::kMaxZoom ? z : 1.0;
 }
 
 VirusEditor::VirusEditor(VirusPlugin *plugin) : VSTGUIEditor(plugin), plugin_(plugin), user_zoom_(load_zoom())
@@ -2182,14 +2183,37 @@ Steinberg::tresult PLUGIN_API VirusEditor::setContentScaleFactor(ScaleFactor fac
 
 void VirusEditor::set_user_zoom(double z)
 {
+    z = clamp_zoom(z);
     if (z == user_zoom_)
         return;
     user_zoom_ = z;
     apply_zoom();
+    save_zoom();
+}
+
+void VirusEditor::save_zoom()
+{
+    zoom_dirty_ = false;
+    if (getenv("VTI_NATIVE_ZOOM")) // a test's size is not the user's choice
+        return;
     if (FILE *f = fopen(zoom_file().c_str(), "w")) {
-        fprintf(f, "%g\n", z);
+        fprintf(f, "%.4g\n", user_zoom_);
         fclose(f);
     }
+}
+
+// the host asks while the user drags an edge: the nearest size in the layout's proportions within the limits
+Steinberg::tresult PLUGIN_API VirusEditor::checkSizeConstraint(Steinberg::ViewRect *rect)
+{
+    if (!rect)
+        return Steinberg::kInvalidArgument;
+    const auto s = fit_editor_size(rect->getWidth(), rect->getHeight(), plugin_->layout().width,
+                                   plugin_->layout().height, content_scale_, user_zoom_);
+    if (s.w <= 0 || s.h <= 0)
+        return Steinberg::kResultFalse;
+    rect->right = rect->left + s.w;
+    rect->bottom = rect->top + s.h;
+    return Steinberg::kResultTrue;
 }
 
 bool VirusEditor::beforeSizeChange(const CRect &newSize, const CRect &)
@@ -2203,10 +2227,23 @@ bool VirusEditor::beforeSizeChange(const CRect &newSize, const CRect &)
     return ok;
 }
 
+// either the answer to our own resizeView (resizing_: the frame has its zoom already) or the user dragged the
+// window (the host checked the size with checkSizeConstraint, or not: then the largest size that fits): the new
+// zoom first, so the frame scales its content instead of showing more of the 1x layout
 Steinberg::tresult PLUGIN_API VirusEditor::onSize(Steinberg::ViewRect *newSize)
 {
     bool was = resizing_;
     resizing_ = true;
+    if (!was && newSize && frame) {
+        const double z = zoom_for_size(newSize->getWidth(), newSize->getHeight(), plugin_->layout().width,
+                                       plugin_->layout().height, content_scale_);
+        if (std::fabs(z - user_zoom_) > 1e-4) {
+            PopupView::close_windows(frame); // an open menu belongs to the old size
+            user_zoom_ = z;
+            zoom_dirty_ = true;
+            frame->setZoom(zoom());
+        }
+    }
     auto r = VSTGUIEditor::onSize(newSize);
     resizing_ = was;
     return r;
@@ -2246,6 +2283,8 @@ bool PLUGIN_API VirusEditor::open(void *parent, const PlatformType &platformType
 
 void PLUGIN_API VirusEditor::close()
 {
+    if (zoom_dirty_)
+        save_zoom();
     if (frame) {
         PopupView::close_windows(frame); // an open menu's own frames go first
 #if SMTG_OS_LINUX
