@@ -226,8 +226,10 @@ same with Access' own driver.
 
 **All systems**
 
-- **Editor size:** right-click on an empty spot of the editor (or of the Control Center's Access look; there also
-  *View > Size*) and choose 100 % to 200 %; the plug-in also follows Windows' display scaling. The original images
+- **Editor size:** drag the edge or corner of the plug-in window to any size from 50 % to 300 % (it keeps its
+  proportions; in DAWs that allow resizing plug-in windows), or right-click on an empty spot of the editor (or of
+  the Control Center's Access look; there also *View > Size*) and choose 75 % to 200 % (the Control Center: 100 % to
+  200 %); the size is kept for the next editor, and the plug-in also follows Windows' display scaling. The original images
   are made for 100 %: at larger sizes and on high-resolution screens (Retina) the plug-in enlarges each image once
   with a sharp filter, in memory only, so they stay crisp (the first visit of a page takes a moment longer). The
   Control Center's Access look still stretches them.
