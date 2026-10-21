@@ -293,6 +293,12 @@ the udev rule while the Virus is on the Mac -> run it when the Virus is back (un
 ~/Downloads/TI-Revive-0.8.29-release-2005; CI plug-in backed up in ~/.vst3-backup/0.8.29-ci).
 Mac = release installed by the user (receipt 0.8.29). #7 item DONE (E311): first ping after the broker idle exit answered 3/3
 on the Mac, reply posted in #7 (no CC 120 tested). Collab update posted in virus-ti-rework#5.
+Linux = release 0.8.29 installed 2026-10-21 ~20:20 (install.sh, no sudo with the Virus attached; plug-in 6fa9e00d.., broker
+cdf3d914.. = release; release plug-in backed up in ~/.vst3-backup/0.8.29-release), then the round dev build in ~/.vst3.
+#11 hardware check 1 (dev b70e1cca, REAPER): menu lists the new destinations and the Virus takes them (LCD 'Osc 2 F-Shift'),
+but the field showed 'Slot 5 Amount 1': ui_value clamped read-back values to maxValue -> fixed 23d4ebb (RemoteDevice::shown,
+test first; 332 tests, ctest 5/5); dev build 34fa9cbd installed. NEXT: user re-checks the MATRIX fields (and after a project
+reload); then E300 option, restore RAM A/B (work/libdrag/ram-backup-20261021-0921).
 timing_analysis --bpm 140 --div 4; Linux, then Mac 48k/128), then fix or note. (2) #11 mod matrix destinations above
 maxValue 121 (REA: the original's menu + host range, then TDD). (3) #7 first ping after the broker idle exit on the Mac
 (read-only). (4) E300 option, restore RAM A/B. Release 0.8.29 follow-ups run in between (replies #5/#10/#13, site, installs).
