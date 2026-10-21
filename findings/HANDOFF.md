@@ -267,8 +267,10 @@ on 98e12e6 pushed separately, release CI run 39626672973 running. NEXT: release 
 release on Linux, win11 (VM=win11), Mac (+ INSTALL-COMMAND.txt); then a new round. Release CI: mac job retried by a loop (no runner, 'capacity constraints'; try 1 cancelled 17:48).
 ISSUES (gone through with the user 2026-10-21): replies drafted in work/issue5-reply.md (close), issue10-reply.md (close;
 user test win11 VM: Configure opens the plug-in window itself; configured parameters follow the Virus knob with the window
-never opened - log: no 'editor opened' in that session), issue13-reply.md (ask Clock RX, retest 0.8.29) - ALL posted only
-after the release is published (user). #7 stays open. ROUND 0.8.30 PLAN (user ok): (1) #13 arp drift: measure first (arp
+never opened - log: no 'editor opened' in that session), issue13-reply.md (video analysis, retest 0.8.29; the Clock RX question dropped: GlobalInit sets 'Sync to External') - ALL posted only
+after the release is published (user). #7 stays open. ROUND 0.8.30 PLAN (user ok): (1) #13 arp drift: reporter's video (scope, audio track silent, read by eye): Virus arp notes ~7-8 ms/s early vs the beat
+(~0.7 % fast, ~141 vs 140 BPM), Live's arp stable in the same take; test file native/tools/arp-hold-140bpm.mid (C3 held
+24 bars after a 1-bar lead-in, 140 BPM; timing_analysis.py --bpm 140 --div 4). Measure first (arp
 1/16 at 120 BPM, timing_analysis 125 ms grid; Linux, then Mac 48k/128), then fix or note; clock code virusplugin.cpp:1284
 looks right (Virus frames). (2) #11 mod matrix destinations: the Access XML gives the 20 destination params maxValue=121 but
 the mapped list has values 0..127; editorrender.cpp:33 drops entries > max -> 122 Slot 6 Amount 1, 123/124 Osc1/2 F-Shift,
