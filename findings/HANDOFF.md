@@ -268,7 +268,9 @@ release on Linux, win11 (VM=win11), Mac (+ INSTALL-COMMAND.txt); then a new roun
 ISSUES (gone through with the user 2026-10-21): replies drafted in work/issue5-reply.md (close), issue10-reply.md (close;
 user test win11 VM: Configure opens the plug-in window itself; configured parameters follow the Virus knob with the window
 never opened - log: no 'editor opened' in that session), issue13-reply.md (video analysis, retest 0.8.29; the Clock RX question dropped: GlobalInit sets 'Sync to External') - ALL posted only
-after the release is published (user). #7 stays open. ROUND 0.8.30 PLAN (user ok): (1) #13 arp drift: reporter's video (scope, audio track silent, read by eye): Virus arp notes ~7-8 ms/s early vs the beat
+after the release is published (user). #7 stays open. Collab update posted 2026-10-21 (user ok, firmware parts removed by the user's choice) in
+Give-me-a-signal/virus-ti-rework#5: E188-E308 highlights (traffic, host/UI behaviour, library roots, pkg version check,
+sleep/wake); text work/collab-update-2026-10-21.md. ROUND 0.8.30 PLAN (user ok): (1) #13 arp drift: reporter's video (scope, audio track silent, read by eye): Virus arp notes ~7-8 ms/s early vs the beat
 (~0.7 % fast, ~141 vs 140 BPM), Live's arp stable in the same take; test file native/tools/arp-hold-140bpm.mid (C3 held
 24 bars after a 1-bar lead-in, 140 BPM; timing_analysis.py --bpm 140 --div 4). Measure first (arp
 1/16 at 120 BPM, timing_analysis 125 ms grid; Linux, then Mac 48k/128), then fix or note; clock code virusplugin.cpp:1284
