@@ -3,6 +3,7 @@
 #include "../access/library.h"
 #include "../device/usbmidi.h"
 #include "../model/bankdrop.h"
+#include <cctype>
 #include <chrono>
 #include <thread>
 #include <ctime>
@@ -149,6 +150,20 @@ std::vector<RestoreWrite> restore_plan(int bank, const std::vector<Dump> &backup
         w.push_back({(int)p, std::move(d)});
     }
     return w;
+}
+
+int bank_from_name(const std::string &stem)
+{
+    std::string s = stem;
+    for (auto &c : s)
+        c = (char)std::toupper((unsigned char)c);
+    for (size_t i = s.find("RAM "); i != std::string::npos; i = s.find("RAM ", i + 1)) {
+        char b = i + 4 < s.size() ? s[i + 4] : 0;
+        bool word = i + 5 >= s.size() || !std::isalnum((unsigned char)s[i + 5]);
+        if ((i == 0 || !std::isalnum((unsigned char)s[i - 1])) && b >= 'A' && b <= 'D' && word)
+            return b - 'A' + 1;
+    }
+    return 0;
 }
 
 std::vector<std::vector<uint8_t>> dump_pieces(const Dump &d)

@@ -52,6 +52,8 @@ struct RestoreWrite {
 // left out of the comparison), or that `current` does not know. Empty slots and anything but a single dump in the
 // backup are left alone. Empty for another bank.
 std::vector<RestoreWrite> restore_plan(int bank, const std::vector<Dump> &backup, const Bank &current);
+// The RAM bank a library's file name stands for: "RAM A".."RAM D" as a word anywhere in it (any case), else 0.
+int bank_from_name(const std::string &stem);
 // A single dump as it goes out: USB-MIDI on cable 3, 64 bytes per write, like the plug-in (dumppacer.h, E270).
 std::vector<std::vector<uint8_t>> dump_pieces(const Dump &d);
 // Restores RAM bank 1..4 from `backup`: brings the bank cache up to date (bank info + changed programs), writes the

@@ -64,3 +64,15 @@ TEST(ccrestore_dump_pieces)
     }
     CHECK(total == 700 && pieces[0].size() == 64 && pieces.back().size() == 60);
 }
+
+TEST(ccrestore_bank_from_name)
+{
+    // the bank a backup file is for: the Control Center's backups are "RAM A.mid" .. "RAM D.mid"
+    CHECK(cc::bank_from_name("RAM B") == 2);
+    CHECK(cc::bank_from_name("Restore RAM D (2026-10-18)") == 4);
+    CHECK(cc::bank_from_name("ram a") == 1);
+    CHECK(cc::bank_from_name("RAM E") == 0);
+    CHECK(cc::bank_from_name("RAMBO") == 0);
+    CHECK(cc::bank_from_name("RAM AB") == 0); // a word, not a bank letter
+    CHECK(cc::bank_from_name("My Patches") == 0);
+}
