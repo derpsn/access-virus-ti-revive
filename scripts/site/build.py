@@ -362,8 +362,9 @@ def page_landing(latest, releases, sums):
       for the Access files (measured {COVERAGE_DATE}).</p></div>
       <div><h3>On the synth</h3><p>Changes that touch the Virus are tried on our TI2 Desktop before a release; the
       release notes say on which systems and in which DAWs.</p></div>
-      <div><h3>Your reports</h3><p>The soft knobs (0.8.7, 0.8.8), the third USB output (0.8.9) and knobs on the Virus
-      in Ableton's Configure mode (0.8.29) were fixed after a user's report. <a href="#support">Bug reports</a> and <a href="{GH}/issues/new?template=test_report.yml">test
+      <div><h3>Your reports</h3><p>The soft knobs (0.8.7, 0.8.8), the third USB output (0.8.9), knobs on the Virus in
+      Ableton's Configure mode (0.8.29) and the missing mod matrix destinations (0.8.30) were fixed after a user's
+      report. <a href="#support">Bug reports</a> and <a href="{GH}/issues/new?template=test_report.yml">test
       reports</a> from other setups show us what to fix next.</p></div>
     </div>
   </div>
@@ -641,8 +642,10 @@ def features_section():
     <div class="feature cc">
       <div><h3>TI Revive Control Center</h3>
       <p>A separate app in the look of the Access Virus Control Center, when that is in your Access installer. It
-      shows the connected Virus and its RAM banks, backs them up as patch libraries and converts libraries between
-      <code>.mid</code> and <code>.syx</code>. It only reads from the Virus.</p></div>
+      shows the connected Virus and its RAM banks, backs them up as patch libraries, restores a bank from such a backup
+      and converts libraries between <code>.mid</code> and <code>.syx</code>. A restore (since 0.8.30) writes only the
+      programs that differ, into the Virus' RAM, and reads each one back; unlike Access' Control Center it never writes
+      the Virus' flash.</p></div>
       <figure class="shot"><img src="control-center.png" width="687" height="463"
       alt="TI Revive Control Center in the look of Access' Virus Control Center">
       <figcaption>The Control Center in the Access look, drawn from your own installer. The Burn To Flash ROM and OS

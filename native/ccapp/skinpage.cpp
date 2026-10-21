@@ -144,7 +144,7 @@ public:
     {
         const std::string &p = n.parameter;
         if (p.find("TriggerRestore") != std::string::npos)
-            return false; // restore into the Virus: later, after a separate review
+            return !busy_ && found_ && actions_.restore; // RAM banks from a library, never flash (E313)
         if (p.find("TriggerBackup") != std::string::npos || p == kChangePath)
             return !busy_;
         if (p == kModel)
@@ -176,6 +176,11 @@ public:
             done_ = false;
             backup_text_ = target_;
             status_ = "OK starts the backup";
+        } else if (p.find("TriggerRestore") != std::string::npos && actions_.restore) {
+            actions_.restore([this](const std::string &st) {
+                std::lock_guard<std::mutex> l(mu_);
+                status_ = st;
+            });
         } else if (p == kChangePath) {
             choose_target();
         } else if (p == kModel) {

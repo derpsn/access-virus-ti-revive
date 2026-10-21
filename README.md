@@ -74,8 +74,8 @@ contains no Access material. No kernel code of its own is installed.
   [`tirevive-usbinfo.ps1`](scripts/tirevive-usbinfo.ps1) with the Snow connected and attach the
   `TI-Revive-usbinfo.txt` it saves on your Desktop to a [GitHub issue](https://github.com/derpsn/access-virus-ti-revive/issues).
 - **Virus Control Center**: Access' app does not work without its old driver. TI Revive brings its own, step by
-  step: **TI Revive Control Center** (device info, backup of the RAM banks, library export; also as the command
-  line tool `tirevive-cc`; see "Backups" below). Firmware/OS updates and flash functions are not supported, on purpose.
+  step: **TI Revive Control Center** (device info, backup and restore of the RAM banks, library export; also as the
+  command line tool `tirevive-cc`; see "Backups" below). Firmware/OS updates and flash functions are not supported, on purpose.
 
 > TI Revive is an independent project. It is **not affiliated with Access Music Electronics GmbH or
 > Kemper GmbH**. "Access", "Virus" and "Virus TI" are trademarks of their owners and are used only to
@@ -288,17 +288,19 @@ same with Access' own driver.
   `~/.local/share/virus-ti-native`), reproduce the problem and attach `diag.log` from there (see CONTRIBUTING.md).
 - Do not run firmware/OS updates of the Virus through TI Revive; that path is not verified.
 
-**Backups: TI Revive Control Center (read-only)**
+**Backups: TI Revive Control Center**
 
 Start **TI Revive Control Center** (Windows: Start menu, folder "TI Revive"; macOS: Applications; Linux: the
 application menu, or `tirevive-control-center`). It looks like Access' Virus Control Center when that is in your
 Access installer (the setup step copies its images; it loads the look from there, like the plug-in). Click the Virus
 picture to choose your model (Desktop, Keyboard, Polar): USB does not tell them apart. It works next to your DAW: the
-plug-in and the Control Center share the Virus (only plug-ins of two programs do not, see below). The window shows the connected Virus and its RAM banks, backs them up as patch libraries and converts
-libraries between `.mid` and `.syx`. **Nerd mode** (button or *View > Nerd mode*) shows live what goes between
+plug-in and the Control Center share the Virus (only plug-ins of two programs do not, see below). The window shows the connected Virus and its RAM banks, backs them up as patch libraries, restores a bank from
+such a backup and converts libraries between `.mid` and `.syx`. **Nerd mode** (button or *View > Nerd mode*) shows live what goes between
 TI Revive and the Virus (decoded: notes, parameter changes by name, dumps, bank sync), which programs use the Virus,
 the plug-in's and the broker's logs; it switches the plug-in log on and off and saves all logs for a bug report in
 one file. It only watches: it never sends anything to the Virus.
+
+**Restore** (since 0.8.30): *Restore...* (in the Access look: RESTORE) asks for a backup's `RAM B.mid` (or any library), then for the RAM bank to overwrite. Only the programs that differ are written, into the Virus' RAM, the way the plug-in's browser writes them, and each one is read back. Unlike Access' Control Center it never writes the Virus' flash. The same from a terminal: `tirevive-cc restore B "RAM B.mid"`.
 
 ![Nerd mode: the plug-in plays notes and checks its bank cache, decoded live](docs/images/control-center-nerd-mode.png)
 
@@ -605,8 +607,8 @@ measurements: [`findings/design-linux.md`](findings/design-linux.md), evidence E
 | Installers: Access software only unpacked (Windows/Linux), clean-up of earlier versions | done |
 | Virus TI Snow | works per user reports (macOS, 0.8.3+; USB 3 and soft knobs with 0.8.20); not tested by us |
 | Audio Unit (AUv2) of the native plug-in, with the classic Audio Unit's codes (its Logic / GarageBand projects open) | done: passes `auval`, tested in GarageBand |
-| Control Center app + command line `tirevive-cc` (device info, backup, library export; read-only) | done: CLI tested on macOS (M3), app on Linux, both with a TI2 |
-| Control Center: restore into RAM | open (flash functions and OS update: never) |
+| Control Center app + command line `tirevive-cc` (device info, backup, restore into RAM, library export) | done: CLI tested on macOS (M3), app on Linux, both with a TI2 |
+| Control Center: restore into RAM | done in 0.8.30: RAM only, tested on Linux with a TI2 (E313); flash functions and OS update: never |
 | Windows MIDI ports | open |
 | **Windows** | |
 | WinUSB driver package, broker with USB audio, unplug recovery, Windows 11 with memory integrity (HVCI) | done |

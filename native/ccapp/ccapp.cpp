@@ -110,7 +110,10 @@ public:
         std::string err;
         skin_ = tirevive::make_skin_page(vti::AccessFiles::open_control_center(err), TIREVIVE_VERSION,
                                          {[this] { show_page(kNerdPage); }, [this] { export_library(); },
-                                          [this] { show_page(kPlainPage); }, [this](CPoint p) { size_menu(p); }},
+                                          [this] { show_page(kPlainPage); }, [this](CPoint p) { size_menu(p); },
+                                          [this](std::function<void(const std::string &)> st) {
+                                              choose_restore(std::move(st));
+                                          }},
                                          err);
         if (skin_)
             frame_->addView(skin_);
@@ -445,7 +448,7 @@ private:
 
     // Restore a RAM bank from a library (a backup's "RAM B.mid", or any library): the file, then a menu whose entry
     // names the bank to overwrite - choosing it is the confirmation. RAM only, never flash (controlcenter.h, E313).
-    void choose_restore()
+    void choose_restore(std::function<void(const std::string &)> also = nullptr)
     {
         auto open = owned(CNewFileSelector::create(frame_, CNewFileSelector::kSelectFile));
         if (!open)
@@ -460,21 +463,27 @@ private:
         open->setInitialDirectory(dir.c_str());
         open->addFileExtension(CFileExtension("Patch library", "mid"));
         open->addFileExtension(CFileExtension("SysEx file", "syx"));
-        if (!open->run([this](CNewFileSelector *s) {
+        if (!open->run([this, also](CNewFileSelector *s) {
                 if (s->getNumSelectedFiles())
-                    restore_menu(s->getSelectedFile(0));
+                    restore_menu(s->getSelectedFile(0), also);
             }))
             no_dialog();
     }
 
-    void restore_menu(const std::string &file)
+    // `also`: the Access look's status line (its RESTORE button), besides the plain page's
+    void restore_menu(const std::string &file, std::function<void(const std::string &)> also)
     {
+        auto status = [this, also](const std::string &st) {
+            set(&Shared::status, st);
+            if (also)
+                also(st);
+        };
         auto lib = std::make_shared<vti::PatchLibrary>();
         std::string err;
         auto files = vti::AccessFiles::open("", err);
         if (!vti::load_library_file(file, *lib, files ? files->default_page_b() : std::vector<uint8_t>()) ||
             lib->dumps.empty())
-            return set(&Shared::status, "No Virus TI patches in " + file);
+            return status("No Virus TI patches in " + file);
         const std::string name = fs::path(file).filename().string();
         const int guess = vti::cc::bank_from_name(fs::path(file).stem().string());
         auto *menu = new COptionMenu();
@@ -486,35 +495,41 @@ private:
         }
         menu->addSeparator();
         menu->addEntry("Cancel");
-        CRect r = buttons_[7]->getViewSize();
-        menu->popup(frame_, CPoint(r.left, r.bottom), [this, lib, name](COptionMenu *m) {
+        CPoint where;
+        if (page_ == kPlainPage) {
+            CRect r = buttons_[7]->getViewSize();
+            where = CPoint(r.left, r.bottom);
+        } else
+            frame_->getCurrentMouseLocation(where);
+        menu->popup(frame_, where, [this, lib, name, status](COptionMenu *m) {
             int b = m->getLastResult() + 1;
             if (b >= 1 && b <= 4)
-                restore(b, lib, name);
+                restore(b, lib, name, status);
         });
         menu->forget();
     }
 
-    void restore(int bank, std::shared_ptr<vti::PatchLibrary> lib, const std::string &name)
+    void restore(int bank, std::shared_ptr<vti::PatchLibrary> lib, const std::string &name,
+                 std::function<void(const std::string &)> status)
     {
-        run([this, bank, lib, name] {
+        run([this, bank, lib, name, status] {
             const char b = (char)('A' + bank - 1);
             vti::Broker broker;
             if (!connect(broker))
-                return set(&Shared::status, "Connect the Virus, switch it on and try again.");
-            set(&Shared::status, std::string("RAM ") + b + ": checking which programs differ...");
+                return status("Connect the Virus, switch it on and try again.");
+            status(std::string("RAM ") + b + ": checking which programs differ...");
             std::string err;
             int written = 0;
             bool ok = vti::cc::restore_ram(broker, bank, lib->dumps, [&](int done, int total) {
-                set(&Shared::status, std::string("Restoring RAM ") + b + ": " + std::to_string(done) + " / " +
+                status(std::string("Restoring RAM ") + b + ": " + std::to_string(done) + " / " +
                                          std::to_string(total) + " written and read back");
             }, written, err, &stop_);
             if (ok)
-                set(&Shared::status, std::string("RAM ") + b + " restored from " + name + ": " +
+                status(std::string("RAM ") + b + " restored from " + name + ": " +
                                          std::to_string(written) + " programs written" +
                                          (written ? "." : " (all were the same already)."));
             else
-                set(&Shared::status, std::string("RAM ") + b + " not restored completely (" + std::to_string(written) +
+                status(std::string("RAM ") + b + " not restored completely (" + std::to_string(written) +
                                          " written): " + err);
         });
     }
