@@ -686,6 +686,13 @@ TEST(editor_value_texts)
     CHECK(dest.size() == 3 && dest[0].second == "Off" && dest[1].first == 7 && dest[2].first == 127 &&
           dest[2].second == "Mix");
     CHECK(g.r->value_text("Osc/Dest", 127) == "Mix");
+    // the value a control shows: clamped to the range like the original, but a mapped list's value is its own entry
+    // (Destination = Distortion Mix 127 of max 121 stays 127, E309)
+    CHECK(g.dev.shown("Osc/Dest", 127) == 127);
+    CHECK(g.dev.shown("Osc/Dest", 2) == 2);
+    CHECK(g.dev.shown("Osc/Mode", 7) == 3);   // plain list: clamped to max 3
+    CHECK(g.dev.shown("Osc/Wave", 40) == 40); // mapped
+    CHECK(g.dev.shown("Unknown/Param", 200) == 200);
     CHECK(g.r->value_text("Osc/Wave", 5) == "Grey");    // the control shows the text without it
     auto modes = g.r->menu_entries("Osc/Mode");
     CHECK(modes.size() == 3); // the empty entry is left out
