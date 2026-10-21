@@ -1,6 +1,10 @@
 // controlcenter.cpp - see controlcenter.h.
 #include "controlcenter.h"
 #include "../access/library.h"
+#include "../device/usbmidi.h"
+#include "../model/bankdrop.h"
+#include <chrono>
+#include <thread>
 #include <ctime>
 #include <filesystem>
 #include <fstream>
@@ -123,6 +127,99 @@ bool backup_ram(Broker &broker, const std::string &banks, const std::string &out
             return false;
     }
     return true;
+}
+
+// the sound and name of two single dumps: all but the header (bank, program) and the two checksums
+static bool same_patch(const Dump &a, const Dump &b)
+{
+    return a.size() == 524 && b.size() == 524 && std::equal(a.begin() + 9, a.begin() + 265, b.begin() + 9) &&
+           std::equal(a.begin() + 266, a.begin() + 522, b.begin() + 266);
+}
+
+std::vector<RestoreWrite> restore_plan(int bank, const std::vector<Dump> &backup, const Bank &current)
+{
+    std::vector<RestoreWrite> w;
+    if (bank < 1 || bank > 4)
+        return w;
+    for (size_t p = 0; p < backup.size() && p < 128; p++) {
+        if (!BankDrop::is_single(backup[p]) || same_patch(backup[p], current[p]))
+            continue;
+        Dump d = backup[p];
+        BankDrop::address(d, bank - 1, (int)p);
+        w.push_back({(int)p, std::move(d)});
+    }
+    return w;
+}
+
+std::vector<std::vector<uint8_t>> dump_pieces(const Dump &d)
+{
+    auto pk = usbmidi_pack(d, 3);
+    std::vector<std::vector<uint8_t>> out;
+    for (size_t off = 0; off < pk.size(); off += 64)
+        out.emplace_back(pk.begin() + off, pk.begin() + std::min(pk.size(), off + 64));
+    return out;
+}
+
+bool restore_ram(Broker &broker, int bank, const std::vector<Dump> &backup,
+                 const std::function<void(int, int)> &progress, int &written, std::string &error,
+                 const std::atomic<bool> *stop)
+{
+    written = 0;
+    if (bank < 1 || bank > 4) {
+        error = "only RAM banks A-D can be restored";
+        return false;
+    }
+    const std::string name = std::string("RAM ") + (char)('A' + bank - 1);
+    std::string cache = cache_dir();
+    std::error_code ec;
+    if (!cache.empty())
+        fs::create_directories(cache, ec);
+    Bank b;
+    if (!cache.empty())
+        load_bank_file(cache + "/" + name, b);
+    MemorySync sync(broker);
+    // the bank as the Virus has it now: only what differs is written
+    int n = sync.sync_bank(bank, b, nullptr, stop);
+    if (!cache.empty())
+        save_bank_file(cache + "/" + name, b);
+    if (n == -2) {
+        error = "cancelled";
+        return false;
+    }
+    if (n < 0) {
+        error = name + ": the Virus did not answer";
+        return false;
+    }
+    auto plan = restore_plan(bank, backup, b);
+    for (size_t i = 0; i < plan.size(); i++) {
+        if (stop && stop->load()) {
+            error = "cancelled";
+            break;
+        }
+        bool ok = true;
+        for (auto &piece : dump_pieces(plan[i].dump)) {
+            ok = ok && broker.write(0x06, piece.data(), piece.size());
+            std::this_thread::sleep_for(std::chrono::milliseconds(10)); // the plug-in's pace (dumppacer.h)
+        }
+        if (!ok) {
+            error = name + ": writing to the Virus failed";
+            break;
+        }
+        std::this_thread::sleep_for(std::chrono::milliseconds(20));
+        // read back: the Virus has the patch, the cache gets what it says
+        Dump r = sync.single(bank, plan[i].slot);
+        if (!same_patch(r, plan[i].dump)) {
+            error = name + " " + std::to_string(plan[i].slot) + ": the Virus has another patch after the restore";
+            break;
+        }
+        b[(size_t)plan[i].slot] = r;
+        written++;
+        if (progress)
+            progress((int)i + 1, (int)plan.size());
+    }
+    if (!cache.empty())
+        save_bank_file(cache + "/" + name, b);
+    return written == (int)plan.size() && error.empty();
 }
 
 bool write_syx(const std::vector<Dump> &dumps, const std::string &path, std::string &error)
