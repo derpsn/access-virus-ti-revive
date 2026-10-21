@@ -286,6 +286,10 @@ Plan (user ok, issues gone through 2026-10-21): (1) #13 arp drift: measure first
 timing_analysis --bpm 140 --div 4; Linux, then Mac 48k/128), then fix or note. (2) #11 mod matrix destinations above
 maxValue 121 (REA: the original's menu + host range, then TDD). (3) #7 first ping after the broker idle exit on the Mac
 (read-only). (4) E300 option, restore RAM A/B. Release 0.8.29 follow-ups run in between (replies #5/#10/#13, site, installs).
+#11 FIXED (E309, test first): menu limited by list position like the original; 332 tests, ctest 5/5; on hardware: check the
+MATRIX page destination menu (Distortion Mix etc. present, no '-reserved-'). #13 measurement 1 (user, REAPER Linux, 44.1 kHz,
+render of arp-hold-140bpm.mid but the project stayed at 120 BPM, pattern 2, 1/16; ~/Musik/arp.wav): 385/385 on the 125 ms
+grid, drift -10 ppm, sd 0.99 ms, one 19 ms outlier -> no drift at 120/44.1 on Linux. Next: 140 BPM at 44.1, then at 48 kHz.
 
 ## Round 0.8.29 (branch round-0.8.29, collecting; started 2026-10-20)
 

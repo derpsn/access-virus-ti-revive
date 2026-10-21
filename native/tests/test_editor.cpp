@@ -19,6 +19,7 @@ static const char *DEVICE = R"(<?xml version="1.0"?>
    <Parameter name="Shape" minValue="0" maxValue="127" defaultValue="64" part="all"/>
    <Parameter name="Mode" minValue="0" maxValue="3" defaultValue="0" valuelist="Modes" part="all"/>
    <Parameter name="Wave" minValue="0" maxValue="9" defaultValue="0" valuelist="Waves" part="all"/>
+   <Parameter name="Dest" minValue="0" maxValue="2" defaultValue="0" valuelist="Dests" part="all"/>
    <Parameter name="Gated" minValue="0" maxValue="127" defaultValue="0" condition="Mode Is Two" part="all"/>
    <Parameter name="Plain" minValue="2" maxValue="4" defaultValue="2" part="all"/>
   </ParameterSet>
@@ -48,6 +49,7 @@ static const char *DEVICE = R"(<?xml version="1.0"?>
  <Valuelists>
   <Valuelist name="Modes" type="plain"><Entry index="0">Off</Entry><Entry index="1"> Saw</Entry><Entry index="2">Pulse</Entry><Entry index="3"></Entry></Valuelist>
   <Valuelist name="Waves" type="mapped"><Entry index="0" value="9">Nine</Entry><Entry index="1" value="4">Four</Entry><Entry index="2" value="40">Out</Entry><Entry index="3" value="5">-GGrey</Entry></Valuelist>
+  <Valuelist name="Dests" type="mapped"><Entry index="0">Off</Entry><Entry index="2" value="127">Mix</Entry><Entry index="3" value="2">-reserved (2)-</Entry><Entry index="1" value="7">Amount</Entry></Valuelist>
  </Valuelists>
  <Conditionsets>
   <Condition name="Mode Is Two"><Test type="equals" param="Osc/Mode" minvalue="2"/></Condition>
@@ -675,8 +677,15 @@ TEST(editor_value_texts)
     CHECK(g.r->value_text("Osc/Wave", 4) == "Four"); // mapped list: value, not position
     CHECK(g.r->value_text("Unknown/Param", 5) == "5");
     auto m = g.r->menu_entries("Osc/Wave");
-    CHECK(m.size() == 3 && m[0].first == 9 && m[0].second == "Nine" && m[1].first == 4); // menu order; 40 out of range
-    CHECK(m[2].first == 5 && m[2].second == "-GGrey");   // the menu keeps the "greyed" marker (the editor disables it)
+    // menu order; min/max limit the menu position (index), not the value, like the original (issue #11)
+    CHECK(m.size() == 4 && m[0].first == 9 && m[0].second == "Nine" && m[1].first == 4 && m[2].first == 40);
+    CHECK(m[3].first == 5 && m[3].second == "-GGrey");   // the menu keeps the "greyed" marker (the editor disables it)
+    // the real case: values above maxValue 121 (Distortion Mix = 127) are in, the "-reserved-" entries at positions
+    // past it are out
+    auto dest = g.r->menu_entries("Osc/Dest");
+    CHECK(dest.size() == 3 && dest[0].second == "Off" && dest[1].first == 7 && dest[2].first == 127 &&
+          dest[2].second == "Mix");
+    CHECK(g.r->value_text("Osc/Dest", 127) == "Mix");
     CHECK(g.r->value_text("Osc/Wave", 5) == "Grey");    // the control shows the text without it
     auto modes = g.r->menu_entries("Osc/Mode");
     CHECK(modes.size() == 3); // the empty entry is left out

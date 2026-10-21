@@ -28,11 +28,11 @@ std::vector<std::pair<int, std::string>> EditorRenderer::menu_entries(const std:
         for (auto &e : vl->second.entries)
             es.push_back(&e);
         std::stable_sort(es.begin(), es.end(), [](auto *a, auto *b) { return a->index < b->index; });
-        for (auto *e : es) {
-            int v = vl->second.value_of(*e);
-            if (v >= p->min && v <= p->max && !e->text.empty())
-                out.push_back({v, e->text});
-        }
+        // min/max limit the menu position, not the value: like the original (issue #11), the mod matrix
+        // destinations (max 121) list values up to 127 and leave out the "-reserved-" entries at positions 122..127
+        for (auto *e : es)
+            if (e->index >= p->min && e->index <= p->max && !e->text.empty())
+                out.push_back({vl->second.value_of(*e), e->text});
         return out;
     }
     for (int v = p->min; v <= p->max; v++) // no list: plain numbers
