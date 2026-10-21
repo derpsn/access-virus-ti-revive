@@ -280,6 +280,13 @@ the mapped list has values 0..127; editorrender.cpp:33 drops entries > max -> 12
 (3) #7: first ping after the broker idle exit on the Mac (read-only, diag.log). (4) E300 option, restore RAM A/B.
 E300 option open; restore the user's RAM A/B (work/libdrag/ram-backup-20261021-0921).
 
+## Round 0.8.30 (branch round-0.8.30 from round-0.8.29 a095c61+, started 2026-10-21, while the v0.8.29 release CI waits for a Mac runner)
+
+Plan (user ok, issues gone through 2026-10-21): (1) #13 arp drift: measure first (native/tools/arp-hold-140bpm.mid,
+timing_analysis --bpm 140 --div 4; Linux, then Mac 48k/128), then fix or note. (2) #11 mod matrix destinations above
+maxValue 121 (REA: the original's menu + host range, then TDD). (3) #7 first ping after the broker idle exit on the Mac
+(read-only). (4) E300 option, restore RAM A/B. Release 0.8.29 follow-ups run in between (replies #5/#10/#13, site, installs).
+
 ## Round 0.8.29 (branch round-0.8.29, collecting; started 2026-10-20)
 
 1. **accessfiles.cpp: NaN in the oscillator wave table under fast-math (fixed, test first).** find_osc_waves checked
