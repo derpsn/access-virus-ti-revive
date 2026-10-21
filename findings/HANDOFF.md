@@ -315,9 +315,10 @@ restore_ram in src/cc/controlcenter (sync the bank, write only programs that dif
 64-byte pieces on cable 3 10 ms apart, read each back, update the cache), bank_from_name; CLI tirevive-cc restore A|B|C|D FILE
 [--yes]; window button 'Restore...' (file, then a menu 'Overwrite RAM X with ...' = the confirmation). Tests: ccrestore_* +
 cc_restore_ram (fake Virus with memory); 338 tests, ctest 5/5. Commits 7190aaf, ac7576f. Safety backup of the current RAM A/B:
-~/Dokumente/Access Music/Virus TI/Backups/2026-10-21 2116. NEXT: user runs build-native/ccapp/TIReviveControlCenter (dev
-build), restores RAM A (expect 21) and RAM B (expect 4) from the Restore libraries; then compare the cache with cache.old,
-write E313, README/site lines (the Control Center is no longer read-only), release prep for tomorrow. (and after a project
+~/Dokumente/Access Music/Virus TI/Backups/2026-10-21 2116. DONE on hardware (E313): the user's RAM A/B restored
+with the dev Control Center, all 512 programs = the 2026-10-18 state, fingerprints from the Virus confirm. NEXT: wire the
+Access look's RESTORE button to the same function, README/site lines (the Control Center is no longer read-only), release
+prep for tomorrow (0.8.30: #11, give-back E312, Control Center restore). (and after a project
 reload); then E300 option, restore RAM A/B (work/libdrag/ram-backup-20261021-0921).
 timing_analysis --bpm 140 --div 4; Linux, then Mac 48k/128), then fix or note. (2) #11 mod matrix destinations above
 maxValue 121 (REA: the original's menu + host range, then TDD). (3) #7 first ping after the broker idle exit on the Mac
