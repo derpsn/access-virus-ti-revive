@@ -302,8 +302,12 @@ test first, 332 tests, ctest 5/5). dev 1bfb7fc6 installed, user: fields right ->
 5 give-back resets in 5 min, then error -71 and 'unable to enumerate'; power cycle + re-plug; the old broker reset the Virus
 again 1 s after it came back). E300/E312 FIX written (user ok): give-back resets before releasing the interfaces (src/broker/giveback.h, vticore.c;
 tests giveback_*, 334 tests, ctest 5/5; broker + vtiprobe built in work/build/linux, not installed). Hardware loop 30/30 OK (20:46-20:52,
-reset then one probe each, 0 errors). NEXT: install the fixed broker on Linux for everyday use (user decision), CI + other
-platforms with the round; restore RAM A/B (and after a project
+reset then one probe each, 0 errors). Fixed broker INSTALLED on Linux (~/.local/lib/tirevive/vtibroker
+8b068b73.., release broker kept as vtibroker.0.8.29-release) for everyday use until the round's release (user: release tomorrow).
+NEW round item (user): Control Center 'Restore RAM from backup' like the original - REA check of Virus Control Center.exe
+running; then TDD; the user's RAM A/B are restored WITH that feature (pre-test state = cache.old of 2026-10-18: RAM A 21
+slots, RAM B slots 0-3 differ; restore libraries also built in ~/Dokumente/Access Music/Virus TI/Patches/Restore RAM A|B
+(2026-10-18).mid as a fallback via the browser). (and after a project
 reload); then E300 option, restore RAM A/B (work/libdrag/ram-backup-20261021-0921).
 timing_analysis --bpm 140 --div 4; Linux, then Mac 48k/128), then fix or note. (2) #11 mod matrix destinations above
 maxValue 121 (REA: the original's menu + host range, then TDD). (3) #7 first ping after the broker idle exit on the Mac
