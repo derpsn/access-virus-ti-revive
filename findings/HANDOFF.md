@@ -262,7 +262,9 @@ C:\tirevive-test\0.8.29-ci3): LOAD + browser library menus 'works'. NEXT: releas
 decision with the user (user: release now, then a new round); site check 2026-10-21 (agent + spot checks): TESTS 305->332, Mac timing
 row 0.8.29 (E308, 0 ppm, max 1.35 ms), README status row 0.04-0.33 ms / -72 to 0 ppm, new lines for #10 and the library
 folders (site + README identical), README got the 'Presets and soft knobs' line, release notes rewritten; site built locally,
-not deployed. E300 option open; restore the user's RAM A/B (work/libdrag/ram-backup-20261021-0921).
+not deployed. RELEASE: merge 98e12e6 (round-0.8.29 -> main, -F, 2 parents, tree = round), main pushed, tag v0.8.29
+on 98e12e6 pushed separately, release CI run 39626672973 running. NEXT: release green -> site rebuild by hand, install the
+release on Linux, win11 (VM=win11), Mac (+ INSTALL-COMMAND.txt); then a new round. E300 option open; restore the user's RAM A/B (work/libdrag/ram-backup-20261021-0921).
 
 ## Round 0.8.29 (branch round-0.8.29, collecting; started 2026-10-20)
 
