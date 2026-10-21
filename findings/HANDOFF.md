@@ -291,6 +291,8 @@ exit 0, plug-in 35212dd8.. = MSI, C:\tirevive-test\0.8.29-release, VM shut down)
 ~/Downloads/TI-Revive-0.8.29-release-mac (+ INSTALL-COMMAND.txt), the user installs; Linux NOT yet: install.sh needs sudo for
 the udev rule while the Virus is on the Mac -> run it when the Virus is back (unpacked in
 ~/Downloads/TI-Revive-0.8.29-release-2005; CI plug-in backed up in ~/.vst3-backup/0.8.29-ci).
+Mac = release installed by the user (receipt 0.8.29). #7 item DONE (E311): first ping after the broker idle exit answered 3/3
+on the Mac, reply posted in #7 (no CC 120 tested). Collab update posted in virus-ti-rework#5.
 timing_analysis --bpm 140 --div 4; Linux, then Mac 48k/128), then fix or note. (2) #11 mod matrix destinations above
 maxValue 121 (REA: the original's menu + host range, then TDD). (3) #7 first ping after the broker idle exit on the Mac
 (read-only). (4) E300 option, restore RAM A/B. Release 0.8.29 follow-ups run in between (replies #5/#10/#13, site, installs).
