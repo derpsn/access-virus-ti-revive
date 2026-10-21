@@ -307,7 +307,17 @@ reset then one probe each, 0 errors). Fixed broker INSTALLED on Linux (~/.local/
 NEW round item (user): Control Center 'Restore RAM from backup' like the original - REA check of Virus Control Center.exe
 running; then TDD; the user's RAM A/B are restored WITH that feature (pre-test state = cache.old of 2026-10-18: RAM A 21
 slots, RAM B slots 0-3 differ; restore libraries also built in ~/Dokumente/Access Music/Virus TI/Patches/Restore RAM A|B
-(2026-10-18).mid as a fallback via the browser). (and after a project
+(2026-10-18).mid as a fallback via the browser).
+REA (sub-agent, Virus Control Center.exe x64): the original's restore is whole-device only (.vtibackup: RAM A-D as raw SRAM
+images, user ROM banks, multis, device settings), written through USB vendor requests incl. flash erase/burn of the ROM banks
+and the settings sector - NOT copied (rule 2, E177). Ours (E313 to write after the hardware test): restore_plan / dump_pieces /
+restore_ram in src/cc/controlcenter (sync the bank, write only programs that differ as single dumps into RAM like the browser,
+64-byte pieces on cable 3 10 ms apart, read each back, update the cache), bank_from_name; CLI tirevive-cc restore A|B|C|D FILE
+[--yes]; window button 'Restore...' (file, then a menu 'Overwrite RAM X with ...' = the confirmation). Tests: ccrestore_* +
+cc_restore_ram (fake Virus with memory); 338 tests, ctest 5/5. Commits 7190aaf, ac7576f. Safety backup of the current RAM A/B:
+~/Dokumente/Access Music/Virus TI/Backups/2026-10-21 2116. NEXT: user runs build-native/ccapp/TIReviveControlCenter (dev
+build), restores RAM A (expect 21) and RAM B (expect 4) from the Restore libraries; then compare the cache with cache.old,
+write E313, README/site lines (the Control Center is no longer read-only), release prep for tomorrow. (and after a project
 reload); then E300 option, restore RAM A/B (work/libdrag/ram-backup-20261021-0921).
 timing_analysis --bpm 140 --div 4; Linux, then Mac 48k/128), then fix or note. (2) #11 mod matrix destinations above
 maxValue 121 (REA: the original's menu + host range, then TDD). (3) #7 first ping after the broker idle exit on the Mac
