@@ -7,13 +7,13 @@ SRC_MIDI = vticore_midi.c
 
 all: $(OUT)/linux/vtiprobe $(OUT)/linux/vtibroker $(OUT)/linux/vtiaudiotest $(OUT)/vtiprobe.exe $(OUT)/vtisend.exe $(OUT)/vtiflash.exe $(OUT)/vtibroker.exe $(OUT)/vtiprobe-pipe.exe $(OUT)/vtiaudiotest.exe
 
-$(OUT)/linux/vtiprobe: vtiprobe.c vticore.c $(SRC_MIDI) vticore.h
+$(OUT)/linux/vtiprobe: vtiprobe.c vticore.c $(SRC_MIDI) vticore.h resetguard.h giveback.h
 	mkdir -p $(OUT)/linux
 	$(CC) $(CFLAGS) $(shell pkg-config --cflags libusb-1.0) -o $@ vtiprobe.c vticore.c $(SRC_MIDI) \
 		$(shell pkg-config --libs libusb-1.0) -lpthread
 
 # Broker for macOS / Linux on libusb (vtibroker_posix.c); on macOS: make -C src/broker mac (needs libusb from Homebrew)
-$(OUT)/linux/vtibroker: vtibroker_posix.c vticore.c vtiusbaudio_libusb.c $(SRC_MIDI) vticore.h vtiproto.h brokerinfo.h ctrlguard.h owner.h pktstat.h \
+$(OUT)/linux/vtibroker: vtibroker_posix.c vticore.c vtiusbaudio_libusb.c $(SRC_MIDI) vticore.h vtiproto.h brokerinfo.h ctrlguard.h owner.h pktstat.h resetguard.h giveback.h \
 		vtiaudioshm.h vtiusbaudio_libusb.h
 	mkdir -p $(OUT)/linux
 	$(CC) $(CFLAGS) $(VDEF) $(shell pkg-config --cflags libusb-1.0) -o $@ vtibroker_posix.c vticore.c vtiusbaudio_libusb.c \

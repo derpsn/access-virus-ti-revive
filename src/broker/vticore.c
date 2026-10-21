@@ -9,9 +9,13 @@
 
 #ifdef __linux__
 #include "resetguard.h"
+#include "giveback.h"
 #include <stdio.h>
 #include <time.h>
 #define RESET_GAP_S 5 // E136, see resetguard.h
+static int gb_claim(void *h, int i) { return libusb_claim_interface((libusb_device_handle *)h, i); }
+static int gb_release(void *h, int i) { return libusb_release_interface((libusb_device_handle *)h, i); }
+static int gb_reset(void *h) { return libusb_reset_device((libusb_device_handle *)h); }
 static int reset_allowed(void)
 {
     char path[64];
@@ -120,15 +124,10 @@ void vti_close(vti *v)
 #ifdef __linux__
     // snd-usb-audio shuts the whole card down when interfaces 3/4 are taken away, and the dead card lives on while
     // any of its interfaces is still bound ("USB device is in the shutdown state", E113). So: take all five (the
-    // card is freed), give them back, and reset the port so snd-usb-audio probes a fresh card - the Virus is a
-    // normal Linux sound card again after the broker.
-    for (int i = 0; i <= 4; i++)
-        libusb_claim_interface(v->h, i);
-    for (int i = 0; i <= 4; i++)
-        libusb_release_interface(v->h, i);
-    if (reset_allowed())
-        libusb_reset_device(v->h);
-    else
+    // card is freed), reset the port, and give them back so snd-usb-audio probes a fresh card - the Virus is a
+    // normal Linux sound card again after the broker. The reset comes before the release (giveback.h, E312).
+    const vti_giveback_ops ops = {gb_claim, gb_release, gb_reset};
+    if (!vti_giveback(&ops, v->h, reset_allowed()))
         vti_log("vti: give-back reset skipped (the last one was less than %d s ago, E136)\n", RESET_GAP_S);
 #else
     for (int i = 3; i <= 4; i++)
