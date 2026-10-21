@@ -301,8 +301,9 @@ test first; 332 tests, ctest 5/5); dev build 34fa9cbd installed; user: still wro
 test first, 332 tests, ctest 5/5). dev 1bfb7fc6 installed, user: fields right -> #11 DONE on hardware (E309). E300 hit again during the checks (E312:
 5 give-back resets in 5 min, then error -71 and 'unable to enumerate'; power cycle + re-plug; the old broker reset the Virus
 again 1 s after it came back). E300/E312 FIX written (user ok): give-back resets before releasing the interfaces (src/broker/giveback.h, vticore.c;
-tests giveback_*, 334 tests, ctest 5/5; broker + vtiprobe built in work/build/linux, not installed). NEXT: hardware loop
-scripts/giveback-loop.sh 30 7 with the user's OK (power cycle if it hangs), then a broker in the install; restore RAM A/B (and after a project
+tests giveback_*, 334 tests, ctest 5/5; broker + vtiprobe built in work/build/linux, not installed). Hardware loop 30/30 OK (20:46-20:52,
+reset then one probe each, 0 errors). NEXT: install the fixed broker on Linux for everyday use (user decision), CI + other
+platforms with the round; restore RAM A/B (and after a project
 reload); then E300 option, restore RAM A/B (work/libdrag/ram-backup-20261021-0921).
 timing_analysis --bpm 140 --div 4; Linux, then Mac 48k/128), then fix or note. (2) #11 mod matrix destinations above
 maxValue 121 (REA: the original's menu + host range, then TDD). (3) #7 first ping after the broker idle exit on the Mac
