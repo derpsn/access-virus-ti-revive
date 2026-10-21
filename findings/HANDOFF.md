@@ -298,7 +298,9 @@ cdf3d914.. = release; release plug-in backed up in ~/.vst3-backup/0.8.29-release
 #11 hardware check 1 (dev b70e1cca, REAPER): menu lists the new destinations and the Virus takes them (LCD 'Osc 2 F-Shift'),
 but the field showed 'Slot 5 Amount 1': ui_value clamped read-back values to maxValue -> fixed 23d4ebb (RemoteDevice::shown,
 test first; 332 tests, ctest 5/5); dev build 34fa9cbd installed; user: still wrong -> second clamp in the renderer's draw, fixed (EditorRenderer::shown_value,
-test first, 332 tests, ctest 5/5). NEXT: install that build (REAPER must be closed), user re-checks the MATRIX fields (and after a project
+test first, 332 tests, ctest 5/5). dev 1bfb7fc6 installed, user: fields right -> #11 DONE on hardware (E309). E300 hit again during the checks (E312:
+5 give-back resets in 5 min, then error -71 and 'unable to enumerate'; power cycle + re-plug; the old broker reset the Virus
+again 1 s after it came back). NEXT: E300 work (user decision on the approach), restore RAM A/B (and after a project
 reload); then E300 option, restore RAM A/B (work/libdrag/ram-backup-20261021-0921).
 timing_analysis --bpm 140 --div 4; Linux, then Mac 48k/128), then fix or note. (2) #11 mod matrix destinations above
 maxValue 121 (REA: the original's menu + host range, then TDD). (3) #7 first ping after the broker idle exit on the Mac
