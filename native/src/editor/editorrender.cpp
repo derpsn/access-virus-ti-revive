@@ -40,6 +40,19 @@ std::vector<std::pair<int, std::string>> EditorRenderer::menu_entries(const std:
     return out;
 }
 
+int EditorRenderer::shown_value(const std::string &param, int v) const
+{
+    const Parameter *p = cond_.find(param);
+    if (!p || p->max < p->min)
+        return v;
+    for (const RemoteDevice *d : {&dev_, &ed_}) {
+        auto vl = d->valuelists.find(p->valuelist);
+        if (vl != d->valuelists.end() && vl->second.mapped && vl->second.find(v))
+            return v;
+    }
+    return std::max(p->min, std::min(p->max, v));
+}
+
 std::string EditorRenderer::value_text(const std::string &param, int v) const
 {
     const Parameter *p = cond_.find(param);
@@ -503,8 +516,8 @@ void EditorRenderer::draw(Canvas &c, const Element &e, int ox, int oy, int inher
     // inactive controls (the parameter's own condition is false; soft knobs without destination) are translucent
     double alpha = param.empty() || param_active(param, pt) ? 1.0 : disabled_alpha;
     int lo = p ? p->min : 0, hi = p ? p->max : 127;
-    if (p && hi >= lo) // a stored value outside the range shows clamped, like the original (Init: Vocoder Bands 127 -> "32")
-        v = std::max(lo, std::min(hi, v));
+    if (p)
+        v = shown_value(vparam, v);
 
     void *normal = c.image(e.get("NormalBack"));
     // inactive controls with a DisabledBack strip use it at full opacity (the translucent "_Trs" look)

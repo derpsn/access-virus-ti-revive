@@ -693,6 +693,10 @@ TEST(editor_value_texts)
     CHECK(g.dev.shown("Osc/Mode", 7) == 3);   // plain list: clamped to max 3
     CHECK(g.dev.shown("Osc/Wave", 40) == 40); // mapped
     CHECK(g.dev.shown("Unknown/Param", 200) == 200);
+    // the renderer draws a control with the same rule (it clamped to max before: the field showed position 121)
+    CHECK(g.r->shown_value("Osc/Dest", 127) == 127);
+    CHECK(g.r->shown_value("Osc/Mode", 7) == 3);
+    CHECK(g.r->shown_value("Osc/Shape", 300) == 127);
     CHECK(g.r->value_text("Osc/Wave", 5) == "Grey");    // the control shows the text without it
     auto modes = g.r->menu_entries("Osc/Mode");
     CHECK(modes.size() == 3); // the empty entry is left out
