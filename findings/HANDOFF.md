@@ -318,8 +318,8 @@ cc_restore_ram (fake Virus with memory); 338 tests, ctest 5/5. Commits 7190aaf, 
 ~/Dokumente/Access Music/Virus TI/Backups/2026-10-21 2116. DONE on hardware (E313): the user's RAM A/B restored
 with the dev Control Center, all 512 programs = the 2026-10-18 state, fingerprints from the Virus confirm. Access look's RESTORE
 wired to the same restore (SkinPageActions::restore, status in both views); README/site: backup + restore, 'Restore'
-paragraph, status table row done, site user-report line + #11 (site built locally, not deployed). ctest: gui_controlcenter_close
-failed only because the user's dev Control Center was still open (single instance) - rerun after it is closed. NEXT
+paragraph, status table row done, site user-report line + #11 (site built locally, not deployed). ctest 5/5 after the user closed
+their Control Center (gui_controlcenter_close had failed only because of the open single instance). NEXT
 (tomorrow, user): release prep 0.8.30 (version, release notes incl. #11, E312 give-back, Control Center restore; CI test
 build; short checklist Linux/VM/Mac incl. RESTORE in the Access look); then release. (and after a project
 reload); then E300 option, restore RAM A/B (work/libdrag/ram-backup-20261021-0921).
