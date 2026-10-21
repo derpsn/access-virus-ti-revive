@@ -283,6 +283,14 @@ E300 option open; restore the user's RAM A/B (work/libdrag/ram-backup-20261021-0
 ## Round 0.8.30 (branch round-0.8.30 from round-0.8.29 a095c61+, started 2026-10-21, while the v0.8.29 release CI waits for a Mac runner)
 
 Plan (user ok, issues gone through 2026-10-21): (1) #13 arp drift: measure first (native/tools/arp-hold-140bpm.mid,
+**v0.8.29 RELEASED 2026-10-21 20:03** (merge 98e12e6, tag v0.8.29, release CI run 39626672973: mac job got a runner on try 10,
+all green, 6 assets, Latest). Site rebuilt by hand (run 39649468184), live: Download 0.8.29, 332 unit tests, #10 line.
+Replies posted: #5 (closed), #10 (closed), #13 (questions; our measurements: Mac Live 12 48k/128 real-time 384/384 -2 ppm,
+Linux REAPER 48k 140 BPM +7 ppm, 120 BPM -10 ppm - not reproducible, E310). Installs: win11 VM = release (setup.exe /quiet
+exit 0, plug-in 35212dd8.. = MSI, C:\tirevive-test\0.8.29-release, VM shut down); Mac = release unpacked in
+~/Downloads/TI-Revive-0.8.29-release-mac (+ INSTALL-COMMAND.txt), the user installs; Linux NOT yet: install.sh needs sudo for
+the udev rule while the Virus is on the Mac -> run it when the Virus is back (unpacked in
+~/Downloads/TI-Revive-0.8.29-release-2005; CI plug-in backed up in ~/.vst3-backup/0.8.29-ci).
 timing_analysis --bpm 140 --div 4; Linux, then Mac 48k/128), then fix or note. (2) #11 mod matrix destinations above
 maxValue 121 (REA: the original's menu + host range, then TDD). (3) #7 first ping after the broker idle exit on the Mac
 (read-only). (4) E300 option, restore RAM A/B. Release 0.8.29 follow-ups run in between (replies #5/#10/#13, site, installs).
