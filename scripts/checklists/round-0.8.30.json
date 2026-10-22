@@ -21,7 +21,7 @@
    "title": "Linux",
    "where": "REAPER via pw-jack, Virus on this PC",
    "prep": [
-    "Already installed by Claude: the CI build (install.sh).",
+    "Already installed by Claude: the CI build (install.sh; plug-in 8670bb4f.., broker a1cdc38c.. = the tarball; the dev build backed up in ~/.vst3-backup/0.8.30-dev-1bfb7fc6).",
     "Claude runs hil.sh on this build (cold start, reopen x2, export, broker kill) and reports the result here; the broker's give-back (E312) runs at every reopen."
    ],
    "items": [
@@ -51,7 +51,7 @@
    "title": "Windows 11 VM",
    "where": "win11 VM, Ableton Live 11, Virus attached by Claude",
    "prep": [
-    "Already installed by Claude: setup.exe /quiet (entry 0.8.30, same plug-in as the CI MSI), C:\\tirevive-test\\0.8.30-ci.",
+    "Already installed by Claude: setup.exe /quiet (exit 0, entries 0.8.30, plug-in 46f97c18.. = the CI MSI), C:\\tirevive-test\\0.8.30-ci.",
     "Ask Claude to attach the Virus to the VM (it stops the Linux broker first)."
    ],
    "items": [
@@ -80,7 +80,7 @@
    "title": "macOS",
    "where": "MacBook Air M3, Ableton Live 12",
    "prep": [
-    "Claude copies the package (CI run 39730939693) to ~/Downloads/TI-Revive-0.8.30-ci-mac when the Mac is awake; double-click 'Install test build.command' there (the command is in INSTALL-COMMAND.txt). Virus on the Mac.",
+    "Package (CI run 39730939693) on the Mac in <code>~/Downloads/TI-Revive-0.8.30-ci-mac/TI-Revive-0.8.30-mac</code>: close Ableton, double-click 'Install test build.command' there (or the line in INSTALL-COMMAND.txt: <code>sudo installer -pkg \"$HOME/Downloads/TI-Revive-0.8.30-ci-mac/TI-Revive-0.8.30-mac/TI Revive.pkg\" -target /</code>). Virus on the Mac.",
     "Claude puts <code>diag.on</code> in the plug-in's folder and renames the old diag.log."
    ],
    "items": [

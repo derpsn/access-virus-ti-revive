@@ -288,6 +288,12 @@ E300 option open; restore the user's RAM A/B (work/libdrag/ram-backup-20261021-0
 cold/reopen/export (WC1-3, MC1-3), Linux by hil.sh. Checklist scripts/checklists/round-0.8.30.json (+ #11 and restore per
 system). CI test build run 39730939693 (version 0.8.30). NEXT: CI green -> install Linux (install.sh), hil.sh, win11 VM
 (setup.exe /quiet), Mac package + INSTALL-COMMAND; publish checklist; then release notes/README/site (338 tests), merge, tag.
+CI 39730939693 ALL GREEN (release skipped). Installed: Linux = CI build (install.sh exit 0; plug-in 8670bb4f.., broker
+a1cdc38c.. = tarball; dev plug-in 1bfb7fc6 + dev broker 8b068b73 backed up in ~/.vst3-backup/0.8.30-dev-1bfb7fc6); win11 VM =
+CI (setup.exe /quiet exit 0, entries 0.8.30, plug-in 46f97c18.. = CI MSI, C:\tirevive-test\0.8.30-ci; VM running, Virus still
+on Linux); Mac: zip pushed + unzipped in ~/Downloads/TI-Revive-0.8.30-ci-mac/TI-Revive-0.8.30-mac (pkg a69567e5.. = CI) with
+INSTALL-COMMAND.txt + 'Install test build.command'; the user installs. hil.sh running on the CI build. Checklist published:
+https://claude.ai/artifact/EXf4qynRdt9pWgVoUy5KvX (db, marks in rounds/0.8.30/marks, empty at publish).
 
 Plan (user ok, issues gone through 2026-10-21): (1) #13 arp drift: measure first (native/tools/arp-hold-140bpm.mid,
 **v0.8.29 RELEASED 2026-10-21 20:03** (merge 98e12e6, tag v0.8.29, release CI run 39626672973: mac job got a runner on try 10,
