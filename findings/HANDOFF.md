@@ -333,6 +333,16 @@ release.command', the user installs. #11 comment POSTED (user ok; issuecomment-6
 reporter. Site rebuilt (user ok, run 39738056459 on 337390d), live: Download 0.8.30, 338 unit tests, Mac row 0.8.30, FAQ
 '10 of 256'. Remaining: the user installs the release on the Mac. Next round 0.8.31: the three open points above (Mac export late notes E314, browser selection in both panes, 'bank sync failed' wording).
 
+**0.8.31 item 1, Mac export late notes (E314), started 2026-10-22 ~12:00 (branch round-0.8.30 still checked out):**
+Mac diag logs pulled to work/timing/mac-0.8.30 (diag.log = 0.8.30 session, diag-0.8.29.log, older ones; MC3.wav saved
+there). Every Mac export in those logs: 9/9 at Live 44.1 kHz / block 512 clean (sync page 0, 0-3 reports), 2/2 at
+48 kHz / block 128 with the sync page (0.8.29 release session 101 reports, 0.8.30 MC3 70) - the late notes follow the
+Live setting, not the build (E308's clean export was 44.1/512). Linux A/B the same day (nativehost H3, installed 0.8.30
+release, work/timing/rate-ab-1209): 44.1/512 and 48/128 both 42/42, max 0.85 / 1.02 ms, 3 sync reports each -> Mac only.
+Hypothesis (LOW, untested): the Mac's Core Audio IOProc hands the ring 512-frame chunks; offline blocks of 117.6 frames
+are released in bursts per chunk, which eats into A = 1024. Next: the same nativehost pair on the Mac (Virus on the Mac),
+then 48/512 and 44.1/128 to split rate from block size. No code change yet.
+
 Plan (user ok, issues gone through 2026-10-21): (1) #13 arp drift: measure first (native/tools/arp-hold-140bpm.mid,
 **v0.8.29 RELEASED 2026-10-21 20:03** (merge 98e12e6, tag v0.8.29, release CI run 39626672973: mac job got a runner on try 10,
 all green, 6 assets, Latest). Site rebuilt by hand (run 39649468184), live: Download 0.8.29, 332 unit tests, #10 line.
