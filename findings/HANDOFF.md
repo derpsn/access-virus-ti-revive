@@ -438,6 +438,11 @@ RELEASE PREP (site check per the skill, only the claims this round touches): FAQ
 fixed in 0.8.31 (E319); Mac timing row 0.8.30 1.05 ms -> 0.8.31 48k/128 0.01 ms, max 0.01, 0 ppm; jitter range
 0.04-0.33 -> 0.01-0.33 (site + README x3, status table E314 -> E319); TESTS 338 -> 345; native version 0.8.31; release
 notes 'New in 0.8.31' in build.yml. Site built locally (values present), not deployed. ctest 5/5.
+MERGED + TAGGED: round-0.8.31 merged into main with -F (9adfd89, parents 337390d + 83ed98a, tree = round), main pushed,
+then tag v0.8.31 on 9adfd89 pushed separately -> release CI run 39824346270 (running). NEXT: run green (mac job: rerun
+only the failed job if no runner) -> check release assets + Latest; site rebuild by hand (gh workflow run site.yml);
+install the release on Linux (install.sh), win11 VM (setup.exe /quiet, VM=win11, VM still running without the Virus),
+Mac (push + INSTALL-COMMAND.txt + Install test build.command); then a new round branch for the next fixes.
 
 Plan (user ok, issues gone through 2026-10-21): (1) #13 arp drift: measure first (native/tools/arp-hold-140bpm.mid,
 **v0.8.29 RELEASED 2026-10-21 20:03** (merge 98e12e6, tag v0.8.29, release CI run 39626672973: mac job got a runner on try 10,
