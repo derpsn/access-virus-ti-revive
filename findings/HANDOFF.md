@@ -388,6 +388,16 @@ empty -> -1 'failed'. Fix: sync_bank/read_bank return -2 when the empty reply fo
 plug-in then logs 'stopped' and saves the partial bank like the other stops. Test first, 344 tests, ctest 5/5. Not on
 hardware. Control Center never calls cancel() (unchanged). NEXT: browser selection in both panes (check the original
 first, static via REA - the user is away, no VM/hardware writes).
+BROWSER SELECTION DONE (dev, ~15:40, E318): REA sub-agent - the original keeps the selection per pane (KPatchTable,
+flag per entry), no mirroring between panes; ours now PaneSelections (per pane, tied to the pane's bank, cleared on a
+bank switch); renderer frames per pane; editor timer drops a switched pane's selection. Test first, 345 tests, ctest
+5/5. NOT seen in a running editor yet -> round 0.8.31 checklist item (same bank in both panes: click upper, lower not
+framed; switch the upper bank and back: selection gone; drag from a selection still works; Delete selection in a
+library). Open LOW: the original fills the selection in the focused pane and outlines it in the other (vtable +0x310,
+not adopted); drag highlight (renderer_.highlighted) is still per bank.
+ROUND 0.8.31 STATE: items 1 (E315-E317 Mac export), 2 (bank sync stop wording) and the browser selection done in dev;
+remaining: round test (risk.py --round 0.8.31, checklist incl. Mac 48/128 export, browser panes), release texts (README/
+site FAQ 'looking into it' -> fixed, Mac timing row, test count 345), version 0.8.31 in native/CMakeLists.txt.
 
 Plan (user ok, issues gone through 2026-10-21): (1) #13 arp drift: measure first (native/tools/arp-hold-140bpm.mid,
 **v0.8.29 RELEASED 2026-10-21 20:03** (merge 98e12e6, tag v0.8.29, release CI run 39626672973: mac job got a runner on try 10,
