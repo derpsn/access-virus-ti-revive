@@ -1,4 +1,5 @@
-// nativehost - minimal VST3 test host for the native plug-in on Linux/macOS (R3 checks).
+// nativehost - minimal VST3 test host for the native plug-in (R3 checks; the hardware runs scripts/hil.sh,
+// hil-win.ps1, hil-mac.command). The editor actions (--editor, --click, ...) are Linux only.
 //   nativehost <plugin.vst3> [--state FILE] [--param ID=NORM]... [--save FILE] [--seconds N] [--notes] [--wav FILE] [--scan]
 // --notes plays C4 (channel 1) for the first half of every second, --wav writes Out 1 (16-bit stereo 44.1 kHz),
 // --wav-bus N the output bus N instead (1..3, e.g. 3 = Out 3 = USB 3).
@@ -30,6 +31,10 @@
 #include <X11/keysym.h>
 #include <X11/extensions/XTest.h>
 #include <poll.h>
+#endif
+#ifdef _WIN32
+// sleep_until wakes on the system timer, 15.6 ms by default: a 11.6 ms block period would come in bursts
+extern "C" __declspec(dllimport) unsigned int __stdcall timeBeginPeriod(unsigned int ms);
 #endif
 #include <algorithm>
 #include <chrono>
@@ -218,6 +223,9 @@ int main(int argc, char **argv)
         fprintf(stderr, "usage: nativehost <plugin.vst3> [--state FILE] [--param ID=NORM]... [--save FILE] [--seconds N]\n");
         return 2;
     }
+#ifdef _WIN32
+    timeBeginPeriod(1);
+#endif
     const char *state = nullptr, *save = nullptr, *wav = nullptr;
     std::string cid; // --cid: the class to load, else the first audio class
     int wav_bus = 0; // the output bus that is measured and written (0 = Out 1)
@@ -598,7 +606,7 @@ int main(int argc, char **argv)
             for (int32 c = 0; c < data.inputs[1].numChannels && c < 2; c++)
                 if (float *s = data.inputs[1].channelBuffers32 ? data.inputs[1].channelBuffers32[c] : nullptr)
                     for (int i = 0; i < block; i++)
-                        s[i] = 0.5f * (float)std::sin(2 * M_PI * sc_sine * ((double)b * block + i) / rate);
+                        s[i] = 0.5f * (float)std::sin(2 * 3.14159265358979323846 * sc_sine * ((double)b * block + i) / rate);
         if (proc)
             proc->process(data);
         if (proc2) { // the duplicate plays the same notes (same clip on the duplicated track)

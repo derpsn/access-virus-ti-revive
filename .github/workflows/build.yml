@@ -75,6 +75,19 @@ jobs:
           name: nativebin
           path: nativebin
           if-no-files-found: error
+      - name: Hardware run tools (test only, never in the release; a failure here does not stop the build)
+        continue-on-error: true
+        shell: pwsh
+        run: |
+          cmake --build native-build --config Release --target nativehost
+          New-Item -ItemType Directory hil | Out-Null
+          Copy-Item native-build\bin\Release\nativehost.exe, scripts\hil-win.ps1, scripts\hil-win.cmd, scripts\hil_check.py, scripts\timing_analysis.py hil\
+      - uses: actions/upload-artifact@v7
+        continue-on-error: true
+        with:
+          name: TI-Revive-hil-windows
+          path: hil
+          if-no-files-found: warn
 
   msi:
     needs: [binaries, native-windows]
@@ -142,6 +155,22 @@ jobs:
           name: TI-Revive-mac
           path: out/TI-Revive-*-mac.zip
           if-no-files-found: error
+      - name: Hardware run tools (test only, never in the release; a failure here does not stop the build)
+        continue-on-error: true
+        run: |
+          cmake --build out/build/native --config Release --target nativehost -- -quiet
+          mkdir hil
+          cp out/build/native/bin/Release/nativehost repo/scripts/hil-mac.command repo/scripts/hil_check.py \
+              repo/scripts/timing_analysis.py hil/
+          codesign --force --sign - hil/nativehost
+          chmod +x hil/nativehost hil/hil-mac.command
+          ditto -c -k --keepParent hil TI-Revive-hil-mac.zip # keeps the execute bits (an artifact zip drops them)
+      - uses: actions/upload-artifact@v7
+        continue-on-error: true
+        with:
+          name: TI-Revive-hil-mac
+          path: TI-Revive-hil-mac.zip
+          if-no-files-found: warn
 
   native-linux: # the native plug-in for Linux, on Ubuntu 22.04 (glibc 2.35: runs on Ubuntu 22.04 / Debian 12 and newer)
     runs-on: ubuntu-22.04

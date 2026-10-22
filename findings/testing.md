@@ -76,6 +76,19 @@ scripts/hil.sh                 # LC1-LC3, results in work/hil/<time>/summary.txt
 scripts/hil.sh --sleep         # plus LC5 (asks for sudo)
 ```
 
+### The same run on Windows and macOS (added 2026-10-22, not yet run on hardware)
+
+`scripts/hil-win.ps1` (started with `hil-win.cmd`) and `scripts/hil-mac.command` play the items H1, H2 x2, H3 and H6
+with the installed plug-in in `nativehost` and write `results-<time>/` next to themselves (NAME.err = the plug-in's
+log, NAME.out, NAME.wav, summary.txt). `hil_check.py --folder DIR` grades such a folder on any system (`ITEMS`; a
+unit test checks that both runners play the item lengths it expects); the runners call it themselves when a Python 3
+is there. The CI test build makes them as the artifacts `TI-Revive-hil-windows` and `TI-Revive-hil-mac` (`nativehost`
+plus the scripts; steps that may fail, never part of the release). Both must run in the desktop session: on the Mac an
+ssh session gets no Microphone access and the plug-in records silence (E103; the first double-click asks for
+Microphone access for Terminal), on Windows the broker's shared memory is per session (E047; for the VM a scheduled
+task with /IT). H6 on Windows kills the broker hard (Stop-Process), like a crash. Until both have passed once on the
+Virus, `risk.json` keeps cold/reopen/export as hand items on Windows and macOS.
+
 ## Pre-releases for testers
 
 A tag `v0.8.28-rc1` builds everything like a release tag and creates a GitHub release marked pre-release, with a
