@@ -423,6 +423,14 @@ INSTALL-COMMAND.txt + Install test build.command); nativehost --scan over ssh lo
 48/128: 256/256, jitter 0.01 ms, max 0.01 ms, no sync page; 'bank sync stopped' wording seen on hardware. Mac round
 items cold + export covered (reopen rotated out). Remaining: Windows (hil-win.cmd, first real run; VM or the real PC),
 then risk.json windows/mac 'automated' once Windows passed too, checklist, release texts.
+WINDOWS VM (E320): win11 started, 0.8.31c installed (setup.exe /quiet exit 0, plug-in 266318e2.. = CI nativebin), files
+in C:\tirevive-test\0.8.31c (hil\ = the artifact), Virus attached (VM=win11 vm.sh attach), scheduled task
+'tirevive-hil' (Interactive, user vti) runs hil-win.ps1 -> console.log. Runner works end to end. Run 1: H1 + H3 FAIL,
+run 2: H2-2 + H6 FAIL - single notes 8-21 ms off, moving between items; VM timeline errors up to +-1023..1845 frames
+(Linux/Mac <= ~400), run 2 H6 audio drops + no marker. Judged as VM USB timing (MED), not proven for real Windows.
+Results pulled to work/hil/win11-*. VM still RUNNING with the Virus attached. Decision for the user: real-PC run
+(this PC booted into Windows, hil-win.cmd by hand) or accept the VM as function-only for this round; risk.json
+unchanged (Windows items stay by hand).
 
 Plan (user ok, issues gone through 2026-10-21): (1) #13 arp drift: measure first (native/tools/arp-hold-140bpm.mid,
 **v0.8.29 RELEASED 2026-10-21 20:03** (merge 98e12e6, tag v0.8.29, release CI run 39626672973: mac job got a runner on try 10,
