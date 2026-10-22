@@ -495,6 +495,10 @@ USER DECISIONS (~21:05): (a) YES - follow the DAW rate, "we want to be as close 
 proposes E322), REA (the original's rate following: trigger, mapping, timing at 48k, firmware side, safe device
 sequence, E241; proposes E323), Explore audit of every 44.1 kHz assumption in our code. NEXT: a written plan for
 rate following from the three results, before any code (TDD, hardware tests on all three systems).
+DONE: (b) E322 (c2c32b4) - the original's repeated bank requests are a timer side effect (any reply resets its tick
+timer; the Virus answers both identically; the 2nd reply changes nothing) -> not copied; startup_diff counts them as
+known: fixed build vs original = SAME START-UP. Audit of the 44.1 assumptions saved locally:
+work/rate-follow/audit-44k1.md (git-ignored). Waiting for the REA pass on the original's rate following (E323).
 
 Plan (user ok, issues gone through 2026-10-21): (1) #13 arp drift: measure first (native/tools/arp-hold-140bpm.mid,
 **v0.8.29 RELEASED 2026-10-21 20:03** (merge 98e12e6, tag v0.8.29, release CI run 39626672973: mac job got a runner on try 10,
