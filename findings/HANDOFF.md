@@ -359,6 +359,11 @@ prediction: Linux is NOT unchanged - the broker fills the ring in 10 ms transfer
 blocks ran 313/323 frames early (441 - block) and 370 once at block 512 (an 882 double step at the render start; under the
 512 cap); comments fixed in a follow-up commit. hil.sh --plugin <dev> ALL PASS (work/hil/20261022-132959/): H1, H2 x2, H3 45/45 max
 0.96 ms, H6. NEXT: push round-0.8.31, CI test build version 0.8.31, Mac: install + exports E2/E3 again.
+CI test build run 39771581839 (version 0.8.31) ALL GREEN (release skipped). Mac: zip pushed + unzipped in
+~/Downloads/TI-Revive-0.8.31-ci-mac/TI-Revive-0.8.31-mac (pkg 2e58c2eb..) + INSTALL-COMMAND.txt + 'Install test
+build.command'; Mac diag.log -> diag.log.pre-0.8.31-ci. NEXT: user moves the Virus to the Mac, installs, exports E3 48/128 and
+E2 44.1/128 to ~/Downloads (E3b-48k-128.wav, E2b-44k-128.wav); I pull, timing_analysis + count notes > 2 ms, log line
+'blocks up to N frames early'.
 
 Plan (user ok, issues gone through 2026-10-21): (1) #13 arp drift: measure first (native/tools/arp-hold-140bpm.mid,
 **v0.8.29 RELEASED 2026-10-21 20:03** (merge 98e12e6, tag v0.8.29, release CI run 39626672973: mac job got a runner on try 10,
