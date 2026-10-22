@@ -402,6 +402,15 @@ DEV CHECK PASSED (Linux, dev build 14:55 = a0350b2 installed to ~/.vst3, 0.8.30 
 scratchpad): user: "all works" - browser selection per pane, bank switch, drag, Delete selection, bank sync wording.
 CI test build started: run 39797996086 (round-0.8.31 @ 3723273, version 0.8.31). Next: install the CI build on Linux,
 then the round test.
+RESULT run 39797996086: all green except mac (no runner again, the known capacity problem; not retried, superseded).
+HARDWARE RUN ON WIN/MAC (user: "can we also make an automate script I can run on windows and mac?"; edad2b9):
+scripts/hil-win.ps1 (+ hil-win.cmd) and scripts/hil-mac.command play H1, H2 x2, H3, H6 like hil.sh and write
+results-<time>/; hil_check.py --folder grades a folder (ITEMS + 4 tests, one keeps the runners' item lengths in step);
+nativehost: no M_PI (MSVC), timeBeginPeriod(1) on Windows; CI builds nativehost on Windows/Mac in continue-on-error
+steps -> artifacts TI-Revive-hil-windows / TI-Revive-hil-mac (not in the release). Desktop session needed: Mac over
+ssh = no Microphone access = silence (E103), Windows broker shm per session (E047: VM via schtasks /IT). Checked: script
+tests 55 OK, ctest 5/5, --folder on work/hil/20261022-143309 = ALL PASS like hil.sh. NOT run on Windows or the Mac
+yet; risk.json keeps those items by hand until they pass once. Next: new CI run, then the first runs.
 
 Plan (user ok, issues gone through 2026-10-21): (1) #13 arp drift: measure first (native/tools/arp-hold-140bpm.mid,
 **v0.8.29 RELEASED 2026-10-21 20:03** (merge 98e12e6, tag v0.8.29, release CI run 39626672973: mac job got a runner on try 10,
