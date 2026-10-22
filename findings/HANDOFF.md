@@ -482,6 +482,14 @@ User saw the message on the Virus (first dev build); capture of the second build
 nativehost 22/22 notes, max 0.08 ms. 347 tests, ctest 5/5. 'Audio clock changed' = the Access driver follows the DAW
 rate (re-configure + UAC SET_CUR 48000/44100 on EP 0x82/0x01); we stay at 44.1 by design - open decision for the user.
 Captures in captures/ (orig-startup-lcd-20261022, ours-startup-20261022, ours-startup-e321(b)-20261022).
+User saw 'Configuring Virus TI' again with the final build (20:51). Item 2 DONE (0517bfa): scripts/startup_diff.py
+compares two start-up captures (testing.md 'Start-up compared with the original'); on the final build
+(captures/ours-startup-e321c-20261022, no notes) only the original's second bank info requests for banks 2-4 remain
+(cause unknown, left visible; known differences IGNORE: 73 00 09, our probe 30 00 00, our anchor F2). Asked the user
+(honest answer): rise/multi pieces were known (E273, E301, protocol.md), the zeroed multi on the wire was an
+oversight, the start-up message + timer and the text mapping were new. OPEN decisions for the user: (a) follow the DAW
+rate like the original (48k: re-configure + SET_CUR; big design change: timing assumes 44.1, E241 risk; conversion
+still needed for 88.2/96), (b) replicate the double bank info requests or not.
 
 Plan (user ok, issues gone through 2026-10-21): (1) #13 arp drift: measure first (native/tools/arp-hold-140bpm.mid,
 **v0.8.29 RELEASED 2026-10-21 20:03** (merge 98e12e6, tag v0.8.29, release CI run 39626672973: mac job got a runner on try 10,
