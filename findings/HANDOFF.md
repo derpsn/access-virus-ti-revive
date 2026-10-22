@@ -473,6 +473,15 @@ lcd_connected_000; E228). How/when/by whom they are sent and where 'clock change
 (sub-agent, static only; driver, VirusUSB_X64.dll, Virus Control, Control Center, firmware listings). Nothing is sent
 to the Virus until the request is known and judged safe (rule 2). Virus on Linux; win10ref still running (no Virus);
 win11 release install still open.
+ROUND 0.8.32 (branch round-0.8.32 from main 22f1455) item 1 DONE in dev (b3bde33, E321): captures of the original's
+start-up (win10ref) vs ours + REA: the original raises Rise Message 7 'Configuring Virus TI' (74 00 7E 07 + Messagetimer
+74 00 29 64 after GlobalInit, 74 00 29 01 after ParamInit, 74 01 7E 07 before every bank info request, timer 1 after
+the check) and sends the plug-in's multi table UNCHANGED before ParamInit (we sent the state's zeroed copy after
+ParamInit). Now the same (init_messages(dev, multi), MemorySync rise, timer after the check, stored multi not sent).
+User saw the message on the Virus (first dev build); capture of the second build = the original's order and bytes;
+nativehost 22/22 notes, max 0.08 ms. 347 tests, ctest 5/5. 'Audio clock changed' = the Access driver follows the DAW
+rate (re-configure + UAC SET_CUR 48000/44100 on EP 0x82/0x01); we stay at 44.1 by design - open decision for the user.
+Captures in captures/ (orig-startup-lcd-20261022, ours-startup-20261022, ours-startup-e321(b)-20261022).
 
 Plan (user ok, issues gone through 2026-10-21): (1) #13 arp drift: measure first (native/tools/arp-hold-140bpm.mid,
 **v0.8.29 RELEASED 2026-10-21 20:03** (merge 98e12e6, tag v0.8.29, release CI run 39626672973: mac job got a runner on try 10,
