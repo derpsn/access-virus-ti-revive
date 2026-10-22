@@ -45,7 +45,8 @@ public:
 
     // Brings `cache` up to date for RAM bank 1..4; progress(program, fetched) is called per fetched program.
     // Returns the number of fetched programs, -1 on failure.
-    // `stop` (optional) cancels between two requests: returns -2, `cache` keeps what was fetched so far.
+    // `stop` (optional) cancels between two requests, cancel() also during one: returns -2, `cache` keeps what was
+    // fetched so far.
     int sync_bank(int bank, Bank &cache, const std::function<void(int, bool)> &progress = nullptr,
                   const std::atomic<bool> *stop = nullptr);
     // "Download entire bank from Virus TI" like the original (E301): RAM bank 1..4, all 128 programs in order, each
@@ -59,6 +60,7 @@ public:
     std::function<bool()> before_request;
 
 private:
+    bool was_cancelled();
     Broker *broker_ = nullptr;
     std::function<bool(const std::vector<uint8_t> &)> send_;
     int dev_;

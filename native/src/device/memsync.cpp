@@ -127,6 +127,14 @@ void MemorySync::cancel()
     cv_.notify_all();
 }
 
+// an empty reply after cancel() is the plug-in closing, not a Virus that did not answer (E314: "bank sync failed"
+// when Live closed the plug-in during the sync)
+bool MemorySync::was_cancelled()
+{
+    std::lock_guard<std::mutex> lk(mu_);
+    return cancelled_;
+}
+
 std::vector<int> MemorySync::bank_info(int bank)
 {
     Dump r = transact({0xF0, 0x00, 0x20, 0x33, 0x01, (uint8_t)dev_, 0x39, (uint8_t)bank, 0xF7}, {0x14, (uint8_t)bank});
@@ -158,7 +166,7 @@ int MemorySync::sync_bank(int bank, Bank &cache, const std::function<void(int, b
         return -2;
     auto info = bank_info(bank);
     if (info.empty())
-        return -1;
+        return was_cancelled() ? -2 : -1;
     int fetched = 0;
     for (int p = 0; p < 128; p++) {
         if (stop && *stop)
@@ -168,6 +176,8 @@ int MemorySync::sync_bank(int bank, Bank &cache, const std::function<void(int, b
             if (before_request && !before_request())
                 return -2;
             Dump d = single(bank, p);
+            if (d.empty() && was_cancelled())
+                return -2;
             if (d.empty() || RemoteDevice::single_fingerprint(d) != info[p])
                 return -1;
             cache[p] = std::move(d);
@@ -188,7 +198,7 @@ int MemorySync::read_bank(int bank, Bank &cache, const std::function<void(int)> 
         send_(rise);
         Dump d = single(bank, p);
         if (d.empty())
-            return -1;
+            return was_cancelled() ? -2 : -1;
         cache[p] = std::move(d);
         if (progress)
             progress(p);

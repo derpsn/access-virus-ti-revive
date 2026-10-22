@@ -317,3 +317,25 @@ TEST(memsync_read_bank_stops)
     std::atomic<bool> stop{true};
     CHECK_EQ(sync.read_bank(1, cache, nullptr, &stop), -2);
 }
+
+// E314: Live closed the plug-in 3 s into its bank sync; terminate() cancels the request in flight, which came back
+// empty like a request without reply, and the log said "bank sync failed". A cancelled request is a stop (-2).
+TEST(memsync_cancel_during_a_request_is_a_stop)
+{
+    for (int mode = 0; mode < 2; mode++) { // 0: sync_bank, 1: read_bank
+        MemorySync sync([](const Bytes &) { return true; }); // the Virus never answers
+        std::thread stopper([&] {
+            std::this_thread::sleep_for(std::chrono::milliseconds(100));
+            sync.cancel();
+        });
+        Bank cache;
+        const int r = mode == 0 ? sync.sync_bank(1, cache) : sync.read_bank(1, cache);
+        stopper.join();
+        CHECK_EQ(r, -2);
+    }
+    // a request that just gets no reply is still a failure
+    MemorySync quiet([](const Bytes &) { return false; }); // the send fails: nothing reaches the Virus
+    Bank cache;
+    CHECK_EQ(quiet.sync_bank(1, cache), -1);
+    CHECK_EQ(quiet.read_bank(1, cache), -1);
+}
