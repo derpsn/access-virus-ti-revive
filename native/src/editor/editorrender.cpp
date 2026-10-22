@@ -126,14 +126,20 @@ void EditorRenderer::image(Canvas &c, const std::string &name, void *img, int sy
 // the bank table of the browser page: 8 columns x 16 rows, the names measured on the original. The program numbers
 // are not drawn: they are part of the page background (BG_Page_Browser) and show through the translucent table
 // bitmap (alpha 102), as in the original (E299)
-void EditorRenderer::patch_browser(Canvas &c, const Element &e, int x, int y, int bank)
+int EditorRenderer::browser_pane(const std::string &param)
+{
+    return param.rfind("Browser ", 0) == 0 ? std::max(0, atoi(param.c_str() + 8)) : 0;
+}
+
+void EditorRenderer::patch_browser(Canvas &c, const Element &e, int x, int y, int bank, int pane)
 {
     const std::string &font = e.get("ControlFont"), &hfont = e.get("SelectedFont");
     auto hl = highlighted.find(bank);
+    auto sel = selected.find(pane);
+    const bool sel_here = sel != selected.end() && sel->second.first == bank;
     for (int p = 0; p < 128; p++) {
         int nx = x + 21 + (p / 16) * 84, ny = y + 1 + (p % 16) * 11;
-        auto sel = selected.find(bank);
-        bool on = sel != selected.end() && sel->second.count(p);
+        bool on = sel_here && sel->second.second.count(p);
         bool match = !browser_match || browser_match(bank, p);
         if (hl != highlighted.end() && hl->second.count(p) && !hfont.empty()) {
             // a drag's source and target (E298 (L7)): filled in the selection blue, the name in the white font
@@ -574,7 +580,7 @@ void EditorRenderer::draw(Canvas &c, const Element &e, int ox, int oy, int inher
     if (e.type == "RemoteBrowser" && remote_name && !param.empty())
         remote_browser(c, e, x, y, values(param, pt));
     if (e.type == "PatchBrowser" && bank_patch && !param.empty()) {
-        patch_browser(c, e, x, y, values(param, pt)); // "Browser N/Selected Bank" (the host side keeps it)
+        patch_browser(c, e, x, y, values(param, pt), browser_pane(param)); // "Browser N/Selected Bank" (host side)
     }
     const std::string &font = e.get("ControlFont");
     if (font.empty() && e.type == "SearchEdit" && atoi(e.get("FontSize").c_str()) > 0 && !param.empty() &&

@@ -265,7 +265,7 @@ TEST(access_editor_render_every_page)
     r.browser_match = [](int, int prog) { return prog % 3 != 0; };
     r.live_text = [](const std::string &p) { return p.find("Display") != std::string::npos ? std::string("LCD") : std::string(); };
     r.meter = [](int ch) { return ch * 8; };
-    r.selected[0] = {5};
+    r.selected[0] = {0, {5}};
     const Parameter *pages = cond.find("VirusControl/SelectedPage");
     const Parameter *sections = cond.find("VirusControl/Selected Section");
     int last_page = pages ? pages->max : 10, last_section = sections ? sections->max : 0;

@@ -65,3 +65,111 @@ TEST(offlinepace_no_audio_never_waits)
     CHECK(p.wait_until(-1, 512) < 0); // no Virus audio: nothing to pace by
     CHECK(p.wait_until(-1, 512) < 0);
 }
+
+// the Mac's ring grows in 512-frame chunks (Core Audio IOProc, E315); the host renders blocks of `frames` and each
+// waits until the ring reaches its release point. Returns how far past its paced position a block ran at worst.
+static int64_t worst_run_late(double frames, int64_t chunk, int blocks)
+{
+    OfflinePacer p;
+    int64_t ring = 100 * chunk, worst = 0;
+    p.wait_until(ring, frames);
+    for (int i = 0; i < blocks; i++) {
+        const int64_t need = p.wait_until(ring, frames);
+        while (ring < need - p.early(frames))
+            ring += chunk; // the next chunk arrives
+        if (i > 64 && ring - need > worst) // after the step is known
+            worst = ring - need;
+    }
+    return worst;
+}
+
+TEST(offlinepace_small_blocks_run_by_their_own_position)
+{
+    // E315: 48 kHz / 128 (117.6 Virus frames) against 512-frame chunks - the first blocks waiting for a chunk ran up
+    // to ~394 frames after their position, their notes reached the Virus late. At most one block late now.
+    CHECK(worst_run_late(128 * 44100.0 / 48000.0, 512, 4000) <= 118);
+    CHECK(worst_run_late(128, 512, 4000) <= 128); // 44.1 kHz / 128
+    CHECK(worst_run_late(64, 512, 4000) <= 64);
+}
+
+TEST(offlinepace_blocks_as_large_as_the_step_wait_as_before)
+{
+    OfflinePacer p;
+    int64_t ring = 51200;
+    p.wait_until(ring, 512);
+    for (int i = 0; i < 100; i++) {
+        ring = p.wait_until(ring, 512); // the Virus delivers exactly one block per chunk (E315: 44.1/512 and 48/512 clean)
+        CHECK(p.early(512) == 0);
+    }
+    OfflinePacer q; // a ring that grows in steps smaller than the block: nothing to run early
+    int64_t r = 10000;
+    q.wait_until(r, 117.6);
+    for (int i = 0; i < 100; i++) {
+        r += 44;
+        q.wait_until(r, 117.6);
+    }
+    CHECK(q.early(117.6) == 0);
+    CHECK(q.early(32) <= 12);
+}
+
+TEST(offlinepace_early_release_stays_inside_the_read_margin)
+{
+    // the block reads the ring ~770 frames behind its paced position (latency_frames: block + 640 + resampler), so
+    // running early may never reach past what is there: capped at MAX_EARLY whatever the step
+    CHECK(OfflinePacer::MAX_EARLY <= 512);
+    OfflinePacer p;
+    int64_t ring = 100000;
+    p.wait_until(ring, 117.6);
+    for (int i = 0; i < 100; i++) {
+        ring += 4096;
+        p.wait_until(ring, 117.6);
+    }
+    CHECK(p.early(117.6) == OfflinePacer::MAX_EARLY);
+    // one late chunk (two arriving together) does not stretch the step: the smallest recent step counts
+    OfflinePacer q;
+    int64_t r = 51200;
+    q.wait_until(r, 117.6);
+    for (int i = 0; i < 200; i++) {
+        r += i == 50 ? 1024 : 512;
+        q.wait_until(r, 117.6);
+    }
+    CHECK(q.early(117.6) == 512 - 118);
+    q.reset(); // back to real time: the ring's step stays known for the next render
+    CHECK(q.early(117.6) == 512 - 118);
+    q.observe(1000); // the ring went backwards: a new stream (the Virus came back), the step is learned again
+    CHECK(q.early(117.6) == 0);
+}
+
+TEST(offlinepace_step_learned_while_playing)
+{
+    // E316: the first note of a render was still late - the step came only from the render's own blocks. Real-time
+    // blocks (128 at 48 kHz, every 2.7 ms) see the ring grow by 0 or 512; the first offline block already knows it.
+    OfflinePacer p;
+    int64_t ring = 51200;
+    for (int i = 0; i < 200; i++) {
+        if (i % 4 == 0)
+            ring += 512;
+        p.observe(ring);
+    }
+    p.reset(); // the host switches to offline
+    p.wait_until(ring, 117.6);
+    CHECK(p.early(117.6) == 512 - 118);
+}
+
+TEST(offlinepace_first_blocks_of_a_render_run_by_their_position)
+{
+    // the whole render, from its first block, with the step known from playback: at most one block late
+    OfflinePacer p;
+    int64_t ring = 51200, worst = 0;
+    for (int i = 0; i < 64; i++)
+        p.observe(ring += 512);
+    p.reset();
+    p.wait_until(ring, 117.6);
+    for (int i = 0; i < 200; i++) {
+        const int64_t need = p.wait_until(ring, 117.6);
+        while (ring < need - p.early(117.6))
+            ring += 512;
+        worst = std::max(worst, ring - need);
+    }
+    CHECK(worst <= 118);
+}

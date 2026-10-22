@@ -118,5 +118,75 @@ class Offline(unittest.TestCase):
         self.assertFalse(all(ok for _, ok, _ in hil_check.offline_verdicts("wrote x.wav\n")))
 
 
+def write_wav(path, onsets, seconds, rate=44100):
+    """16-bit stereo: a 100 ms 440 Hz burst at each onset (what nativehost records of C4 on part 1)"""
+    import math
+    import struct
+    n = int(seconds * rate)
+    x = [0] * n
+    for t in onsets:
+        s = int(t * rate)
+        for i in range(s, min(n, s + rate // 10)):
+            x[i] = int(16000 * math.sin(2 * math.pi * 440 * (i - s) / rate))
+    data = b"".join(struct.pack("<hh", v, v) for v in x)
+    with open(path, "wb") as f:
+        f.write(b"RIFF" + struct.pack("<I", 36 + len(data)) + b"WAVEfmt " +
+                struct.pack("<IHHIIHH", 16, 1, 2, rate, rate * 4, 4, 16) + b"data" + struct.pack("<I", len(data)) + data)
+
+
+class Folder(unittest.TestCase):
+    """a results folder of the Windows / Mac run (hil-win.ps1, hil-mac.command), graded on any system"""
+
+    def setUp(self):
+        import tempfile
+        self.dir = tempfile.mkdtemp()
+
+    def item(self, name, seconds, onsets, out=""):
+        p = os.path.join(self.dir, name)
+        write_wav(p + ".wav", onsets, seconds)
+        with open(p + ".err", "w") as f:
+            f.write(LOG_OK)
+        with open(p + ".out", "w") as f:
+            f.write(out)
+
+    def clean_folder(self):
+        for name in ("H1", "H2-1", "H2-2"):
+            self.item(name, 20, [6.05 + k for k in range(14)])
+        self.item("H3", 54, [6.05 + k for k in range(30)] + [40.05 + k for k in range(14)],
+                  "offline part: 24.00 s of audio in 24.10 s wall time (1.00x)\n")
+        self.item("H6", 60, [6.05 + k for k in range(14)] + [34.05 + k for k in range(26)])
+
+    def test_clean_folder_passes(self):
+        self.clean_folder()
+        ok, lines = hil_check.grade_folder(self.dir)
+        self.assertTrue(ok, "\n".join(lines))
+        self.assertEqual(sum(1 for line in lines if line.endswith(": pass")), len(hil_check.ITEMS))
+
+    def test_an_item_not_run_fails(self):
+        self.clean_folder()
+        os.remove(os.path.join(self.dir, "H6.err"))
+        ok, lines = hil_check.grade_folder(self.dir)
+        self.assertFalse(ok)
+        self.assertIn("H6: FAIL (not run)", lines)
+
+    def test_a_free_running_export_fails(self):
+        self.clean_folder()
+        self.item("H3", 54, [6.05 + k for k in range(30)] + [40.05 + k for k in range(14)],
+                  "offline part: 24.00 s of audio in 2.00 s wall time (12.00x)\n")
+        ok, lines = hil_check.grade_folder(self.dir)
+        self.assertFalse(ok)
+        self.assertIn("H3: FAIL", lines)
+
+    def test_runners_play_the_items_the_grader_expects(self):
+        # the Windows and Mac runners name each item with its length; a changed length there must change ITEMS too
+        here = os.path.join(os.path.dirname(os.path.abspath(__file__)), "..")
+        for runner in ("hil-win.ps1", "hil-mac.command"):
+            with open(os.path.join(here, runner), encoding="utf-8") as f:
+                text = f.read()
+            for name, item in hil_check.ITEMS.items():
+                self.assertRegex(text, r"(?i)(run|start)_?item\s+['\"]?%s['\"]?\s+%d\b" % (name, item["seconds"]),
+                                 "%s: %s %d s" % (runner, name, item["seconds"]))
+
+
 if __name__ == "__main__":
     unittest.main()

@@ -5,6 +5,7 @@
 // level is offline, 0x18002fd40 -> 0x180080ba0). Here each offline block waits until the Virus has produced as many
 // frames as the blocks so far: the render is right, at real-time speed. Header only: the plug-in and the tests use it.
 #pragma once
+#include <algorithm>
 #include <cmath>
 #include <cstdint>
 
@@ -24,6 +25,7 @@ public:
             reset();
             return -1;
         }
+        observe(newest);
         if (pos_ < 0 || newest < seen_) { // the first offline block, or a new stream (the Virus came back)
             pos_ = (double)newest;
             seen_ = newest;
@@ -36,7 +38,40 @@ public:
         return (int64_t)std::floor(pos_ + 1e-9);
     }
 
-    // back to real time, or the wait gave up (the Virus stopped streaming): the next offline block starts afresh
+    // the block reads the ring ~770 frames behind its paced position (latency_frames), so it may run at most this far
+    // before the ring reaches that position and still read only frames that are there
+    static constexpr int64_t MAX_EARLY = 512;
+
+    // how many frames before its paced position a block of `frames` may run. The ring grows in steps (macOS: Core
+    // Audio hands over 512 frames at a time; Linux: the broker's 10 ms USB transfers, 441 frames). Blocks smaller than a step that all
+    // waited for the same step ran together when it arrived, the first up to a step minus a block after its position,
+    // and its events reached the Virus that much later than in real time (E315: late notes at 128-sample blocks
+    // on the Mac, none at 512). Running up to a step minus a block early leaves each block at most one block late.
+    int64_t early(double frames) const
+    {
+        if (step_ <= 0)
+            return 0;
+        const double e = std::floor((double)step_ - frames);
+        return e <= 0 ? 0 : std::min<int64_t>((int64_t)e, MAX_EARLY);
+    }
+
+    // every block, real-time ones too: the ring's step is known when a render starts (E316: its first note was
+    // late while the step came only from the render's own blocks). A ring that went backwards is a new stream.
+    void observe(int64_t newest)
+    {
+        if (newest < 0)
+            return;
+        if (last_ >= 0 && newest < last_) {
+            step_ = 0;
+            win_min_ = prev_min_ = INT64_MAX;
+            win_n_ = 0;
+        } else if (last_ >= 0 && newest > last_)
+            learn_step(newest - last_);
+        last_ = newest;
+    }
+
+    // back to real time, or the wait gave up (the Virus stopped streaming): the next offline block starts afresh;
+    // the ring's step stays (it belongs to the stream, not to the render)
     void reset()
     {
         pos_ = -1.0;
@@ -44,8 +79,22 @@ public:
     }
 
 private:
+    // the ring's step: the smallest growth over the last 32-64 steps (two chunks arriving together are no step)
+    void learn_step(int64_t d)
+    {
+        win_min_ = std::min(win_min_, d);
+        step_ = std::min(prev_min_, win_min_);
+        if (++win_n_ >= 32) {
+            prev_min_ = win_min_;
+            win_min_ = INT64_MAX;
+            win_n_ = 0;
+        }
+    }
+
     double pos_ = -1.0;
-    int64_t seen_ = -1;
+    int64_t seen_ = -1, last_ = -1;
+    int64_t step_ = 0, win_min_ = INT64_MAX, prev_min_ = INT64_MAX;
+    int win_n_ = 0;
 };
 
 } // namespace vti

@@ -121,7 +121,11 @@ public:
     std::vector<std::array<int, 4>> param_rects(const std::string &param) const;
     // the browser entry (program 0..127) under a point inside a PatchBrowser hit, or -1
     static int browser_entry(const Hit &h, int x, int y);
-    std::map<int, std::set<int>> selected; // bank -> selected programs in the browser (framed)
+    // the pane of a PatchBrowser's parameter "Browser N/Selected Bank": N (0 upper, 1 lower), 0 for anything else
+    static int browser_pane(const std::string &param);
+    // pane -> (the bank it showed, its selected programs), framed only while the pane shows that bank (E318: the
+    // original keeps the selection per pane, not per bank)
+    std::map<int, std::pair<int, std::set<int>>> selected;
     std::map<int, std::set<int>> highlighted; // bank -> entries of a drag: its source and the slot under the cursor
     std::string value_text(const std::string &param, int v) const;
     std::vector<std::pair<int, std::string>> menu_entries(const std::string &param) const; // (value, text), menu order
@@ -145,7 +149,7 @@ private:
     std::vector<std::string> inactive_inputs(const std::string &param, int part) const;
     bool hit(const Element &e, int ox, int oy, int inherited, int px, int py, Hit &out, bool include_disabled = false,
              const std::string &cond = std::string(), bool menus_only = false) const;
-    void patch_browser(Canvas &c, const Element &e, int x, int y, int bank);
+    void patch_browser(Canvas &c, const Element &e, int x, int y, int bank, int pane);
     void remote_browser(Canvas &c, const Element &e, int x, int y, int selected);
     void envelope(Canvas &c, const Element &e, int x, int y, int part, double alpha);
     void filter_response(Canvas &c, const Element &e, int x, int y, int part);

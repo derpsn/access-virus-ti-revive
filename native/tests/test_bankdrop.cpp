@@ -374,3 +374,20 @@ TEST(download_progress_text)
     CHECK(download_progress(127, 130000) == "127 / 128, about 0:01 left");
     CHECK(download_progress(128, 131000) == "128 / 128");
 }
+
+// one selection per browser pane like the original (KPatchTable keeps the selected flags per pane, E318): the same
+// bank in both panes is framed only in the pane that was clicked; a pane that switches banks loses its selection
+TEST(paneselections_per_pane_not_per_bank)
+{
+    PaneSelections s;
+    s.at(0, 1).press(5, false, false); // upper pane, RAM B
+    CHECK(s.framed(0, 1) == std::set<int>{5});
+    CHECK(s.framed(1, 1).empty()); // lower pane shows RAM B too: nothing framed there
+    s.at(1, 1).press(9, false, false);
+    CHECK(s.framed(1, 1) == std::set<int>{9});
+    CHECK(s.framed(0, 1) == std::set<int>{5}); // each pane keeps its own
+    CHECK(s.framed(0, 2).empty()); // what a pane frames belongs to the bank it was made in
+    CHECK(s.at(0, 2).items().empty()); // the upper pane switched to RAM C: empty
+    s.at(0, 1);
+    CHECK(s.framed(0, 1).empty()); // and back to RAM B: the old selection does not come back
+}

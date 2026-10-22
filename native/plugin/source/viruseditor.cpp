@@ -1065,6 +1065,7 @@ public:
 #endif
             plugin_->diag_report();
             plugin_->tick_gestures(); // knob moves on the Virus -> host edits (E304)
+            drop_switched_selections();
             if (plugin_->ui_changed() && !partial_) { // during a drag the drag repaints its own area
                 plugin_->diag.dirty_ticks++;
                 plugin_->lcd_changed();
@@ -1417,9 +1418,11 @@ public:
             }
             if (prog >= 0) {
                 const bool shift = event.modifiers.has(ModifierKey::Shift), ctrl = event.modifiers.has(ModifierKey::Control);
-                dnd_bank_ = bank, dnd_prog_ = prog;
-                browser_sel_[bank].press(prog, shift, ctrl);
-                show_selection(bank);
+                const int pane = EditorRenderer::browser_pane(e.get("Parameter"));
+                pane_param_[pane] = e.get("Parameter");
+                dnd_bank_ = bank, dnd_prog_ = prog, dnd_pane_ = pane;
+                browser_sel_.at(pane, bank).press(prog, shift, ctrl);
+                show_selection(pane, bank);
                 if (event.clickCount >= 2 && !shift && !ctrl)
                     plugin_->load_patch_remembered(bank, prog, plugin_->ui_value(plugin_->layout().frame_parameter, -1));
                 invalid();
@@ -1587,8 +1590,8 @@ public:
             dnd_ = false;
         }
         if (drag_.element && drag_.element->type == "PatchBrowser" && dnd_prog_ >= 0) {
-            browser_sel_[dnd_bank_].release(dnd_prog_, dragged);
-            show_selection(dnd_bank_);
+            browser_sel_.at(dnd_pane_, dnd_bank_).release(dnd_prog_, dragged);
+            show_selection(dnd_pane_, dnd_bank_);
         }
         renderer_.highlighted.clear();
         drag_ = {};
@@ -2220,11 +2223,20 @@ private:
     VirusPlugin *plugin_;
     VirusEditor *editor_;
 
-    // the selection of a bank as the renderer frames it
-    void show_selection(int bank)
+    // a pane's selection as the renderer frames it (only while the pane shows `bank`)
+    void show_selection(int pane, int bank) { renderer_.selected[pane] = {bank, browser_sel_.framed(pane, bank)}; }
+
+    // a pane that switched banks (its dropdown, up/down) loses its selection: the original keeps none per bank (E318)
+    void drop_switched_selections()
     {
-        auto items = browser_sel_[bank].items();
-        renderer_.selected[bank] = std::set<int>(items.begin(), items.end());
+        for (auto &[pane, param] : pane_param_) {
+            const int bank = plugin_->ui_value(param, -1);
+            auto it = renderer_.selected.find(pane);
+            if (it != renderer_.selected.end() && it->second.first != bank) {
+                browser_sel_.at(pane, bank);
+                show_selection(pane, bank);
+            }
+        }
     }
 
     static bool is_library(int bank) { return bank >= VirusPlugin::LIB_BASE && bank != VirusPlugin::SEARCH_BANK; }
@@ -2236,7 +2248,7 @@ private:
         std::map<int, std::set<int>> hl;
         const bool from_browser = drag_.element && drag_.element->type == "PatchBrowser" && dnd_prog_ >= 0;
         if (from_browser) {
-            auto items = browser_sel_[dnd_bank_].items();
+            auto items = browser_sel_.at(dnd_pane_, dnd_bank_).items();
             hl[dnd_bank_] = items.empty() ? std::set<int>{dnd_prog_} : std::set<int>(items.begin(), items.end());
         }
         Hit t = renderer_.hit_test(x, y);
@@ -2261,7 +2273,7 @@ private:
         const bool ram = bank >= 0 && bank < 4;
         if ((!ram && !is_library(bank)) || slot < 0)
             return;
-        auto programs = browser_sel_[dnd_bank_].items();
+        auto programs = browser_sel_.at(dnd_pane_, dnd_bank_).items();
         if (programs.empty())
             programs = {dnd_prog_};
         if (ram && bank == dnd_bank_)
@@ -2280,8 +2292,9 @@ private:
     void browser_menu(const Hit &h, const CPoint &where)
     {
         const int bank = plugin_->ui_value(h.element->get("Parameter"), -1);
+        const int pane = EditorRenderer::browser_pane(h.element->get("Parameter"));
         const bool lib = is_library(bank), ram = bank >= 0 && bank < 4;
-        auto selection = browser_sel_[bank].items();
+        auto selection = browser_sel_.at(pane, bank).items();
         enum Act { Undo, Download, Delete, Sort };
         std::vector<vti::PopupItem> items;
         std::vector<Act> acts;
@@ -2296,7 +2309,7 @@ private:
             add("Sort alphabetically", Sort);
         if (items.empty())
             return;
-        show_popup(std::move(items), -1, 0, where, [this, bank, lib, selection, acts](const std::vector<int> &path) {
+        show_popup(std::move(items), -1, 0, where, [this, bank, pane, lib, selection, acts](const std::vector<int> &path) {
             if (path.empty() || path.front() < 0 || path.front() >= (int)acts.size())
                 return;
             bool done = false;
@@ -2315,8 +2328,8 @@ private:
                 break;
             }
             if (acts[path.front()] == Delete || acts[path.front()] == Sort) {
-                browser_sel_[bank].clear();
-                show_selection(bank);
+                browser_sel_.at(pane, bank).clear();
+                show_selection(pane, bank);
             }
             if (done)
                 invalid();
@@ -2351,8 +2364,9 @@ private:
     std::vector<std::array<int, 4>> drag_rects_;
     double drag_y_ = 0, drag_x_ = 0;
     bool dnd_ = false;             // a patch is being dragged
-    int dnd_bank_ = 0, dnd_prog_ = -1;
-    std::map<int, vti::BrowserSelection> browser_sel_; // bank -> its selection in the browser panes
+    int dnd_bank_ = 0, dnd_prog_ = -1, dnd_pane_ = 0;
+    vti::PaneSelections browser_sel_;      // one selection per browser pane (E318)
+    std::map<int, std::string> pane_param_; // pane -> its "Browser N/Selected Bank" parameter
     int drag_value_ = 0;
 };
 

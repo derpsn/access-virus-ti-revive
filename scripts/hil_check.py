@@ -4,6 +4,7 @@
 nativehost plays C4 at the start of every second (--notes) through the plug-in and records Out 1; this script checks
 the recording against that grid and the plug-in's log lines (stderr) against a clean start:
   python3 -I scripts/hil_check.py --log RUN.err [--wav RUN.wav --seconds 20] [--offline RUN.out] [--sleep --from T] [--gap A:B]
+  python3 -I scripts/hil_check.py --folder DIR   (a whole Windows / Mac run: hil-win.ps1, hil-mac.command)
 Exit 0 when every check passes, 1 otherwise. The limits come from clean runs on the TI Desktop (2026-10-19:
 jitter 0.02 ms, max 1.5 ms off the grid, drift -3..-31 ppm, first note after 5-8 s).
 """
@@ -98,9 +99,53 @@ def offline_verdicts(out):
     return [("export: paced to the Virus", 0.8 <= ratio <= 1.25, "%.2fx real time" % ratio)]
 
 
+def check_run(log, wav=None, seconds=20.0, offline=None, sleep=False, since=0.0, gaps=()):
+    """every verdict of one run: the log, the recording against the grid, the export's pace"""
+    with open(log, encoding="utf-8", errors="replace") as f:
+        checks = log_verdicts(f.read(), sleep)
+    if wav:
+        x, rate = timing_analysis.read_wav(wav)
+        checks += grid_verdicts(grid(timing_analysis.onsets(x, rate), 1.0, seconds, since, gaps))
+    if offline:
+        with open(offline, encoding="utf-8", errors="replace") as f:
+            checks += offline_verdicts(f.read())
+    return checks
+
+
+# the items of the Windows and Mac runs (scripts/hil-win.ps1, scripts/hil-mac.command; hil.sh plays the same on
+# Linux): length in s, how each is judged. H3 renders from 12 to 36 s and stops until 40 s; H6 kills the broker at 20 s
+ITEMS = {
+    "H1": {"seconds": 20},
+    "H2-1": {"seconds": 20},
+    "H2-2": {"seconds": 20},
+    "H3": {"seconds": 54, "offline": True, "gaps": [(36.0, 40.0)]},
+    "H6": {"seconds": 60, "since": 34.0},
+}
+
+
+def grade_folder(folder):
+    """(all passed, report lines) for a results folder with NAME.err / .wav / .out per item of ITEMS"""
+    lines, ok = [], True
+    for name, item in ITEMS.items():
+        p = os.path.join(folder, name)
+        if not os.path.exists(p + ".err") or not os.path.exists(p + ".wav"):
+            lines.append("%s: FAIL (not run)" % name)
+            ok = False
+            continue
+        checks = check_run(p + ".err", p + ".wav", item["seconds"], p + ".out" if item.get("offline") else None,
+                           since=item.get("since", 0.0), gaps=item.get("gaps", ()))
+        lines += ["  %s  %s%s" % ("pass" if c else "FAIL", n, " (%s)" % d if d else "") for n, c, d in checks]
+        passed = all(c for _, c, _ in checks)
+        lines.append("%s: %s" % (name, "pass" if passed else "FAIL"))
+        ok = ok and passed
+    lines.append("ALL PASS" if ok else "FAILED")
+    return ok, lines
+
+
 def main():
     ap = argparse.ArgumentParser(description=__doc__.split("\n")[0])
-    ap.add_argument("--log", required=True, help="the plug-in's log of the run (nativehost stderr)")
+    ap.add_argument("--folder", help="grade every item of a Windows / Mac results folder (ITEMS)")
+    ap.add_argument("--log", help="the plug-in's log of the run (nativehost stderr)")
     ap.add_argument("--wav")
     ap.add_argument("--seconds", type=float, default=20.0)
     ap.add_argument("--offline", help="nativehost stdout of an --offline run")
@@ -108,15 +153,14 @@ def main():
     ap.add_argument("--from", dest="since", type=float, default=0.0, help="judge only the notes from this time on")
     ap.add_argument("--gap", action="append", default=[], help="A:B - a planned pause without notes (s)")
     a = ap.parse_args()
-    with open(a.log, encoding="utf-8", errors="replace") as f:
-        checks = log_verdicts(f.read(), a.sleep)
-    if a.wav:
-        x, rate = timing_analysis.read_wav(a.wav)
-        checks += grid_verdicts(grid(timing_analysis.onsets(x, rate), 1.0, a.seconds, a.since,
-                                    [tuple(float(v) for v in g.split(":")) for g in a.gap]))
-    if a.offline:
-        with open(a.offline, encoding="utf-8", errors="replace") as f:
-            checks += offline_verdicts(f.read())
+    if a.folder:
+        ok, lines = grade_folder(a.folder)
+        print("\n".join(lines))
+        return 0 if ok else 1
+    if not a.log:
+        ap.error("--log or --folder")
+    checks = check_run(a.log, a.wav, a.seconds, a.offline, a.sleep, a.since,
+                       [tuple(float(v) for v in g.split(":")) for g in a.gap])
     for name, ok, detail in checks:
         print("  %s  %s%s" % ("pass" if ok else "FAIL", name, " (%s)" % detail if detail else ""))
     return 0 if all(ok for _, ok, _ in checks) else 1

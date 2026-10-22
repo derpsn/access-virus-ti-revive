@@ -313,12 +313,131 @@ Release texts 2026-10-22: release notes 0.8.30 in build.yml; README/site 338 tes
 'tirevive-cc only reads ... restoring comes later' WRONG -> fixed; CLI list + restore line; status row restore now 'Linux,
 Windows 11 (VM), macOS (E313, E314)'; native/docs/controlcenter.md scope row, title and RESTORE line updated. Site built
 locally (not deployed). OPEN for the user: Mac timing row (0.8.29, E308 clean) vs the newer 0.8.30 export (E314: 10 late
-notes, E243). Open LOW (0.8.31): tirevive-cc's help says 'Close the TI Revive plug-in first' but the Control Center shares
-the Virus with the plug-in (restore worked with the plug-in open on all three systems).
+notes, E243). CORRECTED 2026-10-22 (user): the earlier note here ('restore worked with the plug-in open, so tirevive-cc's
+help is wrong') was false and unsourced - the user had to close the plug-in before the restore worked, as tirevive-cc's
+help and native/docs/controlcenter.md say (one broker client at a time). No open point.
 USER DECISION: Mac timing row -> 0.8.30 numbers (E314: 256/256, 1.05 ms, max 6.30 ms, -8 ppm), release. Site check found
 the sync error FAQ's 'since 0.8.27 ... the late notes did not come back' contradicted by E314 -> README + site: '10 of 256
 came 3-6 ms late in the 0.8.30 test, we are looking into it'. Status row jitter 0.04-1.05 ms. OPEN 0.8.31: Mac export late
 notes DURING the paced render (E314; E243 was after it).
+MERGED 2026-10-22: 337390d (main 98e12e6 + round 224d69a, -F file, tree = round tip), pushed; tag v0.8.30 on 337390d,
+release CI run 39736879794 running. NEXT: CI green -> release check (assets, Latest), install the release on Linux, win11
+(VM=win11), Mac (+ INSTALL-COMMAND); #11 comment (scratchpad draft, TESTED_LINE = VM + Mac M1/W1); site rebuild only when the
+user says so.
+**v0.8.30 RELEASED 2026-10-22 08:59** (release CI 39736879794 all green, 6 assets, Latest). Installs: Linux = release
+(install.sh; plug-in 8670bb4f.., broker a1cdc38c.. = byte-identical to the CI build; NOTE: REAPER was open during install.sh -
+no file changed because of that, but stop before installing while a DAW runs); win11 = release (setup.exe /quiet exit 0,
+plug-in e285b4f7.. = release MSI; MSVC builds differ from the CI test build), VM shut down; Mac: release unpacked in
+~/Downloads/TI-Revive-0.8.30-release-mac/TI-Revive-0.8.30-mac (pkg 5936f178.. = release) + INSTALL-COMMAND.txt + 'Install
+release.command', the user installs. #11 comment POSTED (user ok; issuecomment-6334883221), issue left open for the
+reporter. Site rebuilt (user ok, run 39738056459 on 337390d), live: Download 0.8.30, 338 unit tests, Mac row 0.8.30, FAQ
+'10 of 256'. Remaining: the user installs the release on the Mac. Next round 0.8.31: the three open points above (Mac export late notes E314, browser selection in both panes, 'bank sync failed' wording).
+
+**0.8.31 item 1, Mac export late notes (E314), started 2026-10-22 ~12:00 (branch round-0.8.30 still checked out):**
+Mac diag logs pulled to work/timing/mac-0.8.30 (diag.log = 0.8.30 session, diag-0.8.29.log, older ones; MC3.wav saved
+there). Every Mac export in those logs: 9/9 at Live 44.1 kHz / block 512 clean (sync page 0, 0-3 reports), 2/2 at
+48 kHz / block 128 with the sync page (0.8.29 release session 101 reports, 0.8.30 MC3 70) - the late notes follow the
+Live setting, not the build (E308's clean export was 44.1/512). Linux A/B the same day (nativehost H3, installed 0.8.30
+release, work/timing/rate-ab-1209): 44.1/512 and 48/128 both 42/42, max 0.85 / 1.02 ms, 3 sync reports each -> Mac only.
+Hypothesis (LOW, untested): the Mac's Core Audio IOProc hands the ring 512-frame chunks; offline blocks of 117.6 frames
+are released in bursts per chunk, which eats into A = 1024. Next: the same nativehost pair on the Mac (Virus on the Mac),
+then 48/512 and 44.1/128 to split rate from block size. No code change yet.
+RESULT (user's Live exports 13:07-13:10, E315): block size decides, not the rate - 48/512 clean (max 0.74 ms, 0 late),
+44.1/128 10 late (max 4.2 ms), 48/128 6 late (max 2.5 ms); late notes every 3.75 s = one phase of the Mac's 512-frame
+chunks. Files in work/timing/mac-0.8.30/exports. Fix idea (not written): pace offline blocks by the ring's chunk step so
+small blocks are not released in a burst behind their position (OfflinePacer, test first), Linux behaviour unchanged.
+FIX WRITTEN 2026-10-22 ~13:20 on branch round-0.8.31 (from round-0.8.30 6effb6f; user: 'start the fix in round-0.8.31'):
+OfflinePacer::early() (ring step learned per render, block runs up to step - block early, cap 512), wait_offline gets
+`avail` (ring's real newest) for the read guards, log 'offline render ended (blocks up to N frames early)'. Tests first
+(3 new, the burst test failed with the old pacer), 341 tests, ctest 5/5. NOT on hardware: the Linux dev runs at 13:19
+had no Virus (it was still on the Mac), deleted. NEXT: Virus back on Linux -> hil.sh --plugin <dev build> + the H3 pair
+48/128 and 44.1/512 (expect 'blocks up to ~0 frames early' there), then CI test build (version 0.8.31) for the Mac:
+user exports 48/128 and 44.1/128 again, expect 0 notes > 2 ms late, no sync page, log 'up to ~394 / ~384 frames early'.
+LINUX ON HARDWARE 2026-10-22 ~13:25-13:40 (TI Desktop, dev plug-in build-native 1382fcc+): H3 trio (work/timing/rate-ab-dev-1324)
+48/128 42/42 max 1.03 ms, 44.1/512 max 0.86 ms, 44.1/128 max 0.41 ms jitter 0.09 ms, 1-3 sync reports each. CORRECTION of my
+prediction: Linux is NOT unchanged - the broker fills the ring in 10 ms transfers (vtiusbaudio_libusb.c NP 10 = 441 frames), so
+blocks ran 313/323 frames early (441 - block) and 370 once at block 512 (an 882 double step at the render start; under the
+512 cap); comments fixed in a follow-up commit. hil.sh --plugin <dev> ALL PASS (work/hil/20261022-132959/): H1, H2 x2, H3 45/45 max
+0.96 ms, H6. NEXT: push round-0.8.31, CI test build version 0.8.31, Mac: install + exports E2/E3 again.
+CI test build run 39771581839 (version 0.8.31) ALL GREEN (release skipped). Mac: zip pushed + unzipped in
+~/Downloads/TI-Revive-0.8.31-ci-mac/TI-Revive-0.8.31-mac (pkg 2e58c2eb..) + INSTALL-COMMAND.txt + 'Install test
+build.command'; Mac diag.log -> diag.log.pre-0.8.31-ci. NEXT: user moves the Virus to the Mac, installs, exports E3 48/128 and
+E2 44.1/128 to ~/Downloads (E3b-48k-128.wav, E2b-44k-128.wav); I pull, timing_analysis + count notes > 2 ms, log line
+'blocks up to N frames early'.
+MAC RESULT 2026-10-22 ~14:00 (E316): FIXED - 48/128 256/256 max 0.01 ms, 0 late; 44.1/128 only the first note late (4.9 ms,
+was also late before), 0-1 sync reports, no page; log 394/384 frames early. Files work/timing/mac-0.8.31 (the user saved
+44.1/128 as E3b-44k-128.wav, copied as E2b-44k-128.wav). Open LOW: the first note of a render (step not learned yet:
+keep the step across the real-time -> offline switch or learn it in real time too).
+FIRST-NOTE FIX WRITTEN 2026-10-22 ~14:15 (user: 'fix the first note too'): OfflinePacer::observe() on every real-time
+block, reset() keeps the step, a backwards ring forgets it; tests first, 343 tests, ctest 5/5. Not on hardware (Virus
+not on Linux, not listed on the Mac either at 14:15). Pushed, CI test build started (version 0.8.31). NEXT: Mac install,
+E2c 44.1/128 + E3c 48/128 exports (first note on time?), then Linux hil.sh in the round test.
+CI 39775550348 ALL GREEN; Mac: ~/Downloads/TI-Revive-0.8.31b-ci-mac/TI-Revive-0.8.31-mac (pkg a007f9a0..) + install files;
+Mac diag.log -> diag.log.ci1-0.8.31 (copy in work/timing/mac-0.8.31/diag.log). Virus on the Mac (user, ~14:25).
+MAC RESULT ~14:30 (E317, work/timing/mac-0.8.31b): first note on time in both (-0.08 / -0.14 ms); E2c 44.1/128 1 note
+2.5 ms late at 14.25 s, max 2.55 ms, jitter 0.26; E3c 48/128 0 late, max 1.82, jitter 0.40; 0-2 sync reports, no page.
+Item 1 (E314) done on the Mac up to one single 2.5 ms note (cause unknown, watch in the round test). NEXT: Linux hil.sh
+on the round build when the Virus is back; other 0.8.31 items (browser selection both panes, 'bank sync failed' wording);
+at release: README/site FAQ ('10 of 256 ... looking into it') + Mac timing row.
+LINUX ON HARDWARE ~14:33-14:45 with the first-note build (dev, = 2410c7c code): hil.sh ALL PASS (work/hil/20261022-143309:
+H1, H2 x2, H3, H6); H3 48/128 42/42 max 1.02 ms jitter 0.17, 44.1/128 max 0.81 ms jitter 0.16, 1 sync report each, blocks
+323 / 313 frames early (work/timing/rate-ab-dev2-1437). Linux done for item 1.
+ITEM 'bank sync failed' wording DONE (dev, ~15:00; user away, asked me to do items 1+2 alone): cause from the E314 Mac log
++ code - Live terminated the instance mid-sync, terminate() -> MemorySync::cancel() -> the request in flight returned
+empty -> -1 'failed'. Fix: sync_bank/read_bank return -2 when the empty reply follows cancel() (was_cancelled()); the
+plug-in then logs 'stopped' and saves the partial bank like the other stops. Test first, 344 tests, ctest 5/5. Not on
+hardware. Control Center never calls cancel() (unchanged). NEXT: browser selection in both panes (check the original
+first, static via REA - the user is away, no VM/hardware writes).
+BROWSER SELECTION DONE (dev, ~15:40, E318): REA sub-agent - the original keeps the selection per pane (KPatchTable,
+flag per entry), no mirroring between panes; ours now PaneSelections (per pane, tied to the pane's bank, cleared on a
+bank switch); renderer frames per pane; editor timer drops a switched pane's selection. Test first, 345 tests, ctest
+5/5. NOT seen in a running editor yet -> round 0.8.31 checklist item (same bank in both panes: click upper, lower not
+framed; switch the upper bank and back: selection gone; drag from a selection still works; Delete selection in a
+library). Open LOW: the original fills the selection in the focused pane and outlines it in the other (vtable +0x310,
+not adopted); drag highlight (renderer_.highlighted) is still per bank.
+ROUND 0.8.31 STATE: items 1 (E315-E317 Mac export), 2 (bank sync stop wording) and the browser selection done in dev;
+remaining: round test (risk.py --round 0.8.31, checklist incl. Mac 48/128 export, browser panes), release texts (README/
+site FAQ 'looking into it' -> fixed, Mac timing row, test count 345), version 0.8.31 in native/CMakeLists.txt.
+DEV CHECK PASSED (Linux, dev build 14:55 = a0350b2 installed to ~/.vst3, 0.8.30 release backed up in the session
+scratchpad): user: "all works" - browser selection per pane, bank switch, drag, Delete selection, bank sync wording.
+CI test build started: run 39797996086 (round-0.8.31 @ 3723273, version 0.8.31). Next: install the CI build on Linux,
+then the round test.
+RESULT run 39797996086: all green except mac (no runner again, the known capacity problem; not retried, superseded).
+HARDWARE RUN ON WIN/MAC (user: "can we also make an automate script I can run on windows and mac?"; edad2b9):
+scripts/hil-win.ps1 (+ hil-win.cmd) and scripts/hil-mac.command play H1, H2 x2, H3, H6 like hil.sh and write
+results-<time>/; hil_check.py --folder grades a folder (ITEMS + 4 tests, one keeps the runners' item lengths in step);
+nativehost: no M_PI (MSVC), timeBeginPeriod(1) on Windows; CI builds nativehost on Windows/Mac in continue-on-error
+steps -> artifacts TI-Revive-hil-windows / TI-Revive-hil-mac (not in the release). Desktop session needed: Mac over
+ssh = no Microphone access = silence (E103), Windows broker shm per session (E047: VM via schtasks /IT). Checked: script
+tests 55 OK, ctest 5/5, --folder on work/hil/20261022-143309 = ALL PASS like hil.sh. NOT run on Windows or the Mac
+yet; risk.json keeps those items by hand until they pass once. Next: new CI run, then the first runs.
+CI run 39800731071 (78f7808, version 0.8.31): ALL GREEN incl. mac (got a runner); artifacts incl. TI-Revive-hil-windows
+(286 KB) and TI-Revive-hil-mac (126 KB). Linux = CI build (install.sh, no sudo needed; plug-in 569d1d8a.., broker
+56d2f4e0.. = the tarball; dev build backed up in ~/.vst3-backup/0.8.31-dev-3723273; unpacked in
+~/Downloads/TI-Revive-0.8.31-test). hil.sh on it (work/hil/20261022-190007): H1, H2 x2, H3, H6 ALL PASS (H3 export
+1.00x, 45/45, max 0.94 ms; H6 26/26); --folder on it: ALL PASS too. Next: Windows (hil-win.cmd, first real run),
+Mac (push package + hil zip, hil-mac.command by the user + 48/128 Live export), checklist.
+MAC DONE (E319, work/timing/mac-0.8.31c): package + hil zip pushed to ~/Downloads/TI-Revive-0.8.31c-ci-mac (with
+INSTALL-COMMAND.txt + Install test build.command); nativehost --scan over ssh loaded the plug-in (exit 0); user installed
+19:13 (receipt 0.8.31), ran hil-mac.command: FIRST RUN ALL PASS (H1, H2 x2, H3 1.00x 45/45, H6 26/26); Live export E4
+48/128: 256/256, jitter 0.01 ms, max 0.01 ms, no sync page; 'bank sync stopped' wording seen on hardware. Mac round
+items cold + export covered (reopen rotated out). Remaining: Windows (hil-win.cmd, first real run; VM or the real PC),
+then risk.json windows/mac 'automated' once Windows passed too, checklist, release texts.
+WINDOWS VM (E320): win11 started, 0.8.31c installed (setup.exe /quiet exit 0, plug-in 266318e2.. = CI nativebin), files
+in C:\tirevive-test\0.8.31c (hil\ = the artifact), Virus attached (VM=win11 vm.sh attach), scheduled task
+'tirevive-hil' (Interactive, user vti) runs hil-win.ps1 -> console.log. Runner works end to end. Run 1: H1 + H3 FAIL,
+run 2: H2-2 + H6 FAIL - single notes 8-21 ms off, moving between items; VM timeline errors up to +-1023..1845 frames
+(Linux/Mac <= ~400), run 2 H6 audio drops + no marker. Judged as VM USB timing (MED), not proven for real Windows.
+Results pulled to work/hil/win11-*. VM still RUNNING with the Virus attached. Decision for the user: real-PC run
+(this PC booted into Windows, hil-win.cmd by hand) or accept the VM as function-only for this round; risk.json
+unchanged (Windows items stay by hand).
+USER DECISION (~19:45): "2 and ship it. I think we are clean" -> VM counts as a function check this round, Windows
+timing left for a later real-PC session; no checklist artifact this round (automated runs + the user's Linux browser
+check + Mac E4 export instead). Virus detached from the VM (back on Linux, broker socket active; VM still running).
+RELEASE PREP (site check per the skill, only the claims this round touches): FAQ Mac export line 'looking into it' ->
+fixed in 0.8.31 (E319); Mac timing row 0.8.30 1.05 ms -> 0.8.31 48k/128 0.01 ms, max 0.01, 0 ppm; jitter range
+0.04-0.33 -> 0.01-0.33 (site + README x3, status table E314 -> E319); TESTS 338 -> 345; native version 0.8.31; release
+notes 'New in 0.8.31' in build.yml. Site built locally (values present), not deployed. ctest 5/5.
 
 Plan (user ok, issues gone through 2026-10-21): (1) #13 arp drift: measure first (native/tools/arp-hold-140bpm.mid,
 **v0.8.29 RELEASED 2026-10-21 20:03** (merge 98e12e6, tag v0.8.29, release CI run 39626672973: mac job got a runner on try 10,
