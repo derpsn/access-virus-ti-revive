@@ -445,6 +445,13 @@ on the main push (run 39824323963, build.py changed: new texts live while Downlo
 itself on 'release published' -> only check that it ran and shows Download 0.8.31;
 install the release on Linux (install.sh), win11 VM (setup.exe /quiet, VM=win11, VM still running without the Virus),
 Mac (push + INSTALL-COMMAND.txt + Install test build.command); then a new round branch for the next fixes.
+Release run 39824346270: all green except mac (cancelled, no runner) -> release skipped; rerun of the failed jobs only
+(gh run rerun --failed) started ~19:50, mac queued. No release yet.
+Side task (user, while waiting): three hardstyle singles (HS Supersw, HS Pulse, HS Lead) as a library in the user's
+personal patches folder (~/Dokumente/Access Music/Virus TI/Patches/TI Revive Hardstyle.mid); built from the plug-in's
+init single through RemoteDevice::update_dump one value at a time (aliases share bytes; the 524-byte dump has two
+checksums, so hand offsets for page C/D were one byte off - caught before use), values read back; one-off tools in the
+session scratchpad only, nothing in the repo. Not listened to yet.
 
 Plan (user ok, issues gone through 2026-10-21): (1) #13 arp drift: measure first (native/tools/arp-hold-140bpm.mid,
 **v0.8.29 RELEASED 2026-10-21 20:03** (merge 98e12e6, tag v0.8.29, release CI run 39626672973: mac job got a runner on try 10,
