@@ -364,6 +364,10 @@ CI test build run 39771581839 (version 0.8.31) ALL GREEN (release skipped). Mac:
 build.command'; Mac diag.log -> diag.log.pre-0.8.31-ci. NEXT: user moves the Virus to the Mac, installs, exports E3 48/128 and
 E2 44.1/128 to ~/Downloads (E3b-48k-128.wav, E2b-44k-128.wav); I pull, timing_analysis + count notes > 2 ms, log line
 'blocks up to N frames early'.
+MAC RESULT 2026-10-22 ~14:00 (E316): FIXED - 48/128 256/256 max 0.01 ms, 0 late; 44.1/128 only the first note late (4.9 ms,
+was also late before), 0-1 sync reports, no page; log 394/384 frames early. Files work/timing/mac-0.8.31 (the user saved
+44.1/128 as E3b-44k-128.wav, copied as E2b-44k-128.wav). Open LOW: the first note of a render (step not learned yet:
+keep the step across the real-time -> offline switch or learn it in real time too).
 
 Plan (user ok, issues gone through 2026-10-21): (1) #13 arp drift: measure first (native/tools/arp-hold-140bpm.mid,
 **v0.8.29 RELEASED 2026-10-21 20:03** (merge 98e12e6, tag v0.8.29, release CI run 39626672973: mac job got a runner on try 10,
