@@ -346,6 +346,13 @@ RESULT (user's Live exports 13:07-13:10, E315): block size decides, not the rate
 44.1/128 10 late (max 4.2 ms), 48/128 6 late (max 2.5 ms); late notes every 3.75 s = one phase of the Mac's 512-frame
 chunks. Files in work/timing/mac-0.8.30/exports. Fix idea (not written): pace offline blocks by the ring's chunk step so
 small blocks are not released in a burst behind their position (OfflinePacer, test first), Linux behaviour unchanged.
+FIX WRITTEN 2026-10-22 ~13:20 on branch round-0.8.31 (from round-0.8.30 6effb6f; user: 'start the fix in round-0.8.31'):
+OfflinePacer::early() (ring step learned per render, block runs up to step - block early, cap 512), wait_offline gets
+`avail` (ring's real newest) for the read guards, log 'offline render ended (blocks up to N frames early)'. Tests first
+(3 new, the burst test failed with the old pacer), 341 tests, ctest 5/5. NOT on hardware: the Linux dev runs at 13:19
+had no Virus (it was still on the Mac), deleted. NEXT: Virus back on Linux -> hil.sh --plugin <dev build> + the H3 pair
+48/128 and 44.1/512 (expect 'blocks up to ~0 frames early' there), then CI test build (version 0.8.31) for the Mac:
+user exports 48/128 and 44.1/128 again, expect 0 notes > 2 ms late, no sync page, log 'up to ~394 / ~384 frames early'.
 
 Plan (user ok, issues gone through 2026-10-21): (1) #13 arp drift: measure first (native/tools/arp-hold-140bpm.mid,
 **v0.8.29 RELEASED 2026-10-21 20:03** (merge 98e12e6, tag v0.8.29, release CI run 39626672973: mac job got a runner on try 10,
