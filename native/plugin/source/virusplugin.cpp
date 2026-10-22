@@ -1209,7 +1209,8 @@ tresult PLUGIN_API VirusPlugin::process(ProcessData &data)
                 marker_retries_ = 0; // a new stream (start, the Virus came back)
             out_->anchors.fetch_add(1, std::memory_order_relaxed);
             tl_valid_ = true;
-            anchored_ = true; // FE + song position at the new anchor, like the original's start
+            anchored_ = true; // FE + song position at the new anchor (the original sends F2 only at Play, E275/E321;
+            // here it anchors the Virus' timeline for the stamps)
             rs_valid_ = false; // the resampled output jumps with the timeline, like the direct one (E279)
             if (!env_no_ping())
                 out_->calibrate(newest, new_stream); // the marker follows the ping sent in this block
