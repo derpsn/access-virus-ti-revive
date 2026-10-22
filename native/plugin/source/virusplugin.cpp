@@ -1164,7 +1164,8 @@ tresult PLUGIN_API VirusPlugin::process(ProcessData &data)
         tl_valid_ = false;
         stream_start_ = -1;
     }
-    wait_offline(data, ratio, newest); // offline render: at the Virus' pace
+    int64_t avail = newest; // the ring's newest frame for the reads; offline, `newest` becomes the paced position
+    wait_offline(data, ratio, newest, avail); // offline render: at the Virus' pace
     if (newest >= 0) {
         // anchor once the stream has run for ~0.5 s (the first blocks arrive in bursts), then follow drift gently:
         // one frame per block, re-anchor (new song position) only on a large jump (DAW or USB stall)
@@ -1417,7 +1418,7 @@ tresult PLUGIN_API VirusPlugin::process(ProcessData &data)
         // a host may pass a bus with null channel pointers (an inactive output): every one is checked (review M8)
         const bool stereo = o1 && o2 && o1[0] && o1[1] && o2[0] && o2[1];
         if (stereo && resampling())
-            read_resampled(o1, o2, o3, data.numSamples, ratio, newest,
+            read_resampled(o1, o2, o3, data.numSamples, ratio, avail,
                            tl_valid_ && out_->marker.load() >= 0
                                ? block_start + lead() - latency_frames()
                                : newest - std::max<int64_t>(2 * block_frames + 256, 768) - Resampler::HALF);
@@ -1425,10 +1426,10 @@ tresult PLUGIN_API VirusPlugin::process(ProcessData &data)
         {
             if (tl_valid_ && out_->marker.load() >= 0) { // stamp-aligned: an event of this block sounds latency() later
                 int64_t pos = block_start + lead() - latency_frames();
-                if (pos + data.numSamples > newest) // never read frames that are not there yet (silence, clicks)
-                    pos = newest - data.numSamples;
+                if (pos + data.numSamples > avail) // never read frames that are not there yet (silence, clicks)
+                    pos = avail - data.numSamples;
                 out_->audio().read_at(o1[0], o1[1], o2[0], o2[1], data.numSamples, pos, l3, r3);
-                int64_t margin = newest - (pos + data.numSamples); // < 0: frames not there yet (silence)
+                int64_t margin = avail - (pos + data.numSamples); // < 0: frames not there yet (silence)
                 if (margin < out_->read_margin_min.load(std::memory_order_relaxed))
                     out_->read_margin_min.store(margin, std::memory_order_relaxed);
                 out_->aligned_blocks.fetch_add(1, std::memory_order_relaxed);
@@ -1453,8 +1454,10 @@ int64_t VirusPlugin::ring_newest()
 // Offline render (export, freeze, offline bounce): the host calls process() as fast as it can, the Virus plays in real
 // time. The block waits until the Virus has made its audio (OfflinePacer), and the timeline runs on the paced frame:
 // the ring frame seen after a sleep is up to a timer tick (Windows ~15 ms) later than needed and would look like a
-// timeline jump. Real-time blocks never wait; a Virus that stops streaming ends the wait after 1 s (silence, no hang).
-void VirusPlugin::wait_offline(ProcessData &data, double ratio, int64_t &newest)
+// timeline jump. A block smaller than the ring's step runs up to a step early (OfflinePacer::early, E315); `avail`
+// is the ring's newest frame then, for the reads. Real-time blocks never wait; a Virus that stops streaming ends the
+// wait after 1 s (silence, no hang).
+void VirusPlugin::wait_offline(ProcessData &data, double ratio, int64_t &newest, int64_t &avail)
 {
     const bool offline = data.processMode == kOffline; // per block: the Audio Unit wrapper sets it only here
     if (offline != offline_) {
@@ -1485,7 +1488,7 @@ void VirusPlugin::wait_offline(ProcessData &data, double ratio, int64_t &newest)
             waited = true;
             std::this_thread::sleep_for(std::chrono::milliseconds(5));
         }
-        newest = ring_newest();
+        newest = avail = ring_newest();
         if (out_->generation.load() != generation_seen_) { // the Virus connected meanwhile: its stream starts here
             generation_seen_ = out_->generation.load();
             tl_valid_ = false;
@@ -1499,20 +1502,27 @@ void VirusPlugin::wait_offline(ProcessData &data, double ratio, int64_t &newest)
     }
     if (newest < 0)
         return;
-    const int64_t need = pacer_.wait_until(newest, data.numSamples * ratio);
+    const double frames = data.numSamples * ratio;
+    const int64_t need = pacer_.wait_until(newest, frames);
     if (need < 0)
         return;
+    const int64_t early = pacer_.early(frames);
+    const int64_t release = need - early;
+    if (early > offline_early_max_.load(std::memory_order_relaxed))
+        offline_early_max_.store((int)early, std::memory_order_relaxed);
     const auto give_up = std::chrono::steady_clock::now() + std::chrono::seconds(1);
-    for (int64_t f = newest; f < need; f = ring_newest()) {
+    int64_t f = newest;
+    for (; f < release; f = ring_newest()) {
         if (f < 0 || std::chrono::steady_clock::now() > give_up) { // the stream stopped: no pacing until it is back
             pacer_.reset();
             offline_timeouts_.fetch_add(1, std::memory_order_relaxed);
-            newest = f;
+            newest = avail = f;
             return;
         }
         std::this_thread::sleep_for(std::chrono::milliseconds(1));
     }
     newest = need;
+    avail = f;
 }
 
 // worker thread: the original's sync error page (SyncAlert, E205) - the transport, Live Mode and its 50 ms tick; the
@@ -1548,8 +1558,11 @@ void VirusPlugin::report_offline()
     const bool now = offline_now_.load(std::memory_order_relaxed);
     if (now != offline_reported_) {
         offline_reported_ = now;
-        out_->log("Virus TI native: %s\n", now ? "offline render, paced to the Virus (real-time speed)"
-                                               : "offline render ended");
+        if (now)
+            out_->log("Virus TI native: offline render, paced to the Virus (real-time speed)\n");
+        else // the ring's step against the block size: > 0 where small blocks ran early instead of in a burst
+            out_->log("Virus TI native: offline render ended (blocks up to %d frames early)\n",
+                      offline_early_max_.exchange(0, std::memory_order_relaxed));
         if (now)
             set_lcd("Offline render", "at real-time speed", std::string(), std::string());
     }

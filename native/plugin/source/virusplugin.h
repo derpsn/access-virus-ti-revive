@@ -640,8 +640,9 @@ private:
     std::atomic<bool> offline_now_{false};   // for the worker's report
     bool offline_reported_ = false;          // worker
     std::atomic<int> offline_timeouts_{0};   // waits that gave up (the Virus stopped streaming)
+    std::atomic<int> offline_early_max_{0};  // most frames a block ran before its paced position (E315), this render
     int offline_timeouts_reported_ = 0;      // worker
-    void wait_offline(Steinberg::Vst::ProcessData &data, double ratio, int64_t &newest);
+    void wait_offline(Steinberg::Vst::ProcessData &data, double ratio, int64_t &newest, int64_t &avail);
     int64_t ring_newest(); // the newest frame of the Virus' ring, -1 without one (read under the audio gate)
     void report_offline();
     // the original's sync error page (E205): events from the Virus (broker rx thread), ticks and transport (worker)
