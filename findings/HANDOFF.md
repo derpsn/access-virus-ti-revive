@@ -417,6 +417,12 @@ CI run 39800731071 (78f7808, version 0.8.31): ALL GREEN incl. mac (got a runner)
 ~/Downloads/TI-Revive-0.8.31-test). hil.sh on it (work/hil/20261022-190007): H1, H2 x2, H3, H6 ALL PASS (H3 export
 1.00x, 45/45, max 0.94 ms; H6 26/26); --folder on it: ALL PASS too. Next: Windows (hil-win.cmd, first real run),
 Mac (push package + hil zip, hil-mac.command by the user + 48/128 Live export), checklist.
+MAC DONE (E319, work/timing/mac-0.8.31c): package + hil zip pushed to ~/Downloads/TI-Revive-0.8.31c-ci-mac (with
+INSTALL-COMMAND.txt + Install test build.command); nativehost --scan over ssh loaded the plug-in (exit 0); user installed
+19:13 (receipt 0.8.31), ran hil-mac.command: FIRST RUN ALL PASS (H1, H2 x2, H3 1.00x 45/45, H6 26/26); Live export E4
+48/128: 256/256, jitter 0.01 ms, max 0.01 ms, no sync page; 'bank sync stopped' wording seen on hardware. Mac round
+items cold + export covered (reopen rotated out). Remaining: Windows (hil-win.cmd, first real run; VM or the real PC),
+then risk.json windows/mac 'automated' once Windows passed too, checklist, release texts.
 
 Plan (user ok, issues gone through 2026-10-21): (1) #13 arp drift: measure first (native/tools/arp-hold-140bpm.mid,
 **v0.8.29 RELEASED 2026-10-21 20:03** (merge 98e12e6, tag v0.8.29, release CI run 39626672973: mac job got a runner on try 10,
