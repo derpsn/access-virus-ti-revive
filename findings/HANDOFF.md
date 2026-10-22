@@ -309,6 +309,12 @@ Mac block 5/5 marked pass -> ROUND 0.8.30: 12/12 marked pass (E314). Mac export 
 10 notes 3.4-6.3 ms late with a sync error 3 s into the render = known E243/E244 (nothing in the Mac timing path changed;
 0.8.29's release session showed it too). README/site timing rows kept at the 0.8.29 measurements (E308). Open LOW: 'bank sync
 failed' is logged when the host deactivates the plug-in mid-sync (should it say 'stopped'?). NEXT: release texts, merge, tag.
+Release texts 2026-10-22: release notes 0.8.30 in build.yml; README/site 338 tests. Site check (round claims): README
+'tirevive-cc only reads ... restoring comes later' WRONG -> fixed; CLI list + restore line; status row restore now 'Linux,
+Windows 11 (VM), macOS (E313, E314)'; native/docs/controlcenter.md scope row, title and RESTORE line updated. Site built
+locally (not deployed). OPEN for the user: Mac timing row (0.8.29, E308 clean) vs the newer 0.8.30 export (E314: 10 late
+notes, E243). Open LOW (0.8.31): tirevive-cc's help says 'Close the TI Revive plug-in first' but the Control Center shares
+the Virus with the plug-in (restore worked with the plug-in open on all three systems).
 
 Plan (user ok, issues gone through 2026-10-21): (1) #13 arp drift: measure first (native/tools/arp-hold-140bpm.mid,
 **v0.8.29 RELEASED 2026-10-21 20:03** (merge 98e12e6, tag v0.8.29, release CI run 39626672973: mac job got a runner on try 10,

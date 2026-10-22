@@ -309,6 +309,7 @@ The same from a terminal:
 ```
 tirevive-cc info      # the connected Virus and its RAM banks
 tirevive-cc backup    # RAM A..D as patch libraries (.mid) in Documents/Access Music/Virus TI/Backups/<date time>
+tirevive-cc restore B "RAM B.mid"     # RAM B from a backup or library: only the programs that differ (asks first)
 tirevive-cc list FILE.mid             # the patch names in a library
 tirevive-cc export FILE.mid OUT.syx   # convert a library (.mid <-> .syx)
 tirevive-cc logs      # plug-in + broker logs in one file for a bug report (home folder and user name removed)
@@ -319,8 +320,8 @@ tirevive-cc watch     # Nerd mode in the terminal: the traffic, decoded, while t
 Where it is: Windows `C:\Program Files\TI Revive\tirevive-cc.exe`, macOS
 `"/Library/Application Support/TI Revive/tirevive-cc"`, Linux `~/.local/bin/tirevive-cc`. A backup takes a few
 seconds when the plug-in's bank sync is current, otherwise about 2 minutes per bank. To open a backup in the plug-in,
-copy its `.mid` files into the `Patches` folder. `tirevive-cc` only reads from the Virus; restoring a backup into the
-Virus comes later. Firmware/OS updates, "Burn To Flash" and factory reset are not supported, on purpose: they write
+copy its `.mid` files into the `Patches` folder. Only `tirevive-cc restore` writes to the Virus, and only into its
+RAM (since 0.8.30). Firmware/OS updates, "Burn To Flash" and factory reset are not supported, on purpose: they write
 the Virus' flash and can brick it. Details: [native/docs/controlcenter.md](native/docs/controlcenter.md).
 
 **Windows**
@@ -436,7 +437,7 @@ hardware (TI2 Desktop) - details and raw numbers in [`findings/evidence.md`](fin
 - **Automation rate limit** (250 messages/s, coalesced per parameter): unthrottled parameter floods hung the Virus'
   audio until a power cycle within 4 minutes; with the limit a 4-minute full-load test (16 channels of notes + 32
   automation lanes) passes.
-- Checked with ThreadSanitizer and AddressSanitizer (one race in the broker connection found and fixed); 332 unit
+- Checked with ThreadSanitizer and AddressSanitizer (one race in the broker connection found and fixed); 338 unit
   tests run with every release build on Windows and Linux, plus two end-to-end tests on Linux in a virtual display
   (two editors of a duplicated track; the Control Center's window and close button).
 
@@ -608,7 +609,7 @@ measurements: [`findings/design-linux.md`](findings/design-linux.md), evidence E
 | Virus TI Snow | works per user reports (macOS, 0.8.3+; USB 3 and soft knobs with 0.8.20); not tested by us |
 | Audio Unit (AUv2) of the native plug-in, with the classic Audio Unit's codes (its Logic / GarageBand projects open) | done: passes `auval`, tested in GarageBand |
 | Control Center app + command line `tirevive-cc` (device info, backup, restore into RAM, library export) | done: CLI tested on macOS (M3), app on Linux, both with a TI2 |
-| Control Center: restore into RAM | done in 0.8.30: RAM only, tested on Linux with a TI2 (E313); flash functions and OS update: never |
+| Control Center: restore into RAM | done in 0.8.30: RAM only, tested with a TI2 on Linux, Windows 11 (VM) and macOS (E313, E314); flash functions and OS update: never |
 | Windows MIDI ports | open |
 | **Windows** | |
 | WinUSB driver package, broker with USB audio, unplug recovery, Windows 11 with memory integrity (HVCI) | done |
