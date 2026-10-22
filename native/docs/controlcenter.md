@@ -1,4 +1,4 @@
-# Control Center (phase 1: read-only)
+# Control Center
 
 Access' "Virus Control Center" was a separate app next to the plug-in: backup and restore of the Virus' RAM banks,
 "Burn To Flash", OS updates and an "Advanced" menu (factory reset, device name). It needs the old Access driver, so it
@@ -13,7 +13,7 @@ does not work with TI Revive. Its replacement is built in steps: a core library,
 | List / convert patch libraries (.mid <-> .syx), no Virus needed | app (Convert library), `tirevive-cc list`, `export` |
 | Nerd mode: plug-in and broker log live, plug-in log switch, logs for a bug report (anonymized) | app (View > Nerd mode, or the button), `tirevive-cc logs`, `debug on/off` |
 | Nerd mode "Live": broker status (device, owner, clients, audio, counters) and the traffic, decoded | app (Live tab), `tirevive-cc watch`; all three brokers |
-| Restore a backup into the Virus' RAM | later, after a separate review (writes stored patches) |
+| Restore a RAM bank from a backup or library: only the programs that differ, single dumps into RAM like the plug-in's browser, each read back; never flash (E313) | app (Restore..., Access look: RESTORE), `tirevive-cc restore A\|B\|C\|D FILE [--yes]`; since 0.8.30 |
 | Firmware / OS update, Burn To Flash, factory reset, device name | **not supported, on purpose** |
 
 The last row stays out for good: these functions write the Virus' flash, and a failure there can brick the device
@@ -69,7 +69,8 @@ it (`engine.xml`, the original's logic, is not used):
   does not tell Desktop, Keyboard and Polar apart: a click on the model picture switches between them (kept in the
   app's preferences) and picks the matching backup page; a Snow is recognised by its USB product string;
 - Backup & Restore: BACKUP proposes a dated folder in `Virus TI/Backups` (a click on the path field chooses
-  another), OK runs the backup; progress and result in the footer. RESTORE is dimmed (later);
+  another), OK runs the backup; progress and result in the footer. RESTORE asks for a library, then for the RAM bank to
+  overwrite (since 0.8.30, E313);
 - Burn Flash ROM and OS Updater: the original pages with a note that TI Revive does not offer them; their controls
   are hidden or dimmed;
 - our additions in the original's empty footer (with its blank button image): NERD MODE, CONVERT LIBRARY, PLAIN VIEW;

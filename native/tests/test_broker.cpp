@@ -17,6 +17,7 @@
 #include <chrono>
 #include <cstring>
 #include <filesystem>
+#include <map>
 #include <mutex>
 #include <string>
 #include <sys/socket.h>
@@ -563,6 +564,83 @@ TEST(broker_late_control_reply_is_not_kept)
     }
     std::this_thread::sleep_for(std::chrono::milliseconds(100));
     CHECK(b.pending_replies() == 0);
+    b.close();
+}
+
+// a Virus with memory: single dumps written to RAM 1..4 are kept (by bytes 7/8), bank info and dump requests answer
+// from it - the Control Center's restore round trip (E313)
+struct FakeRam {
+    std::mutex mu;
+    std::map<std::pair<int, int>, Bytes> mem;
+    int writes = 0;
+    Bytes get(int bank, int p)
+    {
+        auto it = mem.find({bank, p});
+        return it != mem.end() ? it->second : fake_single(bank, p, p);
+    }
+    void on(FakeBroker &fb, const Bytes &m)
+    {
+        if (m.size() < 9 || m[1] != 0x00 || m[2] != 0x20 || m[3] != 0x33)
+            return;
+        std::lock_guard<std::mutex> lk(mu);
+        if (m[6] == 0x10 && m.size() == 524 && m[7] >= 1 && m[7] <= 4) {
+            mem[{m[7], m[8]}] = m;
+            writes++;
+        } else if (m[6] == 0x39) {
+            Bytes r = {0xF0, 0x00, 0x20, 0x33, 0x01, 0x10, 0x14, m[7], 0x00};
+            for (int p = 0; p < 128; p++) {
+                int fp = RemoteDevice::single_fingerprint(get(m[7], p));
+                r.push_back((uint8_t)(fp & 0x7F));
+                r.push_back((uint8_t)(fp >> 7 & 0x7F));
+            }
+            r.push_back(0x00);
+            r.push_back(0xF7);
+            fb.reply_sysex(r);
+        } else if (m[6] == 0x30 && m.size() >= 10)
+            fb.reply_sysex(get(m[7], m[8]));
+    }
+};
+
+TEST(cc_restore_ram)
+{
+    TempHome home;
+    FakeBroker fb;
+    FakeRam ram;
+    fb.on_sysex = [&](FakeBroker &f, const Bytes &m) { ram.on(f, m); };
+    Broker b;
+    b.set_endpoint(fb.path);
+    std::string err;
+    CHECK(b.open(err));
+    std::vector<Dump> backup(128); // a backup of RAM B as a library: bank byte 1, two programs differ
+    for (int p = 0; p < 128; p++) {
+        backup[p] = fake_single(1, p, p);
+    }
+    backup[4] = fake_single(1, 4, 1000); // fake_single gives the same bytes for seeds 128 apart (900 at slot 4 would)
+    backup[77] = fake_single(1, 77, 901);
+    int calls = 0, last_total = 0, written = 0;
+    bool done = cc::restore_ram(b, 2, backup, [&](int, int total) { calls++, last_total = total; }, written, err);
+    if (!done)
+        fprintf(stderr, "  restore: %s\n", err.c_str());
+    CHECK(done);
+    CHECK_EQ(written, 2);
+    CHECK_EQ(ram.writes, 2);
+    CHECK(last_total == 2 && calls >= 2);
+    {
+        std::lock_guard<std::mutex> lk(ram.mu);
+        Bytes d = ram.get(2, 77);
+        CHECK(d[7] == 2 && d[8] == 77 && std::equal(d.begin() + 9, d.begin() + 265, backup[77].begin() + 9));
+    }
+    // the plug-in's cache knows the restored programs
+    Bank cache;
+    CHECK(load_bank_file(cc::cache_dir() + "/RAM B", cache) && cache[4].size() == 524 &&
+          std::equal(cache[4].begin() + 9, cache[4].begin() + 265, backup[4].begin() + 9));
+    // again: nothing differs any more, nothing is written
+    written = -1;
+    CHECK(cc::restore_ram(b, 2, backup, nullptr, written, err) && written == 0 && ram.writes == 2);
+    std::atomic<bool> stop{true};
+    backup[5] = fake_single(1, 5, 902);
+    CHECK(!cc::restore_ram(b, 2, backup, nullptr, written, err, &stop) && err == "cancelled");
+    CHECK(!cc::restore_ram(b, 7, backup, nullptr, written, err) && !err.empty()); // RAM 1..4 only
     b.close();
 }
 #else

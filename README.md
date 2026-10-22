@@ -74,8 +74,8 @@ contains no Access material. No kernel code of its own is installed.
   [`tirevive-usbinfo.ps1`](scripts/tirevive-usbinfo.ps1) with the Snow connected and attach the
   `TI-Revive-usbinfo.txt` it saves on your Desktop to a [GitHub issue](https://github.com/derpsn/access-virus-ti-revive/issues).
 - **Virus Control Center**: Access' app does not work without its old driver. TI Revive brings its own, step by
-  step: **TI Revive Control Center** (device info, backup of the RAM banks, library export; also as the command
-  line tool `tirevive-cc`; see "Backups" below). Firmware/OS updates and flash functions are not supported, on purpose.
+  step: **TI Revive Control Center** (device info, backup and restore of the RAM banks, library export; also as the
+  command line tool `tirevive-cc`; see "Backups" below). Firmware/OS updates and flash functions are not supported, on purpose.
 
 > TI Revive is an independent project. It is **not affiliated with Access Music Electronics GmbH or
 > Kemper GmbH**. "Access", "Virus" and "Virus TI" are trademarks of their owners and are used only to
@@ -226,7 +226,7 @@ for the Virus.
 
 **"A sync error occurred. Press Stop and Play to clear."** Like the original, the editor shows this when the Virus
 reports several notes in a row that arrived too late for their time stamp while your DAW plays. Stop and Play clears
-it. If it comes back, use a USB port the Virus does not share with other devices; the original gives the same advice. On macOS, notes could come late after an export in 0.8.25 and 0.8.26; since 0.8.27 the plug-in fills the audio cycles Core Audio skips during an export, and in our tests the late notes did not come back.
+it. If it comes back, use a USB port the Virus does not share with other devices; the original gives the same advice. On macOS, notes could come late after an export in 0.8.25 and 0.8.26; since 0.8.27 the plug-in fills the audio cycles Core Audio skips during an export. In the 0.8.30 test a few notes of an export still came 3-6 ms late (10 of 256) and the message appeared; we are looking into it.
 
 **Start playback slightly before the first note.** The plug-in sends notes to the Virus ahead of time to make up
 for the USB round trip; right at Play, notes in the first quarter second can come late or be skipped. This was the
@@ -288,17 +288,19 @@ same with Access' own driver.
   `~/.local/share/virus-ti-native`), reproduce the problem and attach `diag.log` from there (see CONTRIBUTING.md).
 - Do not run firmware/OS updates of the Virus through TI Revive; that path is not verified.
 
-**Backups: TI Revive Control Center (read-only)**
+**Backups: TI Revive Control Center**
 
 Start **TI Revive Control Center** (Windows: Start menu, folder "TI Revive"; macOS: Applications; Linux: the
 application menu, or `tirevive-control-center`). It looks like Access' Virus Control Center when that is in your
 Access installer (the setup step copies its images; it loads the look from there, like the plug-in). Click the Virus
 picture to choose your model (Desktop, Keyboard, Polar): USB does not tell them apart. It works next to your DAW: the
-plug-in and the Control Center share the Virus (only plug-ins of two programs do not, see below). The window shows the connected Virus and its RAM banks, backs them up as patch libraries and converts
-libraries between `.mid` and `.syx`. **Nerd mode** (button or *View > Nerd mode*) shows live what goes between
+plug-in and the Control Center share the Virus (only plug-ins of two programs do not, see below). The window shows the connected Virus and its RAM banks, backs them up as patch libraries, restores a bank from
+such a backup and converts libraries between `.mid` and `.syx`. **Nerd mode** (button or *View > Nerd mode*) shows live what goes between
 TI Revive and the Virus (decoded: notes, parameter changes by name, dumps, bank sync), which programs use the Virus,
 the plug-in's and the broker's logs; it switches the plug-in log on and off and saves all logs for a bug report in
 one file. It only watches: it never sends anything to the Virus.
+
+**Restore** (since 0.8.30): *Restore...* (in the Access look: RESTORE) asks for a backup's `RAM B.mid` (or any library), then for the RAM bank to overwrite. Only the programs that differ are written, into the Virus' RAM, the way the plug-in's browser writes them, and each one is read back. Unlike Access' Control Center it never writes the Virus' flash. The same from a terminal: `tirevive-cc restore B "RAM B.mid"`.
 
 ![Nerd mode: the plug-in plays notes and checks its bank cache, decoded live](docs/images/control-center-nerd-mode.png)
 
@@ -307,6 +309,7 @@ The same from a terminal:
 ```
 tirevive-cc info      # the connected Virus and its RAM banks
 tirevive-cc backup    # RAM A..D as patch libraries (.mid) in Documents/Access Music/Virus TI/Backups/<date time>
+tirevive-cc restore B "RAM B.mid"     # RAM B from a backup or library: only the programs that differ (asks first)
 tirevive-cc list FILE.mid             # the patch names in a library
 tirevive-cc export FILE.mid OUT.syx   # convert a library (.mid <-> .syx)
 tirevive-cc logs      # plug-in + broker logs in one file for a bug report (home folder and user name removed)
@@ -317,8 +320,8 @@ tirevive-cc watch     # Nerd mode in the terminal: the traffic, decoded, while t
 Where it is: Windows `C:\Program Files\TI Revive\tirevive-cc.exe`, macOS
 `"/Library/Application Support/TI Revive/tirevive-cc"`, Linux `~/.local/bin/tirevive-cc`. A backup takes a few
 seconds when the plug-in's bank sync is current, otherwise about 2 minutes per bank. To open a backup in the plug-in,
-copy its `.mid` files into the `Patches` folder. `tirevive-cc` only reads from the Virus; restoring a backup into the
-Virus comes later. Firmware/OS updates, "Burn To Flash" and factory reset are not supported, on purpose: they write
+copy its `.mid` files into the `Patches` folder. Only `tirevive-cc restore` writes to the Virus, and only into its
+RAM (since 0.8.30). Firmware/OS updates, "Burn To Flash" and factory reset are not supported, on purpose: they write
 the Virus' flash and can brick it. Details: [native/docs/controlcenter.md](native/docs/controlcenter.md).
 
 **Windows**
@@ -411,7 +414,7 @@ hardware (TI2 Desktop) - details and raw numbers in [`findings/evidence.md`](fin
 |---|---|---|---|---|
 | Classic plug-in 0.7.x (Linux, REAPER) | first note late, second missing | 0.06 ms | 1.31 ms | - |
 | **0.8.27, Linux** (REAPER render, test round) | 63 / 63 | **0.16 ms** | 0.37 ms | -72 ppm |
-| **0.8.29, macOS** (Ableton 12 export, M3, test round) | 256 / 256 | **0.19 ms** | 1.35 ms | 0 ppm |
+| **0.8.30, macOS** (Ableton 12 export, M3, test round) | 256 / 256 | **1.05 ms** | 6.30 ms | -8 ppm |
 | **0.8.23, Windows 11 PC** (Ableton Live 11 export) | 480 / 480 | **0.04 ms** | 0.71 ms | 0 ppm |
 | **0.8.24, Windows 11 PC** (Ableton Live 11 export, test round) | 256 / 256 | **0.33 ms** | 2.58 ms | -1 ppm |
 
@@ -434,7 +437,7 @@ hardware (TI2 Desktop) - details and raw numbers in [`findings/evidence.md`](fin
 - **Automation rate limit** (250 messages/s, coalesced per parameter): unthrottled parameter floods hung the Virus'
   audio until a power cycle within 4 minutes; with the limit a 4-minute full-load test (16 channels of notes + 32
   automation lanes) passes.
-- Checked with ThreadSanitizer and AddressSanitizer (one race in the broker connection found and fixed); 332 unit
+- Checked with ThreadSanitizer and AddressSanitizer (one race in the broker connection found and fixed); 338 unit
   tests run with every release build on Windows and Linux, plus two end-to-end tests on Linux in a virtual display
   (two editors of a duplicated track; the Control Center's window and close button).
 
@@ -600,13 +603,13 @@ measurements: [`findings/design-linux.md`](findings/design-linux.md), evidence E
 | Reverse engineering of driver, protocol and plug-in interface | done (`findings/`) |
 | **0.8.0: native plug-in "TI Revive Virus Control" (all platforms)** | |
 | Plug-in (editor, browser, libraries, bank sync, automation, project state), opens projects of the classic plug-in | done: tested in REAPER (Linux), Ableton Live 12 (macOS M3), Ableton Live 11 (Windows 11 PC) |
-| Timing: sample-accurate, latency reported to the DAW, any sample rate | done: 0.04-0.33 ms jitter, drift -72 to 0 ppm (E139-E143, E209, E216, E278, E289, E308) |
+| Timing: sample-accurate, latency reported to the DAW, any sample rate | done: 0.04-1.05 ms jitter, drift -72 to 0 ppm (E139-E143, E209, E216, E278, E289, E308, E314) |
 | ASIO sound card "TI Revive Virus Audio" (Windows, 6 in / 2 out, no Access driver) | done: clean on a real PC |
 | Installers: Access software only unpacked (Windows/Linux), clean-up of earlier versions | done |
 | Virus TI Snow | works per user reports (macOS, 0.8.3+; USB 3 and soft knobs with 0.8.20); not tested by us |
 | Audio Unit (AUv2) of the native plug-in, with the classic Audio Unit's codes (its Logic / GarageBand projects open) | done: passes `auval`, tested in GarageBand |
-| Control Center app + command line `tirevive-cc` (device info, backup, library export; read-only) | done: CLI tested on macOS (M3), app on Linux, both with a TI2 |
-| Control Center: restore into RAM | open (flash functions and OS update: never) |
+| Control Center app + command line `tirevive-cc` (device info, backup, restore into RAM, library export) | done: CLI tested on macOS (M3), app on Linux, both with a TI2 |
+| Control Center: restore into RAM | done in 0.8.30: RAM only, tested with a TI2 on Linux, Windows 11 (VM) and macOS (E313, E314); flash functions and OS update: never |
 | Windows MIDI ports | open |
 | **Windows** | |
 | WinUSB driver package, broker with USB audio, unplug recovery, Windows 11 with memory integrity (HVCI) | done |

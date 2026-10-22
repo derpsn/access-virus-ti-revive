@@ -1724,9 +1724,13 @@ int VirusPlugin::ui_value(const std::string &path, int part)
     }
     if (int v; ui_state_get(path, v))
         return v;
-    // stored values outside the parameter's range (e.g. Vocoder/Bands 127 of 0..31 in old patches) are clamped like
-    // the original shows them
-    auto clamp = [param](int v) { return param && param->max > param->min ? std::max(param->min, std::min(param->max, v)) : v; };
+    // stored values outside the parameter's range are shown clamped like the original, mapped lists' values as they
+    // are (RemoteDevice::shown)
+    auto clamp = [this, &path, param](int v) {
+        if (dev_.find(path))
+            return dev_.shown(path, v);
+        return param && param->max > param->min ? std::max(param->min, std::min(param->max, v)) : v;
+    };
     {
         std::lock_guard<std::mutex> lk(values_mu_);
         for (int p : {part, -1}) {

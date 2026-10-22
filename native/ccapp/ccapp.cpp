@@ -44,7 +44,7 @@ namespace {
 
 const CColor kBack(43, 43, 43), kText(230, 230, 230), kDim(160, 160, 160), kAccent(240, 170, 60);
 constexpr CCoord W = 640, H = 470, M = 20;
-enum Tag { kRefresh = 1, kBackup, kCancel, kFolder, kExport, kNerd, kSkin };
+enum Tag { kRefresh = 1, kBackup, kCancel, kFolder, kExport, kNerd, kSkin, kRestore };
 enum UiPage { kPlainPage, kSkinPage, kNerdPage };
 const Command kNerdCommand{"View", "Nerd mode"};
 // the window's size (the original layout is small on today's screens); kept in the app's preferences
@@ -110,7 +110,10 @@ public:
         std::string err;
         skin_ = tirevive::make_skin_page(vti::AccessFiles::open_control_center(err), TIREVIVE_VERSION,
                                          {[this] { show_page(kNerdPage); }, [this] { export_library(); },
-                                          [this] { show_page(kPlainPage); }, [this](CPoint p) { size_menu(p); }},
+                                          [this] { show_page(kPlainPage); }, [this](CPoint p) { size_menu(p); },
+                                          [this](std::function<void(const std::string &)> st) {
+                                              choose_restore(std::move(st));
+                                          }},
                                          err);
         if (skin_)
             frame_->addView(skin_);
@@ -162,6 +165,7 @@ public:
         case kCancel: stop_ = true; break;
         case kFolder: choose_folder(); break;
         case kExport: export_library(); break;
+        case kRestore: choose_restore(); break;
         case kNerd: show_page(kNerdPage); break;
         case kSkin: show_page(kSkinPage); break;
         }
@@ -213,7 +217,7 @@ private:
     bool plain_refreshed_ = false;
     SharedPointer<CVSTGUITimer> timer_;
     CTextLabel *device_ = nullptr, *banks_[4] = {}, *status_ = nullptr, *folder_ = nullptr;
-    CTextButton *buttons_[7] = {};
+    CTextButton *buttons_[8] = {};
     Shared sh_;
     std::thread worker_;
     std::atomic<bool> busy_{false}, stop_{false};
@@ -250,10 +254,11 @@ private:
         label(196, 20, "Backup folder", kDim, kNormalFontSmall);
         folder_ = label(216, 22, "", kText, kNormalFont, M, W - 2 * M - 110);
         buttons_[3] = button(W - M - 100, 213, 100, kFolder, "Change...");
-        buttons_[0] = button(M, 256, 110, kRefresh, "Refresh");
-        buttons_[1] = button(M + 120, 256, 180, kBackup, "Back up RAM banks");
-        buttons_[2] = button(M + 310, 256, 90, kCancel, "Cancel");
-        buttons_[4] = button(W - M - 150, 256, 150, kExport, "Convert library...");
+        buttons_[0] = button(M, 256, 100, kRefresh, "Refresh");
+        buttons_[1] = button(M + 110, 256, 160, kBackup, "Back up RAM banks");
+        buttons_[7] = button(M + 280, 256, 110, kRestore, "Restore...");
+        buttons_[2] = button(M + 400, 256, 70, kCancel, "Cancel");
+        buttons_[4] = button(W - M - 130, 256, 130, kExport, "Convert library...");
         status_ = new CMultiLineTextLabel(CRect(M, 298, W - M, 360));
         status_->setFontColor(kText);
         status_->setFont(kNormalFont);
@@ -264,10 +269,10 @@ private:
         buttons_[5] = button(W - M - 110, 14, 110, kNerd, "Nerd mode");
         buttons_[6] = button(W - M - 230, 14, 110, kSkin, "Access look");
         auto *note = new CMultiLineTextLabel(CRect(M, 372, W - M, H - 10));
-        note->setText("Read-only: nothing is written to the Virus. It works next to your DAW (the plug-in and the "
-                      "Control Center share the Virus). Firmware/OS updates, Burn To Flash and factory reset "
-                      "are not supported, on purpose (they write the Virus' flash). Backups open in the plug-in once "
-                      "their .mid files are copied into the Patches folder.");
+        note->setText("Only Restore writes to the Virus: programs into a RAM bank, never its flash. It works next to "
+                      "your DAW (the plug-in and the Control Center share the Virus). Firmware/OS updates, Burn To "
+                      "Flash and factory reset are not supported, on purpose (they write the Virus' flash). Backups "
+                      "open in the plug-in once their .mid files are copied into the Patches folder.");
         note->setFontColor(kDim);
         note->setFont(kNormalFontSmall);
         note->setHoriAlign(kLeftText);
@@ -313,7 +318,7 @@ private:
             fflush(stdout);
         }
         bool busy = busy_;
-        for (int i = 0; i < 5; i++) { // while an action runs only Cancel; otherwise everything but Cancel
+        for (int i : {0, 1, 2, 3, 4, 7}) { // while an action runs only Cancel; otherwise everything but Cancel
             bool on = (i == 2) == busy;
             buttons_[i]->setMouseEnabled(on);
             buttons_[i]->setAlphaValue(on ? 1.f : 0.4f);
@@ -438,6 +443,94 @@ private:
                 set(&Shared::status, "Backup not finished: " + err);
             if (ok) // the next backup gets its own folder
                 set(&Shared::folder, vti::cc::default_backup_dir());
+        });
+    }
+
+    // Restore a RAM bank from a library (a backup's "RAM B.mid", or any library): the file, then a menu whose entry
+    // names the bank to overwrite - choosing it is the confirmation. RAM only, never flash (controlcenter.h, E313).
+    void choose_restore(std::function<void(const std::string &)> also = nullptr)
+    {
+        auto open = owned(CNewFileSelector::create(frame_, CNewFileSelector::kSelectFile));
+        if (!open)
+            return;
+        open->setTitle("Backup or library to restore into a RAM bank");
+        std::string dir;
+        {
+            std::lock_guard<std::mutex> lk(sh_.mu);
+            dir = sh_.folder;
+        }
+        dir = fs::exists(dir) ? dir : fs::path(dir).parent_path().string(); // the backups folder
+        open->setInitialDirectory(dir.c_str());
+        open->addFileExtension(CFileExtension("Patch library", "mid"));
+        open->addFileExtension(CFileExtension("SysEx file", "syx"));
+        if (!open->run([this, also](CNewFileSelector *s) {
+                if (s->getNumSelectedFiles())
+                    restore_menu(s->getSelectedFile(0), also);
+            }))
+            no_dialog();
+    }
+
+    // `also`: the Access look's status line (its RESTORE button), besides the plain page's
+    void restore_menu(const std::string &file, std::function<void(const std::string &)> also)
+    {
+        auto status = [this, also](const std::string &st) {
+            set(&Shared::status, st);
+            if (also)
+                also(st);
+        };
+        auto lib = std::make_shared<vti::PatchLibrary>();
+        std::string err;
+        auto files = vti::AccessFiles::open("", err);
+        if (!vti::load_library_file(file, *lib, files ? files->default_page_b() : std::vector<uint8_t>()) ||
+            lib->dumps.empty())
+            return status("No Virus TI patches in " + file);
+        const std::string name = fs::path(file).filename().string();
+        const int guess = vti::cc::bank_from_name(fs::path(file).stem().string());
+        auto *menu = new COptionMenu();
+        for (int b = 1; b <= 4; b++) {
+            auto *item = menu->addEntry(("Overwrite RAM " + std::string(1, (char)('A' + b - 1)) + " with \"" + name +
+                                         "\" (only programs that differ)")
+                                            .c_str());
+            item->setChecked(b == guess);
+        }
+        menu->addSeparator();
+        menu->addEntry("Cancel");
+        CPoint where;
+        if (page_ == kPlainPage) {
+            CRect r = buttons_[7]->getViewSize();
+            where = CPoint(r.left, r.bottom);
+        } else
+            frame_->getCurrentMouseLocation(where);
+        menu->popup(frame_, where, [this, lib, name, status](COptionMenu *m) {
+            int b = m->getLastResult() + 1;
+            if (b >= 1 && b <= 4)
+                restore(b, lib, name, status);
+        });
+        menu->forget();
+    }
+
+    void restore(int bank, std::shared_ptr<vti::PatchLibrary> lib, const std::string &name,
+                 std::function<void(const std::string &)> status)
+    {
+        run([this, bank, lib, name, status] {
+            const char b = (char)('A' + bank - 1);
+            vti::Broker broker;
+            if (!connect(broker))
+                return status("Connect the Virus, switch it on and try again.");
+            status(std::string("RAM ") + b + ": checking which programs differ...");
+            std::string err;
+            int written = 0;
+            bool ok = vti::cc::restore_ram(broker, bank, lib->dumps, [&](int done, int total) {
+                status(std::string("Restoring RAM ") + b + ": " + std::to_string(done) + " / " +
+                                         std::to_string(total) + " written and read back");
+            }, written, err, &stop_);
+            if (ok)
+                status(std::string("RAM ") + b + " restored from " + name + ": " +
+                                         std::to_string(written) + " programs written" +
+                                         (written ? "." : " (all were the same already)."));
+            else
+                status(std::string("RAM ") + b + " not restored completely (" + std::to_string(written) +
+                                         " written): " + err);
         });
     }
 

@@ -125,6 +125,9 @@ public:
     std::map<int, std::set<int>> highlighted; // bank -> entries of a drag: its source and the slot under the cursor
     std::string value_text(const std::string &param, int v) const;
     std::vector<std::pair<int, std::string>> menu_entries(const std::string &param) const; // (value, text), menu order
+    // the value a control draws for `v`: clamped to the range like the original (Init: Vocoder Bands 127 -> "32"),
+    // a mapped list's own value as it is (mod matrix destinations above maxValue, E309)
+    int shown_value(const std::string &param, int v) const;
 
 private:
     const EditorLayout &layout_;

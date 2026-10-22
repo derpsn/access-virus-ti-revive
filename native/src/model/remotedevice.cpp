@@ -529,6 +529,17 @@ std::vector<RemoteDevice::Change> RemoteDevice::decode(const std::vector<uint8_t
     return out;
 }
 
+int RemoteDevice::shown(const std::string &path, int v) const
+{
+    const Parameter *p = find(path);
+    if (!p || p->max <= p->min)
+        return v;
+    auto vl = valuelists.find(p->valuelist);
+    if (vl != valuelists.end() && vl->second.mapped && vl->second.find(v))
+        return v;
+    return std::max(p->min, std::min(p->max, v));
+}
+
 int RemoteDevice::value_of(const std::string &path, const std::string &text) const
 {
     const Parameter *p = find(path);

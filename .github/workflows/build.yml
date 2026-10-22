@@ -231,6 +231,23 @@ jobs:
           native plug-in **"TI Revive Virus Control"**: looks and works like the original Virus Control and runs
           natively on Windows, macOS (Apple Silicon and Intel) and Linux - no Rosetta, Wine or yabridge.
 
+          **New in 0.8.30: restore a RAM bank from a backup, and the missing mod matrix destinations.**
+
+          - TI Revive Control Center restores a RAM bank from a backup or any library: "Restore..." (in the Access look:
+            RESTORE), then the bank to overwrite. Only the programs that differ are written, into the Virus' RAM, the
+            way the plug-in's browser writes them, and each one is read back. Unlike Access' Control Center it never
+            writes the Virus' flash. The same from a terminal: tirevive-cc restore B "RAM B.mid".
+          - The modulation matrix's destination menus (and the LFO assign target) now list Distortion Mix, Osc 1/2
+            F-Shift and Osc 1/2 F-Spread, and no longer show "-reserved-" entries (issue #11). A patch that uses one of
+            these destinations shows it by name.
+          - Linux: when the broker gives the Virus back to the system, it now resets the USB port before it releases
+            the interfaces. With the old order, restarting the DAW often a few times in a row left our Virus off USB
+            until it was switched off and on or plugged in again (seen three times; 30 of 30 give-backs passed with
+            the new order).
+
+          Tested on a Virus TI2 Desktop: Linux with REAPER, Windows 11 (VM) with Ableton Live 11, macOS (MacBook Air
+          M3) with Ableton Live 12; 12 of 12 test items passed, plus the automated Linux run.
+
           **New in 0.8.29: the browser works like the original's, and knobs on the Virus reach your DAW.**
 
           - Browser drag and drop like the original: drag one or several patches from a library onto a RAM slot in

@@ -1,9 +1,12 @@
-// tirevive-cc - TI Revive Control Center, command line (phase 1: read-only, src/cc/controlcenter.h).
+// tirevive-cc - TI Revive Control Center, command line (src/cc/controlcenter.h).
 //   tirevive-cc info [--raw]                  USB identity of the Virus, its identification blocks (OS version; --raw:
 //                                             the bytes), RAM banks compared with the plug-in's cache
 //   tirevive-cc backup [--out DIR] [--banks 1234]
 //                                             RAM banks -> "RAM A.mid".. (library format; default <Documents>/
 //                                             Access Music/Virus TI/Backups/<date time>)
+//   tirevive-cc restore A|B|C|D FILE [--yes]  RAM bank from a library (e.g. a backup's "RAM B.mid"): only the
+//                                             programs that differ, single dumps into RAM like the plug-in's browser,
+//                                             read back; asks first unless --yes (never flash, E313)
 //   tirevive-cc list FILE                     patch names in a library (.mid or .syx), no Virus needed
 //   tirevive-cc export FILE OUT.syx|OUT.mid   convert a library, no Virus needed
 //   tirevive-cc logs [--out FILE]             plug-in + broker logs in one file for a bug report (anonymized)
@@ -11,7 +14,7 @@
 //   tirevive-cc watch [--seconds N]           Nerd mode in the terminal: broker status, log and the traffic, decoded
 //                                             (a read-only observer: works while the plug-in uses the Virus)
 // Firmware/OS update, Burn To Flash, factory reset and renaming the Virus are not supported, on purpose: they write
-// the Virus' flash (AGENTS.md rule 2).
+// the Virus' flash (AGENTS.md rule 2). restore writes RAM only.
 #include "../src/access/accessfiles.h"
 #include "../src/access/library.h"
 #include "../src/cc/controlcenter.h"
@@ -20,6 +23,7 @@
 #include "../src/model/remotedevice.h"
 #include "../src/model/sysinfo.h"
 #include "vtiproto.h"
+#include <cctype>
 #include <cstdio>
 #include <algorithm>
 #include <chrono>
@@ -35,13 +39,14 @@ static int usage()
 {
     fprintf(stderr, "usage: tirevive-cc info\n"
                     "       tirevive-cc backup [--out DIR] [--banks 1234]\n"
+                    "       tirevive-cc restore A|B|C|D FILE.mid|FILE.syx [--yes]\n"
                     "       tirevive-cc list FILE.mid|FILE.syx\n"
                     "       tirevive-cc export FILE.mid|FILE.syx OUT.syx|OUT.mid\n"
                     "       tirevive-cc logs [--out FILE]\n"
                     "       tirevive-cc debug on|off\n"
                     "       tirevive-cc watch [--seconds N]\n"
-                    "Read-only: nothing is written to the Virus. Close the TI Revive plug-in (or your DAW) first:\n"
-                    "the Virus serves one program at a time.\n");
+                    "Only restore writes to the Virus (RAM, never flash). Close the TI Revive plug-in (or your DAW)\n"
+                    "first: the Virus serves one program at a time.\n");
     return 2;
 }
 
@@ -143,6 +148,46 @@ static int backup(int argc, char **argv)
         return 1;
     }
     printf("Done: %d programs read from the Virus, libraries in %s\n", fetched, out.c_str());
+    return 0;
+}
+
+static bool load(const char *path, vti::PatchLibrary &lib);
+
+static int restore(int argc, char **argv)
+{
+    if (argc < 4)
+        return usage();
+    const char b = (char)toupper((unsigned char)argv[2][0]);
+    bool yes = argc == 5 && !strcmp(argv[4], "--yes");
+    if (strlen(argv[2]) != 1 || b < 'A' || b > 'D' || (argc == 5 && !yes) || argc > 5)
+        return usage();
+    vti::PatchLibrary lib;
+    if (!load(argv[3], lib))
+        return 1;
+    if (!yes) {
+        printf("Overwrite RAM %c with %s? The programs that differ are replaced (RAM only). [y/N] ", b, argv[3]);
+        fflush(stdout);
+        char line[16] = {};
+        if (!fgets(line, sizeof line, stdin) || (line[0] != 'y' && line[0] != 'Y')) {
+            printf("Nothing written.\n");
+            return 1;
+        }
+    }
+    vti::Broker broker;
+    if (!connect(broker))
+        return 1;
+    std::string err;
+    int written = 0;
+    bool ok = vti::cc::restore_ram(broker, b - 'A' + 1, lib.dumps, [&](int done, int total) {
+        printf("  RAM %c: %d of %d written\n", b, done, total);
+        fflush(stdout);
+    }, written, err);
+    if (!ok) {
+        fprintf(stderr, "tirevive-cc: %s (%d written)\n", err.c_str(), written);
+        return 1;
+    }
+    printf("Done: %d programs written to RAM %c and read back%s\n", written, b,
+           written ? "" : " (all programs were the same already)");
     return 0;
 }
 
@@ -297,6 +342,8 @@ int main(int argc, char **argv)
         return info(argc == 3);
     if (cmd == "backup")
         return backup(argc, argv);
+    if (cmd == "restore")
+        return restore(argc, argv);
     if (cmd == "list" && argc == 3)
         return list(argv[2]);
     if (cmd == "export" && argc == 4)

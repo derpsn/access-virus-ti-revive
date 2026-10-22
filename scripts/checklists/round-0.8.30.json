@@ -1,0 +1,108 @@
+{
+ "round": "0.8.30",
+ "core": "core.json",
+ "core_items": [
+  "WC1",
+  "WC2",
+  "WC3",
+  "MC1",
+  "MC2",
+  "MC3"
+ ],
+ "lead": "Test build 0.8.30 (CI run 39730939693). New in this round: the MATRIX page's destination menus list Distortion Mix, Osc 1/2 F-Shift and Osc 1/2 F-Spread and show them after a reload (issue #11, E309); the Control Center restores a RAM bank from a backup, RAM only (Restore... / RESTORE in the Access look, E313); on Linux the broker resets the USB port before it gives the Virus back (E312). Linux: #11 and the restore were tested on dev builds; hil.sh runs the core items on this CI build. Mark each item, add a note where something looks different, then copy the results at the bottom into the chat.",
+ "rules": [
+  "Never store a patch on the Virus with the Virus' own STORE button.",
+  "Restore tests write into the Virus' RAM: first make a fresh backup (Backup button), change only RAM A slots 24-31, then restore RAM A from that fresh backup. Never restore an older backup.",
+  "Order: Linux first (the Virus is on this PC), then the Windows 11 VM, then macOS. Close the DAW before the Virus moves."
+ ],
+ "sections": [
+  {
+   "id": "linux",
+   "title": "Linux",
+   "where": "REAPER via pw-jack, Virus on this PC",
+   "prep": [
+    "Already installed by Claude: the CI build (install.sh; plug-in 8670bb4f.., broker a1cdc38c.. = the tarball; the dev build backed up in ~/.vst3-backup/0.8.30-dev-1bfb7fc6).",
+    "Claude runs hil.sh on this build (cold start, reopen x2, export, broker kill) and reports the result here; the broker's give-back (E312) runs at every reopen."
+   ],
+   "items": [
+    {
+     "id": "L1",
+     "title": "Mod matrix destinations (#11)",
+     "steps": [
+      "MATRIX page, slot 1: open the destination menu and choose Osc 2 F-Shift; slot 2: Distortion Mix.",
+      "Save the project, close REAPER, open the project again and look at the MATRIX page."
+     ],
+     "expect": "the menu has Distortion Mix, Osc 1/2 F-Shift and Osc 1/2 F-Spread and no '-reserved-' entries; the Virus' display names the destination; after the reload both fields still show them."
+    },
+    {
+     "id": "L2",
+     "title": "Control Center: backup and restore",
+     "steps": [
+      "TI Revive Control Center (plain view): Backup (a new folder under Documents/Access Music/Virus TI/Backups).",
+      "In the plug-in's browser drag one patch from a library onto RAM A slot 24.",
+      "Control Center: Restore..., choose the new backup's RAM A.mid, then 'Overwrite RAM A with ...'."
+     ],
+     "expect": "the status line says RAM A was restored, 1 programs written; slot 24 has its old name again in the browser (after Download entire bank if needed)."
+    }
+   ]
+  },
+  {
+   "id": "vm",
+   "title": "Windows 11 VM",
+   "where": "win11 VM, Ableton Live 11, Virus attached by Claude",
+   "prep": [
+    "Already installed by Claude: setup.exe /quiet (exit 0, entries 0.8.30, plug-in 46f97c18.. = the CI MSI), C:\\tirevive-test\\0.8.30-ci.",
+    "Ask Claude to attach the Virus to the VM (it stops the Linux broker first)."
+   ],
+   "items": [
+    {
+     "id": "W1",
+     "title": "Mod matrix destinations (#11)",
+     "steps": [
+      "MATRIX page, slot 1: choose Osc 1 F-Spread in the destination menu."
+     ],
+     "expect": "the menu has Distortion Mix, Osc 1/2 F-Shift and Osc 1/2 F-Spread and no '-reserved-' entries; the field shows Osc 1 F-Spread."
+    },
+    {
+     "id": "W2",
+     "title": "Control Center in the Access look: RESTORE",
+     "steps": [
+      "TI Revive Control Center in the Access look: BACKUP, then OK (a new folder under Documents/Access Music/Virus TI/Backups).",
+      "In the plug-in's browser drag one patch onto RAM A slot 25.",
+      "Control Center: RESTORE, choose the new backup's RAM A.mid, then 'Overwrite RAM A with ...'."
+     ],
+     "expect": "the status says RAM A was restored, 1 programs written; slot 25 has its old patch again."
+    }
+   ]
+  },
+  {
+   "id": "mac",
+   "title": "macOS",
+   "where": "MacBook Air M3, Ableton Live 12",
+   "prep": [
+    "Package (CI run 39730939693) on the Mac in <code>~/Downloads/TI-Revive-0.8.30-ci-mac/TI-Revive-0.8.30-mac</code>: close Ableton, double-click 'Install test build.command' there (or the line in INSTALL-COMMAND.txt: <code>sudo installer -pkg \"$HOME/Downloads/TI-Revive-0.8.30-ci-mac/TI-Revive-0.8.30-mac/TI Revive.pkg\" -target /</code>). Virus on the Mac.",
+    "Claude puts <code>diag.on</code> in the plug-in's folder and renames the old diag.log."
+   ],
+   "items": [
+    {
+     "id": "M1",
+     "title": "Mod matrix destinations (#11)",
+     "steps": [
+      "MATRIX page, slot 1: choose Osc 2 F-Shift, slot 2: Distortion Mix (the reporter's case: macOS, Ableton Live)."
+     ],
+     "expect": "the menu has Distortion Mix, Osc 1/2 F-Shift and Osc 1/2 F-Spread and no '-reserved-' entries; both fields show the choice."
+    },
+    {
+     "id": "M2",
+     "title": "Control Center in the Access look: RESTORE",
+     "steps": [
+      "TI Revive Control Center in the Access look: BACKUP, then OK (a new folder under Documents/Access Music/Virus TI/Backups).",
+      "In the plug-in's browser drag one patch onto RAM A slot 26.",
+      "Control Center: RESTORE, choose the new backup's RAM A.mid, then 'Overwrite RAM A with ...'."
+     ],
+     "expect": "the status says RAM A was restored, 1 programs written; slot 26 has its old patch again."
+    }
+   ]
+  }
+ ]
+}

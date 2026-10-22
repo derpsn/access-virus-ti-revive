@@ -262,7 +262,112 @@ C:\tirevive-test\0.8.29-ci3): LOAD + browser library menus 'works'. NEXT: releas
 decision with the user (user: release now, then a new round); site check 2026-10-21 (agent + spot checks): TESTS 305->332, Mac timing
 row 0.8.29 (E308, 0 ppm, max 1.35 ms), README status row 0.04-0.33 ms / -72 to 0 ppm, new lines for #10 and the library
 folders (site + README identical), README got the 'Presets and soft knobs' line, release notes rewritten; site built locally,
-not deployed. E300 option open; restore the user's RAM A/B (work/libdrag/ram-backup-20261021-0921).
+not deployed. RELEASE: merge 98e12e6 (round-0.8.29 -> main, -F, 2 parents, tree = round), main pushed, tag v0.8.29
+on 98e12e6 pushed separately, release CI run 39626672973 running. NEXT: release green -> site rebuild by hand, install the
+release on Linux, win11 (VM=win11), Mac (+ INSTALL-COMMAND.txt); then a new round. Release CI: mac job retried by a loop (no runner, 'capacity constraints'; try 1 cancelled 17:48).
+ISSUES (gone through with the user 2026-10-21): replies drafted in work/issue5-reply.md (close), issue10-reply.md (close;
+user test win11 VM: Configure opens the plug-in window itself; configured parameters follow the Virus knob with the window
+never opened - log: no 'editor opened' in that session), issue13-reply.md (video analysis, retest 0.8.29; the Clock RX question dropped: GlobalInit sets 'Sync to External') - ALL posted only
+after the release is published (user). #7 stays open. Collab update posted 2026-10-21 (user ok, firmware parts removed by the user's choice) in
+Give-me-a-signal/virus-ti-rework#5: E188-E308 highlights (traffic, host/UI behaviour, library roots, pkg version check,
+sleep/wake); text work/collab-update-2026-10-21.md. ROUND 0.8.30 PLAN (user ok): (1) #13 arp drift: reporter's video (scope, audio track silent, read by eye): Virus arp notes ~7-8 ms/s early vs the beat
+(~0.7 % fast, ~141 vs 140 BPM), Live's arp stable in the same take; test file native/tools/arp-hold-140bpm.mid (C3 held
+24 bars after a 1-bar lead-in, 140 BPM; timing_analysis.py --bpm 140 --div 4). Measure first (arp
+1/16 at 120 BPM, timing_analysis 125 ms grid; Linux, then Mac 48k/128), then fix or note; clock code virusplugin.cpp:1284
+looks right (Virus frames). (2) #11 mod matrix destinations: the Access XML gives the 20 destination params maxValue=121 but
+the mapped list has values 0..127; editorrender.cpp:33 drops entries > max -> 122 Slot 6 Amount 1, 123/124 Osc1/2 F-Shift,
+125/126 Osc1/2 F-Spread, 127 Distortion Mix missing; REA: how the original builds the menu + host range, then TDD.
+(3) #7: first ping after the broker idle exit on the Mac (read-only, diag.log). (4) E300 option, restore RAM A/B.
+E300 option open; restore the user's RAM A/B (work/libdrag/ram-backup-20261021-0921).
+
+## Round 0.8.30 (branch round-0.8.30 from round-0.8.29 a095c61+, started 2026-10-21, while the v0.8.29 release CI waits for a Mac runner)
+
+**RELEASE PREP 0.8.30 (2026-10-22):** issues checked with the user: #10/#13 confirmed by the reporter and closed, #12 closed
+(right-click loads wavetables), #11 still open until the release (comment drafted: fixed in 0.8.30, please confirm). Version
+0.8.30 (native/CMakeLists.txt), 338 unit tests, ctest 5/5 on Linux. risk.py --round 0.8.30: class C; Windows + Mac by hand
+cold/reopen/export (WC1-3, MC1-3), Linux by hil.sh. Checklist scripts/checklists/round-0.8.30.json (+ #11 and restore per
+system). CI test build run 39730939693 (version 0.8.30). NEXT: CI green -> install Linux (install.sh), hil.sh, win11 VM
+(setup.exe /quiet), Mac package + INSTALL-COMMAND; publish checklist; then release notes/README/site (338 tests), merge, tag.
+CI 39730939693 ALL GREEN (release skipped). Installed: Linux = CI build (install.sh exit 0; plug-in 8670bb4f.., broker
+a1cdc38c.. = tarball; dev plug-in 1bfb7fc6 + dev broker 8b068b73 backed up in ~/.vst3-backup/0.8.30-dev-1bfb7fc6); win11 VM =
+CI (setup.exe /quiet exit 0, entries 0.8.30, plug-in 46f97c18.. = CI MSI, C:\tirevive-test\0.8.30-ci; VM running, Virus still
+on Linux); Mac: zip pushed + unzipped in ~/Downloads/TI-Revive-0.8.30-ci-mac/TI-Revive-0.8.30-mac (pkg a69567e5.. = CI) with
+INSTALL-COMMAND.txt + 'Install test build.command'; the user installs. hil.sh running on the CI build. Checklist published:
+https://claude.ai/artifact/EXf4qynRdt9pWgVoUy5KvX (db, marks in rounds/0.8.30/marks, empty at publish).
+hil.sh on the CI build (work/hil/20261022-080203, ended 08:06): H1, H2 x2, H3, H6 ALL PASS (H6: 26/26, max 0.86 ms, jitter 0.23 ms,
++6 ppm). The user started REAPER at 08:05 while hil.sh still owned the Virus -> 'plug-in waiting' (expected, one owner); REAPER
+took over at 08:06:05 by itself. Lesson: tell the user when hil.sh is still running.
+Linux block 2/2 marked pass (L1 #11 incl. reload, L2 Control Center backup + restore, 08:09). OPEN (user, after the
+release, 0.8.31): same bank in BOTH browser panes -> the selection is framed in both, because TI Revive keys the selection
+by bank (viruseditor.cpp browser_sel_[bank], since 0.8.29), not by pane. Not in E294/E297/E298 whether the original does
+the same: check in win10ref (same bank both panes, click an entry: one pane or both framed?) or REA, then fix if it differs.
+VM block 5/5 marked pass (WC1-WC3, W1 #11, W2 RESTORE in the Access look); win11 diag.log: 'bank sync done in 30.7 s',
+'sync error shown (4 late events since Play)' during the export, cleared by Play (as every VM round, E288). Virus detached,
+win11 shut down. Mac: receipt io.github.derpsn.tirevive 0.8.30 (installed by the user ~08:15, after the 08:03 push), old
+diag.log -> diag.log.pre-0.8.30-ci, diag.on set. Mac block next (MC1-MC3, M1 #11, M2 RESTORE).
+Mac block 5/5 marked pass -> ROUND 0.8.30: 12/12 marked pass (E314). Mac export measured: 256/256, -8 ppm, jitter 1.05 ms,
+10 notes 3.4-6.3 ms late with a sync error 3 s into the render = known E243/E244 (nothing in the Mac timing path changed;
+0.8.29's release session showed it too). README/site timing rows kept at the 0.8.29 measurements (E308). Open LOW: 'bank sync
+failed' is logged when the host deactivates the plug-in mid-sync (should it say 'stopped'?). NEXT: release texts, merge, tag.
+Release texts 2026-10-22: release notes 0.8.30 in build.yml; README/site 338 tests. Site check (round claims): README
+'tirevive-cc only reads ... restoring comes later' WRONG -> fixed; CLI list + restore line; status row restore now 'Linux,
+Windows 11 (VM), macOS (E313, E314)'; native/docs/controlcenter.md scope row, title and RESTORE line updated. Site built
+locally (not deployed). OPEN for the user: Mac timing row (0.8.29, E308 clean) vs the newer 0.8.30 export (E314: 10 late
+notes, E243). Open LOW (0.8.31): tirevive-cc's help says 'Close the TI Revive plug-in first' but the Control Center shares
+the Virus with the plug-in (restore worked with the plug-in open on all three systems).
+USER DECISION: Mac timing row -> 0.8.30 numbers (E314: 256/256, 1.05 ms, max 6.30 ms, -8 ppm), release. Site check found
+the sync error FAQ's 'since 0.8.27 ... the late notes did not come back' contradicted by E314 -> README + site: '10 of 256
+came 3-6 ms late in the 0.8.30 test, we are looking into it'. Status row jitter 0.04-1.05 ms. OPEN 0.8.31: Mac export late
+notes DURING the paced render (E314; E243 was after it).
+
+Plan (user ok, issues gone through 2026-10-21): (1) #13 arp drift: measure first (native/tools/arp-hold-140bpm.mid,
+**v0.8.29 RELEASED 2026-10-21 20:03** (merge 98e12e6, tag v0.8.29, release CI run 39626672973: mac job got a runner on try 10,
+all green, 6 assets, Latest). Site rebuilt by hand (run 39649468184), live: Download 0.8.29, 332 unit tests, #10 line.
+Replies posted: #5 (closed), #10 (closed), #13 (questions; our measurements: Mac Live 12 48k/128 real-time 384/384 -2 ppm,
+Linux REAPER 48k 140 BPM +7 ppm, 120 BPM -10 ppm - not reproducible, E310). Installs: win11 VM = release (setup.exe /quiet
+exit 0, plug-in 35212dd8.. = MSI, C:\tirevive-test\0.8.29-release, VM shut down); Mac = release unpacked in
+~/Downloads/TI-Revive-0.8.29-release-mac (+ INSTALL-COMMAND.txt), the user installs; Linux NOT yet: install.sh needs sudo for
+the udev rule while the Virus is on the Mac -> run it when the Virus is back (unpacked in
+~/Downloads/TI-Revive-0.8.29-release-2005; CI plug-in backed up in ~/.vst3-backup/0.8.29-ci).
+Mac = release installed by the user (receipt 0.8.29). #7 item DONE (E311): first ping after the broker idle exit answered 3/3
+on the Mac, reply posted in #7 (no CC 120 tested). Collab update posted in virus-ti-rework#5.
+Linux = release 0.8.29 installed 2026-10-21 ~20:20 (install.sh, no sudo with the Virus attached; plug-in 6fa9e00d.., broker
+cdf3d914.. = release; release plug-in backed up in ~/.vst3-backup/0.8.29-release), then the round dev build in ~/.vst3.
+#11 hardware check 1 (dev b70e1cca, REAPER): menu lists the new destinations and the Virus takes them (LCD 'Osc 2 F-Shift'),
+but the field showed 'Slot 5 Amount 1': ui_value clamped read-back values to maxValue -> fixed 23d4ebb (RemoteDevice::shown,
+test first; 332 tests, ctest 5/5); dev build 34fa9cbd installed; user: still wrong -> second clamp in the renderer's draw, fixed (EditorRenderer::shown_value,
+test first, 332 tests, ctest 5/5). dev 1bfb7fc6 installed, user: fields right -> #11 DONE on hardware (E309). E300 hit again during the checks (E312:
+5 give-back resets in 5 min, then error -71 and 'unable to enumerate'; power cycle + re-plug; the old broker reset the Virus
+again 1 s after it came back). E300/E312 FIX written (user ok): give-back resets before releasing the interfaces (src/broker/giveback.h, vticore.c;
+tests giveback_*, 334 tests, ctest 5/5; broker + vtiprobe built in work/build/linux, not installed). Hardware loop 30/30 OK (20:46-20:52,
+reset then one probe each, 0 errors). Fixed broker INSTALLED on Linux (~/.local/lib/tirevive/vtibroker
+8b068b73.., release broker kept as vtibroker.0.8.29-release) for everyday use until the round's release (user: release tomorrow).
+NEW round item (user): Control Center 'Restore RAM from backup' like the original - REA check of Virus Control Center.exe
+running; then TDD; the user's RAM A/B are restored WITH that feature (pre-test state = cache.old of 2026-10-18: RAM A 21
+slots, RAM B slots 0-3 differ; restore libraries also built in ~/Dokumente/Access Music/Virus TI/Patches/Restore RAM A|B
+(2026-10-18).mid as a fallback via the browser).
+REA (sub-agent, Virus Control Center.exe x64): the original's restore is whole-device only (.vtibackup: RAM A-D as raw SRAM
+images, user ROM banks, multis, device settings), written through USB vendor requests incl. flash erase/burn of the ROM banks
+and the settings sector - NOT copied (rule 2, E177). Ours (E313 to write after the hardware test): restore_plan / dump_pieces /
+restore_ram in src/cc/controlcenter (sync the bank, write only programs that differ as single dumps into RAM like the browser,
+64-byte pieces on cable 3 10 ms apart, read each back, update the cache), bank_from_name; CLI tirevive-cc restore A|B|C|D FILE
+[--yes]; window button 'Restore...' (file, then a menu 'Overwrite RAM X with ...' = the confirmation). Tests: ccrestore_* +
+cc_restore_ram (fake Virus with memory); 338 tests, ctest 5/5. Commits 7190aaf, ac7576f. Safety backup of the current RAM A/B:
+~/Dokumente/Access Music/Virus TI/Backups/2026-10-21 2116. DONE on hardware (E313): the user's RAM A/B restored
+with the dev Control Center, all 512 programs = the 2026-10-18 state, fingerprints from the Virus confirm. Access look's RESTORE
+wired to the same restore (SkinPageActions::restore, status in both views); README/site: backup + restore, 'Restore'
+paragraph, status table row done, site user-report line + #11 (site built locally, not deployed). ctest 5/5 after the user closed
+their Control Center (gui_controlcenter_close had failed only because of the open single instance). NEXT
+(tomorrow, user): release prep 0.8.30 (version, release notes incl. #11, E312 give-back, Control Center restore; CI test
+build; short checklist Linux/VM/Mac incl. RESTORE in the Access look); then release. (and after a project
+reload); then E300 option, restore RAM A/B (work/libdrag/ram-backup-20261021-0921).
+timing_analysis --bpm 140 --div 4; Linux, then Mac 48k/128), then fix or note. (2) #11 mod matrix destinations above
+maxValue 121 (REA: the original's menu + host range, then TDD). (3) #7 first ping after the broker idle exit on the Mac
+(read-only). (4) E300 option, restore RAM A/B. Release 0.8.29 follow-ups run in between (replies #5/#10/#13, site, installs).
+#11 FIXED (E309, test first): menu limited by list position like the original; 332 tests, ctest 5/5; on hardware: check the
+MATRIX page destination menu (Distortion Mix etc. present, no '-reserved-'). #13 measurement 1 (user, REAPER Linux, 44.1 kHz,
+render of arp-hold-140bpm.mid but the project stayed at 120 BPM, pattern 2, 1/16; ~/Musik/arp.wav): 385/385 on the 125 ms
+grid, drift -10 ppm, sd 0.99 ms, one 19 ms outlier -> no drift at 120/44.1 on Linux. Next: 140 BPM at 44.1, then at 48 kHz.
 
 ## Round 0.8.29 (branch round-0.8.29, collecting; started 2026-10-20)
 

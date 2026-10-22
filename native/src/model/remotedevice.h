@@ -137,6 +137,10 @@ public:
         int part = 0, value = 0;
     };
     std::vector<Change> decode(const std::vector<uint8_t> &msg) const;
+    // The value a control shows for a stored or reported `v`: clamped to the parameter's range like the original
+    // (Vocoder/Bands 127 of 0..31 in old patches), except a value of a mapped list, which is its own entry
+    // (mod matrix destinations up to 127 with maxValue 121, E309). Unknown paths: `v` unchanged.
+    int shown(const std::string &path, int v) const;
     // Value of `path` for a valuelist text ("MIDI REMOTE", "Off", "01"); -1 if neither an entry nor a number.
     int value_of(const std::string &path, const std::string &text) const;
     // The messages the original sends at start-up before the project state: GlobalInit, then ParamInit.
