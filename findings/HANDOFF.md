@@ -431,6 +431,13 @@ run 2: H2-2 + H6 FAIL - single notes 8-21 ms off, moving between items; VM timel
 Results pulled to work/hil/win11-*. VM still RUNNING with the Virus attached. Decision for the user: real-PC run
 (this PC booted into Windows, hil-win.cmd by hand) or accept the VM as function-only for this round; risk.json
 unchanged (Windows items stay by hand).
+USER DECISION (~19:45): "2 and ship it. I think we are clean" -> VM counts as a function check this round, Windows
+timing left for a later real-PC session; no checklist artifact this round (automated runs + the user's Linux browser
+check + Mac E4 export instead). Virus detached from the VM (back on Linux, broker socket active; VM still running).
+RELEASE PREP (site check per the skill, only the claims this round touches): FAQ Mac export line 'looking into it' ->
+fixed in 0.8.31 (E319); Mac timing row 0.8.30 1.05 ms -> 0.8.31 48k/128 0.01 ms, max 0.01, 0 ppm; jitter range
+0.04-0.33 -> 0.01-0.33 (site + README x3, status table E314 -> E319); TESTS 338 -> 345; native version 0.8.31; release
+notes 'New in 0.8.31' in build.yml. Site built locally (values present), not deployed. ctest 5/5.
 
 Plan (user ok, issues gone through 2026-10-21): (1) #13 arp drift: measure first (native/tools/arp-hold-140bpm.mid,
 **v0.8.29 RELEASED 2026-10-21 20:03** (merge 98e12e6, tag v0.8.29, release CI run 39626672973: mac job got a runner on try 10,

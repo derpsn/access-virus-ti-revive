@@ -260,6 +260,20 @@ jobs:
           native plug-in **"TI Revive Virus Control"**: looks and works like the original Virus Control and runs
           natively on Windows, macOS (Apple Silicon and Intel) and Linux - no Rosetta, Wine or yabridge.
 
+          **New in 0.8.31: exports on the Mac at small buffer sizes, and the browser's selection.**
+
+          - macOS: an export with a small buffer size (128 samples) no longer lets a few notes come late (0.8.30: 6 to
+            10 of 256 notes up to 4 ms late, and the sync message appeared). Now 256 of 256 notes on the grid at 48 kHz and
+            128 samples. The cause was the way the render waited for the Virus' audio, which the Mac hands over in
+            512-sample pieces.
+          - The browser keeps one selection per pane, like the original: with the same bank in both panes, only the
+            pane you click in shows the frame, and a pane that switches to another bank drops its selection.
+          - Closing the plug-in during the bank sync now logs "bank sync stopped" instead of "bank sync failed".
+
+          Tested on a Virus TI2 Desktop: Linux with the automated run, macOS (MacBook Air M3) with the new automated run
+          and an Ableton Live 12 export, Windows 11 (VM) with the new automated run (function checks; the VM's USB
+          timing cannot judge timing).
+
           **New in 0.8.30: restore a RAM bank from a backup, and the missing mod matrix destinations.**
 
           - TI Revive Control Center restores a RAM bank from a backup or any library: "Restore..." (in the Access look:

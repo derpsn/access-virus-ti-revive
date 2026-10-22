@@ -257,7 +257,7 @@ def page_landing(latest, releases, sums):
           (<a href="https://gearspace.com/threads/fixing-access-virus-sync-issues.839737/">Gearspace</a>,
           <a href="https://forum.ableton.com/viewtopic.php?p=938076">Ableton forum</a>). TI Revive stamps every note
           on the Virus' own clock and reports its latency to the DAW: in our tests every note lands on the grid, within
-          0.04 to 0.33 ms (standard deviation).</li>
+          0.01 to 0.33 ms (standard deviation).</li>
           <li>The original cannot export or freeze a Virus track faster than real time and shows a warning that
           offline rendering is not supported (<a href="https://www.kvraudio.com/forum/viewtopic.php?p=1599326">KVR</a>,
           <a href="https://zynewave.com/topic/realtime-bounce/">Zynewave forum</a>). TI Revive notices an offline
@@ -425,7 +425,7 @@ def page_landing(latest, releases, sums):
       <details><summary>&ldquo;A sync error occurred. Press Stop and Play to clear.&rdquo;</summary>
       <p>Like the original, the editor shows this when the Virus reports several notes in a row that arrived too late
       for their time stamp while your DAW plays. Stop and Play clears it. If it comes back, use a USB port the Virus does
-      not share with other devices; the original gives the same advice. On macOS, notes could come late after an export in 0.8.25 and 0.8.26; since 0.8.27 the plug-in fills the audio cycles Core Audio skips during an export. In the 0.8.30 test a few notes of an export still came 3-6 ms late (10 of 256) and the message appeared; we are looking into it.</p></details>
+      not share with other devices; the original gives the same advice. On macOS, notes could come late after an export in 0.8.25 and 0.8.26; since 0.8.27 the plug-in fills the audio cycles Core Audio skips during an export. In 0.8.30 a few notes of an export at a small buffer size (128 samples) still came 3-6 ms late and the message appeared; fixed in 0.8.31 (an export at 48 kHz and 128 samples: 256 of 256 notes on the grid).</p></details>
       <details><summary>The first notes after Play are late</summary>
       <p>The plug-in sends notes slightly ahead to make up for the USB round trip, so start playback a little before
       the first note. The original driver did the same.</p></details>
@@ -576,7 +576,7 @@ def features_section():
         <thead><tr><th>16th notes at 120 BPM</th><th>On the grid</th><th>Jitter</th><th>Drift</th></tr></thead>
         <tbody>
           <tr><th>Linux, REAPER (0.8.27)</th><td>63 / 63</td><td>0.16 ms</td><td>-72 ppm</td></tr>
-          <tr><th>macOS, Ableton 12 (M3, 0.8.30)</th><td>256 / 256</td><td>1.05 ms</td><td>-8 ppm</td></tr>
+          <tr><th>macOS, Ableton 12 (M3, 0.8.31)</th><td>256 / 256</td><td>0.01 ms</td><td>0 ppm</td></tr>
           <tr><th>Windows 11, Ableton Live</th><td>480 / 480</td><td>0.04 ms</td><td>0 ppm</td></tr>
           <tr><th>Windows 11, Ableton Live 11 (0.8.24)</th><td>256 / 256</td><td>0.33 ms</td><td>-1 ppm</td></tr>
           <tr class="old"><th>Classic plug-in 0.7.x</th><td>first late, second missing</td><td>0.06 ms</td><td>n/a</td></tr>
@@ -708,7 +708,7 @@ def page_changelog_landing(releases):
 # the README's screenshots that the site shows too (copied at build time)
 SHARED_IMAGES = ["control-center.png", "control-center-nerd-mode.png", "plugin-help-mode.png", "plugin-help-inactive.png",
                  "plugin-menus.png"]
-TESTS = 338 # unit tests in native/tests (vtitests), as of 2026-10-22 (round 0.8.30)
+TESTS = 345 # unit tests in native/tests (vtitests), as of 2026-10-22 (round 0.8.31)
 # line coverage of vticore, measured like CI (no Access files, empty home): gcov over the test run
 COVERAGE, COVERAGE_DATE = "94 %", "16 Oct 2026"
 
