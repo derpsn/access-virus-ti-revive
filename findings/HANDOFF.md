@@ -37,6 +37,9 @@ the user's 'stuck hold' (the Virus itself; fixed by a power cycle).
 3. Steps 4-6 (who owns the rate per platform, plug-in flow on resume + kLatencyChanged, docs), then CI + the round test
    (hil at 44.1/48/96, exports at 48 k/128, startup_diff at 48 k, all three systems).
 4. Open small items: install the 0.8.31 release on win11; confirm the Mac release install.
+5. Issue #14 (created on the user's request, 2026-10-22): Virus TI Snow on macOS (Mac Studio M1, Sequoia) - must load
+   the plug-in with the Virus off, analog outputs silent to an Apollo, Logic Pro sync problems, volume knob does nothing
+   over USB. Translated from Spanish, not reproduced; asks for version, diag.log, output routing, Logic buffer/rate.
 
 **Notes:** captures of today in captures/ (git-ignored): orig-startup-lcd-20261022 (original start-up + 5 rate switches),
 ours-startup-*. Audit of every 44.1 kHz assumption: work/rate-follow/audit-44k1.md (local). The GateGuard hook asks for
