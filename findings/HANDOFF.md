@@ -440,7 +440,9 @@ fixed in 0.8.31 (E319); Mac timing row 0.8.30 1.05 ms -> 0.8.31 48k/128 0.01 ms,
 notes 'New in 0.8.31' in build.yml. Site built locally (values present), not deployed. ctest 5/5.
 MERGED + TAGGED: round-0.8.31 merged into main with -F (9adfd89, parents 337390d + 83ed98a, tree = round), main pushed,
 then tag v0.8.31 on 9adfd89 pushed separately -> release CI run 39824346270 (running). NEXT: run green (mac job: rerun
-only the failed job if no runner) -> check release assets + Latest; site rebuild by hand (gh workflow run site.yml);
+only the failed job if no runner) -> check release assets + Latest; site: NOT by hand this time - site.yml deployed
+on the main push (run 39824323963, build.py changed: new texts live while Download still showed 0.8.30) and redeploys
+itself on 'release published' -> only check that it ran and shows Download 0.8.31;
 install the release on Linux (install.sh), win11 VM (setup.exe /quiet, VM=win11, VM still running without the Virus),
 Mac (push + INSTALL-COMMAND.txt + Install test build.command); then a new round branch for the next fixes.
 
