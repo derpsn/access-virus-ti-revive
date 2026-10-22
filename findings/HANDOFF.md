@@ -315,6 +315,10 @@ Windows 11 (VM), macOS (E313, E314)'; native/docs/controlcenter.md scope row, ti
 locally (not deployed). OPEN for the user: Mac timing row (0.8.29, E308 clean) vs the newer 0.8.30 export (E314: 10 late
 notes, E243). Open LOW (0.8.31): tirevive-cc's help says 'Close the TI Revive plug-in first' but the Control Center shares
 the Virus with the plug-in (restore worked with the plug-in open on all three systems).
+USER DECISION: Mac timing row -> 0.8.30 numbers (E314: 256/256, 1.05 ms, max 6.30 ms, -8 ppm), release. Site check found
+the sync error FAQ's 'since 0.8.27 ... the late notes did not come back' contradicted by E314 -> README + site: '10 of 256
+came 3-6 ms late in the 0.8.30 test, we are looking into it'. Status row jitter 0.04-1.05 ms. OPEN 0.8.31: Mac export late
+notes DURING the paced render (E314; E243 was after it).
 
 Plan (user ok, issues gone through 2026-10-21): (1) #13 arp drift: measure first (native/tools/arp-hold-140bpm.mid,
 **v0.8.29 RELEASED 2026-10-21 20:03** (merge 98e12e6, tag v0.8.29, release CI run 39626672973: mac job got a runner on try 10,

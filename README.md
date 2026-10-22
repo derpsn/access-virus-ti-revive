@@ -226,7 +226,7 @@ for the Virus.
 
 **"A sync error occurred. Press Stop and Play to clear."** Like the original, the editor shows this when the Virus
 reports several notes in a row that arrived too late for their time stamp while your DAW plays. Stop and Play clears
-it. If it comes back, use a USB port the Virus does not share with other devices; the original gives the same advice. On macOS, notes could come late after an export in 0.8.25 and 0.8.26; since 0.8.27 the plug-in fills the audio cycles Core Audio skips during an export, and in our tests the late notes did not come back.
+it. If it comes back, use a USB port the Virus does not share with other devices; the original gives the same advice. On macOS, notes could come late after an export in 0.8.25 and 0.8.26; since 0.8.27 the plug-in fills the audio cycles Core Audio skips during an export. In the 0.8.30 test a few notes of an export still came 3-6 ms late (10 of 256) and the message appeared; we are looking into it.
 
 **Start playback slightly before the first note.** The plug-in sends notes to the Virus ahead of time to make up
 for the USB round trip; right at Play, notes in the first quarter second can come late or be skipped. This was the
@@ -414,7 +414,7 @@ hardware (TI2 Desktop) - details and raw numbers in [`findings/evidence.md`](fin
 |---|---|---|---|---|
 | Classic plug-in 0.7.x (Linux, REAPER) | first note late, second missing | 0.06 ms | 1.31 ms | - |
 | **0.8.27, Linux** (REAPER render, test round) | 63 / 63 | **0.16 ms** | 0.37 ms | -72 ppm |
-| **0.8.29, macOS** (Ableton 12 export, M3, test round) | 256 / 256 | **0.19 ms** | 1.35 ms | 0 ppm |
+| **0.8.30, macOS** (Ableton 12 export, M3, test round) | 256 / 256 | **1.05 ms** | 6.30 ms | -8 ppm |
 | **0.8.23, Windows 11 PC** (Ableton Live 11 export) | 480 / 480 | **0.04 ms** | 0.71 ms | 0 ppm |
 | **0.8.24, Windows 11 PC** (Ableton Live 11 export, test round) | 256 / 256 | **0.33 ms** | 2.58 ms | -1 ppm |
 
@@ -603,7 +603,7 @@ measurements: [`findings/design-linux.md`](findings/design-linux.md), evidence E
 | Reverse engineering of driver, protocol and plug-in interface | done (`findings/`) |
 | **0.8.0: native plug-in "TI Revive Virus Control" (all platforms)** | |
 | Plug-in (editor, browser, libraries, bank sync, automation, project state), opens projects of the classic plug-in | done: tested in REAPER (Linux), Ableton Live 12 (macOS M3), Ableton Live 11 (Windows 11 PC) |
-| Timing: sample-accurate, latency reported to the DAW, any sample rate | done: 0.04-0.33 ms jitter, drift -72 to 0 ppm (E139-E143, E209, E216, E278, E289, E308) |
+| Timing: sample-accurate, latency reported to the DAW, any sample rate | done: 0.04-1.05 ms jitter, drift -72 to 0 ppm (E139-E143, E209, E216, E278, E289, E308, E314) |
 | ASIO sound card "TI Revive Virus Audio" (Windows, 6 in / 2 out, no Access driver) | done: clean on a real PC |
 | Installers: Access software only unpacked (Windows/Linux), clean-up of earlier versions | done |
 | Virus TI Snow | works per user reports (macOS, 0.8.3+; USB 3 and soft knobs with 0.8.20); not tested by us |
