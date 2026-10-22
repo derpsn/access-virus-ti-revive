@@ -342,6 +342,10 @@ release, work/timing/rate-ab-1209): 44.1/512 and 48/128 both 42/42, max 0.85 / 1
 Hypothesis (LOW, untested): the Mac's Core Audio IOProc hands the ring 512-frame chunks; offline blocks of 117.6 frames
 are released in bursts per chunk, which eats into A = 1024. Next: the same nativehost pair on the Mac (Virus on the Mac),
 then 48/512 and 44.1/128 to split rate from block size. No code change yet.
+RESULT (user's Live exports 13:07-13:10, E315): block size decides, not the rate - 48/512 clean (max 0.74 ms, 0 late),
+44.1/128 10 late (max 4.2 ms), 48/128 6 late (max 2.5 ms); late notes every 3.75 s = one phase of the Mac's 512-frame
+chunks. Files in work/timing/mac-0.8.30/exports. Fix idea (not written): pace offline blocks by the ring's chunk step so
+small blocks are not released in a burst behind their position (OfflinePacer, test first), Linux behaviour unchanged.
 
 Plan (user ok, issues gone through 2026-10-21): (1) #13 arp drift: measure first (native/tools/arp-hold-140bpm.mid,
 **v0.8.29 RELEASED 2026-10-21 20:03** (merge 98e12e6, tag v0.8.29, release CI run 39626672973: mac job got a runner on try 10,
