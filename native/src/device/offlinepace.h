@@ -44,7 +44,7 @@ public:
     static constexpr int64_t MAX_EARLY = 512;
 
     // how many frames before its paced position a block of `frames` may run. The ring grows in steps (macOS: Core
-    // Audio hands over 512 frames at a time; Linux/Windows: small USB packets). Blocks smaller than a step that all
+    // Audio hands over 512 frames at a time; Linux: the broker's 10 ms USB transfers, 441 frames). Blocks smaller than a step that all
     // waited for the same step ran together when it arrived, the first up to a step minus a block after its position,
     // and its events reached the Virus that much later than in real time (E315: late notes at 128-sample blocks
     // on the Mac, none at 512). Running up to a step minus a block early leaves each block at most one block late.

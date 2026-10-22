@@ -101,7 +101,7 @@ TEST(offlinepace_blocks_as_large_as_the_step_wait_as_before)
         ring = p.wait_until(ring, 512); // the Virus delivers exactly one block per chunk (E315: 44.1/512 and 48/512 clean)
         CHECK(p.early(512) == 0);
     }
-    OfflinePacer q; // Linux: the broker's ring grows in small USB packets - no change for any block size
+    OfflinePacer q; // a ring that grows in steps smaller than the block: nothing to run early
     int64_t r = 10000;
     q.wait_until(r, 117.6);
     for (int i = 0; i < 100; i++) {
