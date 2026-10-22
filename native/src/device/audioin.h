@@ -28,6 +28,11 @@ public:
     void read_at(float *usb1l, float *usb1r, float *usb2l, float *usb2r, int n, int64_t pos, float *usb3l = nullptr,
                  float *usb3r = nullptr);
     int64_t newest_frame() const; // synth frames produced so far (-1 if not streaming)
+    // the Virus' current sample rate in the ring: 44100 or 48000 (44100 when not open or from an older broker, E323)
+    int rate() const;
+    // true once per rate switch of the broker (the ring's rate_gen counted up since the last call; the rate the ring
+    // was opened with is none); `rate` = the new rate. A switch restarts the stream: re-anchor, new sync ping
+    bool rate_changed(int &rate);
     // the highest absolute sample per raw channel (VTI_AUDIO_IN_CH, device order) over the newest `frames` frames:
     // diagnostics (which channels carry sound, e.g. the third USB output); false if not streaming
     bool raw_peaks(int frames, int peak[6]) const;
@@ -44,6 +49,7 @@ private:
     void *map_ = nullptr; // vti_audio_shm (vtiaudioshm.h)
     void *mac_ = nullptr; // macOS: the Core Audio reader that fills map_
     int64_t pos_ = -1, drops_ = 0;
+    int64_t rate_gen_seen_ = -1; // -1: not looked at since open
 };
 
 } // namespace vti

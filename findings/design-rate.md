@@ -21,14 +21,15 @@ local), the risky cases E112, E175, E241, E257.
 
 ## Our design, in the order it gets built (each step test first, then hardware)
 
-1. **Mapping and units (pure logic).** `virus_rate_for(host)` exactly as above. `ratio` = Virus rate / host rate
+1. **Mapping and units (pure logic; DONE 2026-10-22, eba76ab).** `virus_rate_for(host)` exactly as above. `ratio` = Virus rate / host rate
    everywhere (resampler step, sidechain, wait_offline, timeline, transport, MIDI clock, latency report). Constants
    that are TIME become rate-derived (keepalive 0.3 s, gap fill 5 s, anchor windows 0.5 / 1 / 6 s, marker timeout 5 s,
    klog windows, stats "last second"). Constants that are STAMP FRAMES stay frames like the original (S, A, M, the
    ping's 3072, read margins, ring 16384). `resampling()` = host rate != Virus rate. Tests: mapping table (22.05 ...
    192 k), each derived constant at 44.1 and 48 k, resampler at 48 k and the exact 2:1 step.
-2. **Shared ring knows its rate.** vtiaudioshm: `rate` is read, plus a `rate generation` the broker bumps at every
-   switch (VTI_AUDIO_VERSION bump). The plug-in drops its anchor on a new generation and re-pings like after a
+2. **Shared ring knows its rate.** vtiaudioshm: `rate` is read, plus a `rate_gen` the broker bumps at every switch
+   (DONE 2026-10-22: one reserved word, so the layout and VTI_AUDIO_VERSION 2 stay - old and new broker/plug-in still
+   fit; an older broker leaves rate_gen 0 and its rate 44100). The plug-in drops its anchor on a new generation and re-pings like after a
    reconnect (that path exists). Tests with a fake ring (test_audioin).
 3. **Broker: one rate switch, done like the driver.** Protocol: VTIMSG_AUDIO carries the wanted rate (protocol
    version bump; old clients = 44100). The broker switches only when the stream's owner asks, debounced (at most one

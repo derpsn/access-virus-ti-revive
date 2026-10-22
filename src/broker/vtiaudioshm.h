@@ -27,7 +27,11 @@ typedef struct {
     volatile int32_t streaming; // 1 while the broker streams
     volatile int64_t out_write; // frames appended to `out` by the writing client (written after the data)
     volatile int64_t out_read;  // frames taken by the broker
-    uint32_t reserved[13];
+    // rate following (findings/design-rate.md, E323): `rate` is the Virus' current sample rate (44100 or 48000; 0 from
+    // an older broker = 44100); the broker writes it, then counts rate_gen up at every switch, before the stream runs
+    // at the new rate. Readers re-anchor on a new rate_gen. Same layout as before (one reserved word), version stays 2.
+    volatile uint32_t rate_gen;
+    uint32_t reserved[12];
     int16_t in[VTI_AUDIO_RING * VTI_AUDIO_IN_CH];   // frame f at (f & (VTI_AUDIO_RING - 1)) * VTI_AUDIO_IN_CH
     int16_t out[VTI_AUDIO_RING * VTI_AUDIO_OUT_CH]; // frame f at (f & (VTI_AUDIO_RING - 1)) * VTI_AUDIO_OUT_CH
 } vti_audio_shm;

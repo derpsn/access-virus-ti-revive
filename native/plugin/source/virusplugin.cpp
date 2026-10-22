@@ -462,8 +462,10 @@ void DeviceOut::run()
 #else
                 int r = broker_.audio(true);
 #endif
-                if (r == 1 && audio_.open())
+                if (r == 1 && audio_.open()) {
+                    rate = audio_.rate(); // the Virus' current rate (E323; 44100 from an older broker)
                     audio_gate_.open();
+                }
                 fprintf(stderr, "Virus TI native: audio %s (%d)\n", audio_ok() ? "streaming" : "not available", r);
             }
             if (!open_) {
@@ -585,6 +587,18 @@ void DeviceOut::run()
             generation++;
             if (resume_) // after a Windows sleep the Virus answered sync pings but played no notes until this (E210)
                 resume_();
+        }
+        // the broker switched the Virus' rate (rate following, design-rate.md, E323): the stream starts again at the
+        // new rate - a new timeline and sync ping, as after a reconnect; the plug-in's converters follow at its next
+        // setupProcessing (hosts switch rates while the plug-in is inactive, like the original's resume)
+        if (int r = 0; audio_ok() && audio_.rate_changed(r)) {
+            log("Virus TI native: the Virus' audio now runs at %d Hz - a new timeline\n", r);
+            rate = r;
+            scanned_ = -1;
+            marker_skip_ = -1;
+            last_sound = -1;
+            pings_out_ = 0;
+            generation++;
         }
         check_presence();
         if ((env_stats() || diag_on_.load(std::memory_order_acquire)) && std::chrono::steady_clock::now() >= stats_next_) { // endurance tests

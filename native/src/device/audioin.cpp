@@ -189,6 +189,7 @@ static OSStatus io_proc(AudioObjectID, const AudioTimeStamp *, const AudioBuffer
 
 bool AudioIn::open(const char *linux_name)
 {
+    rate_gen_seen_ = -1;
     (void)linux_name; // Linux only
 #ifdef __linux__
     char name[64];
@@ -263,6 +264,7 @@ bool AudioIn::open(const char *linux_name)
 
 void AudioIn::close()
 {
+    rate_gen_seen_ = -1;
 #ifdef __linux__
     if (map_)
         munmap(map_, sizeof(vti_audio_shm));
@@ -293,6 +295,24 @@ int64_t AudioIn::filled() const
 }
 
 int64_t AudioIn::newest_frame() const { return streaming() ? load_acquire(&shm_->in_frames) : -1; }
+
+int AudioIn::rate() const
+{
+    const uint32_t r = shm_ ? shm_->rate : 0;
+    return r == 48000 ? 48000 : 44100;
+}
+
+bool AudioIn::rate_changed(int &rate)
+{
+    if (!shm_)
+        return false;
+    const int64_t gen = shm_->rate_gen;
+    const bool changed = rate_gen_seen_ >= 0 && gen != rate_gen_seen_;
+    rate_gen_seen_ = gen;
+    if (changed)
+        rate = this->rate();
+    return changed;
+}
 
 bool AudioIn::raw_peaks(int frames, int peak[6]) const
 {
