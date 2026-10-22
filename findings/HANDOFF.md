@@ -452,6 +452,17 @@ personal patches folder (~/Dokumente/Access Music/Virus TI/Patches/TI Revive Har
 init single through RemoteDevice::update_dump one value at a time (aliases share bytes; the 524-byte dump has two
 checksums, so hand offsets for page C/D were one byte off - caught before use), values read back; one-off tools in the
 session scratchpad only, nothing in the repo. Not listened to yet.
+**v0.8.31 RELEASED 2026-10-22 20:01** (release run 39824346270 after a rerun of the mac job only; Latest, 6 assets).
+Site: release-triggered deploy does NOT happen (GITHUB_TOKEN releases trigger no workflows) -> run by hand 39827849547,
+live: Download 0.8.31, 345 unit tests, 'fixed in 0.8.31'. Installed: Linux = release (install.sh; plug-in 7bcee367..,
+broker 56d2f4e0.. = tarball; CI build backed up in ~/.vst3-backup/0.8.31-ci; ~/Downloads/TI-Revive-0.8.31-release);
+Mac = release pushed to ~/Downloads/TI-Revive-0.8.31-release-mac (+ INSTALL-COMMAND.txt + Install test build.command),
+the user installs; win11 NOT yet (VM off; setup.exe in ~/Downloads/TI-Revive-0.8.31-release).
+OPEN (user report ~20:00, Linux, 0.8.31 CI build): "everything loaded has a huge release or kind of reverb" (e.g. an
+EPiano). Checked offline: the ROM EPianos as the plug-in builds them (firmware ROM, TI2 by bcdDevice 0300, decoded
+through the model) have normal values (e.g. ROM C 21 EP3DogNyt: release 29, reverb send 29, delay off) -> conversion
+not the cause (MED). Asked the user: front-panel A/B, transport stop (sustain off + CC 123), DAW, patch, 0.8.30?
+User started win10ref (original Access software) to compare the sound; win10 was started by mistake and shut down.
 
 Plan (user ok, issues gone through 2026-10-21): (1) #13 arp drift: measure first (native/tools/arp-hold-140bpm.mid,
 **v0.8.29 RELEASED 2026-10-21 20:03** (merge 98e12e6, tag v0.8.29, release CI run 39626672973: mac job got a runner on try 10,
