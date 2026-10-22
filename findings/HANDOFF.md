@@ -328,7 +328,9 @@ user says so.
 no file changed because of that, but stop before installing while a DAW runs); win11 = release (setup.exe /quiet exit 0,
 plug-in e285b4f7.. = release MSI; MSVC builds differ from the CI test build), VM shut down; Mac: release unpacked in
 ~/Downloads/TI-Revive-0.8.30-release-mac/TI-Revive-0.8.30-mac (pkg 5936f178.. = release) + INSTALL-COMMAND.txt + 'Install
-release.command', the user installs. Open: #11 comment (draft ready, user to approve), site rebuild (user says when).
+release.command', the user installs. #11 comment POSTED (user ok; issuecomment-6334883221), issue left open for the
+reporter. Site rebuilt (user ok, run 39738056459 on 337390d), live: Download 0.8.30, 338 unit tests, Mac row 0.8.30, FAQ
+'10 of 256'. Remaining: the user installs the release on the Mac. Next round 0.8.31: the four open points above.
 
 Plan (user ok, issues gone through 2026-10-21): (1) #13 arp drift: measure first (native/tools/arp-hold-140bpm.mid,
 **v0.8.29 RELEASED 2026-10-21 20:03** (merge 98e12e6, tag v0.8.29, release CI run 39626672973: mac job got a runner on try 10,
