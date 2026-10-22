@@ -463,6 +463,16 @@ EPiano). Checked offline: the ROM EPianos as the plug-in builds them (firmware R
 through the model) have normal values (e.g. ROM C 21 EP3DogNyt: release 29, reverb send 29, delay off) -> conversion
 not the cause (MED). Asked the user: front-panel A/B, transport stop (sustain off + CC 123), DAW, patch, 0.8.30?
 User started win10ref (original Access software) to compare the sound; win10 was started by mistake and shut down.
+RESOLVED (not TI Revive): the original in win10ref had the same ('the note is playing forever' = a stuck hold in the
+Virus); the user power-cycled the Virus (while passed through to win10ref - avoid; after it the VM held the stale USB
+address 18, re-attached as 19), afterwards REAPER on Linux sounds normal. Cause of the stuck hold unknown.
+NEW GAP (user, ~20:30, "a CLEAR huge gap, we need the same behaviour"): with the original, the Virus' display shows a
+'USB configuring' screen when the plug-in starts the first time, and a 'clock changed' message; ours shows neither.
+Known: the configuring/connected screens are host-sent 640-byte LCD bitmaps from firmware.bin (lcd_configuring_000/001,
+lcd_connected_000; E228). How/when/by whom they are sent and where 'clock changed' comes from: REA analysis running
+(sub-agent, static only; driver, VirusUSB_X64.dll, Virus Control, Control Center, firmware listings). Nothing is sent
+to the Virus until the request is known and judged safe (rule 2). Virus on Linux; win10ref still running (no Virus);
+win11 release install still open.
 
 Plan (user ok, issues gone through 2026-10-21): (1) #13 arp drift: measure first (native/tools/arp-hold-140bpm.mid,
 **v0.8.29 RELEASED 2026-10-21 20:03** (merge 98e12e6, tag v0.8.29, release CI run 39626672973: mac job got a runner on try 10,
