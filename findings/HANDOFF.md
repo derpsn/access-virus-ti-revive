@@ -411,6 +411,12 @@ steps -> artifacts TI-Revive-hil-windows / TI-Revive-hil-mac (not in the release
 ssh = no Microphone access = silence (E103), Windows broker shm per session (E047: VM via schtasks /IT). Checked: script
 tests 55 OK, ctest 5/5, --folder on work/hil/20261022-143309 = ALL PASS like hil.sh. NOT run on Windows or the Mac
 yet; risk.json keeps those items by hand until they pass once. Next: new CI run, then the first runs.
+CI run 39800731071 (78f7808, version 0.8.31): ALL GREEN incl. mac (got a runner); artifacts incl. TI-Revive-hil-windows
+(286 KB) and TI-Revive-hil-mac (126 KB). Linux = CI build (install.sh, no sudo needed; plug-in 569d1d8a.., broker
+56d2f4e0.. = the tarball; dev build backed up in ~/.vst3-backup/0.8.31-dev-3723273; unpacked in
+~/Downloads/TI-Revive-0.8.31-test). hil.sh on it (work/hil/20261022-190007): H1, H2 x2, H3, H6 ALL PASS (H3 export
+1.00x, 45/45, max 0.94 ms; H6 26/26); --folder on it: ALL PASS too. Next: Windows (hil-win.cmd, first real run),
+Mac (push package + hil zip, hil-mac.command by the user + 48/128 Live export), checklist.
 
 Plan (user ok, issues gone through 2026-10-21): (1) #13 arp drift: measure first (native/tools/arp-hold-140bpm.mid,
 **v0.8.29 RELEASED 2026-10-21 20:03** (merge 98e12e6, tag v0.8.29, release CI run 39626672973: mac job got a runner on try 10,
