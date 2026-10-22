@@ -313,8 +313,9 @@ Release texts 2026-10-22: release notes 0.8.30 in build.yml; README/site 338 tes
 'tirevive-cc only reads ... restoring comes later' WRONG -> fixed; CLI list + restore line; status row restore now 'Linux,
 Windows 11 (VM), macOS (E313, E314)'; native/docs/controlcenter.md scope row, title and RESTORE line updated. Site built
 locally (not deployed). OPEN for the user: Mac timing row (0.8.29, E308 clean) vs the newer 0.8.30 export (E314: 10 late
-notes, E243). Open LOW (0.8.31): tirevive-cc's help says 'Close the TI Revive plug-in first' but the Control Center shares
-the Virus with the plug-in (restore worked with the plug-in open on all three systems).
+notes, E243). CORRECTED 2026-10-22 (user): the earlier note here ('restore worked with the plug-in open, so tirevive-cc's
+help is wrong') was false and unsourced - the user had to close the plug-in before the restore worked, as tirevive-cc's
+help and native/docs/controlcenter.md say (one broker client at a time). No open point.
 USER DECISION: Mac timing row -> 0.8.30 numbers (E314: 256/256, 1.05 ms, max 6.30 ms, -8 ppm), release. Site check found
 the sync error FAQ's 'since 0.8.27 ... the late notes did not come back' contradicted by E314 -> README + site: '10 of 256
 came 3-6 ms late in the 0.8.30 test, we are looking into it'. Status row jitter 0.04-1.05 ms. OPEN 0.8.31: Mac export late
@@ -330,7 +331,7 @@ plug-in e285b4f7.. = release MSI; MSVC builds differ from the CI test build), VM
 ~/Downloads/TI-Revive-0.8.30-release-mac/TI-Revive-0.8.30-mac (pkg 5936f178.. = release) + INSTALL-COMMAND.txt + 'Install
 release.command', the user installs. #11 comment POSTED (user ok; issuecomment-6334883221), issue left open for the
 reporter. Site rebuilt (user ok, run 39738056459 on 337390d), live: Download 0.8.30, 338 unit tests, Mac row 0.8.30, FAQ
-'10 of 256'. Remaining: the user installs the release on the Mac. Next round 0.8.31: the four open points above.
+'10 of 256'. Remaining: the user installs the release on the Mac. Next round 0.8.31: the three open points above (Mac export late notes E314, browser selection in both panes, 'bank sync failed' wording).
 
 Plan (user ok, issues gone through 2026-10-21): (1) #13 arp drift: measure first (native/tools/arp-hold-140bpm.mid,
 **v0.8.29 RELEASED 2026-10-21 20:03** (merge 98e12e6, tag v0.8.29, release CI run 39626672973: mac job got a runner on try 10,
