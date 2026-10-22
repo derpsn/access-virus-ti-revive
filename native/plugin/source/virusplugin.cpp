@@ -780,6 +780,8 @@ tresult PLUGIN_API VirusPlugin::initialize(FUnknown *context)
             for (auto &kv : v)
                 dump_paths_.insert(kv.first);
     }
+    if (multi.size() == 267)
+        init_multi_ = multi;
     if (multi.size() == 267 && init.size() == 524) {
         RemoteDevice::upgrade_single(init);
         default_.push_back({});
@@ -914,7 +916,7 @@ void VirusPlugin::set_usb_io(int value, bool save)
 // its stored "IO Configuration" the same way on every connection (0x18007ec30)
 std::vector<std::vector<uint8_t>> VirusPlugin::startup_messages() const
 {
-    auto msgs = dev_.init_messages();
+    auto msgs = dev_.init_messages(0x10, init_multi_);
     for (auto &m : msgs)
         if (m.size() == 11 && m[6] == 0x73 && m[7] == 0x00 && m[8] == 0x09)
             m[9] = (uint8_t)usb_io_.load();
@@ -2540,6 +2542,8 @@ void VirusPlugin::sync_banks()
     }
     rise = false;
     riser.join();
+    // like the original after its bank check: the message timer back at 1 (E321)
+    out_->send({0xF0, 0x00, 0x20, 0x33, 0x01, 0x10, 0x74, 0x00, 0x29, 0x01, 0xF7});
     syncing_ = false;
     sync_eta_s_ = -1;
     set_sync_progress(127);
@@ -3543,7 +3547,9 @@ void VirusPlugin::send_state()
     std::lock_guard<std::mutex> lk(state_mu_);
     std::vector<std::vector<uint8_t>> recs;
     for (auto &r : state_)
-        if (!r.empty() && !(r.size() > 2 && r[0] == 0xF0 && r[1] == 0x7D)) { // not our editor-only records
+        if (!r.empty() && !(r.size() > 2 && r[0] == 0xF0 && r[1] == 0x7D) && // not our editor-only records
+            !(!init_multi_.empty() && r.size() > 6 && r[0] == 0xF0 && r[6] == 0x11)) { // nor the stored multi: the
+            // start-up messages send the fixed table unchanged, like the original (E321)
             recs.push_back(r);
             auto &m = recs.back(); // a project's USB IO configuration: this computer's setting wins
             if (m.size() == 11 && m[0] == 0xF0 && m[6] == 0x73 && m[7] == 0x00 && m[8] == 0x09)

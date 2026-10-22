@@ -149,11 +149,11 @@ TEST(memsync_sync_bank_fetches_only_stale)
     CHECK_EQ(progress_calls, 128);
     CHECK_EQ(stale_calls, 2);
     CHECK(cache[3] == v.ram[1][3] && cache[100] == v.ram[1][100]);
-    CHECK_EQ(v.requests.size(), 3u); // bank info + 2 single dumps
-    // up to date now: only the bank info
+    CHECK_EQ(v.requests.size(), 4u); // display message (E321) + bank info + 2 single dumps
+    // up to date now: only the display message and the bank info
     v.requests.clear();
     CHECK_EQ(sync.sync_bank(1, cache), 0);
-    CHECK_EQ(v.requests.size(), 1u);
+    CHECK_EQ(v.requests.size(), 2u);
 }
 
 TEST(memsync_sync_bank_cancel_and_errors)
@@ -274,6 +274,23 @@ TEST(memsync_cancel_ends_a_waiting_request_at_once)
 
 // "Download entire bank from Virus TI" like the original (E301): all 128 programs in order, each request preceded by
 // the display message 74 01 7E 04 (Actions/Rise Message 4), no bank info, every program read again even if cached
+TEST(memsync_sync_bank_keeps_the_configuring_message_up)
+{
+    // E321: the original sends 74 01 7E 07 (Rise Message 7: "Configuring Virus TI") right before every bank info
+    // request, whether anything is fetched or not - the Virus shows it while the banks are checked
+    FakeVirus v;
+    MemorySync sync(v.send());
+    v.sync = &sync;
+    Bank cache;
+    for (int p = 0; p < 128; p++)
+        cache[p] = v.ram[1][p] = fake_single(1, p, p);
+    CHECK_EQ(sync.sync_bank(1, cache), 0);
+    const Bytes rise = {0xF0, 0x00, 0x20, 0x33, 0x01, 0x10, 0x74, 0x01, 0x7E, 0x07, 0xF7};
+    CHECK_EQ(v.requests.size(), 2u);
+    CHECK(v.requests[0] == rise);
+    CHECK(v.requests.size() > 1 && v.requests[1][6] == 0x39);
+}
+
 TEST(memsync_read_bank_reads_all)
 {
     FakeVirus v;

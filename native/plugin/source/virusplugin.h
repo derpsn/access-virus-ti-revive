@@ -715,6 +715,7 @@ private:
     std::atomic<bool> values_dirty_{false};
     bool state_loaded_ = false;                // setState or the default state was applied
     std::vector<std::vector<uint8_t>> default_; // a new instance's state (from the user's plug-in binary)
+    std::vector<uint8_t> init_multi_; // the fixed multi dump as the original sends it at start-up (E321)
 
     void apply_state_to_params();
     void panel_message(const std::vector<uint8_t> &msg);

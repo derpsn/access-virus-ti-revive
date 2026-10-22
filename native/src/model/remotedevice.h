@@ -143,8 +143,9 @@ public:
     int shown(const std::string &path, int v) const;
     // Value of `path` for a valuelist text ("MIDI REMOTE", "Off", "01"); -1 if neither an entry nor a number.
     int value_of(const std::string &path, const std::string &text) const;
-    // The messages the original sends at start-up before the project state: GlobalInit, then ParamInit.
-    std::vector<std::vector<uint8_t>> init_messages(int device_id = 0x10) const;
+    // The messages the original sends at start-up before the project state: GlobalInit, "Configuring Virus TI" on the
+    // display, `multi` (the plug-in's fixed multi dump, sent unchanged; none if empty), then ParamInit (E321).
+    std::vector<std::vector<uint8_t>> init_messages(int device_id = 0x10, const std::vector<uint8_t> &multi = {}) const;
 
     // Dumps (VirusTI_Singledump, VirusTI_MultiDump, ...): the template's byte index is the offset in the SysEx message.
     // Parameter values of a received dump; key = path, or "path@part" for bytes with a part attribute. Several

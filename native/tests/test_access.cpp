@@ -105,6 +105,38 @@ TEST(access_init_messages)
         CHECK(!m.empty() && (m[0] & 0x80));
 }
 
+TEST(access_init_messages_show_configuring_like_the_original)
+{
+    // E321: the original's start-up shows "Configuring Virus TI" on the Virus (Actions/Rise Message 7, message timer
+    // 100) right after the global settings, and sets the timer to 1 once the parts are set up
+    auto msgs = dev().init_messages();
+    const Bytes rise = {0xF0, 0x00, 0x20, 0x33, 0x01, 0x10, 0x74, 0x00, 0x7E, 0x07, 0xF7};
+    const Bytes timer_on = {0xF0, 0x00, 0x20, 0x33, 0x01, 0x10, 0x74, 0x00, 0x29, 0x64, 0xF7};
+    const Bytes timer_off = {0xF0, 0x00, 0x20, 0x33, 0x01, 0x10, 0x74, 0x00, 0x29, 0x01, 0xF7};
+    size_t at = 0;
+    while (at < msgs.size() && msgs[at] != rise)
+        at++;
+    CHECK(at > 0 && at + 1 < msgs.size());
+    if (at == 0 || at + 1 >= msgs.size())
+        return;
+    CHECK(msgs[at + 1] == timer_on);
+    for (size_t i = 0; i < at; i++)
+        CHECK(msgs[i].size() == 11 && msgs[i][6] == 0x73); // all global settings first
+    CHECK(msgs[at + 2][6] == 0x72);                         // then the parts (ParamInit)
+    CHECK(msgs.back() == timer_off);
+    // with the plug-in's fixed multi: sent unchanged between the message and the parts, like the original (the
+    // state keeps it with bytes 25..40 and the checksum zeroed, but the Virus gets the table as it is)
+    auto multi = files()->init_multi();
+    CHECK_EQ(multi.size(), 267u);
+    auto with = dev().init_messages(0x10, multi);
+    CHECK_EQ(with.size(), msgs.size() + 1);
+    if (with.size() == msgs.size() + 1) {
+        CHECK(with[at + 1] == timer_on);
+        CHECK(with[at + 2] == multi);
+        CHECK(with[at + 3][6] == 0x72);
+    }
+}
+
 TEST(access_automation_map)
 {
     std::vector<AutomationEntry> a;

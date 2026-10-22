@@ -564,7 +564,7 @@ int RemoteDevice::value_of(const std::string &path, const std::string &text) con
     return -1;
 }
 
-std::vector<std::vector<uint8_t>> RemoteDevice::init_messages(int device_id) const
+std::vector<std::vector<uint8_t>> RemoteDevice::init_messages(int device_id, const std::vector<uint8_t> &multi) const
 {
     std::vector<std::vector<uint8_t>> out;
     for (auto &g : global_init) {
@@ -575,6 +575,17 @@ std::vector<std::vector<uint8_t>> RemoteDevice::init_messages(int device_id) con
         else
             fprintf(stderr, "remotedevice: GlobalInit %s = %s not encodable\n", g.first.c_str(), g.second.c_str());
     }
+    // like the original (E321): "Configuring Virus TI" on the Virus' display (Rise Message 7) with the message timer
+    // at 100 while the parts are set up, the timer back at 1 after them
+    auto push = [&](const char *path, int v) {
+        auto m = encode(path, v, 0, device_id);
+        if (!m.empty())
+            out.push_back(m);
+    };
+    push("Actions/Rise Message", 7);
+    push("Intern Display/Messagetimer", 100);
+    if (!multi.empty())
+        out.push_back(multi);
     for (auto &pi : param_init) {
         int v = value_of(pi.param, pi.value);
         auto m = v >= 0 ? encode(pi.param, v, pi.part - 1, device_id) : std::vector<uint8_t>{};
@@ -583,6 +594,7 @@ std::vector<std::vector<uint8_t>> RemoteDevice::init_messages(int device_id) con
         else
             fprintf(stderr, "remotedevice: ParamInit %s = %s not encodable\n", pi.param.c_str(), pi.value.c_str());
     }
+    push("Intern Display/Messagetimer", 1);
     return out;
 }
 
