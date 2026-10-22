@@ -353,6 +353,12 @@ OfflinePacer::early() (ring step learned per render, block runs up to step - blo
 had no Virus (it was still on the Mac), deleted. NEXT: Virus back on Linux -> hil.sh --plugin <dev build> + the H3 pair
 48/128 and 44.1/512 (expect 'blocks up to ~0 frames early' there), then CI test build (version 0.8.31) for the Mac:
 user exports 48/128 and 44.1/128 again, expect 0 notes > 2 ms late, no sync page, log 'up to ~394 / ~384 frames early'.
+LINUX ON HARDWARE 2026-10-22 ~13:25-13:40 (TI Desktop, dev plug-in build-native 1382fcc+): H3 trio (work/timing/rate-ab-dev-1324)
+48/128 42/42 max 1.03 ms, 44.1/512 max 0.86 ms, 44.1/128 max 0.41 ms jitter 0.09 ms, 1-3 sync reports each. CORRECTION of my
+prediction: Linux is NOT unchanged - the broker fills the ring in 10 ms transfers (vtiusbaudio_libusb.c NP 10 = 441 frames), so
+blocks ran 313/323 frames early (441 - block) and 370 once at block 512 (an 882 double step at the render start; under the
+512 cap); comments fixed in a follow-up commit. hil.sh --plugin <dev> ALL PASS (work/hil/20261022-132959/): H1, H2 x2, H3 45/45 max
+0.96 ms, H6. NEXT: push round-0.8.31, CI test build version 0.8.31, Mac: install + exports E2/E3 again.
 
 Plan (user ok, issues gone through 2026-10-21): (1) #13 arp drift: measure first (native/tools/arp-hold-140bpm.mid,
 **v0.8.29 RELEASED 2026-10-21 20:03** (merge 98e12e6, tag v0.8.29, release CI run 39626672973: mac job got a runner on try 10,
