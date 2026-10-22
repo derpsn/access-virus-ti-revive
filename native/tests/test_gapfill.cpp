@@ -56,6 +56,17 @@ TEST(gapfill_sleep_is_a_new_stream_not_a_fill)
     CHECK_EQ(g.filled(), 0);
 }
 
+TEST(gapfill_limit_is_five_seconds_at_any_rate)
+{
+    // E323: the device may run at 48 kHz; the limit is a time, 5 s
+    GapFill g;
+    CHECK_EQ(g.max_fill(), 5 * 44100);
+    g.set_rate(48000);
+    CHECK_EQ(g.max_fill(), 5 * 48000);
+    g.update(1000, 0);
+    CHECK_EQ(g.update(1000 + 512 + 5 * 48000, 512), 5 * 48000); // 5 s at 48 kHz is still a gap
+}
+
 // The boundaries (mutation run 2026-10-20): exactly MAX_FILL is still a gap, SLACK frames either way are rounding
 TEST(gapfill_boundaries)
 {

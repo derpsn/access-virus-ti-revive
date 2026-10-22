@@ -23,6 +23,17 @@ TEST(keepalive_period_on_timeline)
     CHECK(exact);
 }
 
+TEST(keepalive_period_follows_the_virus_rate)
+{
+    // 300 ms whatever the Virus runs at (E323: at 48 kHz its frames are shorter)
+    ActiveSensing fe;
+    CHECK_EQ(fe.period, 13230);
+    fe.set_rate(48000);
+    CHECK_EQ(fe.period, 14400);
+    fe.set_rate(44100);
+    CHECK_EQ(fe.period, 13230);
+}
+
 TEST(keepalive_resync_bounds_backlog_and_future)
 {
     ActiveSensing fe;

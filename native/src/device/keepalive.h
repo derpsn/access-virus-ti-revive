@@ -10,10 +10,11 @@
 namespace vti {
 
 struct ActiveSensing {
-    int64_t period = 13230; // 300 ms in Virus frames (44.1 kHz)
+    int64_t period = 13230; // 300 ms in Virus frames (44.1 kHz; set_rate for 48 kHz, E323)
     int64_t next = -1;      // timeline frame of the next FE, -1 = not anchored
 
     void reset(int64_t at) { next = at; }
+    void set_rate(int rate) { period = (int64_t)rate * 3 / 10; } // 300 ms at the Virus' current rate
 
     // Emits at most one FE due before `end` (the end of this block on the timeline) and returns how many were sent.
     // A timeline jump in either direction keeps the next FE within one period: no backlog burst after a stall, no

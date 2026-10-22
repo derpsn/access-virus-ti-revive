@@ -123,6 +123,7 @@ public:
     }
     bool calibrating() const { return pings_out_.load() > 0; }
     std::atomic<int64_t> marker{-2};
+    std::atomic<int> rate{44100}; // the Virus' sample rate (44100; 48000 when it follows the host, E323)
     std::atomic<int64_t> lead{0}; // frames from a timeline position to its sound in the ring (VirusPlugin::lead())
     // the newest ring frame that had sound on USB 1 / USB 2 (the ping waits for 1 s of silence, like the original)
     std::atomic<int64_t> last_sound{-1};
@@ -610,17 +611,18 @@ private:
     static int timing_s() { static const int s = getenv("VTI_NATIVE_S") ? atoi(getenv("VTI_NATIVE_S")) : 5000; return s; }
     int64_t lead() const { return timing_s() + timing_a(); }
     // the read position stays block + 640 - |timeline jitter (<= ~400)| behind the newest frame
-    // (+ the resampler's look-ahead when the host does not run at 44.1 kHz)
+    // (+ the resampler's look-ahead when the host does not run at the Virus' rate)
     int64_t latency_frames() const
     {
         return timing_a() + std::max(block_, 256) + 640 + (resampling() ? Resampler::HALF + 2 : 0);
     }
-    bool resampling() const { return std::fabs(rate_ - 44100.0) > 0.5; }
+    int virus_rate() const { return out_ ? out_->rate.load(std::memory_order_relaxed) : 44100; }
+    bool resampling() const { return std::fabs(rate_ - virus_rate()) > 0.5; }
     void read_resampled(float **o1, float **o2, float **o3, int n, double ratio, int64_t newest, int64_t target);
 public:
     Steinberg::uint32 PLUGIN_API getLatencySamples() override
     {
-        return (Steinberg::uint32)std::lround(latency_frames() * rate_ / 44100.0);
+        return (Steinberg::uint32)std::lround(latency_frames() * rate_ / virus_rate());
     }
 private:
     double rate_ = 44100;
@@ -629,7 +631,7 @@ private:
     bool tl_valid_ = false, anchored_ = false;
     double next_tick_ = 0;
     ActiveSensing fe_;  // FE every 300 ms on the timeline (the DSP's watchdog, E237)
-    double tl_acc_ = 0; // fractional Virus frames of the timeline (host rates other than 44.1 kHz)
+    double tl_acc_ = 0; // fractional Virus frames of the timeline (host rate != the Virus' rate)
     TransportWatch transport_; // Play and loop restarts: the original's F2 + 73 00 23 01 + 6F <part> 7F 00 (E275)
     double stat_acc_ = 0; // the same for the host-frames statistic
     int64_t stream_start_ = -1;

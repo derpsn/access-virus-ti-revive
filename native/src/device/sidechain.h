@@ -16,7 +16,7 @@ public:
     // below its limit (2048, it drops beyond)
     static constexpr int TARGET = 512;
 
-    void setup(double host_rate, int max_block);
+    void setup(double host_rate, int max_block, int virus_rate = 44100); // the Virus at 44.1 or 48 kHz (E323)
     void reset(); // the stream starts again (e.g. after another writer had the ring)
 
     // n host frames (l/r may be null = silence); queued = frames in the ring right before this block. Writes up to
@@ -30,7 +30,7 @@ public:
 
 private:
     Resampler rs_;
-    double nominal_ = 1;      // host frames per Virus frame at equal clocks (host rate / 44100)
+    double nominal_ = 1;      // host frames per Virus frame at equal clocks (host rate / Virus rate)
     int max_block_ = 0, max_out_ = 0, cap_ = 0;
     std::vector<float> hist_[2]; // host frames from absolute frame first_ on (cnt_ of them)
     int64_t first_ = 0;

@@ -245,16 +245,16 @@ void DeviceOut::klog_check()
                     int64_t on = from + i;
                     log("klog: K %lld (stamp %lld, sent at newest %lld = stamp + %lld; sound %.1f ms after sending)\n",
                         (long long)(on - e.stamp), (long long)e.stamp, (long long)e.sent,
-                        (long long)(e.sent - e.stamp), (on - e.sent) / 44.1);
+                        (long long)(e.sent - e.stamp), (on - e.sent) * 1000.0 / rate.load());
                     found = true;
                 } else if (v >= 0.004f)
                     e.quiet = 0;
             }
             e.scanned = from + n;
         }
-        if (!found && e.scanned > e.stamp + 88200)
+        if (!found && e.scanned > e.stamp + 2 * (int64_t)rate.load())
             log("klog: no onset within 2 s of stamp %lld (sent at newest %lld)\n", (long long)e.stamp, (long long)e.sent);
-        if (found || e.scanned > e.stamp + 88200)
+        if (found || e.scanned > e.stamp + 2 * (int64_t)rate.load())
             klog_stamps_.erase(klog_stamps_.begin() + (long)k);
         else
             k++;
@@ -316,7 +316,7 @@ void DeviceOut::scan_audio()
         }
         scanned_ += n;
     }
-    if (pings_out_.load() > 0 && from >= 0 && newest > from + 5 * 44100) { // 5 s without a marker
+    if (pings_out_.load() > 0 && from >= 0 && newest > from + 5 * (int64_t)rate.load()) { // 5 s without a marker
         pings_out_ = 0;
         if (marker.load() < 0) {
             marker = -2;
@@ -602,7 +602,7 @@ void DeviceOut::run()
                 (long long)err_min.exchange(INT64_MAX), (long long)err_max.exchange(INT64_MIN));
             stats_newest_ = newest;
             int pk[6];
-            if (audio_ok() && audio_.raw_peaks(44100, pk)) // the last second per raw channel (0/1 in, 2/3 USB 1, 4/5 USB 2)
+            if (audio_ok() && audio_.raw_peaks(rate.load(), pk)) // the last second per raw channel (0/1 in, 2/3 USB 1, 4/5 USB 2)
                 log("stats: raw peaks %d %d | %d %d | %d %d\n", pk[0], pk[1], pk[2], pk[3], pk[4], pk[5]);
             int64_t sc_f = sc_frames.exchange(0), sc_y = sc_yields.exchange(0);
             if (sc_f || sc_y)
@@ -1010,14 +1010,15 @@ tresult PLUGIN_API VirusPlugin::setupProcessing(ProcessSetup &setup)
 {
     block_ = setup.maxSamplesPerBlock;
     rate_ = setup.sampleRate;
-    if (resampling()) { // the Virus runs at 44.1 kHz; other host rates get its audio resampled
-        const double step = 44100.0 / rate_;
+    if (resampling()) { // the Virus runs at 44.1 or 48 kHz (E323); other host rates get its audio resampled
+        const double step = (double)virus_rate() / rate_;
         resampler_.setup(step);
         for (auto &b : rs_src_)
             b.assign((size_t)(block_ * step * 1.01) + 2 * Resampler::TAPS + 8, 0.0f);
         rs_valid_ = false;
     }
-    sc_.setup(rate_, std::max(block_, 1));
+    sc_.setup(rate_, std::max(block_, 1), virus_rate());
+    fe_.set_rate(virus_rate());
     sc_buf_.assign((size_t)sc_.max_out() * 2, 0);
     sc_expect_ = sc_seen_ = -1;
     sc_hold_ = 0;
@@ -1159,7 +1160,8 @@ tresult PLUGIN_API VirusPlugin::process(ProcessData &data)
         last_play_ms_.store(now_ms(), std::memory_order_relaxed);
     // the Virus timeline: block start = newest ring frame - S, continued by the block size, re-anchored on drift
     const int S = timing_s();
-    const double ratio = 44100.0 / rate_; // Virus frames per host sample
+    const int vrate = virus_rate();
+    const double ratio = (double)vrate / rate_; // Virus frames per host sample
     int64_t newest = ring_newest();
     if (out_ && out_->generation.load() != generation_seen_) { // the Virus came back: a new audio stream
         generation_seen_ = out_->generation.load();
@@ -1189,8 +1191,8 @@ tresult PLUGIN_API VirusPlugin::process(ProcessData &data)
             stream_start_ = newest; // wait until the Virus has worked through the start-up messages and the state
         // the sync ping goes with the anchor: like the original, after 1 s of silence on USB 1/2 so its marker can be
         // found (at most 6 s later; without a marker the stamps stay relative to the ring)
-        bool quiet = out_->last_sound.load() < newest - 44100;
-        bool anchor_now = !tl_valid_ ? newest - stream_start_ > 22050 && (quiet || newest - stream_start_ > 6 * 44100)
+        bool quiet = out_->last_sound.load() < newest - vrate;
+        bool anchor_now = !tl_valid_ ? newest - stream_start_ > vrate / 2 && (quiet || newest - stream_start_ > 6 * vrate)
                                      : std::llabs(err) > 8192;
         // no marker (the Virus was not silent): ping again once it is quiet and the host is not playing (3 tries)
         if (tl_valid_ && !anchor_now && out_->marker.load() == -2 && !out_->calibrating() && marker_retries_ < 3 && quiet &&
@@ -1276,7 +1278,7 @@ tresult PLUGIN_API VirusPlugin::process(ProcessData &data)
         const double tempo_qn = (data.processContext->state & ProcessContext::kTempoValid) ? data.processContext->tempo
                                                                                           : 120.0;
         const double ppq = data.processContext->projectTimeMusic;
-        if (transport_.update(playing, ppq, (double)block_frames / 44100.0 * tempo_qn / 60.0)) {
+        if (transport_.update(playing, ppq, (double)block_frames / vrate * tempo_qn / 60.0)) {
             // F2 and the +1 tick; the original's 16 part messages (6F <part> 7F 00) are left out: on the device they
             // delayed the next note by 29-37 ms, and they only concern parts that use the Atomizer (E280)
             uint8_t f2[3];
@@ -1289,7 +1291,7 @@ tresult PLUGIN_API VirusPlugin::process(ProcessData &data)
         double tempo = clock_tempo(data.processContext && (data.processContext->state & ProcessContext::kTempoValid)
                                        ? data.processContext->tempo
                                        : 120.0); // 0 or negative made this loop endless (hostmidi.h)
-        double per_tick = 44100.0 * 60.0 / (tempo * 24.0);
+        double per_tick = vrate * 60.0 / (tempo * 24.0); // 919 frames per tick at 44.1 kHz, 1000 at 48 (E323)
         static const uint8_t f8 = 0xF8;
         while (next_tick_ < (double)(tl_ + block_frames)) {
             add((int64_t)std::lround(next_tick_), &f8, 1);
@@ -1503,7 +1505,7 @@ void VirusPlugin::wait_offline(ProcessData &data, double ratio, int64_t &newest,
         // ping goes out now, the marker follows ~1 s later) instead of after 0.5 s of render - or 6 s when the
         // render's first notes keep the Virus from being quiet
         if (waited && !tl_valid_ && newest >= 0)
-            stream_start_ = newest - 22051;
+            stream_start_ = newest - (virus_rate() / 2 + 1);
     }
     if (newest < 0)
         return;
