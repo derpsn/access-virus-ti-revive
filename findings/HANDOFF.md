@@ -294,6 +294,9 @@ CI (setup.exe /quiet exit 0, entries 0.8.30, plug-in 46f97c18.. = CI MSI, C:\tir
 on Linux); Mac: zip pushed + unzipped in ~/Downloads/TI-Revive-0.8.30-ci-mac/TI-Revive-0.8.30-mac (pkg a69567e5.. = CI) with
 INSTALL-COMMAND.txt + 'Install test build.command'; the user installs. hil.sh running on the CI build. Checklist published:
 https://claude.ai/artifact/EXf4qynRdt9pWgVoUy5KvX (db, marks in rounds/0.8.30/marks, empty at publish).
+hil.sh on the CI build (work/hil/20261022-080203, ended 08:06): H1, H2 x2, H3, H6 ALL PASS (H6: 26/26, max 0.86 ms, jitter 0.23 ms,
++6 ppm). The user started REAPER at 08:05 while hil.sh still owned the Virus -> 'plug-in waiting' (expected, one owner); REAPER
+took over at 08:06:05 by itself. Lesson: tell the user when hil.sh is still running.
 
 Plan (user ok, issues gone through 2026-10-21): (1) #13 arp drift: measure first (native/tools/arp-hold-140bpm.mid,
 **v0.8.29 RELEASED 2026-10-21 20:03** (merge 98e12e6, tag v0.8.29, release CI run 39626672973: mac job got a runner on try 10,
