@@ -502,6 +502,13 @@ work/rate-follow/audit-44k1.md (git-ignored). Waiting for the REA pass on the or
 E323 written (the original's rate following: mapping 0x1800a9dc0, driver sequence, USB chip, DSP PLL, stamps in
 Virus frames at the current rate, E241 hypothesis SA Freq). PLAN: findings/design-rate.md (6 steps, rule-2 gates,
 hardware tests, risks) - waiting for the user's go before any code; first gate: the user reads SA Freq on the Virus.
+User: 'yes, start with steps 1 and 2'. STEP 1 DONE (eba76ab): virusrate.h (the original's rule), time values from
+the Virus' rate (keepalive, gap fill, anchor windows, marker timeout, klog, stats, MIDI clock 919/1000, transport,
+resampler/sidechain step, latency report); the rate stays 44100 until the broker switches. STEP 2 DONE: rate_gen in
+the shm (same layout, version 2), AudioIn::rate()/rate_changed(), the plug-in re-anchors on a switch. 354 tests,
+ctest 5/5, hil.sh ALL PASS after each step (work/hil/20261022-212352, -213127). Nothing sent to the Virus at 48 kHz.
+NEXT: step 3 (broker switch sequence) - only after the user read SA Freq and agreed; the first real switch is a
+controlled run with the user watching the display.
 
 Plan (user ok, issues gone through 2026-10-21): (1) #13 arp drift: measure first (native/tools/arp-hold-140bpm.mid,
 **v0.8.29 RELEASED 2026-10-21 20:03** (merge 98e12e6, tag v0.8.29, release CI run 39626672973: mac job got a runner on try 10,
