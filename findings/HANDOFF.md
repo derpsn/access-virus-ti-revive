@@ -379,6 +379,9 @@ MAC RESULT ~14:30 (E317, work/timing/mac-0.8.31b): first note on time in both (-
 Item 1 (E314) done on the Mac up to one single 2.5 ms note (cause unknown, watch in the round test). NEXT: Linux hil.sh
 on the round build when the Virus is back; other 0.8.31 items (browser selection both panes, 'bank sync failed' wording);
 at release: README/site FAQ ('10 of 256 ... looking into it') + Mac timing row.
+LINUX ON HARDWARE ~14:33-14:45 with the first-note build (dev, = 2410c7c code): hil.sh ALL PASS (work/hil/20261022-143309:
+H1, H2 x2, H3, H6); H3 48/128 42/42 max 1.02 ms jitter 0.17, 44.1/128 max 0.81 ms jitter 0.16, 1 sync report each, blocks
+323 / 313 frames early (work/timing/rate-ab-dev2-1437). Linux done for item 1.
 
 Plan (user ok, issues gone through 2026-10-21): (1) #13 arp drift: measure first (native/tools/arp-hold-140bpm.mid,
 **v0.8.29 RELEASED 2026-10-21 20:03** (merge 98e12e6, tag v0.8.29, release CI run 39626672973: mac job got a runner on try 10,
