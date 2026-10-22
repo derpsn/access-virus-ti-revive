@@ -305,6 +305,10 @@ VM block 5/5 marked pass (WC1-WC3, W1 #11, W2 RESTORE in the Access look); win11
 'sync error shown (4 late events since Play)' during the export, cleared by Play (as every VM round, E288). Virus detached,
 win11 shut down. Mac: receipt io.github.derpsn.tirevive 0.8.30 (installed by the user ~08:15, after the 08:03 push), old
 diag.log -> diag.log.pre-0.8.30-ci, diag.on set. Mac block next (MC1-MC3, M1 #11, M2 RESTORE).
+Mac block 5/5 marked pass -> ROUND 0.8.30: 12/12 marked pass (E314). Mac export measured: 256/256, -8 ppm, jitter 1.05 ms,
+10 notes 3.4-6.3 ms late with a sync error 3 s into the render = known E243/E244 (nothing in the Mac timing path changed;
+0.8.29's release session showed it too). README/site timing rows kept at the 0.8.29 measurements (E308). Open LOW: 'bank sync
+failed' is logged when the host deactivates the plug-in mid-sync (should it say 'stopped'?). NEXT: release texts, merge, tag.
 
 Plan (user ok, issues gone through 2026-10-21): (1) #13 arp drift: measure first (native/tools/arp-hold-140bpm.mid,
 **v0.8.29 RELEASED 2026-10-21 20:03** (merge 98e12e6, tag v0.8.29, release CI run 39626672973: mac job got a runner on try 10,
