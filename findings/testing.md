@@ -90,8 +90,8 @@ python3 -I scripts/startup_diff.py captures/orig-<name>.pcapng captures/ours-<na
 It condenses both from the first SysEx to the end of the bank check and prints what only the original sends (`-`)
 and what only we send (`+`). Known differences are counted, not judged (`IGNORE` in the script, each with its reason:
 this computer's USB IO setting, our readiness probe, our song position at the timeline anchor). The first comparison
-found the missing "Configuring Virus TI" message and the wrong multi dump (E321). Still open: the original requests
-banks 2-4 twice each (cause unknown). Run it in rounds that touch the start-up (initialize, state, MemorySync, the
+found the missing "Configuring Virus TI" message and the wrong multi dump (E321). The original's repeated bank info
+requests for banks 2-4 are a side effect of its timer (E322) and counted as known. On the fixed build: SAME START-UP. Run it in rounds that touch the start-up (initialize, state, MemorySync, the
 broker's device open); the reference capture is captures/orig-startup-lcd-20261022 (original 5.1.7, TI2).
 
 ### The same run on Windows and macOS (added 2026-10-22, not yet run on hardware)

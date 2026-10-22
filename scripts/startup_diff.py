@@ -113,9 +113,28 @@ def window(msgs, max_s=40.0):
     return w
 
 
+def _drop_repeated_bank_requests(seq):
+    """the sequence without a bank info request for a bank already asked for (and the display message right before
+    it): the original asks again while a reply still arrives, a side effect of its timer (E322); count dropped"""
+    out, asked, dropped = [], set(), 0
+    for t in seq:
+        if t.endswith("(bank info request)"):
+            if t in asked:
+                if out and out[-1] == "74 01 7e=07":
+                    out.pop()
+                dropped += 1
+                continue
+            asked.add(t)
+        out.append(t)
+    return out, dropped
+
+
 def compare(a, b, ignore=()):
     """(same, report lines): '- x' only in a (the original), '+ y' only in b (ours), '  z' in both"""
     lines = []
+    (a, da), (b, db) = _drop_repeated_bank_requests(a), _drop_repeated_bank_requests(b)
+    if da or db:
+        lines.append("ignored repeated bank info requests (E322): %d in the original, %d in ours" % (da, db))
     for pre in ignore:
         na, nb = sum(t.startswith(pre) for t in a), sum(t.startswith(pre) for t in b)
         if na or nb:

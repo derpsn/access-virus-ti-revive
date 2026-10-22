@@ -90,6 +90,16 @@ class Compare(unittest.TestCase):
         self.assertIn("- x", lines)
         self.assertIn("+ y", lines)
 
+    def test_repeated_bank_info_requests_are_a_known_side_effect(self):
+        # E322: the original asks again for a bank whose reply is still arriving (timer reset by any reply); the
+        # repeat and its display message count as known, not as a difference
+        orig = ["74 01 7e=07", "39 01 (bank info request)", "74 01 7e=07", "39 02 (bank info request)",
+                "74 01 7e=07", "39 02 (bank info request)", "74 00 29=01"]
+        ours = ["74 01 7e=07", "39 01 (bank info request)", "74 01 7e=07", "39 02 (bank info request)", "74 00 29=01"]
+        same, lines = startup_diff.compare(orig, ours)
+        self.assertTrue(same, lines)
+        self.assertTrue(any("repeated bank info" in line for line in lines))
+
     def test_known_differences_are_listed_not_counted(self):
         same, lines = startup_diff.compare(["73 00 09=00", "a"], ["a"], ignore=["73 00 09="])
         self.assertTrue(same)
