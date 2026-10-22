@@ -301,6 +301,10 @@ Linux block 2/2 marked pass (L1 #11 incl. reload, L2 Control Center backup + res
 release, 0.8.31): same bank in BOTH browser panes -> the selection is framed in both, because TI Revive keys the selection
 by bank (viruseditor.cpp browser_sel_[bank], since 0.8.29), not by pane. Not in E294/E297/E298 whether the original does
 the same: check in win10ref (same bank both panes, click an entry: one pane or both framed?) or REA, then fix if it differs.
+VM block 5/5 marked pass (WC1-WC3, W1 #11, W2 RESTORE in the Access look); win11 diag.log: 'bank sync done in 30.7 s',
+'sync error shown (4 late events since Play)' during the export, cleared by Play (as every VM round, E288). Virus detached,
+win11 shut down. Mac: receipt io.github.derpsn.tirevive 0.8.30 (installed by the user ~08:15, after the 08:03 push), old
+diag.log -> diag.log.pre-0.8.30-ci, diag.on set. Mac block next (MC1-MC3, M1 #11, M2 RESTORE).
 
 Plan (user ok, issues gone through 2026-10-21): (1) #13 arp drift: measure first (native/tools/arp-hold-140bpm.mid,
 **v0.8.29 RELEASED 2026-10-21 20:03** (merge 98e12e6, tag v0.8.29, release CI run 39626672973: mac job got a runner on try 10,
