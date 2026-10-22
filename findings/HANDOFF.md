@@ -9,7 +9,7 @@ happen (GITHUB_TOKEN releases start no workflows): always `gh workflow run site.
 **Test machines:** Linux = 0.8.31 release (install.sh; CI build backed up in ~/.vst3-backup/0.8.31-ci). Mac = the
 release is pushed to ~/Downloads/TI-Revive-0.8.31-release-mac (+ INSTALL-COMMAND.txt, Install test build.command) -
 whether the user installed it is unknown, check the receipt. win11 = 0.8.31 CI build (0.8.31c), release NOT installed
-(VM off). win10ref = RUNNING without the Virus (the user compared the original there) - shut down when not needed.
+(VM off). win10ref = shut down cleanly 2026-10-22 evening (all VMs off).
 Virus TI2 Desktop: on Linux, broker socket active.
 
 **Branch round-0.8.32 (from main 22f1455, pushed, last cbf1299). Done today:**
