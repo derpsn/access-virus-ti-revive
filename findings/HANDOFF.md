@@ -499,6 +499,9 @@ DONE: (b) E322 (c2c32b4) - the original's repeated bank requests are a timer sid
 timer; the Virus answers both identically; the 2nd reply changes nothing) -> not copied; startup_diff counts them as
 known: fixed build vs original = SAME START-UP. Audit of the 44.1 assumptions saved locally:
 work/rate-follow/audit-44k1.md (git-ignored). Waiting for the REA pass on the original's rate following (E323).
+E323 written (the original's rate following: mapping 0x1800a9dc0, driver sequence, USB chip, DSP PLL, stamps in
+Virus frames at the current rate, E241 hypothesis SA Freq). PLAN: findings/design-rate.md (6 steps, rule-2 gates,
+hardware tests, risks) - waiting for the user's go before any code; first gate: the user reads SA Freq on the Virus.
 
 Plan (user ok, issues gone through 2026-10-21): (1) #13 arp drift: measure first (native/tools/arp-hold-140bpm.mid,
 **v0.8.29 RELEASED 2026-10-21 20:03** (merge 98e12e6, tag v0.8.29, release CI run 39626672973: mac job got a runner on try 10,
