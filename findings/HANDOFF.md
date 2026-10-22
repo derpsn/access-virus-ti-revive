@@ -490,6 +490,11 @@ compares two start-up captures (testing.md 'Start-up compared with the original'
 oversight, the start-up message + timer and the text mapping were new. OPEN decisions for the user: (a) follow the DAW
 rate like the original (48k: re-configure + SET_CUR; big design change: timing assumes 44.1, E241 risk; conversion
 still needed for 88.2/96), (b) replicate the double bank info requests or not.
+USER DECISIONS (~21:05): (a) YES - follow the DAW rate, "we want to be as close as possible to the original plugin";
+(b) find out with REA why the original requests banks 2-4 twice. Running in the background: REA (double requests,
+proposes E322), REA (the original's rate following: trigger, mapping, timing at 48k, firmware side, safe device
+sequence, E241; proposes E323), Explore audit of every 44.1 kHz assumption in our code. NEXT: a written plan for
+rate following from the three results, before any code (TDD, hardware tests on all three systems).
 
 Plan (user ok, issues gone through 2026-10-21): (1) #13 arp drift: measure first (native/tools/arp-hold-140bpm.mid,
 **v0.8.29 RELEASED 2026-10-21 20:03** (merge 98e12e6, tag v0.8.29, release CI run 39626672973: mac job got a runner on try 10,
