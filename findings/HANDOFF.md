@@ -323,6 +323,12 @@ MERGED 2026-10-22: 337390d (main 98e12e6 + round 224d69a, -F file, tree = round 
 release CI run 39736879794 running. NEXT: CI green -> release check (assets, Latest), install the release on Linux, win11
 (VM=win11), Mac (+ INSTALL-COMMAND); #11 comment (scratchpad draft, TESTED_LINE = VM + Mac M1/W1); site rebuild only when the
 user says so.
+**v0.8.30 RELEASED 2026-10-22 08:59** (release CI 39736879794 all green, 6 assets, Latest). Installs: Linux = release
+(install.sh; plug-in 8670bb4f.., broker a1cdc38c.. = byte-identical to the CI build; NOTE: REAPER was open during install.sh -
+no file changed because of that, but stop before installing while a DAW runs); win11 = release (setup.exe /quiet exit 0,
+plug-in e285b4f7.. = release MSI; MSVC builds differ from the CI test build), VM shut down; Mac: release unpacked in
+~/Downloads/TI-Revive-0.8.30-release-mac/TI-Revive-0.8.30-mac (pkg 5936f178.. = release) + INSTALL-COMMAND.txt + 'Install
+release.command', the user installs. Open: #11 comment (draft ready, user to approve), site rebuild (user says when).
 
 Plan (user ok, issues gone through 2026-10-21): (1) #13 arp drift: measure first (native/tools/arp-hold-140bpm.mid,
 **v0.8.29 RELEASED 2026-10-21 20:03** (merge 98e12e6, tag v0.8.29, release CI run 39626672973: mac job got a runner on try 10,
