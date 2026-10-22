@@ -319,6 +319,10 @@ USER DECISION: Mac timing row -> 0.8.30 numbers (E314: 256/256, 1.05 ms, max 6.3
 the sync error FAQ's 'since 0.8.27 ... the late notes did not come back' contradicted by E314 -> README + site: '10 of 256
 came 3-6 ms late in the 0.8.30 test, we are looking into it'. Status row jitter 0.04-1.05 ms. OPEN 0.8.31: Mac export late
 notes DURING the paced render (E314; E243 was after it).
+MERGED 2026-10-22: 337390d (main 98e12e6 + round 224d69a, -F file, tree = round tip), pushed; tag v0.8.30 on 337390d,
+release CI run 39736879794 running. NEXT: CI green -> release check (assets, Latest), install the release on Linux, win11
+(VM=win11), Mac (+ INSTALL-COMMAND); #11 comment (scratchpad draft, TESTED_LINE = VM + Mac M1/W1); site rebuild only when the
+user says so.
 
 Plan (user ok, issues gone through 2026-10-21): (1) #13 arp drift: measure first (native/tools/arp-hold-140bpm.mid,
 **v0.8.29 RELEASED 2026-10-21 20:03** (merge 98e12e6, tag v0.8.29, release CI run 39626672973: mac job got a runner on try 10,
