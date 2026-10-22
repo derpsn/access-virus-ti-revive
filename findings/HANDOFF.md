@@ -398,6 +398,10 @@ not adopted); drag highlight (renderer_.highlighted) is still per bank.
 ROUND 0.8.31 STATE: items 1 (E315-E317 Mac export), 2 (bank sync stop wording) and the browser selection done in dev;
 remaining: round test (risk.py --round 0.8.31, checklist incl. Mac 48/128 export, browser panes), release texts (README/
 site FAQ 'looking into it' -> fixed, Mac timing row, test count 345), version 0.8.31 in native/CMakeLists.txt.
+DEV CHECK PASSED (Linux, dev build 14:55 = a0350b2 installed to ~/.vst3, 0.8.30 release backed up in the session
+scratchpad): user: "all works" - browser selection per pane, bank switch, drag, Delete selection, bank sync wording.
+CI test build started: run 39797996086 (round-0.8.31 @ 3723273, version 0.8.31). Next: install the CI build on Linux,
+then the round test.
 
 Plan (user ok, issues gone through 2026-10-21): (1) #13 arp drift: measure first (native/tools/arp-hold-140bpm.mid,
 **v0.8.29 RELEASED 2026-10-21 20:03** (merge 98e12e6, tag v0.8.29, release CI run 39626672973: mac job got a runner on try 10,
