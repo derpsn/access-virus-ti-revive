@@ -25,13 +25,12 @@ public:
             reset();
             return -1;
         }
+        observe(newest);
         if (pos_ < 0 || newest < seen_) { // the first offline block, or a new stream (the Virus came back)
             pos_ = (double)newest;
             seen_ = newest;
             return newest;
         }
-        if (newest > seen_)
-            learn_step(newest - seen_);
         seen_ = newest;
         pos_ += frames;
         if (pos_ < (double)(newest - MAX_BEHIND))
@@ -56,14 +55,27 @@ public:
         return e <= 0 ? 0 : std::min<int64_t>((int64_t)e, MAX_EARLY);
     }
 
-    // back to real time, or the wait gave up (the Virus stopped streaming): the next offline block starts afresh
+    // every block, real-time ones too: the ring's step is known when a render starts (E316: its first note was
+    // late while the step came only from the render's own blocks). A ring that went backwards is a new stream.
+    void observe(int64_t newest)
+    {
+        if (newest < 0)
+            return;
+        if (last_ >= 0 && newest < last_) {
+            step_ = 0;
+            win_min_ = prev_min_ = INT64_MAX;
+            win_n_ = 0;
+        } else if (last_ >= 0 && newest > last_)
+            learn_step(newest - last_);
+        last_ = newest;
+    }
+
+    // back to real time, or the wait gave up (the Virus stopped streaming): the next offline block starts afresh;
+    // the ring's step stays (it belongs to the stream, not to the render)
     void reset()
     {
         pos_ = -1.0;
         seen_ = -1;
-        step_ = 0;
-        win_min_ = prev_min_ = INT64_MAX;
-        win_n_ = 0;
     }
 
 private:
@@ -80,7 +92,7 @@ private:
     }
 
     double pos_ = -1.0;
-    int64_t seen_ = -1;
+    int64_t seen_ = -1, last_ = -1;
     int64_t step_ = 0, win_min_ = INT64_MAX, prev_min_ = INT64_MAX;
     int win_n_ = 0;
 };

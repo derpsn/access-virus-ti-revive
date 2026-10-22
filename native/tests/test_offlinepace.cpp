@@ -134,6 +134,42 @@ TEST(offlinepace_early_release_stays_inside_the_read_margin)
         q.wait_until(r, 117.6);
     }
     CHECK(q.early(117.6) == 512 - 118);
-    q.reset(); // a new stream: the step is learned again
+    q.reset(); // back to real time: the ring's step stays known for the next render
+    CHECK(q.early(117.6) == 512 - 118);
+    q.observe(1000); // the ring went backwards: a new stream (the Virus came back), the step is learned again
     CHECK(q.early(117.6) == 0);
+}
+
+TEST(offlinepace_step_learned_while_playing)
+{
+    // E316: the first note of a render was still late - the step came only from the render's own blocks. Real-time
+    // blocks (128 at 48 kHz, every 2.7 ms) see the ring grow by 0 or 512; the first offline block already knows it.
+    OfflinePacer p;
+    int64_t ring = 51200;
+    for (int i = 0; i < 200; i++) {
+        if (i % 4 == 0)
+            ring += 512;
+        p.observe(ring);
+    }
+    p.reset(); // the host switches to offline
+    p.wait_until(ring, 117.6);
+    CHECK(p.early(117.6) == 512 - 118);
+}
+
+TEST(offlinepace_first_blocks_of_a_render_run_by_their_position)
+{
+    // the whole render, from its first block, with the step known from playback: at most one block late
+    OfflinePacer p;
+    int64_t ring = 51200, worst = 0;
+    for (int i = 0; i < 64; i++)
+        p.observe(ring += 512);
+    p.reset();
+    p.wait_until(ring, 117.6);
+    for (int i = 0; i < 200; i++) {
+        const int64_t need = p.wait_until(ring, 117.6);
+        while (ring < need - p.early(117.6))
+            ring += 512;
+        worst = std::max(worst, ring - need);
+    }
+    CHECK(worst <= 118);
 }

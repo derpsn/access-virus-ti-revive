@@ -1466,8 +1466,10 @@ void VirusPlugin::wait_offline(ProcessData &data, double ratio, int64_t &newest,
         offline_start_waited_ = false;
         offline_now_.store(offline, std::memory_order_relaxed);
     }
-    if (!offline)
+    if (!offline) {
+        pacer_.observe(newest); // the ring's step, known when a render starts (E316)
         return;
+    }
     // a render right after the project opened (a freeze, an export at once): wait once, at most 20 s, until the Virus
     // has taken the start-up messages and its audio runs - else the render raced through silence and the start-up
     // dropped the first notes. The broker connection may not be up yet in the first block: up to 3 s for the Virus to
