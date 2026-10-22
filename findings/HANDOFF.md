@@ -372,6 +372,8 @@ FIRST-NOTE FIX WRITTEN 2026-10-22 ~14:15 (user: 'fix the first note too'): Offli
 block, reset() keeps the step, a backwards ring forgets it; tests first, 343 tests, ctest 5/5. Not on hardware (Virus
 not on Linux, not listed on the Mac either at 14:15). Pushed, CI test build started (version 0.8.31). NEXT: Mac install,
 E2c 44.1/128 + E3c 48/128 exports (first note on time?), then Linux hil.sh in the round test.
+CI 39775550348 ALL GREEN; Mac: ~/Downloads/TI-Revive-0.8.31b-ci-mac/TI-Revive-0.8.31-mac (pkg a007f9a0..) + install files;
+Mac diag.log -> diag.log.ci1-0.8.31 (copy in work/timing/mac-0.8.31/diag.log). Virus on the Mac (user, ~14:25).
 
 Plan (user ok, issues gone through 2026-10-21): (1) #13 arp drift: measure first (native/tools/arp-hold-140bpm.mid,
 **v0.8.29 RELEASED 2026-10-21 20:03** (merge 98e12e6, tag v0.8.29, release CI run 39626672973: mac job got a runner on try 10,
