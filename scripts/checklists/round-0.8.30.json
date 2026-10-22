@@ -9,7 +9,7 @@
   "MC2",
   "MC3"
  ],
- "lead": "Test build 0.8.30 (CI run CIRUN). New in this round: the MATRIX page's destination menus list Distortion Mix, Osc 1/2 F-Shift and Osc 1/2 F-Spread and show them after a reload (issue #11, E309); the Control Center restores a RAM bank from a backup, RAM only (Restore... / RESTORE in the Access look, E313); on Linux the broker resets the USB port before it gives the Virus back (E312). Linux: #11 and the restore were tested on dev builds; hil.sh runs the core items on this CI build. Mark each item, add a note where something looks different, then copy the results at the bottom into the chat.",
+ "lead": "Test build 0.8.30 (CI run 39730939693). New in this round: the MATRIX page's destination menus list Distortion Mix, Osc 1/2 F-Shift and Osc 1/2 F-Spread and show them after a reload (issue #11, E309); the Control Center restores a RAM bank from a backup, RAM only (Restore... / RESTORE in the Access look, E313); on Linux the broker resets the USB port before it gives the Virus back (E312). Linux: #11 and the restore were tested on dev builds; hil.sh runs the core items on this CI build. Mark each item, add a note where something looks different, then copy the results at the bottom into the chat.",
  "rules": [
   "Never store a patch on the Virus with the Virus' own STORE button.",
   "Restore tests write into the Virus' RAM: first make a fresh backup (Backup button), change only RAM A slots 24-31, then restore RAM A from that fresh backup. Never restore an older backup.",
@@ -80,7 +80,7 @@
    "title": "macOS",
    "where": "MacBook Air M3, Ableton Live 12",
    "prep": [
-    "Claude copies the package (CI run CIRUN) to ~/Downloads/TI-Revive-0.8.30-ci-mac when the Mac is awake; double-click 'Install test build.command' there (the command is in INSTALL-COMMAND.txt). Virus on the Mac.",
+    "Claude copies the package (CI run 39730939693) to ~/Downloads/TI-Revive-0.8.30-ci-mac when the Mac is awake; double-click 'Install test build.command' there (the command is in INSTALL-COMMAND.txt). Virus on the Mac.",
     "Claude puts <code>diag.on</code> in the plug-in's folder and renames the old diag.log."
    ],
    "items": [

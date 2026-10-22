@@ -282,6 +282,13 @@ E300 option open; restore the user's RAM A/B (work/libdrag/ram-backup-20261021-0
 
 ## Round 0.8.30 (branch round-0.8.30 from round-0.8.29 a095c61+, started 2026-10-21, while the v0.8.29 release CI waits for a Mac runner)
 
+**RELEASE PREP 0.8.30 (2026-10-22):** issues checked with the user: #10/#13 confirmed by the reporter and closed, #12 closed
+(right-click loads wavetables), #11 still open until the release (comment drafted: fixed in 0.8.30, please confirm). Version
+0.8.30 (native/CMakeLists.txt), 338 unit tests, ctest 5/5 on Linux. risk.py --round 0.8.30: class C; Windows + Mac by hand
+cold/reopen/export (WC1-3, MC1-3), Linux by hil.sh. Checklist scripts/checklists/round-0.8.30.json (+ #11 and restore per
+system). CI test build run 39730939693 (version 0.8.30). NEXT: CI green -> install Linux (install.sh), hil.sh, win11 VM
+(setup.exe /quiet), Mac package + INSTALL-COMMAND; publish checklist; then release notes/README/site (338 tests), merge, tag.
+
 Plan (user ok, issues gone through 2026-10-21): (1) #13 arp drift: measure first (native/tools/arp-hold-140bpm.mid,
 **v0.8.29 RELEASED 2026-10-21 20:03** (merge 98e12e6, tag v0.8.29, release CI run 39626672973: mac job got a runner on try 10,
 all green, 6 assets, Latest). Site rebuilt by hand (run 39649468184), live: Download 0.8.29, 332 unit tests, #10 line.
