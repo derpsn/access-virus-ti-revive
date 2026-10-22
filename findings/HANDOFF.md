@@ -374,6 +374,11 @@ not on Linux, not listed on the Mac either at 14:15). Pushed, CI test build star
 E2c 44.1/128 + E3c 48/128 exports (first note on time?), then Linux hil.sh in the round test.
 CI 39775550348 ALL GREEN; Mac: ~/Downloads/TI-Revive-0.8.31b-ci-mac/TI-Revive-0.8.31-mac (pkg a007f9a0..) + install files;
 Mac diag.log -> diag.log.ci1-0.8.31 (copy in work/timing/mac-0.8.31/diag.log). Virus on the Mac (user, ~14:25).
+MAC RESULT ~14:30 (E317, work/timing/mac-0.8.31b): first note on time in both (-0.08 / -0.14 ms); E2c 44.1/128 1 note
+2.5 ms late at 14.25 s, max 2.55 ms, jitter 0.26; E3c 48/128 0 late, max 1.82, jitter 0.40; 0-2 sync reports, no page.
+Item 1 (E314) done on the Mac up to one single 2.5 ms note (cause unknown, watch in the round test). NEXT: Linux hil.sh
+on the round build when the Virus is back; other 0.8.31 items (browser selection both panes, 'bank sync failed' wording);
+at release: README/site FAQ ('10 of 256 ... looking into it') + Mac timing row.
 
 Plan (user ok, issues gone through 2026-10-21): (1) #13 arp drift: measure first (native/tools/arp-hold-140bpm.mid,
 **v0.8.29 RELEASED 2026-10-21 20:03** (merge 98e12e6, tag v0.8.29, release CI run 39626672973: mac job got a runner on try 10,
