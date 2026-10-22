@@ -10,6 +10,7 @@
 #include <cctype>
 #include <cstdio>
 #include <cstdint>
+#include <map>
 #include <set>
 #include <string>
 #include <vector>
@@ -323,6 +324,39 @@ public:
 private:
     std::set<int> sel_;
     int anchor_ = -1, kept_ = -1;
+};
+
+// the browser panes' selections: one per pane, like the original's KPatchTable, which keeps a selected flag per entry
+// of each pane (select 0x180051c90, deselect all 0x180051bf0, E318) - the same bank in both panes is framed only in
+// the pane that was clicked. A pane's selection belongs to the bank it showed then: the original keeps none per bank.
+class PaneSelections {
+public:
+    // the selection of `pane` (0 upper, 1 lower) while it shows `bank`; emptied when the pane's bank changed
+    BrowserSelection &at(int pane, int bank)
+    {
+        Pane &p = panes_[pane];
+        if (p.bank != bank) {
+            p.bank = bank;
+            p.sel.clear();
+        }
+        return p.sel;
+    }
+    // what `pane` frames while it shows `bank`
+    std::set<int> framed(int pane, int bank) const
+    {
+        auto it = panes_.find(pane);
+        if (it == panes_.end() || it->second.bank != bank)
+            return {};
+        auto v = it->second.sel.items();
+        return {v.begin(), v.end()};
+    }
+
+private:
+    struct Pane {
+        int bank = -1;
+        BrowserSelection sel;
+    };
+    std::map<int, Pane> panes_;
 };
 
 } // namespace vti

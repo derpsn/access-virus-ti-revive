@@ -350,7 +350,7 @@ TEST(editor_render_browser)
     Rig g;
     g.r->bank_patch = [](int bank, int program) { return "B" + std::to_string(bank) + "P" + std::to_string(program); };
     g.r->browser_match = [](int, int program) { return program % 2 == 0; };
-    g.r->selected[0] = {5};
+    g.r->selected[0] = {0, {5}}; // pane 0 showing bank 0: entry 5 framed
     g.r->render(g.canvas);
     auto &c = g.canvas;
     // 128 entries: names, odd programs dimmed; no program numbers of its own - the original's are part of the page
@@ -365,6 +365,10 @@ TEST(editor_render_browser)
             (b.alpha < 1.0 ? dim : full)++;
     CHECK(dim > 0 && full > 0);
     CHECK(c.lines >= 4); // the frame around the selected entry
+    // the pane comes from "Browser N/Selected Bank" (E318: one selection per pane)
+    CHECK(EditorRenderer::browser_pane("Browser 0/Selected Bank") == 0);
+    CHECK(EditorRenderer::browser_pane("Browser 1/Selected Bank") == 1);
+    CHECK(EditorRenderer::browser_pane("VirusControl/Something") == 0);
     Hit h = g.r->hit_test(30, 270);
     CHECK(h.element && h.element->type == "PatchBrowser");
     CHECK(EditorRenderer::browser_entry(h, h.x + 21, h.y + 1) == 0);
