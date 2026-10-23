@@ -73,6 +73,14 @@ local), the risky cases E112, E175, E241, E257.
 5. **Plug-in flow.** setupProcessing stores the host rate; setActive(true) (resume) asks for the Virus rate when it
    differs (like 0x1800a9880), waits for the new generation, re-pings, re-anchors, then restartComponent
    (kLatencyChanged). Offline renders at a new rate go through the same path.
+   **Written 2026-10-23 (not on hardware):** setupProcessing stores want_rate = virus_rate_for(host) and builds the
+   resampler and the sidechain converter for BOTH Virus rates (buffers for the larger step), so process() only picks
+   one per block (no allocation, no table work on the audio thread) - a rate that differs from the wish (an older
+   broker stays at 44.1, a refusal, the debounce, another program on macOS) still plays right. The first audio start
+   asks for want_rate (Broker::audio(rate) / AudioIn::open(rate) on macOS); setActive(true) calls
+   DeviceOut::request_rate (the worker asks the broker or Core Audio, then its rate_changed path re-pings and
+   re-anchors; setActive waits up to 3 s), then restartComponent(kLatencyChanged) when the latency the host last read
+   changed. No unit test for this flow (it needs a host): nativehost --rate on hardware is its test.
 6. **Docs and texts**: protocol.md, architecture.md, design-linux.md, README/site timing rows (new measurements at
    48 k), the ASIO driver's "44.1 kHz only".
 

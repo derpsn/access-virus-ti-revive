@@ -44,6 +44,12 @@ request_rate / rate listener. Second cpp-reviewer round: 8 of 9 findings fixed (
 372 tests, ctest 5/5, both brokers build (mingw), ASIO mingw -fsyntax-only clean. NEXT: step 5 (plug-in flow: host
 rate -> virus_rate_for -> Broker::audio(rate) / request_rate on resume, re-ping, kLatencyChanged), then CI for the
 MSVC/Xcode builds.
+Step 5 WRITTEN (commit below): the plug-in now ASKS for 48 kHz when the host runs at 48/96/192 k (or 32/24 k).
+SAFETY (rule 2): with a protocol-5 broker (the dev broker, any CI build of this round) a 48 kHz host project / nativehost
+--rate 48000 really switches the Virus - the first such run is the controlled one with the user watching the
+display. Until then hardware runs only at 44.1 kHz (hil.sh default). The installed 0.8.31 broker ignores the rate
+(stays 44.1; the plug-in's second converter set covers it). Mac/Windows test builds of this round switch too: no
+Mac/Windows test of a 48 kHz project before the Linux controlled run. NEXT: step 6 (docs) and CI.
 
 **NEXT (in this order):**
 1. Ask the user for the Virus' "System Clock / SA Freq" value (CONFIG menu) - E323 (6): a Virus set to 48 k may switch
