@@ -31,13 +31,14 @@
    "items": [
     {
      "id": "L1",
-     "title": "48 kHz project (rate following)",
+     "title": "44.1 kHz project after 48 kHz (rate following, redo)",
      "steps": [
-      "Close REAPER. Set PipeWire to 48 kHz: <code>pw-metadata -n settings 0 clock.force-rate 48000</code>",
+      "This PC's PipeWire runs at 48 kHz by default (clock.rate 48000), so REAPER at 48 kHz is the normal case here (tested in the first pass).",
+      "Close REAPER. Force 44.1 kHz: <code>pw-metadata -n settings 0 clock.force-rate 44100</code>",
       "Start REAPER, open the test project, play a few bars, look at the Virus' display.",
-      "Close REAPER, set PipeWire back: <code>pw-metadata -n settings 0 clock.force-rate 0</code>, open the project again and play."
+      "Close REAPER, back to the default: <code>pw-metadata -n settings 0 clock.force-rate 0</code>"
      ],
-     "expect": "'Audio clock changed' at the start at 48 kHz and again back at 44.1 kHz; the Virus sounds normal and on time both times; no 'sync error' page."
+     "expect": "'Audio clock changed' when REAPER starts at 44.1 kHz (the Virus comes from 48 kHz); the Virus sounds normal and on time; no 'sync error' page."
     },
     {
      "id": "L2",
