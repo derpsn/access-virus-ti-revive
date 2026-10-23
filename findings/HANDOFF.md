@@ -28,6 +28,16 @@ Also today: the Windows/Mac hardware-run scripts (hil-win.ps1, hil-mac.command; 
 function check E320), the hardstyle preset library (~/Dokumente/.../Patches/TI Revive Hardstyle.mid, not listened to),
 the user's 'stuck hold' (the Virus itself; fixed by a power cycle).
 
+**2026-10-23 (morning):** step 3 Linux part DONE (e07b52c, not on hardware: the Virus was off): ratesw.h (driver's
+switch order, debounce 1 s, owner only, refused SET_CUR back once), protocol 5 (VTIMSG_AUDIO + u32 rate; plug-in
+still asks 44100), pktstat/lever relative to the wanted rate, libusb stream_start/stop + vla_switch_rate; the 44.1 kHz
+start now in the driver's SET_CUR order (0x82, 0x01 x2) with IN before the OUT lead-in (a behaviour change at 44.1!).
+cpp-reviewer: 3 findings fixed (start without IN transfers leaked the stream, rate_tries after a switch, join after
+an unplug), 1 = intended debounce. 369 tests, ctest 5/5, both brokers build. Windows switch -> step 4.
+NEXT first: Virus on -> back up ~/.local/lib/tirevive/vtibroker (= 0.8.31 release), install work/build/linux/vtibroker,
+hil.sh --plugin build-native/VST3/Release/... at 44.1 kHz (checks the new start order), then restore the release broker.
+Asked the user again for System Clock / SA Freq (item 1).
+
 **NEXT (in this order):**
 1. Ask the user for the Virus' "System Clock / SA Freq" value (CONFIG menu) - E323 (6): a Virus set to 48 k may switch
    itself after a USB reset (E175/E241 hypothesis). Do not send a request to read it.
