@@ -37,7 +37,8 @@ scripts/startup_diff.py (SAME START-UP), E322, E323 + plan findings/design-rate.
   Round item: Linux install from the .msi -> Control Center in the Access look. Reply on #15 posted (pushed ff1ce70);
   issue stays open until 0.8.32 is released.
 - Issue #16 (TI Desktop, macOS Tahoe, FL Studio 2026, 0.8.28): stages 1-5 pass, VST3 fine; **AU crashes FL Studio
-  when unloaded** (new, no crash log yet) + cosmetic bank list number defect (screenshot only). Reply pending.
+  when unloaded** (new, no crash log yet) + cosmetic bank list number defect (screenshot only). Reply posted
+  2026-10-23: asked for the .ips crash report, diag.log, how it is unloaded, and a re-check on 0.8.31.
 - User decision 2026-10-23: the Windows (WDM) sound card stays deferred - no kernel driver, nothing of
   design-wdm-bridge.md in this round.
 
