@@ -30,6 +30,13 @@ scripts/startup_diff.py (SAME START-UP), E322, E323 + plan findings/design-rate.
 - Two cpp-reviewer rounds, findings fixed (design-rate.md steps 3/4). 372 unit tests, ctest 5/5 (Linux).
 - **CI test build 39904309933 (version 0.8.32): ALL GREEN** - first MSVC/Xcode build of steps 4/5; Windows unit tests
   4/4. Not installed anywhere yet.
+- **Issue #15 fixed (E324, 2026-10-23 noon, with the user):** Linux install.sh took the first of two Common/ copies in
+  the .msi; the Program Files one has a 32-bit DLL and no Control Center exe. Now access_src prefers the copy with
+  the exe, a re-run adds a missing exe from the .msi (else a note), find_msi no longer ends the script under set -e.
+  scripts/tests/test_install_linux.py (7) + sandbox runs with the real .msi; README + README-linux.txt one line.
+  Round item: Linux install from the .msi -> Control Center in the Access look. Reply on #15 drafted, not posted.
+- Issue #16 (TI Desktop, macOS Tahoe, FL Studio 2026, 0.8.28): stages 1-5 pass, VST3 fine; **AU crashes FL Studio
+  when unloaded** (new, no crash log yet) + cosmetic bank list number defect (screenshot only). Reply pending.
 - User decision 2026-10-23: the Windows (WDM) sound card stays deferred - no kernel driver, nothing of
   design-wdm-bridge.md in this round.
 

@@ -156,6 +156,8 @@ msitools`) or Wine. Wine and yabridge are no longer needed for the plug-in. The 
 Any sample rate works; JACK through PipeWire (`pw-jack reaper`) works well, avoid PulseAudio as the DAW's audio
 system. While TI Revive uses the Virus, it is not available as a Linux sound card; it is handed back about 30 seconds
 after the plug-in is closed. Uninstall with `./uninstall.sh`. Details: `README-linux.txt` in the package.
+Control Center in its plain look instead of the Access look: `install.sh` of 0.8.31 and older could miss
+`Virus Control Center.exe` in the `.msi` (issue #15); run `./install.sh` with the `.msi` again, it adds the file.
 Known issue: after a USB cable replug, or when the Virus is switched on while no DAW runs, it can come back without
 sound; switch it off and on once while the DAW runs (being worked on).
 
