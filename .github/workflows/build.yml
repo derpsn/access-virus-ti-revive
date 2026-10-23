@@ -198,6 +198,9 @@ jobs:
       - name: Build
         env:
           CCACHE_MAXSIZE: 500M
+          # VSTGUI builds with precompiled headers, which ccache only caches with this sloppiness; __DATE__/__TIME__
+          # appear only in two SDK sample tools (validator, moduleinfotool), never in our code
+          CCACHE_SLOPPINESS: pch_defines,time_macros
         run: |
           cmake -S native -B native-build -G Ninja -DCMAKE_BUILD_TYPE=Release -DVTI_WERROR=ON \
             -DCMAKE_C_COMPILER_LAUNCHER=ccache -DCMAKE_CXX_COMPILER_LAUNCHER=ccache # a new warning in our code fails here (E13)
