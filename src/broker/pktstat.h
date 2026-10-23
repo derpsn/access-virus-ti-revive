@@ -2,6 +2,8 @@
 // stream keeps running but its packets leave the 44.1 kHz range ~2.8 s after every start; the code only counted the
 // good ones, so the bad sizes were never seen). Diagnostics only: counting, no request to the Virus. Plain C, used by
 // the libusb (Linux) and the WinUSB (Windows) stream; the unit test calls it directly.
+// Rate following (design-rate.md step 3): "in range" is relative to the rate the broker asked for - 43-46 frames at
+// 44.1 kHz, 47-49 at 48 kHz; a long run of the other rate's sizes is the lost rate. A zeroed statistic is at 44.1 kHz.
 #pragma once
 #include <stdint.h>
 
@@ -17,7 +19,20 @@ typedef struct {
     int bad;                        // 1 while in a reported bad run
     uint64_t bad_since;             // packet number (= ms since the start) of the first packet of that run
     uint32_t bad_frames;            // size of the run's last bad packet, in frames
+    uint32_t rate;                  // the wanted rate (0 = 44100)
 } vti_pktstat;
+
+static inline uint32_t vti_pktstat_rate(const vti_pktstat *s) { return s->rate == 48000 ? 48000 : 44100; }
+static inline void vti_pktstat_set_rate(vti_pktstat *s, uint32_t rate) { s->rate = rate == 48000 ? 48000 : 44100; }
+
+// a packet of f frames is the size of `rate` (44.1 kHz: 44/45 with jitter 43-46; 48 kHz: 48 with jitter 47-49)
+static inline int vti_pkt_in_range(uint32_t rate, uint32_t f)
+{
+    return rate == 48000 ? f >= 47 && f <= 49 : f >= 43 && f <= 46;
+}
+
+// frames of the i-th nominal packet: 44.1 kHz = 45, then nine of 44 (per 10 ms); 48 kHz = 48
+static inline unsigned vti_pkt_nominal(uint32_t rate, unsigned i) { return rate == 48000 ? 48 : i % 10 ? 44 : 45; }
 
 static inline int vti_pktstat_bucket(uint32_t f)
 {
@@ -28,7 +43,7 @@ static inline int vti_pktstat_bucket(uint32_t f)
 // one packet of f frames: +1 = a bad run just reached VTI_PKT_BAD_RUN, -1 = it ended (VTI_PKT_GOOD_RUN good ones)
 static inline int vti_pktstat_add(vti_pktstat *s, uint32_t f)
 {
-    int ok = f >= 43 && f <= 46, ev = 0;
+    int ok = vti_pkt_in_range(vti_pktstat_rate(s), f), ev = 0;
     s->size[vti_pktstat_bucket(f)]++;
     if (ok) {
         s->good_run++;
@@ -52,17 +67,17 @@ static inline int vti_pktstat_add(vti_pktstat *s, uint32_t f)
     return ev;
 }
 
-// The OUT packet that answers an IN packet of f frames (E241). In range (43-46): the same size, with audio. A 48 kHz
-// packet (47-49): the same size but silent - the Virus runs at 48 kHz then, and a 44/45-frame packet with audio
-// starves its output every ms (a loud signal on its outputs after a wake, then a freeze). Anything else (lost, empty,
-// nonsense): the nominal size with audio, as before.
-static inline unsigned vti_pkt_out(uint32_t f, unsigned nominal, int *silent)
+// The OUT packet that answers an IN packet of f frames (E241), at the wanted rate. In range: the same size, with audio.
+// A packet of the other rate (44.1 kHz: 47-49, 48 kHz: 43-46): the same size but silent - the Virus runs at that rate
+// then, and packets of the wanted size with audio starve or flood its output every ms (E241: a loud signal on its
+// outputs after a wake, then a freeze). Anything else (lost, empty, nonsense): the nominal size with audio, as before.
+static inline unsigned vti_pkt_out(uint32_t rate, uint32_t f, unsigned nominal, int *silent)
 {
-    if (f >= 43 && f <= 46) {
+    if (vti_pkt_in_range(rate, f)) {
         *silent = 0;
         return f;
     }
-    if (f >= 47 && f <= 49) {
+    if (vti_pkt_in_range(rate == 48000 ? 44100 : 48000, f)) {
         *silent = 1;
         return f;
     }
@@ -70,9 +85,9 @@ static inline unsigned vti_pkt_out(uint32_t f, unsigned nominal, int *silent)
     return nominal;
 }
 
-// the Virus left 44.1 kHz: a reported bad run (VTI_PKT_BAD_RUN packets, longer than the phase after SET_CUR) of
-// 48 kHz packets - lost packets alone are not a rate problem
+// the Virus left the wanted rate: a reported bad run (VTI_PKT_BAD_RUN packets, longer than the phase after SET_CUR)
+// of the other rate's packets - lost packets alone are not a rate problem
 static inline int vti_pktstat_rate_lost(const vti_pktstat *s)
 {
-    return s->bad && s->bad_frames >= 47 && s->bad_frames <= 49;
+    return s->bad && vti_pkt_in_range(vti_pktstat_rate(s) == 48000 ? 44100 : 48000, s->bad_frames);
 }

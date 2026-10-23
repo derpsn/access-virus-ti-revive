@@ -39,6 +39,16 @@ local), the risky cases E112, E175, E241, E257.
    `pktstat` and the "rate lost" detector (E241) become relative to the wanted rate; the lever (73 00 10 vv) sends the
    wanted value - otherwise our E241 fix would fight a deliberate switch. Tests: pktstat at 48 k, the switch sequence
    against a fake libusb/WinUSB layer, debounce.
+   **Linux part DONE 2026-10-23 (not on hardware yet):** src/broker/ratesw.h (the sequence over a table of
+   operations, `vti_rate_choose` = owner + debounce, `vti_audio_req_rate`; test_ratesw.cpp against a fake), protocol 5
+   (VTIMSG_AUDIO: name, NUL, u32 rate; Broker::audio(on, timeout, rate), the plug-in still asks for 44100),
+   pktstat/vti_pkt_out/the lever relative to the wanted rate, vtiusbaudio_libusb.c split into stream_start/stop with
+   vla_switch_rate (interfaces stay claimed: a release would hand them back to snd-usb-audio); the shared ring gets
+   rate + rate_gen before the first transfer at the new rate. Start at 44.1 kHz now also in the driver's order:
+   SET_CUR 0x82, 0x01, 0x82, 0x01 (was 0x01, 0x82 once), IN queued before the OUT lead-in. A refused SET_CUR goes back
+   to the old rate once; no alternate setting 1 = stream stopped and the interfaces given back. Non-owners and a second
+   request within 1 s keep the current rate (logged). Windows (vtiusbaudio.c) still 44.1 kHz only: its switch comes
+   with step 4 (one stream for several plug-ins and the ASIO driver).
 4. **Who owns the rate.** Linux: the broker (one stream). Windows: one stream for every plug-in plus our ASIO driver -
    like the original's single driver rate, the last plug-in that starts sets it; the ASIO driver accepts 44.1 and 48 k
    and gets kAsioResetRequest / sampleRateDidChange when the stream changes under it. macOS: the plug-in sets the

@@ -375,7 +375,7 @@ int Broker::flash_info(std::vector<uint8_t> &out, int timeout_ms)
     return flash_reply_;
 }
 
-int Broker::audio(bool on, int timeout_ms)
+int Broker::audio(bool on, int timeout_ms, uint32_t rate)
 {
     {
         std::lock_guard<std::mutex> g(ctl_);
@@ -391,7 +391,10 @@ int Broker::audio(bool on, int timeout_ms)
         ev = CreateEventA(nullptr, FALSE, FALSE, nm);
     name = nm;
 #endif
-    if (!send(VTIMSG_AUDIO, &v, 4, name.c_str(), name.size() + 1)) // u32 on + event name
+    std::string tail(name.c_str(), name.size() + 1); // event name with its NUL, then u32 rate (protocol 5)
+    for (int i = 0; i < 4; i++)
+        tail.push_back((char)(rate >> (8 * i)));
+    if (!send(VTIMSG_AUDIO, &v, 4, tail.data(), tail.size())) // u32 on + event name + rate
         return -1;
     std::unique_lock<std::mutex> l(ctl_);
     if (!ctl_cv_.wait_for(l, std::chrono::milliseconds(timeout_ms), [&] { return audio_replied_; }))

@@ -319,7 +319,7 @@ int vua_run(volatile LONG *running, vua_in_fn in, void *user, vua_log_fn log)
                     InterlockedIncrement(&g_rate_lost);
                 }
                 int silent;
-                unsigned of = vti_pkt_out(f, nominal, &silent); // a 48 kHz packet: the same size, silent (E241)
+                unsigned of = vti_pkt_out(VUA_RATE, f, nominal, &silent); // a 48 kHz packet: the same size, silent (E241)
                 if (f < 43 || f > 46) {
                     // Lost packet, or still 48 kHz right after SET_CUR (~0.3 s of 48/49-frame packets): substitute
                     // the nominal pattern value with silence, like the driver's PGFramePatternObserver "repair".

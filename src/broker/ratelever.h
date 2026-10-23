@@ -11,8 +11,9 @@
 #pragma once
 #include <stdint.h>
 
-// USB-MIDI packets (cable 2) of the global parameter message: 16 bytes, or -1 when cap is too small
-static inline int vti_pack_rate_44k1(uint8_t *out, int cap)
+// USB-MIDI packets (cable 2) of the global parameter message for `rate` (48000 -> 1, anything else 0): 16 bytes, or -1
+// when cap is too small. Rate following (design-rate.md step 3): the lever asks for the rate the broker wants.
+static inline int vti_pack_rate(uint8_t *out, int cap, uint32_t rate)
 {
     static const uint8_t pk[16] = {0x24, 0xF0, 0x00, 0x20, 0x24, 0x33, 0x01, 0x10,
                                    0x24, 0x73, 0x00, 0x10, 0x26, 0x00, 0xF7, 0x00};
@@ -20,8 +21,11 @@ static inline int vti_pack_rate_44k1(uint8_t *out, int cap)
         return -1;
     for (int i = 0; i < 16; i++)
         out[i] = pk[i];
+    out[13] = rate == 48000 ? 0x01 : 0x00;
     return 16;
 }
+
+static inline int vti_pack_rate_44k1(uint8_t *out, int cap) { return vti_pack_rate(out, cap, 44100); }
 
 // A report of the global 0x10 in received USB-MIDI packets (any cable): the value 0/1, or -1 when none
 static inline int vti_rate_report(const uint8_t *p, int len)
