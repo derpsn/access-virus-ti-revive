@@ -1,0 +1,34 @@
+# Keeps build.yml's apt cache (.github/actions/apt-install) filled on main. A release run on a version tag can only
+# read caches of its own tag and of main, and GitHub drops a cache nobody read for 7 days; this job installs each
+# package list once on main, so the release run takes the packages from the cache instead of the Ubuntu mirror.
+# Runs when the lists or the action change on main, twice a week (new runner images come weekly) and by hand.
+name: cache
+
+on:
+  push:
+    branches: [main]
+    paths: ['.github/apt/**', '.github/actions/apt-install/**', '.github/workflows/cache.yml']
+  schedule:
+    - cron: '23 3 * * 1,4'
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  apt:
+    strategy:
+      matrix: # the lists and runners of build.yml's jobs
+        include:
+          - {list: binaries, os: ubuntu-24.04}
+          - {list: native-linux, os: ubuntu-22.04}
+          - {list: linux, os: ubuntu-24.04}
+    runs-on: ${{ matrix.os }}
+    timeout-minutes: 20
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          sparse-checkout: .github
+      - uses: ./.github/actions/apt-install
+        with:
+          list: ${{ matrix.list }}

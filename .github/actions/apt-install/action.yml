@@ -1,0 +1,58 @@
+# Installs the Ubuntu packages listed in .github/apt/<list>.txt and keeps the downloaded .deb files in the Actions
+# cache, per list and runner image. On 2026-10-23 the runners' Azure mirror delivered the 115 MB of mingw packages at
+# a few KB/s and three release runs ran into the job time limit; with the cache the mirror is only needed when a
+# package changes. Used by build.yml; cache.yml fills the cache on main, because a tag's release run can only read
+# caches of its own tag and of main.
+name: apt-install
+description: Install .github/apt/<list>.txt with the .deb files cached
+inputs:
+  list:
+    description: name of the package list in .github/apt (without .txt)
+    required: true
+runs:
+  using: composite
+  steps:
+    - id: key # ImageOS/ImageVersion: the runner image; a new image starts from the last cache of the same OS
+      shell: bash
+      env:
+        LIST: ${{ inputs.list }}
+      run: |
+        f="$GITHUB_WORKSPACE/.github/apt/$LIST.txt"
+        h=$(sha256sum "$f" | cut -c1-16)
+        echo "prefix=apt-$LIST-$ImageOS-" >> "$GITHUB_OUTPUT"
+        echo "key=apt-$LIST-$ImageOS-$ImageVersion-$h" >> "$GITHUB_OUTPUT"
+        echo "packages=$(sed 's/#.*//' "$f" | xargs)" >> "$GITHUB_OUTPUT"
+    - id: restore
+      uses: actions/cache/restore@55cc8345863c7cc4c66a329aec7e433d2d1c52a9 # v6.1.0
+      with:
+        path: ~/apt-debs
+        key: ${{ steps.key.outputs.key }}
+        restore-keys: ${{ steps.key.outputs.prefix }}
+    - id: install
+      shell: bash
+      env:
+        PACKAGES: ${{ steps.key.outputs.packages }}
+      run: |
+        d="$HOME/apt-debs"
+        mkdir -p "$d/partial"
+        opt=(-o Dir::Cache::Archives="$d" -o APT::Keep-Downloaded-Packages=true -o APT::Sandbox::User=root
+             -o Acquire::Retries=3 -o Acquire::http::Timeout=20 -o Acquire::https::Timeout=20)
+        # first without 'apt-get update': with the image's package lists and every .deb in the cache nothing is
+        # downloaded; a package missing from the lists or the cache makes it fail fast, then update and retry
+        if ! sudo apt-get "${opt[@]}" install -y --no-install-recommends $PACKAGES; then
+          for i in 1 2 3; do
+            if sudo apt-get "${opt[@]}" update && sudo apt-get "${opt[@]}" install -y --no-install-recommends $PACKAGES
+            then break; fi
+            if [ "$i" = 3 ]; then exit 1; fi
+            echo "apt try $i failed, next in 15 s"; sleep 15
+          done
+        fi
+        sudo apt-get "${opt[@]}" autoclean # drops .debs the package lists no longer offer: the cache does not grow
+        sudo rm -rf "$d/partial" "$d/lock"
+        sudo chown -R "$(id -u):$(id -g)" "$d"
+        echo "debs=$(find "$d" -name '*.deb' | wc -l)" >> "$GITHUB_OUTPUT"
+    - if: steps.restore.outputs.cache-hit != 'true' && steps.install.outputs.debs != '0'
+      uses: actions/cache/save@55cc8345863c7cc4c66a329aec7e433d2d1c52a9 # v6.1.0
+      with:
+        path: ~/apt-debs
+        key: ${{ steps.key.outputs.key }}

@@ -1,0 +1,22 @@
+# build.yml job "native-linux" (ubuntu-22.04): the native plug-in, the Control Center and the unit tests
+g++
+make
+ninja-build
+ccache
+libx11-dev
+libxcb1-dev
+libxcb-util-dev
+libxcb-randr0-dev
+libxcb-cursor-dev
+libxcb-xkb-dev
+libxcb-keysyms1-dev
+libxkbcommon-dev
+libxkbcommon-x11-dev
+libfontconfig1-dev
+libcairo2-dev
+libgtkmm-3.0-dev
+libsqlite3-dev
+libpango1.0-dev
+# gui_test.sh: editors and the Control Center in a virtual display
+xvfb
+xauth
