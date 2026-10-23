@@ -49,7 +49,12 @@ SAFETY (rule 2): with a protocol-5 broker (the dev broker, any CI build of this 
 --rate 48000 really switches the Virus - the first such run is the controlled one with the user watching the
 display. Until then hardware runs only at 44.1 kHz (hil.sh default). The installed 0.8.31 broker ignores the rate
 (stays 44.1; the plug-in's second converter set covers it). Mac/Windows test builds of this round switch too: no
-Mac/Windows test of a 48 kHz project before the Linux controlled run. NEXT: step 6 (docs) and CI.
+Mac/Windows test of a 48 kHz project before the Linux controlled run.
+Step 6 developer docs DONE (0eb60a4: protocol.md "Sample rate", architecture.md, design-linux.md); README/site only
+after the hardware tests. CI test build STARTED 2026-10-23 ~07:10 local: run 39904309933 (round-0.8.32, version
+0.8.32) - first MSVC/Xcode build of steps 4/5. NEXT: check the run (failed job -> fix, gh run rerun <id> --failed);
+when the Virus is on: dev broker + hil.sh at 44.1 kHz (new SET_CUR order), then the controlled first 48 kHz switch
+with the user (nativehost --rate 48000, display "Audio clock changed"); the user's SA Freq value.
 
 **NEXT (in this order):**
 1. Ask the user for the Virus' "System Clock / SA Freq" value (CONFIG menu) - E323 (6): a Virus set to 48 k may switch
