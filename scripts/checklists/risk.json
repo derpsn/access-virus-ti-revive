@@ -9,7 +9,8 @@
   {"why": "docs, findings, site, project files",
    "paths": ["*.md", "LICENSE", "CITATION.cff", "THIRD-PARTY-NOTICES.txt", ".gitignore", ".gitmodules", "*/.gitignore",
              "findings/*", "docs/*", "native/docs/*", "site/*", "scripts/site/*", ".claude/*", ".github/ISSUE_TEMPLATE/*",
-             ".github/FUNDING.yml", ".github/PULL_REQUEST_TEMPLATE.md", ".github/workflows/site.yml"],
+             ".github/FUNDING.yml", ".github/PULL_REQUEST_TEMPLATE.md", ".github/workflows/site.yml",
+             ".github/workflows/cache.yml"],
    "class": "A"},
   {"why": "tests and test/research tools: not shipped",
    "paths": ["native/tests/*", "native/tools/*", "scripts/tests/*", "scripts/checklists/*", "scripts/*.py",
@@ -81,7 +82,8 @@
   {"why": "Windows diagnostics script shipped with the release",
    "paths": ["scripts/tirevive-usbinfo.ps1"], "class": "B", "platforms": ["windows"], "core": []},
   {"why": "build files, release CI, the VST3 SDK: every package",
-   "paths": ["native/external/*", "native/CMakeLists.txt", "native/plugin/CMakeLists.txt", ".github/workflows/build.yml"],
+   "paths": ["native/external/*", "native/CMakeLists.txt", "native/plugin/CMakeLists.txt", ".github/workflows/build.yml",
+             ".github/actions/*", ".github/apt/*"],
    "class": "C", "platforms": ["linux", "windows", "mac"], "core": ["cold"]}
  ]
 }

@@ -1,0 +1,5 @@
+# build.yml job "binaries" (ubuntu-24.04): the Windows broker with mingw-w64, the Linux probe with libusb
+gcc-mingw-w64-x86-64
+libusb-1.0-0-dev
+pkg-config
+make

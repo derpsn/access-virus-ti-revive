@@ -1,0 +1,4 @@
+# build.yml job "linux" (ubuntu-24.04): the Linux tarball (scripts/linux-build-release.sh)
+make
+curl
+bzip2

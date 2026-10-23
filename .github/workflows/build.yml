@@ -30,14 +30,16 @@ jobs:
     runs-on: ubuntu-24.04
     timeout-minutes: 10 # a hanging step (e.g. a stuck package mirror) fails fast instead of blocking
     steps:
-      - uses: actions/checkout@v7
-      - name: Install mingw-w64 and libusb (Linux probe)
-        run: sudo apt-get -o Acquire::Retries=3 -o Acquire::http::Timeout=20 -o Acquire::https::Timeout=20 update && sudo apt-get -o Acquire::Retries=3 -o Acquire::http::Timeout=20 -o Acquire::https::Timeout=20 install -y --no-install-recommends gcc-mingw-w64-x86-64 libusb-1.0-0-dev pkg-config make
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+      - name: Install mingw-w64 and libusb (Linux probe) # .github/apt/binaries.txt, cached
+        uses: ./.github/actions/apt-install
+        with:
+          list: binaries
       - name: Build # the broker for the MSI (0.8: the classic wrapper and the research tools are not shipped)
         run: | # the version is reported to the plug-in (INFO box); a pre-release tag's -rcN is left out
           v="${VERSION:-${GITHUB_REF_NAME#v}}"
           make -C src/broker VERSION="${v%%-rc*}"
-      - uses: actions/upload-artifact@v7
+      - uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
         with:
           name: binaries
           path: work/build/vtibroker.exe
@@ -47,7 +49,7 @@ jobs:
     runs-on: windows-2022
     timeout-minutes: 25 # a hanging step (e.g. a stuck package mirror) fails fast instead of blocking
     steps:
-      - uses: actions/checkout@v7
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
         with:
           submodules: recursive
       - name: Build
@@ -70,7 +72,7 @@ jobs:
           Copy-Item native-build\bin\Release\VirusTINative_ASIO.dll nativebin\
           Copy-Item native-build\bin\Release\tirevive-cc.exe nativebin\
           Copy-Item native-build\ccapp\TIReviveControlCenter.exe nativebin\
-      - uses: actions/upload-artifact@v7
+      - uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
         with:
           name: nativebin
           path: nativebin
@@ -82,7 +84,7 @@ jobs:
           cmake --build native-build --config Release --target nativehost
           New-Item -ItemType Directory hil | Out-Null
           Copy-Item native-build\bin\Release\nativehost.exe, scripts\hil-win.ps1, scripts\hil-win.cmd, scripts\hil_check.py, scripts\timing_analysis.py hil\
-      - uses: actions/upload-artifact@v7
+      - uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
         continue-on-error: true
         with:
           name: TI-Revive-hil-windows
@@ -94,12 +96,12 @@ jobs:
     runs-on: windows-2022
     timeout-minutes: 20 # a hanging step (e.g. a stuck package mirror) fails fast instead of blocking
     steps:
-      - uses: actions/checkout@v7
-      - uses: actions/download-artifact@v8
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+      - uses: actions/download-artifact@9000827ccba6bdab643e8b6fd33ac0654aef8333 # v8.0.2
         with:
           name: binaries
           path: bin
-      - uses: actions/download-artifact@v8
+      - uses: actions/download-artifact@9000827ccba6bdab643e8b6fd33ac0654aef8333 # v8.0.2
         with:
           name: nativebin
           path: nativebin
@@ -130,7 +132,7 @@ jobs:
         run: |
           Rename-Item "out\TI Revive.msi" "TI-Revive-${{ steps.ver.outputs.version }}.msi"
           Rename-Item "out\TI Revive setup.exe" "TI-Revive-${{ steps.ver.outputs.version }}-setup.exe"
-      - uses: actions/upload-artifact@v7
+      - uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
         with:
           name: TI-Revive-msi
           path: |
@@ -142,7 +144,7 @@ jobs:
     runs-on: macos-15
     timeout-minutes: 25 # a hanging step (e.g. a stuck package mirror) fails fast instead of blocking
     steps:
-      - uses: actions/checkout@v7
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
         with:
           path: repo
           submodules: recursive # native/external/vst3sdk
@@ -150,7 +152,7 @@ jobs:
         run: |
           v="${VERSION:-${GITHUB_REF_NAME#v}}"
           bash repo/scripts/mac-build-release.sh repo "${v%%-rc*}" "$PWD/out"
-      - uses: actions/upload-artifact@v7
+      - uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
         with:
           name: TI-Revive-mac
           path: out/TI-Revive-*-mac.zip
@@ -165,7 +167,7 @@ jobs:
           codesign --force --sign - hil/nativehost
           chmod +x hil/nativehost hil/hil-mac.command
           ditto -c -k --keepParent hil TI-Revive-hil-mac.zip # keeps the execute bits (an artifact zip drops them)
-      - uses: actions/upload-artifact@v7
+      - uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
         continue-on-error: true
         with:
           name: TI-Revive-hil-mac
@@ -176,28 +178,38 @@ jobs:
     runs-on: ubuntu-22.04
     timeout-minutes: 25 # a hanging step (e.g. a stuck package mirror) fails fast instead of blocking
     steps:
-      - uses: actions/checkout@v7
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
         with:
           submodules: recursive # native/external/vst3sdk
-      - name: Build dependencies
+      - name: Build dependencies # .github/apt/native-linux.txt, cached
+        uses: ./.github/actions/apt-install
+        with:
+          list: native-linux
+      - name: CMake
         run: |
-          sudo apt-get -o Acquire::Retries=3 -o Acquire::http::Timeout=20 -o Acquire::https::Timeout=20 update && sudo apt-get -o Acquire::Retries=3 -o Acquire::http::Timeout=20 -o Acquire::https::Timeout=20 install -y --no-install-recommends g++ make ninja-build libx11-dev \
-            libxcb1-dev libxcb-util-dev libxcb-randr0-dev libxcb-cursor-dev libxcb-xkb-dev libxcb-keysyms1-dev libxkbcommon-dev \
-            libxkbcommon-x11-dev libfontconfig1-dev libcairo2-dev libgtkmm-3.0-dev libsqlite3-dev libpango1.0-dev \
-            xvfb xauth # gui_test.sh: editors and the Control Center in a virtual display
           pip3 install --user "cmake>=3.25" # Ubuntu 22.04 ships 3.22
           echo "$HOME/.local/bin" >> "$GITHUB_PATH"
+      - name: Compiler cache # ccache's objects of the last run on this branch; a tag run starts empty (main builds nothing)
+        uses: actions/cache@55cc8345863c7cc4c66a329aec7e433d2d1c52a9 # v6.1.0
+        with:
+          path: ~/.cache/ccache
+          key: ccache-native-linux-${{ github.sha }}
+          restore-keys: ccache-native-linux-
       - name: Build
+        env:
+          CCACHE_MAXSIZE: 500M
         run: |
-          cmake -S native -B native-build -G Ninja -DCMAKE_BUILD_TYPE=Release -DVTI_WERROR=ON # a new warning in our code fails here (E13)
+          cmake -S native -B native-build -G Ninja -DCMAKE_BUILD_TYPE=Release -DVTI_WERROR=ON \
+            -DCMAKE_C_COMPILER_LAUNCHER=ccache -DCMAKE_CXX_COMPILER_LAUNCHER=ccache # a new warning in our code fails here (E13)
           cmake --build native-build --target VirusTINative tirevive-cc TIReviveControlCenter vtitests nativehost xclose
+          ccache --show-stats
           strip "native-build/VST3/Release/TI Revive Virus Control.vst3/Contents/x86_64-linux/TI Revive Virus Control.so"
           mkdir native-linux && cp -R "native-build/VST3/Release/TI Revive Virus Control.vst3" native-linux/
           install -m 0755 -s native-build/bin/Release/tirevive-cc native-linux/
           install -m 0755 -s native-build/ccapp/TIReviveControlCenter native-linux/
       - name: Unit tests
         run: ctest --test-dir native-build --output-on-failure
-      - uses: actions/upload-artifact@v7
+      - uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
         with:
           name: native-linux
           path: native-linux
@@ -208,18 +220,20 @@ jobs:
     runs-on: ubuntu-24.04
     timeout-minutes: 10 # a hanging step (e.g. a stuck package mirror) fails fast instead of blocking
     steps:
-      - uses: actions/checkout@v7
-      - uses: actions/download-artifact@v8
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+      - uses: actions/download-artifact@9000827ccba6bdab643e8b6fd33ac0654aef8333 # v8.0.2
         with:
           name: native-linux
           path: native-linux
-      - name: Install build tools
-        run: sudo apt-get -o Acquire::Retries=3 -o Acquire::http::Timeout=20 -o Acquire::https::Timeout=20 update && sudo apt-get -o Acquire::Retries=3 -o Acquire::http::Timeout=20 -o Acquire::https::Timeout=20 install -y --no-install-recommends make curl bzip2
+      - name: Install build tools # .github/apt/linux.txt, cached
+        uses: ./.github/actions/apt-install
+        with:
+          list: linux
       - name: Build
         run: |
           v="${VERSION:-${GITHUB_REF_NAME#v}}"
           NATIVE_PREBUILT="$PWD/native-linux/TI Revive Virus Control.vst3" NATIVE_CC="$PWD/native-linux/tirevive-cc" NATIVE_CCAPP="$PWD/native-linux/TIReviveControlCenter" bash scripts/linux-build-release.sh "$PWD" "${v%%-rc*}" "$PWD/out"
-      - uses: actions/upload-artifact@v7
+      - uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
         with:
           name: TI-Revive-linux
           path: out/TI-Revive-*-linux.tar.gz
@@ -233,19 +247,19 @@ jobs:
     permissions:
       contents: write
     steps:
-      - uses: actions/download-artifact@v8
+      - uses: actions/download-artifact@9000827ccba6bdab643e8b6fd33ac0654aef8333 # v8.0.2
         with:
           name: TI-Revive-msi
           path: out
-      - uses: actions/download-artifact@v8
+      - uses: actions/download-artifact@9000827ccba6bdab643e8b6fd33ac0654aef8333 # v8.0.2
         with:
           name: TI-Revive-mac
           path: out
-      - uses: actions/download-artifact@v8
+      - uses: actions/download-artifact@9000827ccba6bdab643e8b6fd33ac0654aef8333 # v8.0.2
         with:
           name: TI-Revive-linux
           path: out
-      - uses: actions/checkout@v7
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
         with:
           path: repo
           sparse-checkout: scripts/tirevive-usbinfo.ps1
