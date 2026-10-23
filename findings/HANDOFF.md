@@ -1,78 +1,58 @@
 # HANDOFF
 
-## START HERE - state at the end of 2026-10-22 (continue 2026-10-23)
+## START HERE - state at the end of 2026-10-23 (morning session, the user away from home)
 
-**Released:** v0.8.31 (2026-10-22 20:01, merge 9adfd89, tag v0.8.31, release run 39824346270 after a mac-only rerun;
-site rebuilt by hand, run 39827849547, live: Download 0.8.31, 345 tests). Release-triggered site deploys do NOT
-happen (GITHUB_TOKEN releases start no workflows): always `gh workflow run site.yml` by hand.
+**Released:** v0.8.31 (2026-10-22, tag v0.8.31, release run 39824346270; site rebuilt by hand, run 39827849547).
+Release-triggered site deploys do NOT happen: always `gh workflow run site.yml` by hand.
 
-**Test machines:** Linux = 0.8.31 release (install.sh; CI build backed up in ~/.vst3-backup/0.8.31-ci). Mac = the
-release is pushed to ~/Downloads/TI-Revive-0.8.31-release-mac (+ INSTALL-COMMAND.txt, Install test build.command) -
-whether the user installed it is unknown, check the receipt. win11 = 0.8.31 CI build (0.8.31c), release NOT installed
-(VM off). win10ref = shut down cleanly 2026-10-22 evening (all VMs off).
-Virus TI2 Desktop: on Linux, broker socket active.
+**Test machines (unchanged since 2026-10-22):** Linux = 0.8.31 release (broker ~/.local/lib/tirevive/vtibroker =
+release; CI build backed up in ~/.vst3-backup/0.8.31-ci). Mac = 0.8.31 release pushed to
+~/Downloads/TI-Revive-0.8.31-release-mac - install not confirmed (check the receipt). win11 = 0.8.31 CI build (0.8.31c),
+release NOT installed, VM off. win10ref off. **Virus TI2 Desktop: NOT on USB since 2026-10-22 21:47:44 (switched off or
+unplugged; kernel log), so nothing of today ran on hardware.**
 
-**Branch round-0.8.32 (from main 22f1455, pushed, last cbf1299). Done today:**
-1. Start-up like the original (b3bde33, E321): "Configuring Virus TI" (Rise Message 7 + Messagetimer) after the globals,
-   the plug-in's fixed multi table UNCHANGED before the part channels (we used to send the state's zeroed copy after
-   them), 74 01 7E 07 before every bank info request, timer 1 after the check. The user saw the message on the Virus.
-2. scripts/startup_diff.py (0517bfa, c2c32b4): compares two start-up captures; fixed build vs original = SAME START-UP
-   (known differences listed with reasons). Procedure in findings/testing.md. E322: the original's repeated bank info
-   requests are a timer side effect (not copied).
-3. Rate following (user: "as close as possible to the original"): E323 = how the original does it; plan
-   findings/design-rate.md (6 steps). Step 1 DONE (eba76ab: virusrate.h rule, time values from the Virus' rate), step 2
-   DONE (213e6a0: rate + rate_gen in the shm, same layout; AudioIn::rate/rate_changed; plug-in re-anchors on a switch).
-   The Virus still always runs at 44.1 kHz - nothing has been sent to it at 48 kHz. 354 tests, ctest 5/5, hil.sh ALL
-   PASS after each step. Not built on Windows/macOS yet (CI not run for this round).
-Also today: the Windows/Mac hardware-run scripts (hil-win.ps1, hil-mac.command; Mac first run ALL PASS E319, VM only a
-function check E320), the hardstyle preset library (~/Dokumente/.../Patches/TI Revive Hardstyle.mid, not listened to),
-the user's 'stuck hold' (the Virus itself; fixed by a power cycle).
+**Branch round-0.8.32 (pushed, last 79e11c6).** Done 2026-10-22: start-up like the original (b3bde33, E321),
+scripts/startup_diff.py (SAME START-UP), E322, E323 + plan findings/design-rate.md, rate following steps 1-2 (eba76ab,
+213e6a0), hil-win.ps1 / hil-mac.command. Done 2026-10-23 - **rate following steps 3-6, all written, none on hardware:**
+- Step 3 (e07b52c): src/broker/ratesw.h (switch in the driver's order: stop + wait, alt 0, 250 ms, alt 1, SET_CUR
+  0x82/0x01 x2, restart; refused -> back once; 1 s debounce), protocol 5 (VTIMSG_AUDIO + u32 rate, 0 = no wish,
+  missing = 44100), pktstat/lever relative to the wanted rate, Linux libusb stream_start/stop + vla_switch_rate.
+  **Behaviour change at 44.1 kHz too:** SET_CUR now 0x82, 0x01, 0x82, 0x01 (was 0x01, 0x82) and IN queued before the
+  OUT lead-in.
+- Step 4 (28364f5): Windows stream switches in its own thread; who sets the rate = owner.h vti_rate_setter (the
+  owning plug-in, or the ASIO driver while no plug-in owns the Virus - user OK 2026-10-23, narrower than "the last
+  plug-in that starts" because of E112); ASIO driver 44.1/48 (init = no wish, setSampleRate asks the broker, switch
+  under it -> sampleRateDidChange + kAsioResetRequest); macOS AudioIn::open(rate) / request_rate / rate listener.
+- Step 5 (ed4f5b8): plug-in maps the host rate (virus_rate_for), asks for it at the first audio start and in
+  setActive(true) (waits up to 3 s), kLatencyChanged; converters for both Virus rates built in setupProcessing.
+- Step 6 (0eb60a4): developer docs (protocol.md "Sample rate", architecture.md, design-linux.md). README/site NOT yet
+  (only after the hardware tests: new timing rows at 48 k, tirevive-site-check).
+- Two cpp-reviewer rounds, findings fixed (design-rate.md steps 3/4). 372 unit tests, ctest 5/5 (Linux).
+- **CI test build 39904309933 (version 0.8.32): ALL GREEN** - first MSVC/Xcode build of steps 4/5; Windows unit tests
+  4/4. Not installed anywhere yet.
+- User decision 2026-10-23: the Windows (WDM) sound card stays deferred - no kernel driver, nothing of
+  design-wdm-bridge.md in this round.
 
-**2026-10-23 (morning):** step 3 Linux part DONE (e07b52c, not on hardware: the Virus was off): ratesw.h (driver's
-switch order, debounce 1 s, owner only, refused SET_CUR back once), protocol 5 (VTIMSG_AUDIO + u32 rate; plug-in
-still asks 44100), pktstat/lever relative to the wanted rate, libusb stream_start/stop + vla_switch_rate; the 44.1 kHz
-start now in the driver's SET_CUR order (0x82, 0x01 x2) with IN before the OUT lead-in (a behaviour change at 44.1!).
-cpp-reviewer: 3 findings fixed (start without IN transfers leaked the stream, rate_tries after a switch, join after
-an unplug), 1 = intended debounce. 369 tests, ctest 5/5, both brokers build. Windows switch -> step 4.
-NEXT first: Virus on -> back up ~/.local/lib/tirevive/vtibroker (= 0.8.31 release), install work/build/linux/vtibroker,
-hil.sh --plugin build-native/VST3/Release/... at 44.1 kHz (checks the new start order), then restore the release broker.
-Asked the user again for System Clock / SA Freq (item 1).
-Step 4 WRITTEN (commit below, not compiled for Windows MSVC/macOS, not on hardware): Windows stream switches in its
-own thread, broker rule owner.h vti_rate_setter (owning plug-in, or ASIO without one - user not asked yet whether
-"the last plug-in that starts" should win instead), ASIO driver 44.1/48 + reset request, macOS AudioIn::open(rate) /
-request_rate / rate listener. Second cpp-reviewer round: 8 of 9 findings fixed (details in design-rate.md step 4).
-372 tests, ctest 5/5, both brokers build (mingw), ASIO mingw -fsyntax-only clean. NEXT: step 5 (plug-in flow: host
-rate -> virus_rate_for -> Broker::audio(rate) / request_rate on resume, re-ping, kLatencyChanged), then CI for the
-MSVC/Xcode builds.
-Step 5 WRITTEN (commit below): the plug-in now ASKS for 48 kHz when the host runs at 48/96/192 k (or 32/24 k).
-SAFETY (rule 2): with a protocol-5 broker (the dev broker, any CI build of this round) a 48 kHz host project / nativehost
---rate 48000 really switches the Virus - the first such run is the controlled one with the user watching the
-display. Until then hardware runs only at 44.1 kHz (hil.sh default). The installed 0.8.31 broker ignores the rate
-(stays 44.1; the plug-in's second converter set covers it). Mac/Windows test builds of this round switch too: no
-Mac/Windows test of a 48 kHz project before the Linux controlled run.
-Step 6 developer docs DONE (0eb60a4: protocol.md "Sample rate", architecture.md, design-linux.md); README/site only
-after the hardware tests. CI test build STARTED 2026-10-23 ~07:10 local: run 39904309933 (round-0.8.32, version
-0.8.32) - first MSVC/Xcode build of steps 4/5: ALL GREEN (native-windows incl. unit tests, mac, linux,
-native-linux, binaries, msi; release skipped). User decision 2026-10-23: the Windows (WDM) sound card stays
-deferred - no kernel driver for now, nothing of design-wdm-bridge.md in this round. Not installed anywhere yet (Virus off, user away; the build switches
-at 48 k). NEXT:
-when the Virus is on: dev broker + hil.sh at 44.1 kHz (new SET_CUR order), then the controlled first 48 kHz switch
-with the user (nativehost --rate 48000, display "Audio clock changed"); the user's SA Freq value.
+**SAFETY (rule 2):** with a protocol-5 broker (the dev broker work/build/linux/vtibroker, any CI build of this round) a
+48 kHz project or `nativehost --rate 48000` REALLY switches the Virus. The first such run is the controlled one on
+Linux with the user watching the display ("Audio clock changed" expected) and the user's OK at that moment. Until then:
+hardware runs at 44.1 kHz only; no Mac/Windows test of a 48 kHz project. The installed 0.8.31 broker ignores the rate.
 
-**NEXT (in this order):**
-1. Ask the user for the Virus' "System Clock / SA Freq" value (CONFIG menu) - E323 (6): a Virus set to 48 k may switch
-   itself after a USB reset (E175/E241 hypothesis). Do not send a request to read it.
-2. Step 3 of design-rate.md (broker switch sequence: stop iso, alt 0, 250 ms, alt 1, SET_CUR 0x82/0x01 x2, IN then OUT;
-   pktstat/rate-lost/lever relative to the wanted rate; debounce 1 s) - TDD; the FIRST real switch only as a controlled
-   run with the user watching the display ("Audio clock changed" expected) and the user's OK (rule 2).
-3. Steps 4-6 (who owns the rate per platform, plug-in flow on resume + kLatencyChanged, docs), then CI + the round test
-   (hil at 44.1/48/96, exports at 48 k/128, startup_diff at 48 k, all three systems).
-4. Open small items: install the 0.8.31 release on win11; confirm the Mac release install.
-5. Issue #14 (created on the user's request, 2026-10-22): Virus TI Snow on macOS (Mac Studio M1, Sequoia) - must load
-   the plug-in with the Virus off, analog outputs silent to an Apollo, Logic Pro sync problems, volume knob does nothing
-   over USB. Translated from Spanish, not reproduced; asks for version, diag.log, output routing, Logic buffer/rate.
+**NEXT (in this order, when the user is home and the Virus is on):**
+1. 44.1 kHz check of the new start order: back up ~/.local/lib/tirevive/vtibroker (0.8.31 release), install
+   work/build/linux/vtibroker (dev, protocol 5), `scripts/hil.sh --plugin "build-native/VST3/Release/TI Revive Virus
+   Control.vst3"` at 44.1 kHz; compare the start in a capture with startup_diff.py; then restore or keep the dev broker.
+2. The user reads "System Clock / SA Freq" in the CONFIG menu (E323 (6), E175/E241 hypothesis). Never sent as a request.
+3. Controlled first switch with the user: nativehost --rate 48000 (44.1 -> 48), then 48 -> 44.1, then quick changes
+   (debounce must hold them); log + display; new evidence entry (E324+).
+4. Round test: install the CI build (Linux install.sh, win11 VM=win11 silent, Mac INSTALL-COMMAND), risk.py --round
+   0.8.32 (class C everywhere), hil at 44.1/48/96, exports at 48 k/128, startup_diff at 48 k, the ASIO driver at 48 k
+   (VM: function only), checklist artifact (scripts/checklist.py).
+5. After the tests: README/site texts (rate following, timing rows), release notes in build.yml.
+6. Open small items: install the 0.8.31 release on win11; confirm the Mac release install. Issue #14 (Snow on macOS,
+   user report, waiting for the reporter's version/diag.log).
 
-**Notes:** captures of today in captures/ (git-ignored): orig-startup-lcd-20261022 (original start-up + 5 rate switches),
+**Notes:** captures in captures/ (git-ignored): orig-startup-lcd-20261022 (original start-up + 5 rate switches),
 ours-startup-*. Audit of every 44.1 kHz assumption: work/rate-follow/audit-44k1.md (local). The GateGuard hook asks for
 facts before the first edit of each file - state importers/affected functions/the user's instruction, then retry.
 
