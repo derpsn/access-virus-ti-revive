@@ -52,7 +52,9 @@ display. Until then hardware runs only at 44.1 kHz (hil.sh default). The install
 Mac/Windows test of a 48 kHz project before the Linux controlled run.
 Step 6 developer docs DONE (0eb60a4: protocol.md "Sample rate", architecture.md, design-linux.md); README/site only
 after the hardware tests. CI test build STARTED 2026-10-23 ~07:10 local: run 39904309933 (round-0.8.32, version
-0.8.32) - first MSVC/Xcode build of steps 4/5. NEXT: check the run (failed job -> fix, gh run rerun <id> --failed);
+0.8.32) - first MSVC/Xcode build of steps 4/5: ALL GREEN (native-windows incl. unit tests, mac, linux,
+native-linux, binaries, msi; release skipped). Not installed anywhere yet (Virus off, user away; the build switches
+at 48 k). NEXT:
 when the Virus is on: dev broker + hil.sh at 44.1 kHz (new SET_CUR order), then the controlled first 48 kHz switch
 with the user (nativehost --rate 48000, display "Audio clock changed"); the user's SA Freq value.
 
