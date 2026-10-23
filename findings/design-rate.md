@@ -83,6 +83,8 @@ local), the risky cases E112, E175, E241, E257.
    changed. No unit test for this flow (it needs a host): nativehost --rate on hardware is its test.
 6. **Docs and texts**: protocol.md, architecture.md, design-linux.md, README/site timing rows (new measurements at
    48 k), the ASIO driver's "44.1 kHz only".
+   **Developer docs DONE 2026-10-23** (protocol.md "Sample rate", architecture.md audio + ASIO, design-linux.md, the
+   ASIO driver's header). README/site: after the hardware tests (new timing rows at 48 k; the site check skill).
 
 ## Before any switch reaches the Virus (rule 2)
 

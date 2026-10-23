@@ -15,7 +15,8 @@ Windows and macOS: the user's own, unmodified Access software, no old drivers, n
 - So Linux follows the **Windows** design: the broker owns the whole device while TI Revive is in use - MIDI on
   interfaces 3/4 (code exists: vticore.c on libusb, E037) and the audio function on interfaces 0-2, streamed
   isochronously by the broker itself (port of the Windows WinUSB streaming, vtiusbaudio.c: synth = clock master,
-  frame counter never slips, 44.1 kHz) into the shared audio ring (vtiaudioshm.h). When the broker exits it hands
+  frame counter never slips, 44.1 kHz; since round 0.8.32 also 48 kHz, design-rate.md) into the shared audio ring
+  (vtiaudioshm.h). When the broker exits it hands
   the device back to `snd-usb-audio`, so the Virus is a normal Linux sound card whenever TI Revive is not in use.
 
 ```
