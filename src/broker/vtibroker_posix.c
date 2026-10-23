@@ -37,6 +37,7 @@
 #ifdef __linux__
 #include "vtiaudioshm.h"
 #include "vtiusbaudio_libusb.h"
+#include "ratesw.h"
 #include <fcntl.h>
 #include <sys/mman.h>
 #endif
@@ -469,7 +470,7 @@ static void f5_report(const uint8_t *p, int len);
 static void f5_second(void);
 #endif
 
-static volatile int g_rate_lever; // the 44.1 kHz global was sent (E257): log the Virus' report of it
+static volatile int g_rate_lever; // a recovery switch ran (E331): log the Virus' report of the rate's global (E257)
 
 static void on_rx(void *user, uint8_t ep, const uint8_t *data, int len)
 {
@@ -728,10 +729,41 @@ static void f5_second(void) // once per second from the RX statistics
     pthread_mutex_unlock(&g_cs_f5);
 }
 
-static int audio_start(void) // g_cs_dev held, device open
+static vti_rate_guard g_rate_guard; // at most one rate switch per second (ratesw.h, rule 2)
+static vti_relock g_relock; // recovery when the Virus leaves the stream's rate (ratesw.h, E331); g_cs_dev
+
+// the shared ring learns the stream's rate before frames at it arrive (rate, then rate_gen; readers re-anchor on a
+// new generation, vtiaudioshm.h); a change counts for the debounce
+static void shm_rate(uint32_t rate)
 {
-    if (vla_running())
+    if (g_shm->rate == rate)
+        return;
+    g_shm->rate = rate;
+    __sync_synchronize();
+    g_shm->rate_gen++;
+    vti_rate_switched(&g_rate_guard, uptime_ms());
+}
+
+// g_cs_dev held, device open. `wanted` = the client's rate (protocol 5, else 44100); `owner` = it may switch the
+// Virus (the plug-in that owns it, or any client while no plug-in does)
+static int audio_start(uint32_t wanted, int owner)
+{
+    if (vla_running()) {
+        uint32_t cur = vla_rate();
+        uint32_t to = vti_rate_choose(cur, wanted, owner, vti_rate_may_switch(&g_rate_guard, uptime_ms()));
+        if (to != cur) {
+            vti_relock_reset(&g_relock);
+            if (vla_switch_rate(to, shm_rate) == -2) { // the stream stopped: give the interfaces back properly
+                vla_stop();
+                g_shm->streaming = 0;
+                g_audio_on = 0;
+                return -1;
+            }
+        } else if (vti_rate_wanted(wanted, cur) != cur)
+            blog("audio: %.1f kHz asked, staying at %.1f kHz (%s)", wanted / 1000.0, cur / 1000.0,
+                 owner ? "the last switch was less than a second ago" : "only the owner switches the rate");
         return 1;
+    }
     g_audio_on = 0;
     if (shm_create())
         return -1;
@@ -744,7 +776,14 @@ static int audio_start(void) // g_cs_dev held, device open
     g_shm->out_read = g_shm->out_write;
     g_out_playing = 0;
     g_out_frames = g_out_underruns = g_out_dropped = 0;
-    if (vla_start(ctx, h, audio_in, audio_out, NULL))
+    // a fresh start protects no running stream: any explicit wish applies (still debounced); 0 keeps the last rate
+    uint32_t last = g_shm->rate ? g_shm->rate : VLA_RATE;
+    uint32_t rate = vti_rate_choose(last, wanted, 1, vti_rate_may_switch(&g_rate_guard, uptime_ms()));
+    if (rate != vti_rate_wanted(wanted, last))
+        blog("audio: %.1f kHz asked, starting at %.1f kHz (the last switch was less than a second ago)",
+             wanted / 1000.0, rate / 1000.0);
+    shm_rate(rate);
+    if (vla_start(ctx, h, rate, audio_in, audio_out, NULL))
         return -1;
     g_shm->streaming = 1;
     g_audio_on = 1;
@@ -821,26 +860,30 @@ static void *device_thread(void *unused)
             pthread_mutex_unlock(&g_cs_clients);
         }
 #ifdef __linux__
-        // the Virus left 44.1 kHz while streaming (E175/E241: after a wake, a replug): the stream already sends it
-        // silent packets of its size; ask for the rate again, a few times per stream
-        static int rate_tries;
+        // the Virus left the stream's rate (E175/E241: after a wake, a replug): the stream already sends it silent
+        // packets of its size; a switch away and back makes its USB chip tell the DSPs again (E331)
         if (g_dev && g_shm && g_shm->streaming) {
-            if (vla_rate_lost()) {
-                if (rate_tries < 3) {
-                    rate_tries++;
-                    // both masters of the rate (E257): SET_CUR on the endpoints and the panel's global parameter
-                    int r = vla_set_rate_again();
-                    uint8_t lever[16];
-                    int n = vti_pack_rate_44k1(lever, sizeof lever);
-                    int w = n > 0 ? vti_write(g_dev, VTI_EP_MI04_OUT, lever, n) : -1;
-                    g_rate_lever = 1;
-                    blog("usbaudio: the Virus sends 48 kHz packets - asking for 44.1 kHz again (%d/3): SET_CUR %s, "
-                         "global 73 00 10 00 -> %d", rate_tries, r ? "failed" : "accepted", w);
-                } else if (rate_tries++ == 3)
-                    blog("usbaudio: the Virus stays at 48 kHz - its sound stays silent; switch it off and on");
+            uint32_t to = 0, now = vla_rate();
+            switch (vti_relock_step(&g_relock, vla_rate_lost(), now, uptime_ms(), &to)) {
+            case VTI_RELOCK_AWAY:
+                g_rate_lever = 1; // log the Virus' own report of the rate's global
+                blog("usbaudio: the Virus sends %s kHz packets - switching to %.1f kHz and back (%d/%d)",
+                     now == 48000 ? "44.1" : "48", to / 1000.0, g_relock.tries, VTI_RELOCK_TRIES);
+                /* fall through */
+            case VTI_RELOCK_BACK:
+                if (vla_switch_rate(to, shm_rate) == -2) { // the stream stopped: give the interfaces back properly
+                    vla_stop();
+                    g_shm->streaming = 0;
+                    g_audio_on = 0;
+                }
+                break;
+            case VTI_RELOCK_GIVE_UP:
+                blog("usbaudio: the Virus stays at %s kHz - its sound stays silent; switch it off and on",
+                     now == 48000 ? "44.1" : "48");
+                break;
             }
         } else
-            rate_tries = 0;
+            vti_relock_reset(&g_relock);
 #endif
         int open = g_dev != NULL;
         pthread_mutex_unlock(&g_cs_dev);
@@ -1091,16 +1134,22 @@ static void *client_thread(void *arg)
             pthread_mutex_lock(&g_cs_dev);
             pthread_mutex_lock(&g_cs_clients);
             int use = !waits(c), stop = vti_may_stop_audio(vti_is_plugin(c->name), c == g_owner, g_owner != NULL);
+            int owner = c == g_owner || !g_owner;
             pthread_mutex_unlock(&g_cs_clients);
+            uint32_t want = vti_audio_req_rate(buf, h.len);
             if (on)
-                r = g_dev && use ? audio_start() : -1;
+                r = g_dev && use ? audio_start(want, owner) : -1;
             else if (stop)
                 audio_stop();
             pthread_mutex_unlock(&g_cs_dev);
             pthread_mutex_lock(&g_cs_clients);
             c->audio = on && r == 1;
             pthread_mutex_unlock(&g_cs_clients);
-            blog("audio %s -> %d", on ? "on" : "off", r);
+            if (on)
+                blog("audio on (%.1f kHz asked) -> %d%s", want / 1000.0, r, r == 1 ? (g_shm->rate == 48000 ?
+                     ", 48 kHz" : ", 44.1 kHz") : "");
+            else
+                blog("audio off -> %d", r);
 #endif
             send_msg(c, VTIMSG_AUDIO_REPLY, &r, 4, NULL, 0);
             break;

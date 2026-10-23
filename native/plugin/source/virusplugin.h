@@ -14,6 +14,7 @@
 #include "device/dumppacer.h"
 #include "device/startprogress.h"
 #include "device/transport.h"
+#include "device/virusrate.h"
 #include "device/audiogate.h"
 #include "device/hostmidi.h"
 #include "device/sendguard.h"
@@ -123,6 +124,12 @@ public:
     }
     bool calibrating() const { return pings_out_.load() > 0; }
     std::atomic<int64_t> marker{-2};
+    std::atomic<int> rate{44100}; // the Virus' sample rate (44100; 48000 when it follows the host, E323)
+    // rate following (design-rate.md step 5): the Virus rate this instance wants (the host rate mapped like the
+    // original, virusrate.h) - the audio start asks for it; request_rate() asks now and waits until the worker did
+    // (true = the Virus runs at it). From setActive only, never from process(): it blocks up to timeout_ms.
+    std::atomic<int> want_rate{44100};
+    bool request_rate(int rate, int timeout_ms);
     std::atomic<int64_t> lead{0}; // frames from a timeline position to its sound in the ring (VirusPlugin::lead())
     // the newest ring frame that had sound on USB 1 / USB 2 (the ping waits for 1 s of silence, like the original)
     std::atomic<int64_t> last_sound{-1};
@@ -160,6 +167,8 @@ public:
     }
 
 private:
+    std::atomic<int> rate_req_{0};                       // a rate request for the worker (0 = none)
+    std::atomic<unsigned> rate_req_seq_{0}, rate_done_seq_{0}; // requests made / handled
     mutable std::mutex info_mu_;
     std::string tios_;
     std::function<void(bool)> device_;
@@ -610,17 +619,20 @@ private:
     static int timing_s() { static const int s = getenv("VTI_NATIVE_S") ? atoi(getenv("VTI_NATIVE_S")) : 5000; return s; }
     int64_t lead() const { return timing_s() + timing_a(); }
     // the read position stays block + 640 - |timeline jitter (<= ~400)| behind the newest frame
-    // (+ the resampler's look-ahead when the host does not run at 44.1 kHz)
+    // (+ the resampler's look-ahead when the host does not run at the Virus' rate)
     int64_t latency_frames() const
     {
         return timing_a() + std::max(block_, 256) + 640 + (resampling() ? Resampler::HALF + 2 : 0);
     }
-    bool resampling() const { return std::fabs(rate_ - 44100.0) > 0.5; }
+    int virus_rate() const { return out_ ? out_->rate.load(std::memory_order_relaxed) : 44100; }
+    bool resampling() const { return std::fabs(rate_ - virus_rate()) > 0.5; }
     void read_resampled(float **o1, float **o2, float **o3, int n, double ratio, int64_t newest, int64_t target);
 public:
     Steinberg::uint32 PLUGIN_API getLatencySamples() override
     {
-        return (Steinberg::uint32)std::lround(latency_frames() * rate_ / 44100.0);
+        const auto l = (Steinberg::uint32)std::lround(latency_frames() * rate_ / virus_rate());
+        latency_reported_ = (int64_t)l; // setActive tells the host when a rate switch changed it
+        return l;
     }
 private:
     double rate_ = 44100;
@@ -629,7 +641,7 @@ private:
     bool tl_valid_ = false, anchored_ = false;
     double next_tick_ = 0;
     ActiveSensing fe_;  // FE every 300 ms on the timeline (the DSP's watchdog, E237)
-    double tl_acc_ = 0; // fractional Virus frames of the timeline (host rates other than 44.1 kHz)
+    double tl_acc_ = 0; // fractional Virus frames of the timeline (host rate != the Virus' rate)
     TransportWatch transport_; // Play and loop restarts: the original's F2 + 73 00 23 01 + 6F <part> 7F 00 (E275)
     double stat_acc_ = 0; // the same for the host-frames statistic
     int64_t stream_start_ = -1;
@@ -665,8 +677,13 @@ private:
     int64_t sync_tick_ms_ = 0, sync_log_ms_ = 0; // worker
     int sync_logged_ = 0;                        // worker
     void tick_sync_alert();
-    // host rate != 44.1 kHz: the Virus' audio through the resampler, read from a steered fractional position
-    Resampler resampler_;
+    // host rate != the Virus' rate: its audio through the resampler, read from a steered fractional position. One per
+    // Virus rate (index vidx(): 0 = 44.1, 1 = 48 kHz), both built in setupProcessing: a switch outside setActive (an
+    // older broker that stays at 44.1, a refusal, another program on macOS) costs process() only the choice
+    static int vidx(int virus_rate) { return virus_rate == 48000 ? 1 : 0; }
+    Resampler resampler_[2];
+    int vrate_seen_ = 0;           // audio thread: the Virus rate of the last block (a change resets the converters)
+    int64_t latency_reported_ = -1; // what getLatencySamples last told the host
     std::vector<float> rs_src_[6]; // USB 1 L/R, USB 2 L/R, USB 3 L/R
     // the Virus' USB IO configuration ("Global USB/Virus Control USB IO Configuration": 0 = 2 Outs / No Input,
     // 1 = 3 Outs / No Input, 2 = 3 Outs / 1 Input), kept per computer like the original's "IO Configuration"
@@ -674,7 +691,7 @@ private:
     std::atomic<int> usb_io_{0};
     void set_usb_io(int value, bool save);
     // "3 Outs / 1 Input": the Sidechain bus goes to the Virus' USB input, as in the original (E167)
-    SidechainSender sc_;          // rate-controlled converter towards the Virus' clock (audio thread)
+    SidechainSender sc_[2];       // rate-controlled converter towards the Virus' clock, per Virus rate (audio thread)
     std::vector<int16_t> sc_buf_; // its 16-bit stereo output for the ring, sized in setupProcessing
     int64_t sc_expect_ = -1;      // the ring's write position after our last write (-1: we did not write)
     int64_t sc_seen_ = -1;        // the write position at the last block (another writer moves it)
@@ -715,6 +732,7 @@ private:
     std::atomic<bool> values_dirty_{false};
     bool state_loaded_ = false;                // setState or the default state was applied
     std::vector<std::vector<uint8_t>> default_; // a new instance's state (from the user's plug-in binary)
+    std::vector<uint8_t> init_multi_; // the fixed multi dump as the original sends it at start-up (E321)
 
     void apply_state_to_params();
     void panel_message(const std::vector<uint8_t> &msg);

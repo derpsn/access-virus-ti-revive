@@ -5,7 +5,7 @@
 //   WRITE    {ep, data}                       RX       {ep, data}          (unsolicited, every IN transfer)
 //   CONTROL  {seq, setup[8], data(OUT)}       CONTROL_REPLY {seq, result, data(IN)}
 //                                             STATE    {connected}         (on connect and on change)
-//   AUDIO    {on, event name}                 AUDIO_REPLY {result}         (protocol 2, vtiaudioshm.h)
+//   AUDIO    {on, event name, rate}           AUDIO_REPLY {result}         (protocol 2, vtiaudioshm.h; rate: 5)
 //                                             AUDIO_TICK {in_frames}       (protocol 3, Linux: per received block)
 //   OBSERVE  {}                               OBSERVE_REPLY {version}      (protocol 4: read-only observer)
 //                                             INFO {"version=..."}         (after HELLO, brokerinfo.h)
@@ -19,14 +19,15 @@
 #include <stdint.h>
 
 #define VTI_PIPE_NAME "\\\\.\\pipe\\vtibroker"
-#define VTI_PROTO_VERSION 4
+#define VTI_PROTO_VERSION 5
 #define VTI_TCP_PORT 47615 // Linux broker, 127.0.0.1 (Wine clients); actual port in ~/.config/tirevive/broker.token
 
 enum {
     VTIMSG_HELLO = 1,         // client -> broker: u32 version
     VTIMSG_WRITE = 2,         // client -> broker: u8 ep, data...
     VTIMSG_CONTROL = 3,       // client -> broker: u32 seq, u8 setup[8], OUT data...
-    VTIMSG_AUDIO = 4,         // client -> broker: u32 on (1 = start, 0 = stop), char event_name[] (on = 1)
+    VTIMSG_AUDIO = 4,         // client -> broker: u32 on (1 = start, 0 = stop), char event_name[] (on = 1), then
+                              // (protocol 5) u32 the wanted Virus rate, 44100 or 48000 (ratesw.h; missing = 44100)
     VTIMSG_AUTH = 5,          // client -> broker, first message on the Linux TCP listener: char token[64] (hex)
     VTIMSG_OBSERVE = 6,       // client -> broker: become a read-only observer (protocol 4)
     VTIMSG_FLASHINFO = 7,     // client -> broker: the Virus' identification blocks (flashinfo.h; owner only, read once

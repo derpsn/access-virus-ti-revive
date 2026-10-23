@@ -12,9 +12,9 @@ static constexpr double KP = 4e-6;        // per frame of error
 static constexpr double KI = 4e-12;       // per frame of error and host frame
 static constexpr double MAX_INTEG = 0.005, MAX_CORR = 0.01;
 
-void SidechainSender::setup(double host_rate, int max_block)
+void SidechainSender::setup(double host_rate, int max_block, int virus_rate)
 {
-    nominal_ = host_rate > 0 ? host_rate / 44100.0 : 1.0;
+    nominal_ = host_rate > 0 && virus_rate > 0 ? host_rate / virus_rate : 1.0;
     rs_.setup(nominal_); // band-limited for hosts above 44.1 kHz
     max_block_ = std::max(1, max_block);
     cap_ = max_block_ + 2 * Resampler::TAPS + 8;

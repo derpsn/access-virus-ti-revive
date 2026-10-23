@@ -44,6 +44,9 @@ Good to know
   application menu (needs gtkmm 3: Ubuntu 24.04+ libgtkmm-3.0-1t64, older libgtkmm-3.0-1v5, Fedora gtkmm3.0,
   Arch/CachyOS gtkmm3; without it the window closes at once), or "tirevive-cc backup" in a terminal (also
   "info", "list", "export"; both in ~/.local/bin). Firmware/OS updates are not supported.
+- The Control Center shows its plain look instead of the Access look: install.sh of 0.8.31 and older could miss
+  "Virus Control Center.exe" in the Access .msi (issue #15). Run ./install.sh "/path/to/...64-bit.msi" again; it adds
+  the missing file and changes nothing else.
 - Uninstall: ./uninstall.sh (your patch libraries in ~/Documents stay)
 
 Logs: broker "journalctl --user -u tirevive-broker"; plug-in: create ~/.local/share/virus-ti-native/diag.on, then

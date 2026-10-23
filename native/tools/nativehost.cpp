@@ -25,6 +25,7 @@
 #include "pluginterfaces/vst/ivstcomponent.h"
 #include "pluginterfaces/gui/iplugview.h"
 #include "pluginterfaces/vst/ivsteditcontroller.h"
+#include "hostclock.h"
 #ifdef __linux__
 #include <X11/Xlib.h>
 #include <X11/Xutil.h>
@@ -237,6 +238,7 @@ int main(int argc, char **argv)
     std::vector<std::pair<double, double>> aheads; // (at s, ms)
     int block = 512; // --block N: host block size
     int rate = 44100; // --rate N: host sample rate
+    std::vector<RateAt> rate_ats; // --rate-at R@T: the host rate R from T s on (a DAW whose project rate is switched)
     struct Action {
         double t;
         char kind; // c = click, d = drag, s = screenshot
@@ -298,8 +300,16 @@ int main(int argc, char **argv)
             stress_stop = atof(argv[++i]);
         else if (!strcmp(argv[i], "--block") && i + 1 < argc)
             block = atoi(argv[++i]);
-        else if (!strcmp(argv[i], "--rate") && i + 1 < argc) // host sample rate (the Virus runs at 44.1 kHz)
+        else if (!strcmp(argv[i], "--rate") && i + 1 < argc) // host sample rate (the plug-in asks the Virus for 44.1 or 48 kHz)
             rate = atoi(argv[++i]);
+        else if (!strcmp(argv[i], "--rate-at") && i + 1 < argc) {
+            RateAt r{};
+            if (!parse_rate_at(argv[++i], r)) {
+                fprintf(stderr, "nativehost: --rate-at wants RATE@SECONDS, e.g. 48000@10\n");
+                return 2;
+            }
+            rate_ats.push_back(r);
+        }
         else if (!strcmp(argv[i], "--editor"))
             editor = true;
         else if (!strcmp(argv[i], "--editor2"))
@@ -487,12 +497,54 @@ int main(int argc, char **argv)
     EventList ev;
     std::vector<int16_t> pcm;
     float peak = 0;
-    int blocks = (int)(seconds * rate / block);
+    HostClock clk{rate, block};
+    auto running = [&](int b) { return clk.seconds(b + 1) <= seconds + 1e-9; }; // block b ends within --seconds
+    int wav_segment = 1; // --rate-at: one WAV per rate (WAV.wav, then WAV.2.wav, ...), each graded on its own
+    auto write_wav = [&](int at_rate) {
+        if (!wav)
+            return;
+        std::string path = wav;
+        if (wav_segment > 1) {
+            size_t dot = path.rfind(".wav");
+            path = (dot == std::string::npos ? path : path.substr(0, dot)) + "." + std::to_string(wav_segment) + ".wav";
+        }
+        if (FILE *f = fopen(path.c_str(), "wb")) {
+            uint32_t bytes = (uint32_t)(pcm.size() * 2), r = (uint32_t)at_rate, brate = r * 4, sz = 36 + bytes, fmt = 16;
+            uint16_t pcmfmt = 1, ch = 2, align = 4, bits = 16;
+            fwrite("RIFF", 1, 4, f), fwrite(&sz, 4, 1, f), fwrite("WAVEfmt ", 1, 8, f), fwrite(&fmt, 4, 1, f);
+            fwrite(&pcmfmt, 2, 1, f), fwrite(&ch, 2, 1, f), fwrite(&r, 4, 1, f), fwrite(&brate, 4, 1, f);
+            fwrite(&align, 2, 1, f), fwrite(&bits, 2, 1, f), fwrite("data", 1, 4, f), fwrite(&bytes, 4, 1, f);
+            fwrite(pcm.data(), 2, pcm.size(), f);
+            fclose(f);
+            printf("wrote %s\n", path.c_str());
+        }
+    };
     auto t_next = std::chrono::steady_clock::now();
     std::chrono::steady_clock::time_point t_offline{}, t_offline_end{};
-    for (int b = 0; b < blocks; b++) {
-        const bool offline = offline_at >= 0 && b * (double)block / (double)rate >= offline_at &&
-                             (offline_end < 0 || b * (double)block / (double)rate < offline_end);
+    for (int b = 0; running(b); b++) {
+        for (auto &ra : rate_ats)
+            if (!ra.done && proc && clk.seconds(b) >= ra.t) {
+                // what a DAW does when the project rate changes while it plays: stop, deactivate, set up, activate
+                ra.done = true;
+                printf("rate-at %.2f s: %d -> %d Hz\n", clk.seconds(b), clk.rate, ra.rate);
+                fflush(stdout);
+                auto t0 = std::chrono::steady_clock::now();
+                proc->setProcessing(false);
+                comp->setActive(false);
+                ProcessSetup ps2{kRealtime, kSample32, block, static_cast<SampleRate>(ra.rate)};
+                proc->setupProcessing(ps2);
+                comp->setActive(true);
+                proc->setProcessing(true);
+                printf("rate-at: reactivated in %.0f ms\n",
+                       std::chrono::duration<double, std::milli>(std::chrono::steady_clock::now() - t0).count());
+                write_wav(clk.rate);
+                pcm.clear();
+                wav_segment++;
+                clk.set_rate(b, ra.rate);
+                t_next = std::chrono::steady_clock::now();
+            }
+        const bool offline = offline_at >= 0 && clk.seconds(b) >= offline_at &&
+                             (offline_end < 0 || clk.seconds(b) < offline_end);
         if (offline && t_offline == std::chrono::steady_clock::time_point{})
             t_offline = std::chrono::steady_clock::now();
         if (!offline && t_offline != std::chrono::steady_clock::time_point{} &&
@@ -501,14 +553,14 @@ int main(int argc, char **argv)
             // --offline-end: the render is over. The first real-time block comes one block period after the last
             // offline one, like a device callback; called at once it ran a block ahead and its first note was
             // ~12 ms late (E286)
-            std::this_thread::sleep_for(std::chrono::microseconds((long long)block * 1000000 / rate));
+            std::this_thread::sleep_for(std::chrono::microseconds((long long)block * 1000000 / clk.rate));
             t_offline_end = t_next = std::chrono::steady_clock::now();
         }
         data.processMode = offline ? kOffline : kRealtime;
         static ProcessContext pctx{};
         if (transport_at >= 0) { // a DAW transport: 120 BPM from transport_at on, looping every loop_bars bars
-            double t = b * (double)block / (double)rate;
-            pctx.sampleRate = rate;
+            double t = clk.seconds(b);
+            pctx.sampleRate = clk.rate;
             pctx.tempo = 120.0;
             pctx.state = ProcessContext::kTempoValid | ProcessContext::kProjectTimeMusicValid;
             double qn = t >= transport_at ? (t - transport_at) * 2.0 : 0.0;
@@ -521,7 +573,7 @@ int main(int argc, char **argv)
         }
         ev.clear();
         if (notes) { // C4 on at the start of every second, off at the half
-            long f0 = (long)b * block, f1 = f0 + block;
+            const long rate = clk.rate, f0 = clk.frame(b), f1 = f0 + block;
             for (long t = (f0 / (rate / 2)) * (rate / 2); t < f1; t += (rate / 2))
                 if (t >= f0 && !(t >= notes_off_from * rate && t < notes_off_to * rate)) {
                     Event e{};
@@ -537,7 +589,7 @@ int main(int argc, char **argv)
                 }
         }
         if (hold >= 0) { // one C4 from `hold` on, released only at the end
-            long f0 = (long)b * block, on = (long)(hold * rate);
+            long f0 = clk.frame(b), on = (long)(hold * clk.rate);
             if (on >= f0 && on < f0 + block) {
                 Event e{};
                 e.sampleOffset = (int32)(on - f0);
@@ -546,7 +598,7 @@ int main(int argc, char **argv)
                 ev.addEvent(e);
                 printf("hold: C4 on at %.2f s\n", hold);
             }
-            if (b == blocks - 1) {
+            if (!running(b + 1)) {
                 Event e{};
                 e.type = Event::kNoteOffEvent;
                 e.noteOff = {0, 60, 0.f, -1, 0};
@@ -568,7 +620,7 @@ int main(int argc, char **argv)
         }
         data.inputEvents = &ev;
         pc.clearQueue();
-        if (stress && stress_params && ctl && b * (double)block < stress_stop * (double)rate) { // 32 automatable parameters moving every block
+        if (stress && stress_params && ctl && clk.seconds(b) < stress_stop) { // 32 automatable parameters moving every block
             static std::vector<ParamID> ids;
             if (ids.empty())
                 for (int32 k = 0; k < ctl->getParameterCount() && ids.size() < 32; k++) {
@@ -583,7 +635,7 @@ int main(int argc, char **argv)
             }
         }
         for (auto &c : timed)
-            if (!c.done && (double)(b + 1) * block / rate > c.t) {
+            if (!c.done && clk.seconds(b + 1) > c.t) {
                 c.done = true;
                 int32 idx;
                 if (auto *q = pc.addParameterData(c.id, idx)) {
@@ -606,7 +658,7 @@ int main(int argc, char **argv)
             for (int32 c = 0; c < data.inputs[1].numChannels && c < 2; c++)
                 if (float *s = data.inputs[1].channelBuffers32 ? data.inputs[1].channelBuffers32[c] : nullptr)
                     for (int i = 0; i < block; i++)
-                        s[i] = 0.5f * (float)std::sin(2 * 3.14159265358979323846 * sc_sine * ((double)b * block + i) / rate);
+                        s[i] = 0.5f * (float)std::sin(2 * 3.14159265358979323846 * sc_sine * ((double)clk.frame(b) + i) / clk.rate);
         if (proc)
             proc->process(data);
         if (proc2) { // the duplicate plays the same notes (same clip on the duplicated track)
@@ -617,9 +669,9 @@ int main(int argc, char **argv)
             data2.outputParameterChanges = &outpc2;
             proc2->process(data2);
         }
-        if (comp2 && proc && b * (double)block >= duplicate * (double)rate) {
+        if (comp2 && proc && clk.seconds(b) >= duplicate) {
             // the user deletes the original track: the duplicate takes over the Virus
-            printf("duplicate: removing the first instance at %.1f s\n", b * (double)block / (double)rate);
+            printf("duplicate: removing the first instance at %.1f s\n", clk.seconds(b));
             fflush(stdout);
             proc->setProcessing(false);
             comp->setActive(false);
@@ -667,21 +719,21 @@ int main(int argc, char **argv)
                 pcm.push_back((int16_t)std::max(-32768.f, std::min(32767.f, r[i] * 32768)));
             }
         }
-        if ((b + 1) * (long)block / rate != (long)b * block / rate) { // once per second
-            printf("t=%.0f s peak %.3f\n", (b + 1) * (double)block / (double)rate, peak);
+        if ((long)clk.seconds(b + 1) != (long)clk.seconds(b)) { // once per second
+            printf("t=%.0f s peak %.3f\n", clk.seconds(b + 1), peak);
             fflush(stdout);
             peak = 0;
         }
-        t_next += std::chrono::microseconds((long long)block * 1000000 / rate); // real time at 44.1 kHz
+        t_next += std::chrono::microseconds((long long)block * 1000000 / clk.rate); // real time at the host rate
         for (auto &ah : aheads)
-            if (ah.second > 0 && b * (double)block / (double)rate >= ah.first) {
+            if (ah.second > 0 && clk.seconds(b) >= ah.first) {
                 t_next -= std::chrono::microseconds((long long)(ah.second * 1000));
                 printf("ahead %.0f ms at %.1f s\n", ah.second, ah.first);
                 ah.second = 0;
             }
 #ifdef __linux__
         if (view) {
-            double now = (b + 1) * (double)block / (double)rate;
+            double now = clk.seconds(b + 1);
             for (auto &a : actions)
                 if (!a.done && now >= a.t) {
                     a.done = true;
@@ -782,18 +834,7 @@ int main(int argc, char **argv)
         double audio = (ended ? offline_end : seconds) - offline_at;
         printf("offline part: %.2f s of audio in %.2f s wall time (%.2fx)\n", audio, wall, wall > 0 ? audio / wall : 0.0);
     }
-    if (wav) {
-        if (FILE *f = fopen(wav, "wb")) {
-            uint32_t bytes = (uint32_t)(pcm.size() * 2), brate = rate * 4, sz = 36 + bytes, fmt = 16;
-            uint16_t pcmfmt = 1, ch = 2, align = 4, bits = 16;
-            fwrite("RIFF", 1, 4, f), fwrite(&sz, 4, 1, f), fwrite("WAVEfmt ", 1, 8, f), fwrite(&fmt, 4, 1, f);
-            fwrite(&pcmfmt, 2, 1, f), fwrite(&ch, 2, 1, f), fwrite(&rate, 4, 1, f), fwrite(&brate, 4, 1, f);
-            fwrite(&align, 2, 1, f), fwrite(&bits, 2, 1, f), fwrite("data", 1, 4, f), fwrite(&bytes, 4, 1, f);
-            fwrite(pcm.data(), 2, pcm.size(), f);
-            fclose(f);
-            printf("wrote %s\n", wav);
-        }
-    }
+    write_wav(clk.rate);
     if (comp2 && !proc) { // the first instance is gone: the duplicate is the one to finish
         comp = comp2;
         proc = proc2;

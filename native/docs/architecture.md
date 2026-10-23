@@ -105,9 +105,14 @@ Access is installed or registered. These are the files it loads:
   - The worker writes a block's events in one broker message, and keeps the project state current off the audio
     thread (latest value per parameter, every 5 ms; a field index updates one value of a 524-byte part dump in
     ~0.4 us).
-- **Audio:** read from the broker's shared-memory ring at the stamp-aligned position, with latency compensation. At
-  host rates other than 44.1 kHz a 32-tap Kaiser windowed-sinc resampler (`src/device/resampler.h`, -90 dB) reads
-  from a smoothly steered fractional position; the timeline carries the fractional rest per block, so nothing drifts.
+- **Audio:** read from the broker's shared-memory ring at the stamp-aligned position, with latency compensation. The
+  Virus runs at 44.1 or 48 kHz, chosen from the host rate like the original (round 0.8.32, `src/device/virusrate.h`,
+  `findings/design-rate.md`; not yet tested on hardware): the first audio start and every `setActive(true)` ask for
+  it (the broker on Linux/Windows, the Core Audio device on macOS), a switch re-pings and re-anchors, and the host
+  gets `kLatencyChanged`. At other host rates a 32-tap Kaiser windowed-sinc resampler (`src/device/resampler.h`,
+  -90 dB) reads from a smoothly steered fractional position; one resampler and one sidechain converter per Virus rate
+  are built in `setupProcessing`, so `process()` only picks one when the rate changes. The timeline carries the
+  fractional rest per block, so nothing drifts.
 - **Start-up:** the start-up messages (GlobalInit/ParamInit from `remotedevice.xml`) and the project state go out
   first; note-ons are held back for these ~4 s (the Virus plays notes up to 1.6 s late while it works through
   SysEx, TI Revive E144), and queued messages pause 250 ms after a multi dump (the Virus drops the next message
@@ -221,7 +226,8 @@ through the broker.
 | topic | how |
 |---|---|
 | identity | COM in-proc server, CLSID `{F1DA6F3F-7A48-49A9-97F8-C3A8C008EABD}`, ASIO name "TI Revive Virus Audio" (registration removes the test builds' "Virus TI (native)" entry); `regsvr32` writes `HKLM\SOFTWARE\Classes\CLSID\...` and `HKLM\SOFTWARE\ASIO\TI Revive Virus Audio` |
-| channels | 6 in (Analog In L/R, USB 1 L/R, USB 2 L/R), 2 out (Virus Out L/R); 44.1 kHz only; Int32LSB |
+| channels | 6 in (Analog In L/R, USB 1 L/R, USB 2 L/R), 2 out (Virus Out L/R); Int32LSB |
+| sample rate | 44.1 or 48 kHz (round 0.8.32, not yet tested on hardware): `setSampleRate` asks the broker, which switches only while no plug-in owns the Virus (`owner.h` `vti_rate_setter`); a rate it keeps is refused (`ASE_NoClock`). Init asks for no rate (keeps the one that is set). A switch by the owning plug-in gives the host `sampleRateDidChange` and `kAsioResetRequest` |
 | buffers | 64-2048 frames, preferred 256 |
 | clock | the Virus is the master: a thread waits on the ring's event (`Local\vtinative_audio_<pid>`), and each full buffer of new frames is one `bufferSwitch`; the outputs are queued to the broker right after it |
 | latency | in = buffer, out = buffer + 512 (broker prefill) + 88 |

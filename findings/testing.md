@@ -76,6 +76,24 @@ scripts/hil.sh                 # LC1-LC3, results in work/hil/<time>/summary.txt
 scripts/hil.sh --sleep         # plus LC5 (asks for sudo)
 ```
 
+### Start-up compared with the original (added 2026-10-22, E321)
+
+What the host sends to the Virus when the plug-in starts, original against ours, message by message. Two usbmon
+captures of a cold start without notes (the broker gone first): the original in win10ref (pass the Virus through,
+`scripts/capture.sh orig-<name> 60`, then open the plug-in), ours on Linux (`capture.sh ours-<name> 45`, then
+`nativehost <plug-in> --seconds 30`). Then:
+
+```
+python3 -I scripts/startup_diff.py captures/orig-<name>.pcapng captures/ours-<name>.pcapng
+```
+
+It condenses both from the first SysEx to the end of the bank check and prints what only the original sends (`-`)
+and what only we send (`+`). Known differences are counted, not judged (`IGNORE` in the script, each with its reason:
+this computer's USB IO setting, our readiness probe, our song position at the timeline anchor). The first comparison
+found the missing "Configuring Virus TI" message and the wrong multi dump (E321). The original's repeated bank info
+requests for banks 2-4 are a side effect of its timer (E322) and counted as known. On the fixed build: SAME START-UP. Run it in rounds that touch the start-up (initialize, state, MemorySync, the
+broker's device open); the reference capture is captures/orig-startup-lcd-20261022 (original 5.1.7, TI2).
+
 ### The same run on Windows and macOS (added 2026-10-22, not yet run on hardware)
 
 `scripts/hil-win.ps1` (started with `hil-win.cmd`) and `scripts/hil-mac.command` play the items H1, H2 x2, H3 and H6

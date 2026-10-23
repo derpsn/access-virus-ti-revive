@@ -70,6 +70,48 @@ TEST(audioin_open_checks_the_ring)
     a.close(); // twice is harmless
 }
 
+// Rate following (design-rate.md step 2, E323): the broker writes the Virus' current rate into the ring and counts its
+// switches in rate_gen; the reader takes the rate and reports each switch once (a new stream: re-anchor, new ping)
+TEST(audioin_reports_the_rate_and_its_switches)
+{
+    AudioIn a;
+    CHECK_EQ(a.rate(), 44100); // nothing open yet
+    int rate = 0;
+    CHECK(!a.rate_changed(rate));
+    Ring r;
+    CHECK(r.shm && a.open(r.name.c_str()));
+    r.produce(1000);
+    CHECK_EQ(a.rate(), 44100);
+    CHECK(!a.rate_changed(rate)); // the rate the ring was opened with is no switch
+    r.shm->rate = 48000;
+    r.shm->rate_gen = 1;
+    CHECK_EQ(a.rate(), 48000);
+    CHECK(a.rate_changed(rate) && rate == 48000);
+    CHECK(!a.rate_changed(rate)); // once per switch
+    r.shm->rate = 44100;
+    r.shm->rate_gen = 2;
+    CHECK(a.rate_changed(rate) && rate == 44100);
+    r.shm->rate = 0; // an old broker never wrote a rate: 44.1 kHz
+    CHECK_EQ(a.rate(), 44100);
+}
+
+// step 4: on Linux and Windows the broker owns the rate (Broker::audio); asking AudioIn changes nothing in the ring
+#ifndef __APPLE__
+TEST(audioin_request_rate_leaves_the_broker_ring)
+{
+    AudioIn a;
+    CHECK_EQ(a.request_rate(48000), 44100); // nothing open
+    Ring r;
+    CHECK(r.shm && a.open(r.name.c_str(), 48000));
+    CHECK_EQ(a.request_rate(48000), 44100);
+    CHECK(r.shm->rate_gen == 0);
+    int rate = 0;
+    CHECK(!a.rate_changed(rate));
+    r.shm->rate = 48000;
+    CHECK_EQ(a.request_rate(44100), 48000); // the broker's rate stays
+}
+#endif
+
 // Review 2026-10-19 (H4): a ring someone else created, or one too small, was mapped as is - reading the header of a
 // zero-length object raised SIGBUS in the host. Owner and size are checked before mapping.
 TEST(audioin_refuses_a_ring_too_small)

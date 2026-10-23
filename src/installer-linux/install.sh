@@ -23,6 +23,44 @@ ACCESS="$HOME/.local/share/tirevive/access/Access Music/Virus TI" # Common/ (Vir
 say() { printf '\n== %s\n' "$*"; }
 die() { printf '\nERROR: %s\n' "$*" >&2; exit 1; }
 
+CC_EXE="Virus Control Center.exe" # optional: the Control Center app takes its look from it
+find_msi() { # $1 = the path given on the command line, else the usual places
+    if [ -n "${1:-}" ]; then printf '%s\n' "$1"; return; fi
+    for d in "$HERE" "$HOME/Downloads" "$HOME/Desktop" "$HOME"; do
+        for f in "$d"/*Virus*TI*64-bit*.msi; do [ -f "$f" ] && printf '%s\n' "$f" && return; done
+    done
+    return 0 # nothing found is not an error here (set -e)
+}
+unpack_msi() { # $1 = .msi, $2 = empty folder; fails without msiextract or Wine
+    if command -v msiextract >/dev/null 2>&1; then
+        echo "unpacking $1 (msiextract)"
+        (cd "$2" && msiextract "$1" >/dev/null)
+    elif command -v wine >/dev/null 2>&1; then
+        echo "unpacking $1 (Wine, administrative extraction - nothing is installed)"
+        cp "$1" "$2/access.msi"
+        WINEPREFIX="$2/wineprefix" WINEDEBUG=-all wine msiexec /a "$(WINEPREFIX="$2/wineprefix" wine winepath -w "$2/access.msi" 2>/dev/null)" \
+            /qn TARGETDIR="$(WINEPREFIX="$2/wineprefix" wine winepath -w "$2/x" 2>/dev/null)" >/dev/null 2>&1 || return 1
+        WINEPREFIX="$2/wineprefix" wineserver -k 2>/dev/null || true # its files must go with the folder
+    else
+        return 1
+    fi
+}
+# The .msi holds Common/ twice (E324, issue #15): the x64 files with the Control Center exe and, under Program Files,
+# the 32-bit DLL without it. find's order depends on the file system, so take the copy that has the exe.
+access_src() { # $1 = unpacked .msi -> its .../Access Music/Virus TI folder, empty if there is no Virus Control.dll
+    find "$1" -path '*Access Music/Virus TI/Common/Virus Control.dll' | {
+        best=""
+        while IFS= read -r dll; do
+            d=$(dirname "$(dirname "$dll")")
+            [ -n "$best" ] || best=$d
+            if [ -f "$d/Common/$CC_EXE" ]; then best=$d; break; fi
+        done
+        [ -z "$best" ] || printf '%s\n' "$best"
+    }
+}
+# the tests (scripts/tests/test_install_linux.py) source this file for the functions above only
+[ -z "${TIREVIVE_INSTALL_FUNCS_ONLY:-}" ] || return 0
+
 [ "$(id -u)" -ne 0 ] || die "run install.sh as your normal user, not as root (it asks for sudo when needed)"
 
 # --- 1. USB access (udev) ------------------------------------------------------------------------------------------
@@ -84,42 +122,42 @@ fi
 # --- 3. the Access files ---------------------------------------------------------------------------------------------
 say "Access Virus TI files"
 OLD_COMMON="$PREFIX/drive_c/Program Files/Access Music/Virus TI/Common" # TI Revive 0.7 installed Access into Wine
-CC_EXE="Virus Control Center.exe" # optional: the Control Center app takes its look from it
 if [ -f "$ACCESS/Common/Virus Control.dll" ] && [ -f "$ACCESS/Common/firmware.bin" ]; then
     echo "already set up in $ACCESS"
     [ -f "$ACCESS/Common/$CC_EXE" ] || [ ! -f "$OLD_COMMON/$CC_EXE" ] || cp "$OLD_COMMON/$CC_EXE" "$ACCESS/Common/"
+    # installs before 0.8.32 could miss the exe (issue #15): take it from the .msi when it is at hand, else go on
+    MSI=$(find_msi "${1:-}")
+    if [ ! -f "$ACCESS/Common/$CC_EXE" ] && [ -n "$MSI" ] && [ -f "$MSI" ]; then
+        TMP=$(mktemp -d)
+        trap 'rm -rf "$TMP"' EXIT
+        SRC=""
+        unpack_msi "$MSI" "$TMP" && SRC=$(access_src "$TMP")
+        if [ -n "$SRC" ] && [ -f "$SRC/Common/$CC_EXE" ]; then
+            cp "$SRC/Common/$CC_EXE" "$ACCESS/Common/"
+            echo "added $CC_EXE (the Control Center's Access look)"
+        else
+            echo "NOTE: could not take $CC_EXE from $MSI; the Control Center works, in its plain look"
+        fi
+    elif [ ! -f "$ACCESS/Common/$CC_EXE" ]; then
+        echo "NOTE: $CC_EXE is missing, so the Control Center shows its plain look; for the Access look run"
+        echo "      ./install.sh \"/path/to/Virus TI Software Suite 5.1.7.00 64-bit.msi\""
+    fi
 elif [ -f "$OLD_COMMON/Virus Control.dll" ] && [ -f "$OLD_COMMON/firmware.bin" ]; then
     mkdir -p "$ACCESS/Common"
     cp "$OLD_COMMON/Virus Control.dll" "$OLD_COMMON/firmware.bin" "$ACCESS/Common/"
     [ ! -f "$OLD_COMMON/$CC_EXE" ] || cp "$OLD_COMMON/$CC_EXE" "$ACCESS/Common/"
     echo "taken from the Access installation in the Wine prefix $PREFIX"
 else
-    MSI="${1:-}"
-    if [ -z "$MSI" ]; then
-        for d in "$HERE" "$HOME/Downloads" "$HOME/Desktop" "$HOME"; do
-            for f in "$d"/*Virus*TI*64-bit*.msi; do [ -f "$f" ] && MSI="$f" && break 2; done
-        done
-    fi
+    MSI=$(find_msi "${1:-}")
     [ -n "$MSI" ] && [ -f "$MSI" ] || die "Access installer not found. Download \"Virus TI Software Suite 5.1.7.00 64-bit.msi\"
        (your own copy) and run: ./install.sh \"/path/to/Virus TI Software Suite 5.1.7.00 64-bit.msi\""
     TMP=$(mktemp -d)
     trap 'rm -rf "$TMP"' EXIT
-    if command -v msiextract >/dev/null 2>&1; then
-        echo "unpacking $MSI (msiextract)"
-        (cd "$TMP" && msiextract "$MSI" >/dev/null) || die "msiextract could not unpack $MSI"
-    elif command -v wine >/dev/null 2>&1; then
-        echo "unpacking $MSI (Wine, administrative extraction - nothing is installed)"
-        cp "$MSI" "$TMP/access.msi"
-        WINEPREFIX="$TMP/wineprefix" WINEDEBUG=-all wine msiexec /a "$(WINEPREFIX="$TMP/wineprefix" wine winepath -w "$TMP/access.msi" 2>/dev/null)" \
-            /qn TARGETDIR="$(WINEPREFIX="$TMP/wineprefix" wine winepath -w "$TMP/x" 2>/dev/null)" >/dev/null 2>&1 ||
-            die "Wine could not unpack $MSI"
-        WINEPREFIX="$TMP/wineprefix" wineserver -k 2>/dev/null || true # its files must go with $TMP
-    else
+    command -v msiextract >/dev/null 2>&1 || command -v wine >/dev/null 2>&1 ||
         die "to unpack the Access .msi install msitools (Ubuntu/Debian: sudo apt install msitools) or Wine, then run ./install.sh again"
-    fi
-    DLL=$(find "$TMP" -path '*Access Music/Virus TI/Common/Virus Control.dll' | head -1)
-    [ -n "$DLL" ] || die "no Virus Control.dll in $MSI - is it the 64-bit \"Virus TI Software Suite\" .msi?"
-    SRC=$(dirname "$(dirname "$DLL")") # .../Access Music/Virus TI
+    unpack_msi "$MSI" "$TMP" || die "could not unpack $MSI"
+    SRC=$(access_src "$TMP") # .../Access Music/Virus TI
+    [ -n "$SRC" ] || die "no Virus Control.dll in $MSI - is it the 64-bit \"Virus TI Software Suite\" .msi?"
     mkdir -p "$ACCESS/Common"
     cp "$SRC/Common/Virus Control.dll" "$SRC/Common/firmware.bin" "$ACCESS/Common/"
     [ ! -f "$SRC/Common/$CC_EXE" ] || cp "$SRC/Common/$CC_EXE" "$ACCESS/Common/"

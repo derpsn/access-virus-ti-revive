@@ -159,3 +159,23 @@ On close the original resets globals (73 00 3B/3A/3C/7A).
   10368-12568; without ping -> 1/3 honoured. The ping makes the Virus honour the stamps but K still varies per
   session by up to ~2000 frames -> the original must learn K differently (its device-time source, virtual +0x60/+0x68
   of the audio object). Default stays M=1024 without ping (lowest latency; the user rates it as good).
+
+## Sample rate (rate following, round 0.8.32; design in findings/design-rate.md, E323; not yet tested on hardware)
+- The Virus' USB audio runs at 44.1 or 48 kHz. The plug-in picks the rate from the host rate like the original
+  (0x1800a9dc0): double below 44 kHz, halve above 88 kHz, then 46 kHz and up = 48 kHz (`virus_rate_for`). Other host
+  rates are resampled by the plug-in.
+- The broker protocol 5 carries the wish: `VTIMSG_AUDIO` = u32 on, the event name with its NUL, u32 rate (44100,
+  48000, or 0 = no wish: keep the set rate). Older clients send no rate and get 44100 (`src/broker/ratesw.h`).
+- A switch on the wire, as the Access driver does it: the stream stopped and every transfer back, alternate setting 0
+  on interfaces 1/2, 250 ms, alternate setting 1, SET_CUR to EP 0x82, 0x01, 0x82, 0x01, then IN and OUT again. Never
+  a SET_CUR on a running stream (except the E241 retry). No SET_CONFIGURATION (deviation: not possible on claimed
+  interfaces). The start at 44.1 kHz uses the same SET_CUR order.
+- At most one switch per second (rule 2: every switch re-locks the Virus' DSP clock). Who may switch: Linux the
+  owning plug-in (or any client while none owns it); Windows the owning plug-in, or the ASIO driver while no plug-in
+  owns the Virus (`owner.h`); a fresh start (no stream running) takes any explicit wish. macOS: the plug-in sets the
+  Core Audio nominal rate itself and follows changes by other programs.
+- The shared ring (`vtiaudioshm.h`) carries `rate` and `rate_gen` (+1 per switch, written before the first frame at
+  the new rate); readers re-anchor and send a new sync ping on a new generation. Stamps are in Virus frames at the
+  current rate; the frame constants (lead, ring margins) are not scaled, time constants are (`frames_for_ms`).
+- Packet sizes are judged against the wanted rate (`pktstat.h`): 43-46 frames at 44.1 kHz, 47-49 at 48 kHz; a long
+  run of the other rate's sizes is the lost rate (E241: SET_CUR again, plus the global 73 00 10 with the wanted value).

@@ -1,5 +1,8 @@
 // Broker client against a fake broker on its own Unix socket (never the real broker's): HELLO/STATE, writes split
 // below VTIMSG_MAX, received data, control requests, audio start, observer mode, lost connection. POSIX only.
+extern "C" {
+#include "ratesw.h"
+}
 #include "check.h"
 #include "device/broker.h"
 #ifndef _WIN32
@@ -350,6 +353,27 @@ TEST(broker_control_audio_observe)
     CHECK(std::chrono::steady_clock::now() - t0 < std::chrono::seconds(2));
     b.close();
     CHECK(!b.device_present());
+}
+
+// protocol 5 (design-rate.md step 3): the AUDIO request carries the wanted Virus rate after the event name; the
+// default is 44.1 kHz, what every older broker streams
+TEST(broker_audio_carries_the_rate)
+{
+    FakeBroker fb;
+    Broker b;
+    b.set_endpoint(fb.path);
+    std::string err;
+    CHECK(b.open(err));
+    CHECK_EQ(b.audio(true), 1);
+    CHECK_EQ(b.audio(true, 3000, 48000), 1);
+    auto a = fb.messages(VTIMSG_AUDIO);
+    CHECK(a.size() == 2);
+    if (a.size() == 2) {
+        CHECK_EQ(vti_audio_req_rate(a[0].data.data(), (int)a[0].data.size()), 44100u);
+        CHECK_EQ(vti_audio_req_rate(a[1].data.data(), (int)a[1].data.size()), 48000u);
+        CHECK(a[1].data[0] == 1);
+    }
+    b.close();
 }
 
 TEST(broker_old_broker_refuses_observer)

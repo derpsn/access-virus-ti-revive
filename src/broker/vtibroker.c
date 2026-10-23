@@ -20,6 +20,7 @@
 #include "vtipipe_io.h"
 #include "vtiaudioshm.h"
 #include "vtiusbaudio.h"
+#include "ratesw.h"
 #include <windows.h>
 #include <stdarg.h>
 #include <stdio.h>
@@ -161,6 +162,19 @@ static void audio_out(int16_t *dst, uint32_t frames, void *user)
     g_out_frames += n;
 }
 
+static vti_rate_guard g_rate_guard; // at most one rate switch per second (ratesw.h, rule 2); g_cs_audio_ctl
+
+// stream thread, before the first read at `rate`: the shared ring learns it (rate, then rate_gen; readers re-anchor
+// on a new generation, vtiaudioshm.h)
+static void shm_rate(uint32_t rate)
+{
+    if (g_shm->rate == rate)
+        return;
+    g_shm->rate = rate;
+    MemoryBarrier();
+    InterlockedIncrement((volatile LONG *)&g_shm->rate_gen);
+}
+
 static DWORD WINAPI audio_thread(LPVOID unused)
 {
     (void)unused;
@@ -186,16 +200,48 @@ static int audio_clients(void)
     return n;
 }
 
-// Start the stream if needed (g_cs_audio_ctl held): 1 = streaming, 0 = no WinUSB audio function, -1 = error.
-static int audio_start(void)
+// The rate a request gets (g_cs_audio_ctl held): like the original's single driver rate, the client that may set it
+// (vti_rate_setter: the owning plug-in, or the ASIO driver without one) does; at most one switch per second.
+static uint32_t audio_rate_for(uint32_t cur, uint32_t wanted, int setter)
+{
+    uint32_t now = (uint32_t)GetTickCount(); // 32-bit ms; the guard compares differences
+    uint32_t to = vti_rate_choose(cur, wanted, setter, vti_rate_may_switch(&g_rate_guard, now));
+    if (to != cur)
+        vti_rate_switched(&g_rate_guard, now);
+    else if (vti_rate_wanted(wanted, cur) != cur)
+        blog("audio: %.1f kHz asked, staying at %.1f kHz (%s)", wanted / 1000.0, cur / 1000.0,
+             setter ? "the last switch was less than a second ago" : "only the owning plug-in sets the rate");
+    return to;
+}
+
+// Start the stream if needed, or switch a running one (g_cs_audio_ctl held): 1 = streaming, 0 = no WinUSB audio
+// function, -1 = error.
+static int audio_start(uint32_t wanted, int setter)
 {
     if (g_audio_thread) {
         DWORD code;
-        if (GetExitCodeThread(g_audio_thread, &code) && code == STILL_ACTIVE)
-            return 1;
+        if (GetExitCodeThread(g_audio_thread, &code) && code == STILL_ACTIVE) {
+            uint32_t cur = vua_rate(), to = audio_rate_for(cur, wanted, setter);
+            if (to == cur)
+                return 1;
+            LONG n = vua_switches();
+            vua_want_rate(to); // the stream thread switches between two reads (~0.3 s + the restart)
+            for (int i = 0; i < 300 && vua_switches() == n; i++)
+                if (WaitForSingleObject(g_audio_thread, 10) == WAIT_OBJECT_0)
+                    break;
+            if (GetExitCodeThread(g_audio_thread, &code) && code == STILL_ACTIVE)
+                return 1; // at `to`, or back at `cur` when the Virus refused it (logged; the ring says which)
+            blog("audio: the stream stopped during the rate switch (%d)", (int)code);
+            CloseHandle(g_audio_thread);
+            g_audio_thread = NULL;
+            return -1;
+        }
         CloseHandle(g_audio_thread);
         g_audio_thread = NULL;
     }
+    // a fresh start protects no running stream: any explicit wish applies (still debounced); 0 keeps the last rate
+    vua_want_rate(audio_rate_for(g_shm->rate ? g_shm->rate : VUA_RATE, wanted, 1));
+    vua_set_rate_fn(shm_rate);
     g_audio_running = 1;
     g_audio_blocks = 0;
     g_audio_thread = CreateThread(NULL, 0, audio_thread, NULL, 0, NULL);
@@ -250,7 +296,7 @@ static void audio_set(client *c, HANDLE ev)
         CloseHandle(ev); // list full
 }
 
-static int32_t audio_request(client *c, uint32_t on, const char *name)
+static int32_t audio_request(client *c, uint32_t on, const char *name, uint32_t rate)
 {
     EnterCriticalSection(&g_cs_audio_ctl);
     int32_t r = 1;
@@ -261,7 +307,10 @@ static int32_t audio_request(client *c, uint32_t on, const char *name)
             r = -1;
         } else {
             audio_set(c, ev);
-            r = audio_start();
+            EnterCriticalSection(&g_cs_clients);
+            int setter = vti_rate_setter(c == g_plugin_owner, g_plugin_owner != NULL, vti_is_asio(c->name));
+            LeaveCriticalSection(&g_cs_clients);
+            r = audio_start(rate, setter);
             if (r != 1)
                 audio_set(c, NULL);
         }
@@ -457,7 +506,7 @@ static void obs_status(int dev_open) // once a second (device thread)
     LeaveCriticalSection(&g_cs_clients);
 }
 
-static volatile LONG g_rate_lever; // the 44.1 kHz global was sent (E257): log the Virus' report of it
+static volatile LONG g_rate_lever; // a recovery switch ran (E331): log the Virus' report of the rate's global (E257)
 
 static void on_rx(void *user, uint8_t ep, const uint8_t *data, int len)
 {
@@ -540,23 +589,10 @@ static DWORD WINAPI device_thread(LPVOID unused)
                 broadcast(VTIMSG_STATE, &st, 4, NULL, 0);
             }
         }
-        // the Virus left 44.1 kHz while streaming (E175/E241): the stream sends it silent packets of its size and
-        // repeats SET_CUR; here the second master of the rate, the panel's global parameter (E257), a few times
-        static int rate_tries;
-        if (g_dev && g_audio_running) {
-            if (vua_rate_lost()) {
-                if (rate_tries < 3) {
-                    rate_tries++;
-                    uint8_t lever[16];
-                    int n = vti_pack_rate_44k1(lever, sizeof lever);
-                    int w = n > 0 ? vti_write(g_dev, VTI_EP_MI04_OUT, lever, n) : -1;
-                    g_rate_lever = 1;
-                    blog("usbaudio: the Virus sends 48 kHz packets - global 73 00 10 00 (44.1 kHz) sent (%d/3) -> %d",
-                         rate_tries, w);
-                }
-            }
-        } else
-            rate_tries = 0;
+        // the Virus left the stream's rate (E175/E241): the stream switches away and back (vti_relock, E331); log the
+        // Virus' own report of the rate's global from now on
+        if (g_dev && g_audio_running && vua_rate_lost())
+            g_rate_lever = 1;
         int open = g_dev != NULL;
         LeaveCriticalSection(&g_cs_dev);
         static ULONGLONG last_status;
@@ -701,9 +737,13 @@ static DWORD WINAPI client_thread(LPVOID arg)
             break;
         case VTIMSG_AUDIO:
             if (h.len >= 4 && !c->observer) {
+                uint32_t rate = vti_audio_req_rate(buf, h.len); // protocol 5; older clients: 44100
                 buf[h.len < VTIMSG_MAX ? h.len : VTIMSG_MAX - 1] = 0;
-                int32_t r = waits ? -1 : audio_request(c, *(uint32_t *)buf, h.len > 4 ? (const char *)buf + 4 : "");
-                blog("client audio %s -> %d", *(uint32_t *)buf ? "on" : "off", r);
+                int32_t r = waits ? -1 : audio_request(c, *(uint32_t *)buf, h.len > 4 ? (const char *)buf + 4 : "", rate);
+                if (*(uint32_t *)buf)
+                    blog("client audio on (%.1f kHz asked) -> %d, %.1f kHz", rate / 1000.0, r, g_shm->rate / 1000.0);
+                else
+                    blog("client audio off -> %d", r);
                 send_msg(c, VTIMSG_AUDIO_REPLY, &r, 4, NULL, 0);
             }
             break;
@@ -722,7 +762,7 @@ static DWORD WINAPI client_thread(LPVOID arg)
         LeaveCriticalSection(&g_cs_dev);
         blog("all notes off (the client had played notes) -> %d", r);
     }
-    audio_request(c, 0, NULL);
+    audio_request(c, 0, NULL, 0);
     client *next = NULL;
     EnterCriticalSection(&g_cs_clients);
     for (int i = 0; i < MAX_CLIENTS; i++)

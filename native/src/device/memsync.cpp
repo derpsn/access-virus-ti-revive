@@ -164,6 +164,9 @@ int MemorySync::sync_bank(int bank, Bank &cache, const std::function<void(int, b
 {
     if (before_request && !before_request())
         return -2;
+    // the original keeps "Configuring Virus TI" (Rise Message 7) up while it checks the banks: before every bank info
+    // request, fetched or not (E321)
+    send_({0xF0, 0x00, 0x20, 0x33, 0x01, (uint8_t)dev_, 0x74, 0x01, 0x7E, 0x07, 0xF7});
     auto info = bank_info(bank);
     if (info.empty())
         return was_cancelled() ? -2 : -1;

@@ -245,16 +245,16 @@ void DeviceOut::klog_check()
                     int64_t on = from + i;
                     log("klog: K %lld (stamp %lld, sent at newest %lld = stamp + %lld; sound %.1f ms after sending)\n",
                         (long long)(on - e.stamp), (long long)e.stamp, (long long)e.sent,
-                        (long long)(e.sent - e.stamp), (on - e.sent) / 44.1);
+                        (long long)(e.sent - e.stamp), (on - e.sent) * 1000.0 / rate.load());
                     found = true;
                 } else if (v >= 0.004f)
                     e.quiet = 0;
             }
             e.scanned = from + n;
         }
-        if (!found && e.scanned > e.stamp + 88200)
+        if (!found && e.scanned > e.stamp + 2 * (int64_t)rate.load())
             log("klog: no onset within 2 s of stamp %lld (sent at newest %lld)\n", (long long)e.stamp, (long long)e.sent);
-        if (found || e.scanned > e.stamp + 88200)
+        if (found || e.scanned > e.stamp + 2 * (int64_t)rate.load())
             klog_stamps_.erase(klog_stamps_.begin() + (long)k);
         else
             k++;
@@ -316,7 +316,7 @@ void DeviceOut::scan_audio()
         }
         scanned_ += n;
     }
-    if (pings_out_.load() > 0 && from >= 0 && newest > from + 5 * 44100) { // 5 s without a marker
+    if (pings_out_.load() > 0 && from >= 0 && newest > from + 5 * (int64_t)rate.load()) { // 5 s without a marker
         pings_out_ = 0;
         if (marker.load() < 0) {
             marker = -2;
@@ -402,6 +402,20 @@ void DeviceOut::report_status()
         status_(present_seen_ == 1, elsewhere);
 }
 
+bool DeviceOut::request_rate(int want, int timeout_ms)
+{
+    want = want == 48000 ? 48000 : 44100;
+    want_rate = want;
+    if (rate.load() == want)
+        return true;
+    const unsigned seq = rate_req_seq_.fetch_add(1) + 1;
+    rate_req_ = want;
+    cv_.notify_one();
+    for (int t = 0; t < timeout_ms && rate_done_seq_.load(std::memory_order_acquire) < seq && !stop_; t += 5)
+        std::this_thread::sleep_for(std::chrono::milliseconds(5));
+    return rate.load() == want;
+}
+
 void DeviceOut::run()
 {
     while (!stop_ && !go_) // until the plug-in is activated (see start())
@@ -460,10 +474,12 @@ void DeviceOut::run()
 #ifdef __APPLE__
                 int r = 1; // macOS: the plug-in reads the Virus' Core Audio input itself (the broker carries MIDI)
 #else
-                int r = broker_.audio(true);
+                int r = broker_.audio(true, 3000, (uint32_t)want_rate.load()); // the broker sets it (rate following)
 #endif
-                if (r == 1 && audio_.open())
+                if (r == 1 && audio_.open(nullptr, want_rate.load())) { // macOS: the Core Audio rate
+                    rate = audio_.rate(); // the Virus' current rate (E323; 44100 from an older broker)
                     audio_gate_.open();
+                }
                 fprintf(stderr, "Virus TI native: audio %s (%d)\n", audio_ok() ? "streaming" : "not available", r);
             }
             if (!open_) {
@@ -586,6 +602,35 @@ void DeviceOut::run()
             if (resume_) // after a Windows sleep the Virus answered sync pings but played no notes until this (E210)
                 resume_();
         }
+        // setActive asked for another Virus rate (request_rate, design-rate.md step 5): Linux/Windows through the
+        // broker (it switches in the driver's order, debounced, the owner only), macOS on the Core Audio device
+        bool req_handled = false;
+        if (int req = rate_req_.exchange(0); req) {
+            if (audio_ok()) {
+#ifdef __APPLE__
+                const int now = audio_.request_rate(req);
+                log("Virus TI native: %d Hz asked on the Core Audio device -> %d Hz\n", req, now);
+#else
+                const int r = broker_.audio(true, 3000, (uint32_t)req);
+                log("Virus TI native: %d Hz asked from the broker -> %d, ring %d Hz\n", req, r, audio_.rate());
+#endif
+            }
+            req_handled = true;
+        }
+        // the Virus' rate changed (our request above, or the broker / another program): the stream starts again at the
+        // new rate - a new timeline and sync ping, as after a reconnect; process() switches its converters (both are
+        // ready, setupProcessing) and setActive reports the new latency
+        if (int r = 0; audio_ok() && audio_.rate_changed(r)) {
+            log("Virus TI native: the Virus' audio now runs at %d Hz - a new timeline\n", r);
+            rate = r;
+            scanned_ = -1;
+            marker_skip_ = -1;
+            last_sound = -1;
+            pings_out_ = 0;
+            generation++;
+        }
+        if (req_handled)
+            rate_done_seq_.fetch_add(1, std::memory_order_release);
         check_presence();
         if ((env_stats() || diag_on_.load(std::memory_order_acquire)) && std::chrono::steady_clock::now() >= stats_next_) { // endurance tests
             stats_next_ = std::chrono::steady_clock::now() + std::chrono::seconds(10);
@@ -602,7 +647,7 @@ void DeviceOut::run()
                 (long long)err_min.exchange(INT64_MAX), (long long)err_max.exchange(INT64_MIN));
             stats_newest_ = newest;
             int pk[6];
-            if (audio_ok() && audio_.raw_peaks(44100, pk)) // the last second per raw channel (0/1 in, 2/3 USB 1, 4/5 USB 2)
+            if (audio_ok() && audio_.raw_peaks(rate.load(), pk)) // the last second per raw channel (0/1 in, 2/3 USB 1, 4/5 USB 2)
                 log("stats: raw peaks %d %d | %d %d | %d %d\n", pk[0], pk[1], pk[2], pk[3], pk[4], pk[5]);
             int64_t sc_f = sc_frames.exchange(0), sc_y = sc_yields.exchange(0);
             if (sc_f || sc_y)
@@ -619,9 +664,9 @@ void DeviceOut::run()
 #ifdef __APPLE__
             int r = 1;
 #else
-            int r = broker_.audio(true);
+            int r = broker_.audio(true, 3000, (uint32_t)want_rate.load());
 #endif
-            if (r == 1 && audio_.open())
+            if (r == 1 && audio_.open(nullptr, want_rate.load()))
                 audio_gate_.open();
             if (audio_ok())
                 fprintf(stderr, "Virus TI native: audio streaming (retry)\n");
@@ -780,6 +825,8 @@ tresult PLUGIN_API VirusPlugin::initialize(FUnknown *context)
             for (auto &kv : v)
                 dump_paths_.insert(kv.first);
     }
+    if (multi.size() == 267)
+        init_multi_ = multi;
     if (multi.size() == 267 && init.size() == 524) {
         RemoteDevice::upgrade_single(init);
         default_.push_back({});
@@ -914,7 +961,7 @@ void VirusPlugin::set_usb_io(int value, bool save)
 // its stored "IO Configuration" the same way on every connection (0x18007ec30)
 std::vector<std::vector<uint8_t>> VirusPlugin::startup_messages() const
 {
-    auto msgs = dev_.init_messages();
+    auto msgs = dev_.init_messages(0x10, init_multi_);
     for (auto &m : msgs)
         if (m.size() == 11 && m[6] == 0x73 && m[7] == 0x00 && m[8] == 0x09)
             m[9] = (uint8_t)usb_io_.load();
@@ -978,7 +1025,22 @@ tresult PLUGIN_API VirusPlugin::setActive(TBool state)
         apply_state_to_params();
         send_state();
     }
-    return SingleComponentEffect::setActive(state);
+    // rate following (design-rate.md step 5, like the original's resume 0x1800a9880): the Virus at the host's mapped
+    // rate before processing starts; the worker re-pings and re-anchors (rate_changed), process() takes the converters
+    // for it. A refusal or an older broker leaves it where it is: the converters cover that too
+    const int64_t latency_before = latency_reported_;
+    if (state && out_ && out_->audio_ready() && virus_rate_for(rate_) != virus_rate()) {
+        const bool ok = out_->request_rate(virus_rate_for(rate_), 3000);
+        out_->log("Virus TI native: host %.0f Hz -> the Virus at %d Hz%s\n", rate_, virus_rate(),
+                  ok ? "" : " (not switched: the broker kept its rate)");
+    }
+    const tresult res = SingleComponentEffect::setActive(state);
+    // the host read a latency before that is no longer right (the resampler's look-ahead and the rate's share of the
+    // frame constants change with the Virus' rate): it asks again
+    if (state && latency_before >= 0 &&
+        latency_before != (int64_t)std::lround(latency_frames() * rate_ / virus_rate()) && componentHandler)
+        componentHandler->restartComponent(kLatencyChanged);
+    return res;
 }
 
 tresult PLUGIN_API VirusPlugin::activateBus(MediaType type, BusDirection dir, int32 index, TBool state)
@@ -1008,15 +1070,26 @@ tresult PLUGIN_API VirusPlugin::setupProcessing(ProcessSetup &setup)
 {
     block_ = setup.maxSamplesPerBlock;
     rate_ = setup.sampleRate;
-    if (resampling()) { // the Virus runs at 44.1 kHz; other host rates get its audio resampled
-        const double step = 44100.0 / rate_;
-        resampler_.setup(step);
-        for (auto &b : rs_src_)
-            b.assign((size_t)(block_ * step * 1.01) + 2 * Resampler::TAPS + 8, 0.0f);
-        rs_valid_ = false;
+    if (out_) // the audio start and setActive ask for it (rate following, design-rate.md step 5)
+        out_->want_rate = virus_rate_for(rate_);
+    // the Virus runs at 44.1 or 48 kHz (E323); other host rates get its audio resampled. Converters for both Virus
+    // rates: the rate can change while active (an older broker stays at 44.1, a refusal, another program on macOS)
+    size_t src = 0, out = 0;
+    for (int vr : {44100, 48000}) {
+        const double step = (double)vr / rate_;
+        if (std::fabs(rate_ - vr) > 0.5) {
+            resampler_[vidx(vr)].setup(step);
+            src = std::max(src, (size_t)(block_ * step * 1.01) + 2 * Resampler::TAPS + 8);
+        }
+        sc_[vidx(vr)].setup(rate_, std::max(block_, 1), vr);
+        out = std::max(out, (size_t)sc_[vidx(vr)].max_out() * 2);
     }
-    sc_.setup(rate_, std::max(block_, 1));
-    sc_buf_.assign((size_t)sc_.max_out() * 2, 0);
+    for (auto &b : rs_src_)
+        b.assign(src, 0.0f);
+    rs_valid_ = false;
+    vrate_seen_ = 0; // the first block sets the active ones up
+    fe_.set_rate(virus_rate());
+    sc_buf_.assign(out, 0);
     sc_expect_ = sc_seen_ = -1;
     sc_hold_ = 0;
     return SingleComponentEffect::setupProcessing(setup);
@@ -1157,7 +1230,14 @@ tresult PLUGIN_API VirusPlugin::process(ProcessData &data)
         last_play_ms_.store(now_ms(), std::memory_order_relaxed);
     // the Virus timeline: block start = newest ring frame - S, continued by the block size, re-anchored on drift
     const int S = timing_s();
-    const double ratio = 44100.0 / rate_; // Virus frames per host sample
+    const int vrate = virus_rate();
+    const double ratio = (double)vrate / rate_; // Virus frames per host sample
+    if (vrate != vrate_seen_) { // a new Virus rate (or the first block): the converters for it, from their start
+        vrate_seen_ = vrate;
+        rs_valid_ = false;
+        sc_[vidx(vrate)].reset();
+        fe_.set_rate(vrate);
+    }
     int64_t newest = ring_newest();
     if (out_ && out_->generation.load() != generation_seen_) { // the Virus came back: a new audio stream
         generation_seen_ = out_->generation.load();
@@ -1187,8 +1267,8 @@ tresult PLUGIN_API VirusPlugin::process(ProcessData &data)
             stream_start_ = newest; // wait until the Virus has worked through the start-up messages and the state
         // the sync ping goes with the anchor: like the original, after 1 s of silence on USB 1/2 so its marker can be
         // found (at most 6 s later; without a marker the stamps stay relative to the ring)
-        bool quiet = out_->last_sound.load() < newest - 44100;
-        bool anchor_now = !tl_valid_ ? newest - stream_start_ > 22050 && (quiet || newest - stream_start_ > 6 * 44100)
+        bool quiet = out_->last_sound.load() < newest - vrate;
+        bool anchor_now = !tl_valid_ ? newest - stream_start_ > vrate / 2 && (quiet || newest - stream_start_ > 6 * vrate)
                                      : std::llabs(err) > 8192;
         // no marker (the Virus was not silent): ping again once it is quiet and the host is not playing (3 tries)
         if (tl_valid_ && !anchor_now && out_->marker.load() == -2 && !out_->calibrating() && marker_retries_ < 3 && quiet &&
@@ -1207,7 +1287,8 @@ tresult PLUGIN_API VirusPlugin::process(ProcessData &data)
                 marker_retries_ = 0; // a new stream (start, the Virus came back)
             out_->anchors.fetch_add(1, std::memory_order_relaxed);
             tl_valid_ = true;
-            anchored_ = true; // FE + song position at the new anchor, like the original's start
+            anchored_ = true; // FE + song position at the new anchor (the original sends F2 only at Play, E275/E321;
+            // here it anchors the Virus' timeline for the stamps)
             rs_valid_ = false; // the resampled output jumps with the timeline, like the direct one (E279)
             if (!env_no_ping())
                 out_->calibrate(newest, new_stream); // the marker follows the ping sent in this block
@@ -1273,7 +1354,7 @@ tresult PLUGIN_API VirusPlugin::process(ProcessData &data)
         const double tempo_qn = (data.processContext->state & ProcessContext::kTempoValid) ? data.processContext->tempo
                                                                                           : 120.0;
         const double ppq = data.processContext->projectTimeMusic;
-        if (transport_.update(playing, ppq, (double)block_frames / 44100.0 * tempo_qn / 60.0)) {
+        if (transport_.update(playing, ppq, (double)block_frames / vrate * tempo_qn / 60.0)) {
             // F2 and the +1 tick; the original's 16 part messages (6F <part> 7F 00) are left out: on the device they
             // delayed the next note by 29-37 ms, and they only concern parts that use the Atomizer (E280)
             uint8_t f2[3];
@@ -1286,7 +1367,7 @@ tresult PLUGIN_API VirusPlugin::process(ProcessData &data)
         double tempo = clock_tempo(data.processContext && (data.processContext->state & ProcessContext::kTempoValid)
                                        ? data.processContext->tempo
                                        : 120.0); // 0 or negative made this loop endless (hostmidi.h)
-        double per_tick = 44100.0 * 60.0 / (tempo * 24.0);
+        double per_tick = vrate * 60.0 / (tempo * 24.0); // 919 frames per tick at 44.1 kHz, 1000 at 48 (E323)
         static const uint8_t f8 = 0xF8;
         while (next_tick_ < (double)(tl_ + block_frames)) {
             add((int64_t)std::lround(next_tick_), &f8, 1);
@@ -1500,7 +1581,7 @@ void VirusPlugin::wait_offline(ProcessData &data, double ratio, int64_t &newest,
         // ping goes out now, the marker follows ~1 s later) instead of after 0.5 s of render - or 6 s when the
         // render's first notes keep the Virus from being quiet
         if (waited && !tl_valid_ && newest >= 0)
-            stream_start_ = newest - 22051;
+            stream_start_ = newest - (virus_rate() / 2 + 1);
     }
     if (newest < 0)
         return;
@@ -1599,7 +1680,7 @@ void VirusPlugin::send_sidechain(ProcessData &data)
         } else
             sc_hold_ -= n;
         if (sc_hold_ <= 0)
-            sc_.reset(); // the next block starts the stream again
+            sc_[vidx(vrate_seen_)].reset(); // the next block starts the stream again
         sc_expect_ = -1;
         return;
     }
@@ -1624,13 +1705,14 @@ void VirusPlugin::send_sidechain(ProcessData &data)
         out_->sc_queued_min.store(q, std::memory_order_relaxed);
     if (q > out_->sc_queued_max.load(std::memory_order_relaxed))
         out_->sc_queued_max.store(q, std::memory_order_relaxed);
-    const int64_t refills = sc_.refills();
-    const int w = sc_.process(l, r, n, q, sc_buf_.data());
+    SidechainSender &sc = sc_[vidx(vrate_seen_)];
+    const int64_t refills = sc.refills();
+    const int w = sc.process(l, r, n, q, sc_buf_.data());
     audio.write_out(sc_buf_.data(), w);
     sc_expect_ = w0 + w;
     out_->sc_frames.fetch_add(w, std::memory_order_relaxed);
-    out_->sc_refills.fetch_add(sc_.refills() - refills, std::memory_order_relaxed);
-    out_->sc_corr_ppm.store(std::llround(sc_.correction() * 1e6), std::memory_order_relaxed);
+    out_->sc_refills.fetch_add(sc.refills() - refills, std::memory_order_relaxed);
+    out_->sc_corr_ppm.store(std::llround(sc.correction() * 1e6), std::memory_order_relaxed);
 }
 
 // host rate != 44.1 kHz: n output samples from the Virus frame `target` on, resampled. The read position moves on
@@ -1665,7 +1747,7 @@ void VirusPlugin::read_resampled(float **o1, float **o2, float **o3, int n, doub
                           o3 ? rs_src_[4].data() : nullptr, o3 ? rs_src_[5].data() : nullptr);
     float *dst[6] = {o1[0], o1[1], o2[0], o2[1], o3 ? o3[0] : nullptr, o3 ? o3[1] : nullptr};
     for (int c = 0; c < (o3 ? 6 : 4); c++)
-        resampler_.process(rs_src_[c].data(), first, rs_pos_, step, dst[c], n);
+        resampler_[vidx(vrate_seen_)].process(rs_src_[c].data(), first, rs_pos_, step, dst[c], n);
     int64_t margin = newest - (int64_t)std::ceil(rs_pos_ + (n - 1) * step + Resampler::HALF);
     if (margin < out_->read_margin_min.load(std::memory_order_relaxed))
         out_->read_margin_min.store(margin, std::memory_order_relaxed);
@@ -2540,6 +2622,8 @@ void VirusPlugin::sync_banks()
     }
     rise = false;
     riser.join();
+    // like the original after its bank check: the message timer back at 1 (E321)
+    out_->send({0xF0, 0x00, 0x20, 0x33, 0x01, 0x10, 0x74, 0x00, 0x29, 0x01, 0xF7});
     syncing_ = false;
     sync_eta_s_ = -1;
     set_sync_progress(127);
@@ -3543,7 +3627,9 @@ void VirusPlugin::send_state()
     std::lock_guard<std::mutex> lk(state_mu_);
     std::vector<std::vector<uint8_t>> recs;
     for (auto &r : state_)
-        if (!r.empty() && !(r.size() > 2 && r[0] == 0xF0 && r[1] == 0x7D)) { // not our editor-only records
+        if (!r.empty() && !(r.size() > 2 && r[0] == 0xF0 && r[1] == 0x7D) && // not our editor-only records
+            !(!init_multi_.empty() && r.size() > 6 && r[0] == 0xF0 && r[6] == 0x11)) { // nor the stored multi: the
+            // start-up messages send the fixed table unchanged, like the original (E321)
             recs.push_back(r);
             auto &m = recs.back(); // a project's USB IO configuration: this computer's setting wins
             if (m.size() == 11 && m[0] == 0xF0 && m[6] == 0x73 && m[7] == 0x00 && m[8] == 0x09)

@@ -10,9 +10,13 @@
 // plugin's frame counter is exactly the number of frames the synth produced. WASAPI instead delivers frames by
 // the PC's clock (exactly 44100/s), which drifts against the synth (23 ppm in the VM, E074) until the synth
 // rejects the plugin's timestamps ("Sync Information Event", global 0x54).
-// Sample rate: SET_CUR SAMPLING_FREQ (class request to the endpoint) 44100 on both endpoints, as the driver does.
+// Sample rate: SET_CUR SAMPLING_FREQ (class request to the endpoint) on both endpoints, as the driver does; 44.1 or
+// 48 kHz (rate following, design-rate.md step 4): the broker sets the wanted rate (vua_want_rate) and this thread
+// switches between two reads in the driver's order (ratesw.h) - it owns the handles, so no SET_CUR hits a running
+// stream.
 #include "vtiusbaudio.h"
 #include "pktstat.h"
+#include "ratesw.h"
 #include <setupapi.h>
 #include <winusb.h>
 #include <stdio.h>
@@ -42,10 +46,11 @@ typedef struct {
     uint8_t *inbuf, *outbuf;
     USBD_ISO_PACKET_DESCRIPTOR desc[NR][NP];
     OVERLAPPED rov[NR], wov[NW];
-    int wbusy[NW];
+    int rbusy[NR], wbusy[NW]; // a read / write is queued (only those are waited for)
     unsigned wnext;      // next OUT slot
     int out_running;     // OUT stream started (ContinueStream valid)
-    unsigned pattern;    // nominal 44/45 pattern position for the lead-in
+    uint32_t rate;       // the rate set with SET_CUR (44100 or 48000)
+    unsigned pattern;    // nominal pattern position (44/45 at 44.1 kHz, 48 at 48 kHz)
     ULONG next_fn;       // USB frame number of the next IN read
     ULONG gap[NR];       // USB frames skipped before read i (it was rescheduled after a stall)
 } dev;
@@ -96,29 +101,43 @@ static int set_rate(WINUSB_INTERFACE_HANDLE h, uint8_t ep, uint32_t rate)
     return 0;
 }
 
-static void close_dev(dev *d)
+// Abort both pipes, wait for every queued read and write, unregister the buffers: nothing of the stream is left on
+// the wire (the first step of a rate switch, and of the close).
+static void stream_stop(dev *d)
 {
     if (d->h2)
         WinUsb_AbortPipe(d->h2, EP_IN);
     if (d->h1)
         WinUsb_AbortPipe(d->h1, EP_OUT);
+    DWORD n;
     for (int i = 0; i < NR; i++)
-        if (d->rov[i].hEvent) {
-            DWORD n;
+        if (d->rbusy[i]) {
             GetOverlappedResult(d->file, &d->rov[i], &n, TRUE);
-            CloseHandle(d->rov[i].hEvent);
+            d->rbusy[i] = 0;
         }
     for (int i = 0; i < NW; i++)
-        if (d->wov[i].hEvent) {
-            DWORD n;
-            if (d->wbusy[i])
-                GetOverlappedResult(d->file, &d->wov[i], &n, TRUE);
-            CloseHandle(d->wov[i].hEvent);
+        if (d->wbusy[i]) {
+            GetOverlappedResult(d->file, &d->wov[i], &n, TRUE);
+            d->wbusy[i] = 0;
         }
+    d->out_running = 0;
+    d->wnext = 0;
     if (d->bin)
         WinUsb_UnregisterIsochBuffer(d->bin);
     if (d->bout)
         WinUsb_UnregisterIsochBuffer(d->bout);
+    d->bin = d->bout = NULL;
+}
+
+static void close_dev(dev *d)
+{
+    stream_stop(d);
+    for (int i = 0; i < NR; i++)
+        if (d->rov[i].hEvent)
+            CloseHandle(d->rov[i].hEvent);
+    for (int i = 0; i < NW; i++)
+        if (d->wov[i].hEvent)
+            CloseHandle(d->wov[i].hEvent);
     if (d->h2) {
         WinUsb_SetCurrentAlternateSetting(d->h2, 0);
         WinUsb_Free(d->h2);
@@ -144,9 +163,17 @@ void vua_set_out(vua_out_fn fn, void *user)
     g_out = fn;
 }
 
-static volatile LONG g_rate_lost; // seconds of 48 kHz packets seen (E241); read and cleared by vua_rate_lost()
+static volatile LONG g_rate_lost; // seconds of the other rate's packets seen (E241); read and cleared by vua_rate_lost()
 
 LONG vua_rate_lost(void) { return InterlockedExchange(&g_rate_lost, 0); }
+
+static volatile LONG g_want = VUA_RATE, g_rate = VUA_RATE, g_switches; // vua_want_rate / vua_rate / vua_switches
+static void (*g_before_start)(uint32_t rate);
+
+void vua_want_rate(uint32_t rate) { InterlockedExchange(&g_want, (LONG)vti_rate_valid(rate)); }
+uint32_t vua_rate(void) { return (uint32_t)g_rate; }
+LONG vua_switches(void) { return g_switches; }
+void vua_set_rate_fn(void (*before_start)(uint32_t rate)) { g_before_start = before_start; }
 
 // Queue one OUT packet of `frames` frames: audio from the vua_set_out source, or silence (`silent`, or no source).
 static int send_out(dev *d, unsigned frames, int silent)
@@ -202,6 +229,7 @@ static int submit_read(dev *d, int i)
         LOG("usbaudio: IN read failed (error %lu)", GetLastError());
         return -1;
     }
+    d->rbusy[i] = 1;
     d->next_fn += NP;
     return 0;
 }
@@ -214,7 +242,7 @@ static uint32_t fill_silence(dev *d, int16_t *pcm, ULONG packets, vua_in_fn in, 
         ULONG k = packets < NP ? packets : NP;
         uint32_t frames = 0;
         for (ULONG j = 0; j < k; j++)
-            frames += d->pattern++ % 10 ? 44 : 45;
+            frames += vti_pkt_nominal(d->rate, d->pattern++);
         memset(pcm, 0, frames * IN_CH * 2);
         in(pcm, frames, user);
         total += frames;
@@ -223,10 +251,68 @@ static uint32_t fill_silence(dev *d, int16_t *pcm, ULONG packets, vua_in_fn in, 
     return total;
 }
 
+// Register the buffers, queue the OUT lead-in and NR reads at d->rate (the start, and the last step of a switch).
+static int stream_start(dev *d)
+{
+    d->pattern = 0;
+    if (!WinUsb_RegisterIsochBuffer(d->h2, EP_IN, d->inbuf, NR * NP * IN_PKT, &d->bin) ||
+        !WinUsb_RegisterIsochBuffer(d->h1, EP_OUT, d->outbuf, NW * OUT_PKT, &d->bout)) {
+        LOG("usbaudio: RegisterIsochBuffer failed (error %lu)", GetLastError());
+        return -1;
+    }
+    // OUT lead-in with the nominal pattern (44.1 kHz: 44 x 9, 45, the driver's InitFramePattern; 48 kHz: 48), then
+    // every IN packet is mirrored
+    for (int i = 0; i < OUT_LEAD; i++)
+        send_out(d, vti_pkt_nominal(d->rate, d->pattern++), 0);
+    ULONG now = 0;
+    LARGE_INTEGER ts;
+    WinUsb_GetCurrentFrameNumber(d->h2, &now, &ts);
+    d->next_fn = now + FN_MARGIN;
+    for (int i = 0; i < NR; i++)
+        if (submit_read(d, i))
+            return -1;
+    LOG("usbaudio: streaming %.1f kHz on WinUSB (IN EP 0x82 %d ch, OUT EP 0x01 %d ch, frame pattern mirrored)",
+        d->rate / 1000.0, IN_CH, OUT_CH);
+    return 0;
+}
+
+// the operations of a switch (ratesw.h), on the stream thread's device
+static void op_stop(void *u) { stream_stop((dev *)u); }
+static int op_alt(void *u, int iface, int alt)
+{
+    dev *d = (dev *)u;
+    if (!WinUsb_SetCurrentAlternateSetting(iface == 1 ? d->h1 : d->h2, (UCHAR)alt)) {
+        LOG("usbaudio: alternate setting %d of interface %d failed (error %lu)", alt, iface, GetLastError());
+        return -1;
+    }
+    return 0;
+}
+static void op_sleep(void *u, int ms)
+{
+    (void)u;
+    Sleep((DWORD)ms);
+}
+static int op_set_cur(void *u, uint8_t ep, uint32_t rate)
+{
+    dev *d = (dev *)u;
+    return set_rate(ep == EP_IN ? d->h2 : d->h1, ep, rate);
+}
+static int op_start(void *u, uint32_t rate)
+{
+    dev *d = (dev *)u;
+    d->rate = rate;
+    InterlockedExchange(&g_rate, (LONG)rate);
+    if (g_before_start)
+        g_before_start(rate);
+    return stream_start(d);
+}
+
 int vua_run(volatile LONG *running, vua_in_fn in, void *user, vua_log_fn log)
 {
     g_log = log;
+    const uint32_t want0 = (uint32_t)g_want;
     dev d = {0};
+    vti_rate_ops ops = {&d, op_stop, op_alt, op_sleep, op_set_cur, op_start};
     SetThreadPriority(GetCurrentThread(), THREAD_PRIORITY_TIME_CRITICAL); // the driver completes at DPC level
     if (open_dev(&d))
         return -1; // no WinUSB audio function: caller falls back to WASAPI
@@ -239,41 +325,69 @@ int vua_run(volatile LONG *running, vua_in_fn in, void *user, vua_log_fn log)
         LOG("usbaudio: SetCurrentAlternateSetting failed (error %lu)", GetLastError());
         goto out;
     }
-    if (set_rate(d.h1, EP_OUT, VUA_RATE) || set_rate(d.h2, EP_IN, VUA_RATE))
-        goto out;
+    d.rate = want0;
+    if (vti_rate_set_cur(&ops, d.rate)) { // EP 0x82, 0x01, 0x82, 0x01 like the driver (E323)
+        if (d.rate == VUA_RATE)
+            goto out;
+        LOG("usbaudio: the Virus refused %.1f kHz at the start - 44.1 kHz instead", d.rate / 1000.0);
+        d.rate = VUA_RATE; // once, like a refused switch (ratesw.h)
+        if (vti_rate_set_cur(&ops, d.rate))
+            goto out;
+    }
+    InterlockedCompareExchange(&g_want, (LONG)d.rate, (LONG)want0);
+    InterlockedExchange(&g_rate, (LONG)d.rate);
+    if (g_before_start)
+        g_before_start(d.rate);
     d.inbuf = VirtualAlloc(NULL, NR * NP * IN_PKT, MEM_COMMIT | MEM_RESERVE, PAGE_READWRITE);
     d.outbuf = VirtualAlloc(NULL, NW * OUT_PKT, MEM_COMMIT | MEM_RESERVE, PAGE_READWRITE);
-    if (!WinUsb_RegisterIsochBuffer(d.h2, EP_IN, d.inbuf, NR * NP * IN_PKT, &d.bin) ||
-        !WinUsb_RegisterIsochBuffer(d.h1, EP_OUT, d.outbuf, NW * OUT_PKT, &d.bout)) {
-        LOG("usbaudio: RegisterIsochBuffer failed (error %lu)", GetLastError());
-        goto out;
-    }
     for (int i = 0; i < NR; i++)
         d.rov[i].hEvent = CreateEventA(NULL, TRUE, FALSE, NULL);
     for (int i = 0; i < NW; i++)
         d.wov[i].hEvent = CreateEventA(NULL, TRUE, FALSE, NULL);
-    // OUT lead-in with the nominal 44.1 kHz pattern (44 x 9, 45; the driver's InitFramePattern), then mirror.
-    for (int i = 0; i < OUT_LEAD; i++, d.pattern++)
-        send_out(&d, d.pattern % 10 ? 44 : 45, 0);
-    ULONG now = 0;
-    LARGE_INTEGER ts;
-    WinUsb_GetCurrentFrameNumber(d.h2, &now, &ts);
-    d.next_fn = now + FN_MARGIN;
-    for (int i = 0; i < NR; i++)
-        if (submit_read(&d, i))
-            goto out;
-    LOG("usbaudio: streaming 44.1 kHz on WinUSB (IN EP 0x82 %d ch, OUT EP 0x01 %d ch, frame pattern mirrored)",
-        IN_CH, OUT_CH);
+    if (!d.inbuf || !d.outbuf || stream_start(&d))
+        goto out;
     static int16_t pcm[NP * (IN_PKT / 2)];
-    uint64_t total = 0, errs = 0, gaps = 0, next_log = VUA_RATE * 60;
+    uint64_t total = 0, errs = 0, gaps = 0, next_log = (uint64_t)d.rate * 60;
     vti_pktstat ps = {0}; // packet sizes as sent, before the repair (E175)
-    int cur = 0, rate_tries = 0;
+    vti_pktstat_set_rate(&ps, d.rate);
+    int cur = 0;
+    vti_relock rl = {0}; // recovery when the Virus leaves the stream's rate (ratesw.h, E331)
+    uint32_t relock_to = 0; // the recovery's next switch (away or back); the client's wish waits meanwhile
     rc = 0;
     while (*running) {
+        uint32_t to;
+        if (rl.away && vti_relock_step(&rl, 0, d.rate, GetTickCount(), &to) == VTI_RELOCK_BACK)
+            relock_to = to;
+        uint32_t want = relock_to ? relock_to : rl.away ? d.rate : (uint32_t)g_want;
+        if (want != d.rate) { // between two reads: the whole stream stops, switches and starts again
+            uint32_t from = d.rate;
+            LOG("usbaudio: switching %.1f -> %.1f kHz", from / 1000.0, want / 1000.0);
+            int r = vti_rate_switch(&ops, from, want);
+            if (!relock_to) {
+                // asked once: a refusal is not retried; a newer wish that came in meanwhile stays
+                InterlockedCompareExchange(&g_want, (LONG)d.rate, (LONG)want);
+                vti_relock_reset(&rl);
+            }
+            relock_to = 0;
+            InterlockedIncrement(&g_switches);
+            if (r) {
+                LOG("usbaudio: rate switch to %.1f kHz %s", want / 1000.0,
+                    r == -1 ? "refused by the Virus - back at the old rate" : "failed - the stream stops");
+                if (r == -2) {
+                    rc = 1;
+                    break;
+                }
+            }
+            memset(&ps, 0, sizeof ps);
+            vti_pktstat_set_rate(&ps, d.rate);
+            cur = 0;
+            continue;
+        }
         DWORD n = 0;
         if (WaitForSingleObject(d.rov[cur].hEvent, 200) != WAIT_OBJECT_0)
             continue;
         BOOL ok = GetOverlappedResult(d.file, &d.rov[cur], &n, FALSE);
+        d.rbusy[cur] = 0;
         uint32_t frames = 0;
         if (d.gap[cur]) { // frames skipped before this read (stall): they passed on the wire, count them
             ULONG g = d.gap[cur] < GAP_MAX ? d.gap[cur] : GAP_MAX;
@@ -294,35 +408,40 @@ int vua_run(volatile LONG *running, vua_in_fn in, void *user, vua_log_fn log)
             for (int k = 0; k < NP; k++) {
                 USBD_ISO_PACKET_DESCRIPTOR *p = &d.desc[cur][k];
                 uint32_t f = p->Status == 0 ? p->Length / (IN_CH * 2) : 0;
-                unsigned nominal = d.pattern++ % 10 ? 44 : 45;
+                unsigned nominal = vti_pkt_nominal(d.rate, d.pattern++);
                 int ev = vti_pktstat_add(&ps, f);
                 if (ev > 0)
-                    LOG("usbaudio: packets out of the 44.1 kHz range since %llu ms after the start (last: %u frames, "
-                        "%lu bytes, status 0x%lx) - replaced with silence", (unsigned long long)ps.bad_since, f,
-                        p->Length, (unsigned long)p->Status);
+                    LOG("usbaudio: packets out of the %.1f kHz range since %llu ms after the start (last: %u frames, "
+                        "%lu bytes, status 0x%lx) - replaced with silence", d.rate / 1000.0,
+                        (unsigned long long)ps.bad_since, f, p->Length, (unsigned long)p->Status);
                 else if (ev < 0) {
                     LOG("usbaudio: packets back in range at %llu ms after the start", (unsigned long long)ps.packets);
-                    rate_tries = 0;
                 }
-                // the Virus left 44.1 kHz (E241: after a wake, a replug): once per second of 48 kHz packets ask for
-                // the rate again, three times; the broker's device thread adds the panel's global (vua_rate_lost)
+                // the Virus left the stream's rate (E241: after a wake, a replug): a SET_CUR of the same rate changes
+                // nothing (E331), so switch away and, a debounce later, back (the loop above); the broker's device
+                // thread then logs the Virus' report of the rate (vua_rate_lost)
                 if (vti_pktstat_rate_lost(&ps) && ps.bad_run % VTI_PKT_BAD_RUN == 0) {
-                    if (rate_tries < 3) {
-                        rate_tries++;
-                        // both endpoints every time: a failed OUT request must not skip the IN one
-                        int r_out = set_rate(d.h1, EP_OUT, VUA_RATE), r_in = set_rate(d.h2, EP_IN, VUA_RATE);
-                        int r = r_out || r_in;
-                        LOG("usbaudio: the Virus sends 48 kHz packets - asking for 44.1 kHz again (%d/3): SET_CUR %s",
-                            rate_tries, r ? "failed" : "accepted");
-                    } else if (rate_tries++ == 3)
-                        LOG("usbaudio: the Virus stays at 48 kHz - its sound stays silent; switch it off and on");
+                    const char *other = d.rate == 48000 ? "44.1" : "48";
+                    switch (vti_relock_step(&rl, 1, d.rate, GetTickCount(), &to)) {
+                    case VTI_RELOCK_BACK: // the way back fell due here, not at the top of the loop
+                        relock_to = to;
+                        break;
+                    case VTI_RELOCK_AWAY:
+                        relock_to = to;
+                        LOG("usbaudio: the Virus sends %s kHz packets - switching to %.1f kHz and back (%d/%d)", other,
+                            to / 1000.0, rl.tries, VTI_RELOCK_TRIES);
+                        break;
+                    case VTI_RELOCK_GIVE_UP:
+                        LOG("usbaudio: the Virus stays at %s kHz - its sound stays silent; switch it off and on", other);
+                        break;
+                    }
                     InterlockedIncrement(&g_rate_lost);
                 }
                 int silent;
-                unsigned of = vti_pkt_out(f, nominal, &silent); // a 48 kHz packet: the same size, silent (E241)
-                if (f < 43 || f > 46) {
-                    // Lost packet, or still 48 kHz right after SET_CUR (~0.3 s of 48/49-frame packets): substitute
-                    // the nominal pattern value with silence, like the driver's PGFramePatternObserver "repair".
+                unsigned of = vti_pkt_out(d.rate, f, nominal, &silent); // the other rate: the same size, silent (E241)
+                if (!vti_pkt_in_range(d.rate, f)) {
+                    // Lost packet, or still the old rate right after SET_CUR (~0.3 s): substitute the nominal pattern
+                    // value with silence, like the driver's PGFramePatternObserver "repair".
                     if (p->Status)
                         errs++;
                     f = nominal;
@@ -341,7 +460,7 @@ int vua_run(volatile LONG *running, vua_in_fn in, void *user, vua_log_fn log)
             if (errs <= 20)
                 LOG("usbaudio: IN read %d failed (error %lu), repaired with silence", cur, GetLastError());
             for (unsigned k = 0; k < NP; k++)
-                send_out(&d, (d.pattern + k) % 10 ? 44 : 45, 0); // the same counts fill_silence uses
+                send_out(&d, vti_pkt_nominal(d.rate, d.pattern + k), 0); // the same counts fill_silence uses
             total += fill_silence(&d, pcm, NP, in, user);
         }
         if (submit_read(&d, cur)) {
@@ -357,7 +476,7 @@ int vua_run(volatile LONG *running, vua_in_fn in, void *user, vua_log_fn log)
                 (unsigned long long)z[VTI_PKT_45], (unsigned long long)errs, (unsigned long long)gaps,
                 (unsigned long long)z[VTI_PKT_EMPTY], (unsigned long long)z[VTI_PKT_SHORT],
                 (unsigned long long)z[VTI_PKT_46], (unsigned long long)z[VTI_PKT_48K], (unsigned long long)z[VTI_PKT_LONG]);
-            next_log += VUA_RATE * 60;
+            next_log += (uint64_t)d.rate * 60;
         }
     }
 out:

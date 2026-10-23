@@ -55,13 +55,13 @@ TEST(pktstat_bad_run)
 TEST(pktstat_out_matches_48k_with_silence)
 {
     int silent = -1;
-    CHECK(vti_pkt_out(44, 44, &silent) == 44 && silent == 0);
-    CHECK(vti_pkt_out(46, 45, &silent) == 46 && silent == 0);
-    CHECK(vti_pkt_out(48, 44, &silent) == 48 && silent == 1);
-    CHECK(vti_pkt_out(47, 45, &silent) == 47 && silent == 1);
-    CHECK(vti_pkt_out(49, 44, &silent) == 49 && silent == 1);
-    CHECK(vti_pkt_out(0, 45, &silent) == 45 && silent == 0);  // lost packet: as before
-    CHECK(vti_pkt_out(60, 44, &silent) == 44 && silent == 0); // nonsense size: as before
+    CHECK(vti_pkt_out(44100, 44, 44, &silent) == 44 && silent == 0);
+    CHECK(vti_pkt_out(44100, 46, 45, &silent) == 46 && silent == 0);
+    CHECK(vti_pkt_out(44100, 48, 44, &silent) == 48 && silent == 1);
+    CHECK(vti_pkt_out(44100, 47, 45, &silent) == 47 && silent == 1);
+    CHECK(vti_pkt_out(44100, 49, 44, &silent) == 49 && silent == 1);
+    CHECK(vti_pkt_out(44100, 0, 45, &silent) == 45 && silent == 0);  // lost packet: as before
+    CHECK(vti_pkt_out(44100, 60, 44, &silent) == 44 && silent == 0); // nonsense size: as before
 }
 
 // the rate is lost when a reported bad run consists of 48 kHz packets (not when packets are merely lost)
@@ -81,20 +81,9 @@ TEST(pktstat_rate_lost_only_for_48k_runs)
     CHECK(!vti_pktstat_rate_lost(&u));
 }
 
-// E257 (round 0.8.27, T6): the global "System Clock/Frequency = 44.1 kHz" the broker sends next to the SET_CUR
-// retry, and the Virus' report of that parameter when it arrives.
+// E257/E331: the Virus' report of its global "System Clock/Frequency", which the broker logs after a recovery switch.
 extern "C" {
 #include "ratelever.h"
-}
-
-TEST(ratelever_packs_the_global_on_cable_2)
-{
-    uint8_t out[16];
-    CHECK(vti_pack_rate_44k1(out, 15) == -1);
-    CHECK(vti_pack_rate_44k1(out, sizeof out) == 16);
-    const uint8_t want[16] = {0x24, 0xF0, 0x00, 0x20, 0x24, 0x33, 0x01, 0x10,
-                              0x24, 0x73, 0x00, 0x10, 0x26, 0x00, 0xF7, 0x00};
-    CHECK(memcmp(out, want, 16) == 0);
 }
 
 TEST(ratelever_finds_the_report)
@@ -105,4 +94,57 @@ TEST(ratelever_finds_the_report)
     const uint8_t other[] = {0x24, 0xF0, 0x00, 0x20, 0x24, 0x33, 0x01, 0x10, 0x24, 0x73, 0x00, 0x54, 0x26, 0x01, 0xF7, 0x00};
     CHECK(vti_rate_report(other, sizeof other) == -1); // the sync information event
     CHECK(vti_rate_report(rx, 12) == -1);               // cut off before the value
+}
+
+// Rate following (design-rate.md step 3): at a wanted 48 kHz the good packets are 47-49 frames (48 nominal) and a run
+// of 44.1 kHz packets is the lost rate; the OUT packet still mirrors the Virus' real size, silent when it is the other
+// rate (E241's rule, both ways). A zeroed statistic is at 44.1 kHz (the old behaviour).
+TEST(pktstat_at_48k)
+{
+    vti_pktstat s = {};
+    vti_pktstat_set_rate(&s, 48000);
+    for (int i = 0; i < 2000; i++)
+        CHECK(vti_pktstat_add(&s, 48 + (i % 7 == 0)) == 0);
+    CHECK(!s.bad);
+    for (int i = 0; i < 230; i++) // IN keeps 44.1 kHz sizes ~230 ms after SET_CUR (E323): no event
+        CHECK(vti_pktstat_add(&s, 44) == 0);
+    for (int i = 0; i < 2000; i++)
+        vti_pktstat_add(&s, 48);
+    int events = 0;
+    for (int i = 0; i < VTI_PKT_BAD_RUN; i++)
+        events += vti_pktstat_add(&s, 44 + (i % 10 == 0)) == 1;
+    CHECK(events == 1 && s.bad && vti_pktstat_rate_lost(&s));
+    vti_pktstat t = {};
+    vti_pktstat_set_rate(&t, 48000);
+    for (int i = 0; i < VTI_PKT_BAD_RUN; i++)
+        vti_pktstat_add(&t, 0);
+    CHECK(t.bad && !vti_pktstat_rate_lost(&t)); // lost packets are no rate problem at 48 kHz either
+    vti_pktstat z = {};
+    CHECK(vti_pktstat_rate(&z) == 44100);
+}
+
+TEST(pktstat_out_at_48k)
+{
+    int silent = -1;
+    CHECK(vti_pkt_out(48000, 48, 48, &silent) == 48 && silent == 0);
+    CHECK(vti_pkt_out(48000, 47, 48, &silent) == 47 && silent == 0);
+    CHECK(vti_pkt_out(48000, 49, 48, &silent) == 49 && silent == 0);
+    CHECK(vti_pkt_out(48000, 44, 48, &silent) == 44 && silent == 1); // the Virus still at 44.1 kHz
+    CHECK(vti_pkt_out(48000, 45, 48, &silent) == 45 && silent == 1);
+    CHECK(vti_pkt_out(48000, 0, 48, &silent) == 48 && silent == 0);
+    CHECK(vti_pkt_out(48000, 60, 48, &silent) == 48 && silent == 0);
+}
+
+TEST(pktstat_nominal_pattern)
+{
+    unsigned sum = 0;
+    for (unsigned i = 0; i < 1000; i++)
+        sum += vti_pkt_nominal(44100, i);
+    CHECK(sum == 44100); // 44 x 9 + 45 per 10 ms
+    CHECK(vti_pkt_nominal(44100, 0) == 45 && vti_pkt_nominal(44100, 1) == 44);
+    for (unsigned i = 0; i < 20; i++)
+        CHECK(vti_pkt_nominal(48000, i) == 48);
+    CHECK(vti_pkt_in_range(44100, 43) && vti_pkt_in_range(44100, 46) && !vti_pkt_in_range(44100, 47));
+    CHECK(vti_pkt_in_range(48000, 47) && vti_pkt_in_range(48000, 49) && !vti_pkt_in_range(48000, 46));
+    CHECK(!vti_pkt_in_range(48000, 50));
 }

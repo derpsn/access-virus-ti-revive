@@ -260,6 +260,25 @@ jobs:
           native plug-in **"TI Revive Virus Control"**: looks and works like the original Virus Control and runs
           natively on Windows, macOS (Apple Silicon and Intel) and Linux - no Rosetta, Wine or yabridge.
 
+          **New in 0.8.32: the Virus follows your project's sample rate, like with the original.**
+
+          - The Virus now runs at 44.1 or 48 kHz to match the project, the way the original driver did: a 48 kHz project
+            switches the Virus to 48 kHz (its display shows "Audio clock changed"), a 44.1 kHz project switches it back.
+            At 88.2/96 kHz the Virus runs at 44.1/48 kHz and the plug-in converts; any other rate is converted as before.
+            Windows: the ASIO device "TI Revive Virus Audio" offers 44.1 and 48 kHz.
+          - The start of the Virus' audio now follows the original driver's order exactly (checked against a USB
+            capture of the original).
+          - When the Virus keeps sending audio at the wrong rate after a USB replug or a wake (it then stays silent),
+            the plug-in now switches the rate away and back, which the Virus' USB chip cannot ignore. Before, it asked
+            for the same rate again, which the chip ignores - found in the Virus' firmware. We could not make the fault
+            happen on purpose, so this part is not tested against it yet.
+          - Linux: install.sh takes the Access files from the right of the two copies in the .msi, so the Control Center
+            opens in the Access look (issue #15). Running install.sh again with the .msi adds a missing file.
+
+          Tested on a Virus TI2 Desktop: Linux (REAPER and the automated run, 44.1 and 48 kHz), macOS (MacBook Air M3,
+          Ableton Live 12 and the automated run; the Audio Unit in GarageBand and Live), Windows 11 (VM, Ableton Live 11
+          and the automated run; function checks, the VM's USB timing cannot judge timing).
+
           **New in 0.8.31: exports on the Mac at small buffer sizes, and the browser's selection.**
 
           - macOS: an export with a small buffer size (128 samples) no longer lets a few notes come late (0.8.30: 6 to

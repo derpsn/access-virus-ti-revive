@@ -61,7 +61,9 @@ public:
 
     // Start/stop the Virus audio stream (only the owner may). Linux: 1 = streaming into the POSIX shm ring
     // (vtiaudioshm.h, VTI_AUDIO_SHM_LINUX), 0 = no audio function, -1 = error / not the owner.
-    int audio(bool on, int timeout_ms = 3000);
+    // `rate` = the Virus rate the plug-in wants (44100/48000, protocol 5; older brokers ignore it and stream 44.1 kHz).
+    // The broker may keep another one (not the owner, debounce): the real rate is in the shared ring.
+    int audio(bool on, int timeout_ms = 3000, uint32_t rate = 44100);
 
     // The Virus' identification blocks (model, OS version), read by the broker with the original driver's fixed
     // read-only flash sequence (flashinfo.h, E026/E040; owner only, cached per device open). Returns the byte count
