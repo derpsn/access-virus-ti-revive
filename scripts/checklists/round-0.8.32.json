@@ -1,0 +1,104 @@
+{
+ "round": "0.8.32",
+ "core": "core.json",
+ "core_items": [
+  "LC4",
+  "LC5",
+  "WC1",
+  "WC2",
+  "WC3",
+  "WC4",
+  "MC1",
+  "MC2",
+  "MC3",
+  "MC4",
+  "MC5"
+ ],
+ "lead": "Test build 0.8.32 (CI run 39990990671). New in this round: the Virus follows the project's sample rate like the original (44.1 or 48 kHz; 88.2/96 kHz run the Virus at 44.1/48 and the plug-in converts; 'Audio clock changed' on the Virus at a switch, E321-E330), a new recovery when the Virus keeps sending 48 kHz after a replug or wake (E331), and the Linux installer takes the Access files from the right copy in the .msi (issue #15, E324). The start-up order and the switches were tested on Linux with dev builds (hil.sh, captures). Mark each item, add a note where something looks different, then copy the results at the bottom into the chat.",
+ "rules": [
+  "A 48 kHz project really switches the Virus' clock: watch the display for 'Audio clock changed'. If the sound stops and does not come back, switch the Virus off and on and note it.",
+  "Order: Linux first (the Virus is on this PC), then the Windows 11 VM, then macOS. Close the DAW before the Virus moves."
+ ],
+ "sections": [
+  {
+   "id": "linux",
+   "title": "Linux",
+   "where": "REAPER via pw-jack, Virus on this PC",
+   "prep": [
+    "Already installed by Claude: the CI build (install.sh; plug-in ad40058e.., broker bc06b909.. = the tarball; the 0.8.31 release plug-in backed up in ~/.vst3-backup/0.8.31-release-b).",
+    "Claude ran hil.sh on this build (cold start, reopen x2, export, broker kill): ALL PASS (max 0.85 ms off the grid, export 1.00x real time) - LC1-LC3 are covered by it."
+   ],
+   "items": [
+    {
+     "id": "L1",
+     "title": "48 kHz project (rate following)",
+     "steps": [
+      "Close REAPER. Set PipeWire to 48 kHz: <code>pw-metadata -n settings 0 clock.force-rate 48000</code>",
+      "Start REAPER, open the test project, play a few bars, look at the Virus' display.",
+      "Close REAPER, set PipeWire back: <code>pw-metadata -n settings 0 clock.force-rate 0</code>, open the project again and play."
+     ],
+     "expect": "'Audio clock changed' at the start at 48 kHz and again back at 44.1 kHz; the Virus sounds normal and on time both times; no 'sync error' page."
+    },
+    {
+     "id": "L2",
+     "title": "Install from the Access .msi (issue #15)",
+     "steps": [
+      "Move the Access files away: <code>mv ~/.local/share/tirevive/access ~/.local/share/tirevive/access.bak-0.8.32</code>",
+      "Run <code>~/Downloads/TI-Revive-0.8.32-test/TI-Revive-0.8.32-linux/install.sh \"/home/datoml/virus-ti-re/originals/Virus TI Software Suite 5.1.7.00 64-bit.msi\"</code>",
+      "Start the TI Revive Control Center from the app menu."
+     ],
+     "expect": "install.sh unpacks the Access files without an error; the Control Center opens in the Access look. (Afterwards the backup folder can be deleted, or moved back if something failed.)"
+    }
+   ]
+  },
+  {
+   "id": "vm",
+   "title": "Windows 11 VM",
+   "where": "win11 VM, Ableton Live 11, Virus attached by Claude",
+   "prep": [
+    "Already installed by Claude: setup.exe /quiet (exit 0, entries 0.8.32, plug-in 56413c52.. = the CI MSI), C:\\tirevive-test\\0.8.32. The VM is running.",
+    "Ask Claude to attach the Virus to the VM (it stops the Linux broker first). Never switch the Virus off while it is in the VM unless the item says so (WC4), and tell Claude before."
+   ],
+   "items": [
+    {
+     "id": "W1",
+     "title": "48 kHz in Live (rate following)",
+     "steps": [
+      "Live: Preferences > Audio > Sample Rate 48000; play a few bars with Virus Control on a track.",
+      "Back to 44100 and play again."
+     ],
+     "expect": "'Audio clock changed' on the Virus at each switch; the Virus sounds normal after each; no crash. (VM timing is not judged.)"
+    }
+   ]
+  },
+  {
+   "id": "mac",
+   "title": "macOS",
+   "where": "MacBook Air M3, Ableton Live 12",
+   "prep": [
+    "Package (CI run 39990990671) on the Mac in <code>~/Downloads/TI-Revive-0.8.32-mac</code>: close Ableton, double-click 'Install test build.command' there (or the line in INSTALL-COMMAND.txt).",
+    "Then plug the Virus into the Mac."
+   ],
+   "items": [
+    {
+     "id": "M1",
+     "title": "48 kHz in Live (rate following)",
+     "steps": [
+      "Live: Settings > Audio > Sample Rate 48000; play a few bars with the VST3 on a track.",
+      "Back to 44100 and play again."
+     ],
+     "expect": "'Audio clock changed' on the Virus at each switch; the Virus sounds normal and on time after each."
+    },
+    {
+     "id": "M2",
+     "title": "Audio Unit: load and unload (issue #16)",
+     "steps": [
+      "Live: put the Audio Unit 'TI Revive Virus Control' on a MIDI track, play a note.",
+      "Delete the device (or the track), load it again; five times in all."
+     ],
+     "expect": "Live does not crash; each new instance plays. (FL Studio crashed when the AU was unloaded in issue #16.)"
+    }
+   ]
+  }
+ ]
+}
