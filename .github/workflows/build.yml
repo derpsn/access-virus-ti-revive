@@ -202,7 +202,7 @@ jobs:
           cmake -S native -B native-build -G Ninja -DCMAKE_BUILD_TYPE=Release -DVTI_WERROR=ON \
             -DCMAKE_C_COMPILER_LAUNCHER=ccache -DCMAKE_CXX_COMPILER_LAUNCHER=ccache # a new warning in our code fails here (E13)
           cmake --build native-build --target VirusTINative tirevive-cc TIReviveControlCenter vtitests nativehost xclose
-          ccache --show-stats
+          ccache --show-stats --verbose
           strip "native-build/VST3/Release/TI Revive Virus Control.vst3/Contents/x86_64-linux/TI Revive Virus Control.so"
           mkdir native-linux && cp -R "native-build/VST3/Release/TI Revive Virus Control.vst3" native-linux/
           install -m 0755 -s native-build/bin/Release/tirevive-cc native-linux/
