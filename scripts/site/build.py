@@ -275,13 +275,15 @@ def page_landing(latest, releases, sums):
           <li>Sleep: on the Mac, sleep cut the original's connection until Access fixed it in 2008
           (<a href="https://www.kvraudio.com/news-print.php?id=10515">KVR</a>). Since 0.8.24 the plug-in sets the
           Virus up again after the computer wakes, also after a short USB drop at wake (tested with a drop of under a
-          second on Linux). In our tests on Windows 11, macOS and Linux the Virus played again after waking. Once, on Linux, the Virus stayed silent after waking because it kept the wrong sample rate; since 0.8.26 the plug-in keeps it quiet then and asks for the right rate again.</li>
+          second on Linux). In our tests on Windows 11, macOS and Linux the Virus played again after waking. Once, on Linux, the Virus stayed silent after waking because it kept the wrong sample rate; since 0.8.26 the plug-in keeps it quiet then, and since 0.8.32 it switches the rate away and back, which the Virus cannot ignore.</li>
         </ul>
         <h3 class="next">The same as in the original</h3>
         <ul>
           <li>One plug-in instance per Virus (<a href="https://forum.ableton.com/viewtopic.php?p=823712">Ableton
           forum</a>): it controls all 16 parts. A second instance shows &ldquo;Virus unavailable&rdquo; and takes over
           when the first one is removed.</li>
+          <li>The Virus follows the project's sample rate (44.1 or 48 kHz) and shows &ldquo;Audio clock changed&rdquo;
+          when it switches (since 0.8.32).</li>
           <li>Owners advised a USB port directly on the computer instead of a hub
           (<a href="https://gearspace.com/threads/fixing-access-virus-sync-issues.839737/">Gearspace</a>). We have
           not tested hubs.</li>
@@ -570,8 +572,8 @@ def features_section():
     <div class="feature">
       <div><h3>Timing</h3>
       <p>The plug-in finds the clock of the Virus on USB, stamps every note against it and reports its latency, so the
-      DAW lines recordings up with the grid. Any host sample rate works: a resampler converts to the 44.1 kHz of the Virus
-      with -90 dB error.</p></div>
+      DAW lines recordings up with the grid. The Virus follows the host at 44.1 or 48 kHz like with the original (since
+      0.8.32); at other host rates a resampler converts with -90 dB error.</p></div>
       <div><table class="data">
         <thead><tr><th>16th notes at 120 BPM</th><th>On the grid</th><th>Jitter</th><th>Drift</th></tr></thead>
         <tbody>
@@ -634,8 +636,9 @@ def features_section():
         <li>Switch the Virus off and on, or replug it, while the DAW runs: the editor shows the original's &ldquo;No Virus
         TI can be found&rdquo; page meanwhile, then the plug-in waits until the Virus is ready and plays in time again.
         Two DAWs share it: one plays, the other waits and takes over. Linux: after a cable replug, or when the Virus is
-        switched on while no DAW runs, it can come back without sound; switch it off and on once while the DAW runs
-        (being worked on).</li>
+        switched on while no DAW runs, it can come back without sound. Since 0.8.32 the plug-in tries to bring it back
+        by itself (it switches the sample rate away and back, which the Virus cannot ignore); this could not be tested
+        against the fault yet. If it stays silent, switch it off and on once while the DAW runs.</li>
       </ul>
     </div>
 
@@ -708,7 +711,7 @@ def page_changelog_landing(releases):
 # the README's screenshots that the site shows too (copied at build time)
 SHARED_IMAGES = ["control-center.png", "control-center-nerd-mode.png", "plugin-help-mode.png", "plugin-help-inactive.png",
                  "plugin-menus.png"]
-TESTS = 345 # unit tests in native/tests (vtitests), as of 2026-10-22 (round 0.8.31)
+TESTS = 379 # unit tests in native/tests (vtitests), as of 2026-10-23 (round 0.8.32)
 # line coverage of vticore, measured like CI (no Access files, empty home): gcov over the test run
 COVERAGE, COVERAGE_DATE = "94 %", "16 Oct 2026"
 

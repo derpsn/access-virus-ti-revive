@@ -58,8 +58,8 @@ contains no Access material. No kernel code of its own is installed.
 | **Tested with** | Ableton Live 11 (Windows 11 PC and VM) | Ableton Live 12 on a MacBook Air M3 (VST3), GarageBand (AU) | REAPER 7.82 on Ubuntu 26.04 |
 
 - **Timing:** notes land sample-accurately on the grid (measured jitter 0.01 to 0.33 ms, std. dev.); the plug-in
-  reports its latency so the DAW compensates it. Any host sample rate works (the Virus runs at 44.1 kHz, the plug-in
-  converts).
+  reports its latency so the DAW compensates it. The Virus follows the project's sample rate like with the
+  original: it runs at 44.1 or 48 kHz, at other rates (88.2, 96 kHz, ...) the plug-in converts (since 0.8.32).
 - **First start:** the plug-in reads RAM A-D from the Virus (a few minutes without a cache); you can play meanwhile -
   the sync pauses while notes arrive.
 - **Coming from 0.7.x:** the classic plug-in "Virus TI (TI Revive)" (the original Access plug-in in a wrapper) is
@@ -159,7 +159,9 @@ after the plug-in is closed. Uninstall with `./uninstall.sh`. Details: `README-l
 Control Center in its plain look instead of the Access look: `install.sh` of 0.8.31 and older could miss
 `Virus Control Center.exe` in the `.msi` (issue #15); run `./install.sh` with the `.msi` again, it adds the file.
 Known issue: after a USB cable replug, or when the Virus is switched on while no DAW runs, it can come back without
-sound; switch it off and on once while the DAW runs (being worked on).
+sound. Since 0.8.32 the plug-in tries to bring it back by itself (it switches the sample rate away and back, which the
+Virus cannot ignore); this could not be tested against the fault yet. If it stays silent, switch it off and on once
+while the DAW runs.
 
 ## Good to know
 
@@ -348,7 +350,7 @@ the Virus' flash and can brick it. Details: [native/docs/controlcenter.md](nativ
   native plug-in. Tested: Ableton Live 12 (VST3), GarageBand (AU); other hosts should work — reports welcome. Each
   DAW needs its own microphone permission.
 - Access' **Virus Control Center** (32-bit) does not run on current macOS; for backups use `tirevive-cc` (above).
-- The Virus' audio comes from macOS' own USB audio driver (the "Virus TI" audio device, 44.1 kHz); unplugging and
+- The Virus' audio comes from macOS' own USB audio driver (the "Virus TI" audio device, 44.1 or 48 kHz like the project); unplugging and
   replugging the Virus is detected by the plug-in.
 - Logs for bug reports: the plug-in's `diag.log` (see above) and `/tmp/tirevive-vtibroker.log`.
 
@@ -385,12 +387,14 @@ Revive rebuilds that plug-in, and we want to fix its problems instead of copying
 - Sleep: on the Mac, sleep cut the original's connection until Access fixed it in 2008
   ([KVR](https://www.kvraudio.com/news-print.php?id=10515)). Since 0.8.24 the plug-in sets the Virus up again after
   the computer wakes, also after a short USB drop at wake (tested with a drop of under a second on Linux). In our tests
-  on Windows 11, macOS and Linux the Virus played again after waking. Once, on Linux, the Virus stayed silent after waking because it kept the wrong sample rate; since 0.8.26 the plug-in keeps it quiet then and asks for the right rate again.
+  on Windows 11, macOS and Linux the Virus played again after waking. Once, on Linux, the Virus stayed silent after waking because it kept the wrong sample rate; since 0.8.26 the plug-in keeps it quiet then, and since 0.8.32 it switches the rate away and back, which the Virus cannot ignore.
 
 **The same as in the original**
 
 - One plug-in instance per Virus ([Ableton forum](https://forum.ableton.com/viewtopic.php?p=823712)): it controls all
   16 parts. A second instance shows "Virus unavailable" and takes over when the first one is removed.
+- The Virus follows the project's sample rate (44.1 or 48 kHz) and shows "Audio clock changed" when it switches
+  (since 0.8.32).
 - Owners advised a USB port directly on the computer instead of a hub
   ([Gearspace](https://gearspace.com/threads/fixing-access-virus-sync-issues.839737/)). We have not tested hubs.
 
@@ -422,8 +426,9 @@ hardware (TI2 Desktop) - details and raw numbers in [`findings/evidence.md`](fin
 
 - The plug-in finds the Virus' own clock (a sync marker the Virus puts on USB 2), stamps every event against it and
   **reports its latency to the DAW**, so delay compensation lines recordings up with the grid (E139-E141, E143, E209).
-- **Any sample rate:** the Virus runs at 44.1 kHz; at other host rates a 32-tap windowed-sinc resampler converts
-  with -90 dB error (1 kHz and 10 kHz test tones at 32/48/88.2/96 kHz), no clicks, same timing.
+- **Any sample rate:** the Virus follows the host at 44.1 or 48 kHz like with the original (since 0.8.32, E321-E330);
+  at other host rates a 32-tap windowed-sinc resampler converts with -90 dB error (1 kHz and 10 kHz test tones at
+  32/48/88.2/96 kHz), no clicks, same timing.
 
 **CPU and real-time safety**
 
@@ -439,7 +444,7 @@ hardware (TI2 Desktop) - details and raw numbers in [`findings/evidence.md`](fin
 - **Automation rate limit** (250 messages/s, coalesced per parameter): unthrottled parameter floods hung the Virus'
   audio until a power cycle within 4 minutes; with the limit a 4-minute full-load test (16 channels of notes + 32
   automation lanes) passes.
-- Checked with ThreadSanitizer and AddressSanitizer (one race in the broker connection found and fixed); 345 unit
+- Checked with ThreadSanitizer and AddressSanitizer (one race in the broker connection found and fixed); 379 unit
   tests run with every release build on Windows and Linux, plus two end-to-end tests on Linux in a virtual display
   (two editors of a duplicated track; the Control Center's window and close button).
 
@@ -605,6 +610,7 @@ measurements: [`findings/design-linux.md`](findings/design-linux.md), evidence E
 | Reverse engineering of driver, protocol and plug-in interface | done (`findings/`) |
 | **0.8.0: native plug-in "TI Revive Virus Control" (all platforms)** | |
 | Plug-in (editor, browser, libraries, bank sync, automation, project state), opens projects of the classic plug-in | done: tested in REAPER (Linux), Ableton Live 12 (macOS M3), Ableton Live 11 (Windows 11 PC) |
+| The Virus follows the host's sample rate (44.1 / 48 kHz) like the original | done: tested on Linux, Windows 11 (VM) and macOS (E326-E330, E335) |
 | Timing: sample-accurate, latency reported to the DAW, any sample rate | done: 0.01-0.33 ms jitter, drift -72 to 0 ppm (E139-E143, E209, E216, E278, E289, E308, E319) |
 | ASIO sound card "TI Revive Virus Audio" (Windows, 6 in / 2 out, no Access driver) | done: clean on a real PC |
 | Installers: Access software only unpacked (Windows/Linux), clean-up of earlier versions | done |
