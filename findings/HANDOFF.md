@@ -60,7 +60,7 @@ hardware runs at 44.1 kHz only; no Mac/Windows test of a 48 kHz project. The ins
 1. DONE (see above). 44.1 kHz check of the new start order: back up ~/.local/lib/tirevive/vtibroker (0.8.31 release), install
    work/build/linux/vtibroker (dev, protocol 5), `scripts/hil.sh --plugin "build-native/VST3/Release/TI Revive Virus
    Control.vst3"` at 44.1 kHz; compare the start in a capture with startup_diff.py; then restore or keep the dev broker.
-2. The user reads "System Clock / SA Freq" in the CONFIG menu (E323 (6), E175/E241 hypothesis). Never sent as a request.
+2. DONE (E325: System Clock page "Source Auto", "Freq 44.1"; which parameter Freq is stays LOW). The user reads "System Clock / SA Freq" in the CONFIG menu (E323 (6), E175/E241 hypothesis). Never sent as a request.
 3. Controlled first switch with the user: nativehost --rate 48000 (44.1 -> 48), then 48 -> 44.1, then quick changes
    (debounce must hold them); log + display; new evidence entry (E324+).
 4. Round test: install the CI build (Linux install.sh, win11 VM=win11 silent, Mac INSTALL-COMMAND), risk.py --round
