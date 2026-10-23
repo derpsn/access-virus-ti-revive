@@ -91,7 +91,9 @@ def summary(rel):
     if tag in CHANGELOG_EXTRA:
         return CHANGELOG_EXTRA[tag]
     body = body.replace("\r", "")
-    m = re.search(r"^\*\*New in [^*]*\*\*.*?(?=^\*\*Since |^\*\*Windows |^\*\*macOS |^\*\*Linux |^\*\*Coming |\Z)",
+    # later release texts repeat the older versions' "New in" parts below their own: stop at the next one
+    m = re.search(r"^\*\*New in [^*]*\*\*.*?(?=^\*\*New in |^\*\*Since |^\*\*Windows |^\*\*macOS |^\*\*Linux |"
+                  r"^\*\*Coming |\Z)",
                   body, re.M | re.S)
     if m:
         return re.sub(r"^\*\*New in [^*]*\*\*\s*", "", m.group(0).strip(), count=1)

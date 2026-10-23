@@ -2,6 +2,8 @@
 
 ## START HERE - state 2026-10-23 afternoon (the user home, Virus on USB again)
 
+**Site changelog fix (2026-10-23, not deployed yet):** changelog.html showed every older version's notes again under each newer one (release texts since ~0.8.30 repeat the older "New in" parts; summary() in scripts/site/build.py did not stop at the next "**New in"). Fixed; local build from the saved releases: 0.8.29 text 4x -> 1x, changelog.html 114 KB -> 55 KB, same versions, index.html unchanged. Deploy: `gh workflow run site.yml` once the fix is on the branch the site builds from.
+
 **Released:** v0.8.31 (2026-10-22, tag v0.8.31, release run 39824346270; site rebuilt by hand, run 39827849547).
 Release-triggered site deploys do NOT happen: always `gh workflow run site.yml` by hand.
 
