@@ -81,20 +81,9 @@ TEST(pktstat_rate_lost_only_for_48k_runs)
     CHECK(!vti_pktstat_rate_lost(&u));
 }
 
-// E257 (round 0.8.27, T6): the global "System Clock/Frequency = 44.1 kHz" the broker sends next to the SET_CUR
-// retry, and the Virus' report of that parameter when it arrives.
+// E257/E331: the Virus' report of its global "System Clock/Frequency", which the broker logs after a recovery switch.
 extern "C" {
 #include "ratelever.h"
-}
-
-TEST(ratelever_packs_the_global_on_cable_2)
-{
-    uint8_t out[16];
-    CHECK(vti_pack_rate_44k1(out, 15) == -1);
-    CHECK(vti_pack_rate_44k1(out, sizeof out) == 16);
-    const uint8_t want[16] = {0x24, 0xF0, 0x00, 0x20, 0x24, 0x33, 0x01, 0x10,
-                              0x24, 0x73, 0x00, 0x10, 0x26, 0x00, 0xF7, 0x00};
-    CHECK(memcmp(out, want, 16) == 0);
 }
 
 TEST(ratelever_finds_the_report)
@@ -158,15 +147,4 @@ TEST(pktstat_nominal_pattern)
     CHECK(vti_pkt_in_range(44100, 43) && vti_pkt_in_range(44100, 46) && !vti_pkt_in_range(44100, 47));
     CHECK(vti_pkt_in_range(48000, 47) && vti_pkt_in_range(48000, 49) && !vti_pkt_in_range(48000, 46));
     CHECK(!vti_pkt_in_range(48000, 50));
-}
-
-TEST(ratelever_packs_48k)
-{
-    uint8_t out[16];
-    CHECK(vti_pack_rate(out, sizeof out, 48000) == 16);
-    const uint8_t want[16] = {0x24, 0xF0, 0x00, 0x20, 0x24, 0x33, 0x01, 0x10,
-                              0x24, 0x73, 0x00, 0x10, 0x26, 0x01, 0xF7, 0x00};
-    CHECK(memcmp(out, want, 16) == 0);
-    CHECK(vti_pack_rate(out, sizeof out, 44100) == 16 && out[13] == 0x00);
-    CHECK(vti_pack_rate(out, 15, 48000) == -1);
 }

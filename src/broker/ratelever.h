@@ -1,31 +1,14 @@
-// ratelever.h - the MIDI-side lever for the Virus' sample rate (E257, E241).
+// ratelever.h - the Virus' report of its sample rate on MIDI (E257, E241, E331).
 //
-// Why: the Virus' USB chip owns its audio clock and has two masters for the rate: the PC's UAC SET_CUR on the
-// endpoints and the global parameter 0x10 "System Clock/Frequency" (0 = 44.1 kHz, 1 = 48 kHz), which the panel
-// sets and the host CPU forwards to the chip (firmware, E257). After a wake or a replug the Virus sometimes keeps
-// sending 48 kHz packets although SET_CUR 44100 was accepted (E175/E241); when the broker sees that it asks with
-// SET_CUR again and, since round 0.8.27, also sends `F0 00 20 33 01 10 73 00 10 00 F7` on the plug-in cable - a
-// normal global parameter, no vendor request (rule 2). Plain C, shared by the Linux and the Windows broker; the
-// unit test (native/tests/test_pktstat.cpp) calls it directly. A read-back request for the global is not in our
-// evidence (open); the broker logs the Virus' own report of the parameter when one arrives.
+// The Virus' USB chip owns its audio clock; when its stored rate changes it tells the host CPU, which echoes the
+// global parameter 0x10 "System Clock/Frequency" (0 = 44.1 kHz, 1 = 48 kHz) to the PC. After a wake or a replug the
+// Virus sometimes keeps sending 48 kHz packets although SET_CUR 44100 was accepted (E175/E241): the chip ignores a
+// SET_CUR of the rate it has stored, so the stream recovers with a switch away and back (vti_relock, ratesw.h); the
+// broker logs the Virus' report from then on as a diagnostic. Until round 0.8.32 the broker also sent this global
+// itself - it meets the same stored value and changes nothing (E331), so it is gone. Plain C, shared by the Linux and
+// the Windows broker; the unit test (native/tests/test_pktstat.cpp) calls it directly.
 #pragma once
 #include <stdint.h>
-
-// USB-MIDI packets (cable 2) of the global parameter message for `rate` (48000 -> 1, anything else 0): 16 bytes, or -1
-// when cap is too small. Rate following (design-rate.md step 3): the lever asks for the rate the broker wants.
-static inline int vti_pack_rate(uint8_t *out, int cap, uint32_t rate)
-{
-    static const uint8_t pk[16] = {0x24, 0xF0, 0x00, 0x20, 0x24, 0x33, 0x01, 0x10,
-                                   0x24, 0x73, 0x00, 0x10, 0x26, 0x00, 0xF7, 0x00};
-    if (cap < 16)
-        return -1;
-    for (int i = 0; i < 16; i++)
-        out[i] = pk[i];
-    out[13] = rate == 48000 ? 0x01 : 0x00;
-    return 16;
-}
-
-static inline int vti_pack_rate_44k1(uint8_t *out, int cap) { return vti_pack_rate(out, cap, 44100); }
 
 // A report of the global 0x10 in received USB-MIDI packets (any cable): the value 0/1, or -1 when none
 static inline int vti_rate_report(const uint8_t *p, int len)

@@ -184,3 +184,66 @@ TEST(ratesw_no_wish_keeps_the_rate)
     CHECK_EQ(vti_rate_wanted(44100, 48000), 44100u);
     CHECK_EQ(vti_rate_wanted(96000, 48000), 44100u);
 }
+
+// The Virus left the stream's rate (E175/E241): its USB chip ignores a SET_CUR with the rate it has stored (E331), so
+// the recovery is a real switch away and, a debounce later, back - each one makes the chip announce the change to the
+// DSPs. Three tries, then the "switch it off and on" message once.
+TEST(ratesw_relock_goes_away_and_back)
+{
+    vti_relock r = {};
+    uint32_t to = 0;
+    CHECK(vti_relock_step(&r, 0, 44100, 1000, &to) == VTI_RELOCK_NONE);
+    CHECK(vti_relock_step(&r, 1, 44100, 1000, &to) == VTI_RELOCK_AWAY);
+    CHECK_EQ(to, 48000u);
+    // while away: reports of the other rate are not new losses, and the way back waits for the debounce
+    CHECK(vti_relock_step(&r, 1, 48000, 1500, &to) == VTI_RELOCK_NONE);
+    CHECK(vti_relock_step(&r, 0, 48000, 1999, &to) == VTI_RELOCK_NONE);
+    CHECK(vti_relock_step(&r, 0, 48000, 2000, &to) == VTI_RELOCK_BACK);
+    CHECK_EQ(to, 44100u);
+    CHECK(vti_relock_step(&r, 0, 44100, 2500, &to) == VTI_RELOCK_NONE);
+}
+
+TEST(ratesw_relock_from_48k_goes_to_44k1)
+{
+    vti_relock r = {};
+    uint32_t to = 0;
+    CHECK(vti_relock_step(&r, 1, 48000, 0, &to) == VTI_RELOCK_AWAY);
+    CHECK_EQ(to, 44100u);
+    CHECK(vti_relock_step(&r, 0, 44100, 1000, &to) == VTI_RELOCK_BACK);
+    CHECK_EQ(to, 48000u);
+}
+
+TEST(ratesw_relock_gives_up_after_three_tries)
+{
+    vti_relock r = {};
+    uint32_t to = 0, t = 0;
+    for (int i = 0; i < 3; i++) {
+        CHECK(vti_relock_step(&r, 1, 44100, t, &to) == VTI_RELOCK_AWAY);
+        CHECK(vti_relock_step(&r, 0, 48000, t + 1000, &to) == VTI_RELOCK_BACK);
+        t += 2000;
+    }
+    CHECK(vti_relock_step(&r, 1, 44100, t, &to) == VTI_RELOCK_GIVE_UP);
+    CHECK(vti_relock_step(&r, 1, 44100, t + 1000, &to) == VTI_RELOCK_NONE); // said once
+    vti_relock_reset(&r); // a new stream or a client's switch: three new tries
+    CHECK(vti_relock_step(&r, 1, 44100, t + 2000, &to) == VTI_RELOCK_AWAY);
+}
+
+TEST(ratesw_relock_survives_the_ms_clock_wrap)
+{
+    vti_relock r = {};
+    uint32_t to = 0;
+    CHECK(vti_relock_step(&r, 1, 44100, 0xFFFFFF00u, &to) == VTI_RELOCK_AWAY);
+    CHECK(vti_relock_step(&r, 0, 48000, 0xFFFFFF00u + 999u, &to) == VTI_RELOCK_NONE);
+    CHECK(vti_relock_step(&r, 0, 48000, 0xFFFFFF00u + 1000u, &to) == VTI_RELOCK_BACK);
+}
+
+// the Virus refused the switch away (the stream is still at its old rate): there is no way back to go (review)
+TEST(ratesw_relock_after_a_refused_switch_away)
+{
+    vti_relock r = {};
+    uint32_t to = 0;
+    CHECK(vti_relock_step(&r, 1, 44100, 0, &to) == VTI_RELOCK_AWAY);
+    CHECK(vti_relock_step(&r, 0, 44100, 1000, &to) == VTI_RELOCK_NONE);
+    CHECK(!r.away);
+    CHECK(vti_relock_step(&r, 1, 44100, 1500, &to) == VTI_RELOCK_AWAY); // the next loss tries again
+}

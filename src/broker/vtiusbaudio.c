@@ -350,16 +350,25 @@ int vua_run(volatile LONG *running, vua_in_fn in, void *user, vua_log_fn log)
     uint64_t total = 0, errs = 0, gaps = 0, next_log = (uint64_t)d.rate * 60;
     vti_pktstat ps = {0}; // packet sizes as sent, before the repair (E175)
     vti_pktstat_set_rate(&ps, d.rate);
-    int cur = 0, rate_tries = 0;
+    int cur = 0;
+    vti_relock rl = {0}; // recovery when the Virus leaves the stream's rate (ratesw.h, E331)
+    uint32_t relock_to = 0; // the recovery's next switch (away or back); the client's wish waits meanwhile
     rc = 0;
     while (*running) {
-        uint32_t want = (uint32_t)g_want;
+        uint32_t to;
+        if (rl.away && vti_relock_step(&rl, 0, d.rate, GetTickCount(), &to) == VTI_RELOCK_BACK)
+            relock_to = to;
+        uint32_t want = relock_to ? relock_to : rl.away ? d.rate : (uint32_t)g_want;
         if (want != d.rate) { // between two reads: the whole stream stops, switches and starts again
             uint32_t from = d.rate;
             LOG("usbaudio: switching %.1f -> %.1f kHz", from / 1000.0, want / 1000.0);
             int r = vti_rate_switch(&ops, from, want);
-            // asked once: a refusal is not retried; a newer wish that came in meanwhile stays
-            InterlockedCompareExchange(&g_want, (LONG)d.rate, (LONG)want);
+            if (!relock_to) {
+                // asked once: a refusal is not retried; a newer wish that came in meanwhile stays
+                InterlockedCompareExchange(&g_want, (LONG)d.rate, (LONG)want);
+                vti_relock_reset(&rl);
+            }
+            relock_to = 0;
             InterlockedIncrement(&g_switches);
             if (r) {
                 LOG("usbaudio: rate switch to %.1f kHz %s", want / 1000.0,
@@ -372,7 +381,6 @@ int vua_run(volatile LONG *running, vua_in_fn in, void *user, vua_log_fn log)
             memset(&ps, 0, sizeof ps);
             vti_pktstat_set_rate(&ps, d.rate);
             cur = 0;
-            rate_tries = 0;
             continue;
         }
         DWORD n = 0;
@@ -408,22 +416,25 @@ int vua_run(volatile LONG *running, vua_in_fn in, void *user, vua_log_fn log)
                         (unsigned long long)ps.bad_since, f, p->Length, (unsigned long)p->Status);
                 else if (ev < 0) {
                     LOG("usbaudio: packets back in range at %llu ms after the start", (unsigned long long)ps.packets);
-                    rate_tries = 0;
                 }
-                // the Virus left the wanted rate (E241: after a wake, a replug): once per second of the other rate's
-                // packets ask for it again, three times; the broker's device thread adds the panel's global
-                // (vua_rate_lost)
+                // the Virus left the stream's rate (E241: after a wake, a replug): a SET_CUR of the same rate changes
+                // nothing (E331), so switch away and, a debounce later, back (the loop above); the broker's device
+                // thread then logs the Virus' report of the rate (vua_rate_lost)
                 if (vti_pktstat_rate_lost(&ps) && ps.bad_run % VTI_PKT_BAD_RUN == 0) {
                     const char *other = d.rate == 48000 ? "44.1" : "48";
-                    if (rate_tries < 3) {
-                        rate_tries++;
-                        // both endpoints every time: a failed OUT request must not skip the IN one
-                        int r_out = set_rate(d.h1, EP_OUT, d.rate), r_in = set_rate(d.h2, EP_IN, d.rate);
-                        int r = r_out || r_in;
-                        LOG("usbaudio: the Virus sends %s kHz packets - asking for %.1f kHz again (%d/3): SET_CUR %s",
-                            other, d.rate / 1000.0, rate_tries, r ? "failed" : "accepted");
-                    } else if (rate_tries++ == 3)
+                    switch (vti_relock_step(&rl, 1, d.rate, GetTickCount(), &to)) {
+                    case VTI_RELOCK_BACK: // the way back fell due here, not at the top of the loop
+                        relock_to = to;
+                        break;
+                    case VTI_RELOCK_AWAY:
+                        relock_to = to;
+                        LOG("usbaudio: the Virus sends %s kHz packets - switching to %.1f kHz and back (%d/%d)", other,
+                            to / 1000.0, rl.tries, VTI_RELOCK_TRIES);
+                        break;
+                    case VTI_RELOCK_GIVE_UP:
                         LOG("usbaudio: the Virus stays at %s kHz - its sound stays silent; switch it off and on", other);
+                        break;
+                    }
                     InterlockedIncrement(&g_rate_lost);
                 }
                 int silent;

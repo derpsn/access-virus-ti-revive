@@ -165,7 +165,7 @@ static void in_cb(struct libusb_transfer *t)
         else if (ev < 0)
             vti_log("usbaudio: packets back in range at %llu ms after the start", (unsigned long long)S.ps.packets);
         if (vti_pktstat_rate_lost(&S.ps) && S.ps.bad_run % VTI_PKT_BAD_RUN == 0)
-            S.rate_lost = 1; // once per second of the other rate's packets: the device thread asks for the rate again
+            S.rate_lost = 1; // once per second of the other rate's packets: the device thread recovers (vti_relock)
         out_counts[k] = vti_pkt_out(S.rate, f, nominal, &out_silent[k]);
         if (!vti_pkt_in_range(S.rate, f)) { // lost, or still the old rate right after SET_CUR: nominal silence ("repair")
             if (p->status != LIBUSB_TRANSFER_COMPLETED)
@@ -413,12 +413,4 @@ int vla_rate_lost(void)
         return 0;
     S.rate_lost = 0;
     return 1;
-}
-
-int vla_set_rate_again(void) // from the device thread, while streaming (libusb's synchronous API is thread-safe)
-{
-    if (!S.running)
-        return -1;
-    int a = set_rate(EP_OUT, S.rate), b = set_rate(EP_IN, S.rate);
-    return a || b ? -1 : 0;
 }

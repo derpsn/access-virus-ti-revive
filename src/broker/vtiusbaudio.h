@@ -18,8 +18,8 @@ void vua_set_out(vua_out_fn fn, void *user);
 // cannot be opened (the caller then uses WASAPI), 0 after a normal stop, 1 after a setup/stream error.
 int vua_run(volatile LONG *running, vua_in_fn in, void *user, vua_log_fn log);
 
-// Seconds of 48 kHz packets the stream saw since the last call (E241; the stream itself repeats SET_CUR): the
-// broker sends the panel's global parameter "System Clock/Frequency = 44.1 kHz" for each (ratelever.h).
+// Seconds of the other rate's packets the stream saw since the last call (E241; the stream itself switches away and
+// back, vti_relock in ratesw.h): the broker then logs the Virus' report of the rate's global (ratelever.h).
 LONG vua_rate_lost(void);
 
 // Rate following (design-rate.md step 4): the rate the stream should run at (44100 or 48000; vua_run starts at it, a

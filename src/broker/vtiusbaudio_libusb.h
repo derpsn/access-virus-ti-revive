@@ -15,9 +15,8 @@ int vla_start(struct libusb_context *ctx, struct libusb_device_handle *h, uint32
               void *user);
 void vla_stop(void);
 int vla_running(void);
-// 1 once per run of the other rate's packets (the Virus left the wanted rate, E241): the caller may ask again
+// 1 once per second of the other rate's packets (the Virus left the stream's rate, E241): the caller recovers (ratesw.h)
 int vla_rate_lost(void);
-int vla_set_rate_again(void); // SET_CUR of the wanted rate on both endpoints again; 0 = both accepted
 // One switch while streaming, in the driver's order (ratesw.h); the caller debounces. before_start (optional) is called
 // with the rate the stream restarts at, before its first transfer. 0 = at `rate` now, -1 = refused (back at the old
 // rate), -2 = the stream stopped.

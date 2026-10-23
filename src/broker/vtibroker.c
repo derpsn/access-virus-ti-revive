@@ -506,7 +506,7 @@ static void obs_status(int dev_open) // once a second (device thread)
     LeaveCriticalSection(&g_cs_clients);
 }
 
-static volatile LONG g_rate_lever; // the rate's global was sent (E257): log the Virus' report of it
+static volatile LONG g_rate_lever; // a recovery switch ran (E331): log the Virus' report of the rate's global (E257)
 
 static void on_rx(void *user, uint8_t ep, const uint8_t *data, int len)
 {
@@ -589,29 +589,10 @@ static DWORD WINAPI device_thread(LPVOID unused)
                 broadcast(VTIMSG_STATE, &st, 4, NULL, 0);
             }
         }
-        // the Virus left the wanted rate while streaming (E175/E241): the stream sends it silent packets of its size and
-        // repeats SET_CUR; here the second master of the rate, the panel's global parameter (E257), a few times
-        static int rate_tries;
-        static uint32_t rate_tries_at; // a switch to another rate starts the tries again
-        if (g_dev && g_audio_running) {
-            uint32_t want = vua_rate();
-            if (want != rate_tries_at) {
-                rate_tries_at = want;
-                rate_tries = 0;
-            }
-            if (vua_rate_lost()) {
-                if (rate_tries < 3) {
-                    rate_tries++;
-                    uint8_t lever[16];
-                    int n = vti_pack_rate(lever, sizeof lever, want);
-                    int w = n > 0 ? vti_write(g_dev, VTI_EP_MI04_OUT, lever, n) : -1;
-                    g_rate_lever = 1;
-                    blog("usbaudio: the Virus sends %s kHz packets - global 73 00 10 %02X (%.1f kHz) sent (%d/3) -> %d",
-                         want == 48000 ? "44.1" : "48", want == 48000 ? 1 : 0, want / 1000.0, rate_tries, w);
-                }
-            }
-        } else
-            rate_tries = 0;
+        // the Virus left the stream's rate (E175/E241): the stream switches away and back (vti_relock, E331); log the
+        // Virus' own report of the rate's global from now on
+        if (g_dev && g_audio_running && vua_rate_lost())
+            g_rate_lever = 1;
         int open = g_dev != NULL;
         LeaveCriticalSection(&g_cs_dev);
         static ULONGLONG last_status;

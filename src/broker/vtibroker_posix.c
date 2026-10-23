@@ -470,7 +470,7 @@ static void f5_report(const uint8_t *p, int len);
 static void f5_second(void);
 #endif
 
-static volatile int g_rate_lever; // the rate's global was sent (E257): log the Virus' report of it
+static volatile int g_rate_lever; // a recovery switch ran (E331): log the Virus' report of the rate's global (E257)
 
 static void on_rx(void *user, uint8_t ep, const uint8_t *data, int len)
 {
@@ -730,6 +730,7 @@ static void f5_second(void) // once per second from the RX statistics
 }
 
 static vti_rate_guard g_rate_guard; // at most one rate switch per second (ratesw.h, rule 2)
+static vti_relock g_relock; // recovery when the Virus leaves the stream's rate (ratesw.h, E331); g_cs_dev
 
 // the shared ring learns the stream's rate before frames at it arrive (rate, then rate_gen; readers re-anchor on a
 // new generation, vtiaudioshm.h); a change counts for the debounce
@@ -751,6 +752,7 @@ static int audio_start(uint32_t wanted, int owner)
         uint32_t cur = vla_rate();
         uint32_t to = vti_rate_choose(cur, wanted, owner, vti_rate_may_switch(&g_rate_guard, uptime_ms()));
         if (to != cur) {
+            vti_relock_reset(&g_relock);
             if (vla_switch_rate(to, shm_rate) == -2) { // the stream stopped: give the interfaces back properly
                 vla_stop();
                 g_shm->streaming = 0;
@@ -858,34 +860,30 @@ static void *device_thread(void *unused)
             pthread_mutex_unlock(&g_cs_clients);
         }
 #ifdef __linux__
-        // the Virus left the wanted rate while streaming (E175/E241: after a wake, a replug): the stream already sends
-        // it silent packets of its size; ask for the rate again, a few times per stream
-        static int rate_tries;
-        static uint32_t rate_tries_at; // a switch to another rate starts the tries again
-        if (g_dev && g_shm && g_shm->streaming && vla_rate() != rate_tries_at) {
-            rate_tries_at = vla_rate();
-            rate_tries = 0;
-        }
+        // the Virus left the stream's rate (E175/E241: after a wake, a replug): the stream already sends it silent
+        // packets of its size; a switch away and back makes its USB chip tell the DSPs again (E331)
         if (g_dev && g_shm && g_shm->streaming) {
-            if (vla_rate_lost()) {
-                if (rate_tries < 3) {
-                    rate_tries++;
-                    // both masters of the rate (E257): SET_CUR on the endpoints and the panel's global parameter
-                    uint32_t want = vla_rate();
-                    int r = vla_set_rate_again();
-                    uint8_t lever[16];
-                    int n = vti_pack_rate(lever, sizeof lever, want);
-                    int w = n > 0 ? vti_write(g_dev, VTI_EP_MI04_OUT, lever, n) : -1;
-                    g_rate_lever = 1;
-                    blog("usbaudio: the Virus sends %s kHz packets - asking for %.1f kHz again (%d/3): SET_CUR %s, "
-                         "global 73 00 10 %02X -> %d", want == 48000 ? "44.1" : "48", want / 1000.0, rate_tries,
-                         r ? "failed" : "accepted", want == 48000 ? 1 : 0, w);
-                } else if (rate_tries++ == 3)
-                    blog("usbaudio: the Virus stays at %s kHz - its sound stays silent; switch it off and on",
-                         vla_rate() == 48000 ? "44.1" : "48");
+            uint32_t to = 0, now = vla_rate();
+            switch (vti_relock_step(&g_relock, vla_rate_lost(), now, uptime_ms(), &to)) {
+            case VTI_RELOCK_AWAY:
+                g_rate_lever = 1; // log the Virus' own report of the rate's global
+                blog("usbaudio: the Virus sends %s kHz packets - switching to %.1f kHz and back (%d/%d)",
+                     now == 48000 ? "44.1" : "48", to / 1000.0, g_relock.tries, VTI_RELOCK_TRIES);
+                /* fall through */
+            case VTI_RELOCK_BACK:
+                if (vla_switch_rate(to, shm_rate) == -2) { // the stream stopped: give the interfaces back properly
+                    vla_stop();
+                    g_shm->streaming = 0;
+                    g_audio_on = 0;
+                }
+                break;
+            case VTI_RELOCK_GIVE_UP:
+                blog("usbaudio: the Virus stays at %s kHz - its sound stays silent; switch it off and on",
+                     now == 48000 ? "44.1" : "48");
+                break;
             }
         } else
-            rate_tries = 0;
+            vti_relock_reset(&g_relock);
 #endif
         int open = g_dev != NULL;
         pthread_mutex_unlock(&g_cs_dev);

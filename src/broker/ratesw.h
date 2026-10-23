@@ -97,3 +97,50 @@ static inline uint32_t vti_audio_req_rate(const uint8_t *p, int len)
         }
     return 44100;
 }
+
+// Recovery when the Virus leaves the stream's rate while streaming (E175/E241: packets of the other rate after a wake
+// or a replug). Its USB chip ignores a SET_CUR with the rate it has stored, and the host CPU can have put the DSPs to
+// the other rate without the chip (E331) - so asking for the same rate again changes nothing. A real switch away and,
+// one debounce later, back makes the chip announce each change, and its announcements reach the DSPs. Three tries
+// per stream, then the caller says once that the Virus needs a power cycle.
+#define VTI_RELOCK_TRIES 3
+enum { VTI_RELOCK_NONE, VTI_RELOCK_AWAY, VTI_RELOCK_BACK, VTI_RELOCK_GIVE_UP };
+
+typedef struct {
+    int away;           // switched away, the way back is due at at_ms + VTI_RATE_DEBOUNCE_MS
+    uint32_t back_rate; // the stream's rate before
+    uint32_t at_ms;
+    int tries;
+} vti_relock;
+
+static inline void vti_relock_reset(vti_relock *r)
+{
+    r->away = 0;
+    r->tries = 0;
+}
+
+// `lost`: a second of the other rate's packets was just reported; `rate`: the stream's rate now. For AWAY and BACK,
+// *to is the rate to switch the stream to.
+static inline int vti_relock_step(vti_relock *r, int lost, uint32_t rate, uint32_t now_ms, uint32_t *to)
+{
+    if (r->away) { // the other rate's packets are expected now
+        if ((uint32_t)(now_ms - r->at_ms) < VTI_RATE_DEBOUNCE_MS)
+            return VTI_RELOCK_NONE;
+        r->away = 0;
+        if (rate == r->back_rate) // the Virus refused the switch away: nowhere to go back from
+            return VTI_RELOCK_NONE;
+        *to = r->back_rate;
+        return VTI_RELOCK_BACK;
+    }
+    if (!lost)
+        return VTI_RELOCK_NONE;
+    if (r->tries < VTI_RELOCK_TRIES) {
+        r->tries++;
+        r->away = 1;
+        r->back_rate = rate;
+        r->at_ms = now_ms;
+        *to = rate == 48000 ? 44100 : 48000;
+        return VTI_RELOCK_AWAY;
+    }
+    return r->tries++ == VTI_RELOCK_TRIES ? VTI_RELOCK_GIVE_UP : VTI_RELOCK_NONE;
+}
