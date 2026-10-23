@@ -5,7 +5,10 @@
 // arrived from it, so the host never drifts against the Virus.
 //
 // Inputs: 1/2 Virus analog inputs, 3/4 USB 1, 5/6 USB 2 (the Virus' parts routed to USB). Outputs: 1/2 to the Virus
-// outputs. 44.1 kHz only (the Virus' USB audio rate). Samples: 32-bit integer (ASIOSTInt32LSB).
+// outputs. 44.1 or 48 kHz, the Virus' two USB audio rates (rate following, design-rate.md step 4): setSampleRate asks
+// the broker for the rate (it switches the stream only while no plug-in owns the Virus, owner.h); when the owning
+// plug-in switches the stream under the driver, the host gets sampleRateDidChange and a reset request.
+// Samples: 32-bit integer (ASIOSTInt32LSB).
 //
 // The IASIO interface is declared here from the ASIO ABI (a COM-style vtable; the CLSID doubles as the interface id,
 // as every ASIO host expects). Registration: regsvr32 (DllRegisterServer) writes the COM class and
@@ -110,7 +113,7 @@ HINSTANCE g_module;
 std::atomic<long> g_objects{0}, g_locks{0};
 
 const int IN_CH = 6, OUT_CH = 2;
-const double RATE = 44100;
+const double RATE = 44100; // before the ring is open
 const char *IN_NAMES[IN_CH] = {"Analog In L", "Analog In R", "USB 1 L", "USB 1 R", "USB 2 L", "USB 2 R"};
 const char *OUT_NAMES[OUT_CH] = {"Virus Out L", "Virus Out R"};
 const int OUT_PREFILL = 512; // the broker starts playing with this much queued (vtibroker.c)
@@ -217,11 +220,14 @@ public:
             error_ = "no Virus TI connected";
             return 0;
         }
-        if (broker_.audio(true) != 1 || !audio_.open()) {
+        // no wish (0): the rate that is set stays - the host's setSampleRate decides right after (review step 4)
+        if (broker_.audio(true, 3000, 0) != 1 || !audio_.open()) {
             error_ = "the Virus' USB audio is not available (TI Revive WinUSB driver installed?)";
             return 0;
         }
         audio_on_ = true;
+        int seen;
+        audio_.rate_changed(seen); // the rate the ring was opened with is no change
         char nm[64]; // Broker::audio registered this per-process event; the broker signals it for every input block
         snprintf(nm, sizeof nm, "Local\\vtinative_audio_%lu", (unsigned long)GetCurrentProcessId());
         ev_ = OpenEventA(SYNCHRONIZE, FALSE, nm);
@@ -269,7 +275,7 @@ public:
             return ASE_NotPresent;
         long bs = bufsize_ > 0 ? bufsize_ : 256;
         *in = bs;                         // a block is handed over once it is complete
-        *out = bs + OUT_PREFILL + 2 * 44; // + the broker's prefill and up to two USB packets
+        *out = bs + OUT_PREFILL + 2 * (audio_.rate() == 48000 ? 48 : 44); // + the broker's prefill, two USB packets
         return ASE_OK;
     }
     ASIOError getBufferSize(long *mn, long *mx, long *pref, long *gran) override
@@ -277,13 +283,33 @@ public:
         *mn = 64, *mx = 2048, *pref = 256, *gran = -1; // powers of two; 256 like the original
         return ASE_OK;
     }
-    ASIOError canSampleRate(double r) override { return r == RATE ? ASE_OK : ASE_NoClock; }
+    ASIOError canSampleRate(double r) override { return r == 44100 || r == 48000 ? ASE_OK : ASE_NoClock; }
     ASIOError getSampleRate(double *r) override
     {
-        *r = RATE;
+        *r = inited_ ? (double)audio_.rate() : RATE;
         return ASE_OK;
     }
-    ASIOError setSampleRate(double r) override { return r == RATE || r == 0 ? ASE_OK : ASE_NoClock; }
+    // Hosts call it while stopped. The broker decides (owner.h vti_rate_setter, one switch per second): a rate it
+    // keeps is refused, so the host shows that it cannot run at it instead of playing at the wrong speed.
+    ASIOError setSampleRate(double r) override
+    {
+        if (r == 0)
+            return ASE_OK; // "external clock": the Virus is always the clock
+        if (r != 44100 && r != 48000)
+            return ASE_NoClock;
+        if (!inited_)
+            return ASE_NotPresent;
+        if (audio_.rate() == (int)r)
+            return ASE_OK;
+        int res = broker_.audio(true, 3000, (uint32_t)r);
+        if (!running_) { // while running the clock thread owns rate_changed() and resyncs itself (reset request)
+            int seen;
+            audio_.rate_changed(seen); // our own switch: no reset request for it
+            pos_ = -1;                 // the stream restarted: resync at the next start
+        }
+        dlog("%p setSampleRate %.0f -> broker %d, ring %d Hz", (void *)this, r, res, audio_.rate());
+        return res == 1 && audio_.rate() == (int)r ? ASE_OK : ASE_NoClock;
+    }
     ASIOError getClockSources(ASIOClockSource *c, long *n) override
     {
         if (!c || !n || *n < 1)
@@ -399,6 +425,16 @@ private:
                 WaitForSingleObject(ev_, 20);
             else
                 Sleep(2);
+            int now_rate;
+            if (audio_.rate_changed(now_rate)) { // the owning plug-in switched the stream: the host must follow
+                dlog("%p the stream switched to %d Hz", (void *)this, now_rate);
+                if (callbacks_->sampleRateDidChange)
+                    callbacks_->sampleRateDidChange((double)now_rate);
+                if (can_reset && !reset_sent) {
+                    callbacks_->asioMessage(kAsioResetRequest, 0, nullptr, nullptr);
+                    reset_sent = true;
+                }
+            }
             int64_t newest = audio_.newest_frame();
             if (newest < 0)
                 continue;

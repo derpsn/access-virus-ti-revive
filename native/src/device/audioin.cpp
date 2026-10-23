@@ -25,7 +25,12 @@ extern "C" {
 #ifdef __APPLE__
 #include <CoreAudio/CoreAudio.h>
 #include "gapfill.h"
+#include "ratesw.h"
+#include <chrono>
+#include <map>
+#include <mutex>
 #include <string>
+#include <thread>
 #include <vector>
 #endif
 
@@ -57,7 +62,73 @@ struct MacAudio {
     vti_audio_shm *ring = nullptr;
     bool playing = false; // the output towards the Virus runs (IOProc thread)
     GapFill gaps;         // skipped IO cycles become silence, so ring frames stay the Virus' frames (E243)
+    vti_rate_guard guard{}; // at most one rate switch per second (ratesw.h, rule 2; E112: flips can hang the Virus)
+    uintptr_t id = 0;       // key in g_macs (the rate listener's user data)
 };
+
+// Rate following on macOS (design-rate.md step 4): Core Audio owns the Virus' USB audio, so the plug-in sets the
+// device's nominal rate itself - only for its own stream start or resume, debounced - and follows changes by others.
+static const AudioObjectPropertyAddress kRateAddr{kAudioDevicePropertyNominalSampleRate,
+                                                  kAudioObjectPropertyScopeGlobal, kAudioObjectPropertyElementMain};
+
+static Float64 nominal_rate(AudioObjectID dev)
+{
+    Float64 r = 0;
+    UInt32 sz = sizeof r;
+    AudioObjectGetPropertyData(dev, &kRateAddr, 0, nullptr, &sz, &r);
+    return r;
+}
+
+static uint32_t now_ms()
+{
+    using namespace std::chrono;
+    return (uint32_t)duration_cast<milliseconds>(steady_clock::now().time_since_epoch()).count();
+}
+
+// set the nominal rate and wait (up to 1 s) until the device reports it: the change is asynchronous
+static bool set_nominal_rate(MacAudio *m, Float64 r)
+{
+    vti_rate_switched(&m->guard, now_ms());
+    if (AudioObjectSetPropertyData(m->dev, &kRateAddr, 0, nullptr, sizeof r, &r))
+        return false;
+    for (int i = 0; i < 100; i++) {
+        if (nominal_rate(m->dev) == r)
+            return true;
+        std::this_thread::sleep_for(std::chrono::milliseconds(10));
+    }
+    return false;
+}
+
+// Open readers by id, for the rate listener: Core Audio may still run a callback while the listener is removed, so
+// the callback finds its reader here under the mutex (or not at all) instead of using a pointer that close() freed.
+// The mutex also serialises ring_rate() between the listener and request_rate() (one rate_gen step per change).
+static std::mutex g_mac_mx;
+static std::map<uintptr_t, MacAudio *> g_macs;
+static uintptr_t g_mac_next = 1;
+
+// the ring learns the device's rate (rate, then rate_gen; readers re-anchor on a new generation, vtiaudioshm.h);
+// g_mac_mx held
+static void ring_rate(MacAudio *m)
+{
+    const uint32_t v = nominal_rate(m->dev) == 48000 ? 48000 : 44100;
+    if (m->ring->rate == v)
+        return;
+    m->gaps.set_rate((int)v);
+    m->ring->rate = v;
+    __atomic_thread_fence(__ATOMIC_SEQ_CST);
+    __atomic_add_fetch(&m->ring->rate_gen, 1, __ATOMIC_SEQ_CST);
+}
+
+// another program (Audio MIDI Setup, a second DAW) changed the Virus' rate: follow it instead of playing at the wrong
+// speed; never switched back from here (E112)
+static OSStatus rate_listener(AudioObjectID, UInt32, const AudioObjectPropertyAddress *, void *user)
+{
+    std::lock_guard<std::mutex> g(g_mac_mx);
+    auto it = g_macs.find((uintptr_t)user);
+    if (it != g_macs.end())
+        ring_rate(it->second);
+    return noErr;
+}
 
 static std::string cf_string(AudioObjectID id, AudioObjectPropertySelector sel)
 {
@@ -187,8 +258,9 @@ static OSStatus io_proc(AudioObjectID, const AudioTimeStamp *, const AudioBuffer
 }
 #endif
 
-bool AudioIn::open(const char *linux_name)
+bool AudioIn::open(const char *linux_name, int rate)
 {
+    (void)rate; // macOS only: Linux and Windows ask the broker (Broker::audio)
     rate_gen_seen_ = -1;
     (void)linux_name; // Linux only
 #ifdef __linux__
@@ -237,13 +309,14 @@ bool AudioIn::open(const char *linux_name)
         delete m;
         return false;
     }
-    // the Virus runs at 44.1 kHz like the plug-in's host (the clock master is the synth)
-    AudioObjectPropertyAddress ra{kAudioDevicePropertyNominalSampleRate, kAudioObjectPropertyScopeGlobal,
-                                  kAudioObjectPropertyElementMain};
-    Float64 rate = 44100;
-    AudioObjectSetPropertyData(m->dev, &ra, 0, nullptr, sizeof rate, &rate);
+    // the Virus at the wanted rate (44.1 or 48 kHz; the clock master is the synth) - set only when it differs
+    const Float64 want = vti_rate_valid((uint32_t)rate);
+    if (nominal_rate(m->dev) != want && !set_nominal_rate(m, want))
+        fprintf(stderr, "audioin: the Virus did not take %.0f Hz (now %.0f)\n", want, nominal_rate(m->dev));
     m->ring = new vti_audio_shm();
-    m->ring->magic = VTI_AUDIO_MAGIC, m->ring->version = VTI_AUDIO_VERSION, m->ring->rate = 44100;
+    m->ring->magic = VTI_AUDIO_MAGIC, m->ring->version = VTI_AUDIO_VERSION;
+    m->ring->rate = nominal_rate(m->dev) == 48000 ? 48000 : 44100;
+    m->gaps.set_rate((int)m->ring->rate);
     m->ring->in_ch = VTI_AUDIO_IN_CH, m->ring->out_ch = VTI_AUDIO_OUT_CH, m->ring->ring_frames = VTI_AUDIO_RING;
     if (AudioDeviceCreateIOProcID(m->dev, io_proc, m, &m->proc) || AudioDeviceStart(m->dev, m->proc)) {
         if (m->proc)
@@ -253,6 +326,12 @@ bool AudioIn::open(const char *linux_name)
         return false;
     }
     m->ring->streaming = 1;
+    {
+        std::lock_guard<std::mutex> g(g_mac_mx);
+        m->id = g_mac_next++;
+        g_macs[m->id] = m;
+    }
+    AudioObjectAddPropertyListener(m->dev, &kRateAddr, rate_listener, (void *)m->id);
     mac_ = m;
     map_ = m->ring;
     pos_ = -1;
@@ -273,6 +352,11 @@ void AudioIn::close()
         UnmapViewOfFile(map_);
 #elif defined(__APPLE__)
     if (auto *m = (MacAudio *)mac_) {
+        AudioObjectRemovePropertyListener(m->dev, &kRateAddr, rate_listener, (void *)m->id);
+        {
+            std::lock_guard<std::mutex> g(g_mac_mx); // a callback still running finishes first, later ones find nothing
+            g_macs.erase(m->id);
+        }
         AudioDeviceStop(m->dev, m->proc);
         AudioDeviceDestroyIOProcID(m->dev, m->proc);
         delete m->ring;
@@ -300,6 +384,28 @@ int AudioIn::rate() const
 {
     const uint32_t r = shm_ ? shm_->rate : 0;
     return r == 48000 ? 48000 : 44100;
+}
+
+int AudioIn::request_rate(int rate)
+{
+#ifdef __APPLE__
+    auto *m = (MacAudio *)mac_;
+    const uint32_t want = vti_rate_valid((uint32_t)rate);
+    if (!m || m->ring->rate == want || !vti_rate_may_switch(&m->guard, now_ms()))
+        return this->rate();
+    // our IOProc stops first (no audio while the device changes clock), then the rate, read back, then it runs again
+    AudioDeviceStop(m->dev, m->proc);
+    if (!set_nominal_rate(m, want))
+        fprintf(stderr, "audioin: the Virus did not take %u Hz (now %.0f)\n", want, nominal_rate(m->dev));
+    {
+        std::lock_guard<std::mutex> g(g_mac_mx);
+        ring_rate(m);
+    }
+    AudioDeviceStart(m->dev, m->proc);
+#else
+    (void)rate;
+#endif
+    return this->rate();
 }
 
 bool AudioIn::rate_changed(int &rate)

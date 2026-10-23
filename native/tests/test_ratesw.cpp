@@ -171,3 +171,16 @@ TEST(ratesw_choose)
     CHECK_EQ(vti_rate_choose(48000, 48000, 1, 0), 48000u);
     CHECK_EQ(vti_rate_choose(48000, 96000, 1, 1), 44100u); // only the two rates
 }
+
+// 0 = "no wish": a client that only listens (the ASIO driver at init) keeps the rate that is set - asking for 44.1 kHz
+// there flipped a 48 kHz Virus back and armed the debounce against the host's setSampleRate right after (review)
+TEST(ratesw_no_wish_keeps_the_rate)
+{
+    uint8_t m[9] = {1, 0, 0, 0, 0, 0, 0, 0, 0}; // on, empty name, rate 0
+    CHECK_EQ(vti_audio_req_rate(m, 9), 0u);
+    CHECK_EQ(vti_rate_choose(48000, 0, 1, 1), 48000u);
+    CHECK_EQ(vti_rate_choose(44100, 0, 1, 1), 44100u);
+    CHECK_EQ(vti_rate_wanted(0, 48000), 48000u);
+    CHECK_EQ(vti_rate_wanted(44100, 48000), 44100u);
+    CHECK_EQ(vti_rate_wanted(96000, 48000), 44100u);
+}

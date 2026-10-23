@@ -54,6 +54,22 @@ local), the risky cases E112, E175, E241, E257.
    and gets kAsioResetRequest / sampleRateDidChange when the stream changes under it. macOS: the plug-in sets the
    Core Audio nominal rate of the Virus device itself (audioin.cpp), reads it back, listens for changes by others
    (E112: a flip from a second process hung the Virus - so only on our own resume, debounced).
+   **Written 2026-10-23 (not on hardware, Windows/macOS not compiled here):** Windows: vtiusbaudio.c switches in its
+   own thread between two reads (stream_stop/stream_start, reads tracked per slot, isoch buffers registered again
+   after the alternate setting), vua_want_rate + vua_switches (the broker waits for the attempt; a refusal is not
+   retried); vtibroker.c: who sets it = owner.h `vti_rate_setter` - the owning plug-in, or the ASIO driver while no
+   plug-in owns the Virus (E112; deliberately narrower than "the last plug-in that starts"); the ASIO driver accepts
+   44.1/48 k, setSampleRate asks the broker and is refused when the broker keeps another rate, a switch under it
+   gives sampleRateDidChange + kAsioResetRequest. macOS: AudioIn::open(name, rate) sets the nominal rate only when it
+   differs (before: always 44100), AudioIn::request_rate(rate) = IOProc stopped, rate set and read back (1 s),
+   restarted, debounced; a property listener follows other programs' changes into the ring (rate_gen). All callers
+   still ask for 44.1 kHz: step 5 passes the host's mapped rate. Review fixes: rate 0 in VTIMSG_AUDIO = no wish (the ASIO
+   driver's init keeps the set rate - asking 44.1 there flipped a 48 kHz Virus back and armed the debounce against
+   the host's setSampleRate); a fresh start (no running stream to protect) applies any explicit wish, still debounced
+   (an old protocol-4 client after a 48 kHz session gets its 44.1 kHz); a refused 48 kHz at the Windows start falls back
+   to 44.1 once; a newer wish during a switch is kept; macOS readers are found by id under one mutex (no callback on a
+   freed reader, one rate_gen step per change). Left as before: the ASIO reset request from the clock thread (a host
+   that stops the driver inside that call would join its own thread - the same pattern as the existing ring restart).
 5. **Plug-in flow.** setupProcessing stores the host rate; setActive(true) (resume) asks for the Virus rate when it
    differs (like 0x1800a9880), waits for the new generation, re-pings, re-anchors, then restartComponent
    (kLatencyChanged). Offline renders at a new rate go through the same path.

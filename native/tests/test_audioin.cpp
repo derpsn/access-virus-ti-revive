@@ -95,6 +95,23 @@ TEST(audioin_reports_the_rate_and_its_switches)
     CHECK_EQ(a.rate(), 44100);
 }
 
+// step 4: on Linux and Windows the broker owns the rate (Broker::audio); asking AudioIn changes nothing in the ring
+#ifndef __APPLE__
+TEST(audioin_request_rate_leaves_the_broker_ring)
+{
+    AudioIn a;
+    CHECK_EQ(a.request_rate(48000), 44100); // nothing open
+    Ring r;
+    CHECK(r.shm && a.open(r.name.c_str(), 48000));
+    CHECK_EQ(a.request_rate(48000), 44100);
+    CHECK(r.shm->rate_gen == 0);
+    int rate = 0;
+    CHECK(!a.rate_changed(rate));
+    r.shm->rate = 48000;
+    CHECK_EQ(a.request_rate(44100), 48000); // the broker's rate stays
+}
+#endif
+
 // Review 2026-10-19 (H4): a ring someone else created, or one too small, was mapped as is - reading the header of a
 // zero-length object raised SIGBUS in the host. Owner and size are checked before mapping.
 TEST(audioin_refuses_a_ring_too_small)

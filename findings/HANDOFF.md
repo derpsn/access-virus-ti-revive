@@ -37,6 +37,13 @@ an unplug), 1 = intended debounce. 369 tests, ctest 5/5, both brokers build. Win
 NEXT first: Virus on -> back up ~/.local/lib/tirevive/vtibroker (= 0.8.31 release), install work/build/linux/vtibroker,
 hil.sh --plugin build-native/VST3/Release/... at 44.1 kHz (checks the new start order), then restore the release broker.
 Asked the user again for System Clock / SA Freq (item 1).
+Step 4 WRITTEN (commit below, not compiled for Windows MSVC/macOS, not on hardware): Windows stream switches in its
+own thread, broker rule owner.h vti_rate_setter (owning plug-in, or ASIO without one - user not asked yet whether
+"the last plug-in that starts" should win instead), ASIO driver 44.1/48 + reset request, macOS AudioIn::open(rate) /
+request_rate / rate listener. Second cpp-reviewer round: 8 of 9 findings fixed (details in design-rate.md step 4).
+372 tests, ctest 5/5, both brokers build (mingw), ASIO mingw -fsyntax-only clean. NEXT: step 5 (plug-in flow: host
+rate -> virus_rate_for -> Broker::audio(rate) / request_rate on resume, re-ping, kLatencyChanged), then CI for the
+MSVC/Xcode builds.
 
 **NEXT (in this order):**
 1. Ask the user for the Virus' "System Clock / SA Freq" value (CONFIG menu) - E323 (6): a Virus set to 48 k may switch

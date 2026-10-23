@@ -37,7 +37,7 @@ $(OUT)/vtiflash.exe: vtiflash.c vticore_winusb.c $(SRC_MIDI) vticore.h
 	x86_64-w64-mingw32-gcc $(CFLAGS) -o $@ vtiflash.c vticore_winusb.c $(SRC_MIDI) -lwinusb -lsetupapi -static -lpthread
 
 # Broker (owns WinUSB) and a probe that goes through the broker instead of WinUSB
-$(OUT)/vtibroker.exe: vtibroker.c vticore_winusb.c $(SRC_MIDI) vticore.h vtiproto.h brokerinfo.h ctrlguard.h owner.h pktstat.h ratelever.h vtiaudioshm.h vtiusbaudio.c vtiusbaudio.h
+$(OUT)/vtibroker.exe: vtibroker.c vticore_winusb.c $(SRC_MIDI) vticore.h vtiproto.h brokerinfo.h ctrlguard.h owner.h pktstat.h ratelever.h ratesw.h vtiaudioshm.h vtiusbaudio.c vtiusbaudio.h
 	mkdir -p $(OUT)
 	x86_64-w64-mingw32-gcc $(CFLAGS) $(VDEF) -o $@ vtibroker.c vticore_winusb.c $(SRC_MIDI) vtiusbaudio.c -lwinusb -lsetupapi -static -lpthread
 

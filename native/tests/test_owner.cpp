@@ -36,3 +36,17 @@ TEST(owner_audio_stop)
     CHECK(vti_may_stop_audio(0, 0, 1) == 0); // Control Center next to the owner
     CHECK(vti_may_stop_audio(0, 0, 0) == 1); // no plug-in there: the client that started it
 }
+
+// Rate following on Windows (design-rate.md step 4): one stream for every client, like the original's single driver
+// rate. The owning plug-in sets it; the ASIO driver only while no plug-in owns the Virus (E112: a second program
+// restarting the stream under the owner); the Control Center and other clients never.
+TEST(owner_rate_setter)
+{
+    CHECK(vti_is_asio("TI Revive Virus Audio (ASIO)"));
+    CHECK(!vti_is_asio(VTI_PLUGIN_NAME));
+    CHECK(vti_rate_setter(1, 1, 0));  // the owning plug-in
+    CHECK(vti_rate_setter(0, 0, 1));  // the ASIO driver, no plug-in there
+    CHECK(!vti_rate_setter(0, 1, 1)); // the ASIO driver next to another program's plug-in
+    CHECK(!vti_rate_setter(0, 0, 0)); // the Control Center
+    CHECK(!vti_rate_setter(0, 1, 0));
+}

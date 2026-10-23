@@ -73,13 +73,18 @@ static inline void vti_rate_switched(vti_rate_guard *g, uint32_t now_ms)
 // The rate the stream runs at after a client asked for `wanted` while it runs (or last ran) at `cur`: the owner's
 // wish when a switch is allowed now; otherwise it stays - a sharing client never switches the owner's Virus, and a
 // second request within the debounce waits for the next one (the client reads the real rate from the shared ring).
+// `wanted` 0 = no wish (a client that only listens): the rate stays.
 static inline uint32_t vti_rate_choose(uint32_t cur, uint32_t wanted, int owner, int may_switch)
 {
-    return owner && may_switch ? vti_rate_valid(wanted) : cur;
+    return wanted && owner && may_switch ? vti_rate_valid(wanted) : cur;
 }
 
+// what a client asked for, `cur` when it had no wish (for the log)
+static inline uint32_t vti_rate_wanted(uint32_t wanted, uint32_t cur) { return wanted ? vti_rate_valid(wanted) : cur; }
+
 // The wanted rate in a VTIMSG_AUDIO payload (protocol 5): u32 on, the NUL-terminated event name, u32 rate. Older
-// clients send no rate: 44100 (what they expect); a rate other than 44100/48000 is 44100 too.
+// clients send no rate: 44100 (what they expect); 0 = no wish (keep the rate that is set); a rate other than
+// 44100/48000 is 44100.
 static inline uint32_t vti_audio_req_rate(const uint8_t *p, int len)
 {
     for (int i = 4; i < len; i++)
@@ -87,7 +92,8 @@ static inline uint32_t vti_audio_req_rate(const uint8_t *p, int len)
             if (len - (i + 1) < 4)
                 return 44100;
             const uint8_t *r = p + i + 1;
-            return vti_rate_valid((uint32_t)r[0] | (uint32_t)r[1] << 8 | (uint32_t)r[2] << 16 | (uint32_t)r[3] << 24);
+            const uint32_t v = (uint32_t)r[0] | (uint32_t)r[1] << 8 | (uint32_t)r[2] << 16 | (uint32_t)r[3] << 24;
+            return v ? vti_rate_valid(v) : 0;
         }
     return 44100;
 }

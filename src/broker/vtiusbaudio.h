@@ -3,7 +3,7 @@
 #include <windows.h>
 #include <stdint.h>
 
-#define VUA_RATE 44100
+#define VUA_RATE 44100 // the rate before any client asked for one (protocol < 5 clients get it)
 
 // Called once per completed IN read with `frames` interleaved 6-channel int16 frames (device channel order).
 typedef void (*vua_in_fn)(const int16_t *pcm, uint32_t frames, void *user);
@@ -21,3 +21,12 @@ int vua_run(volatile LONG *running, vua_in_fn in, void *user, vua_log_fn log);
 // Seconds of 48 kHz packets the stream saw since the last call (E241; the stream itself repeats SET_CUR): the
 // broker sends the panel's global parameter "System Clock/Frequency = 44.1 kHz" for each (ratelever.h).
 LONG vua_rate_lost(void);
+
+// Rate following (design-rate.md step 4): the rate the stream should run at (44100 or 48000; vua_run starts at it, a
+// running stream switches between two reads in the driver's order, ratesw.h - once per call, a refusal is not
+// retried). vua_switches counts the attempts (the caller waits for the next one); vua_rate = the rate set now.
+// before_start is called on the stream thread with the rate, before the first read at it (the shared ring).
+void vua_want_rate(uint32_t rate);
+uint32_t vua_rate(void);
+LONG vua_switches(void);
+void vua_set_rate_fn(void (*before_start)(uint32_t rate));

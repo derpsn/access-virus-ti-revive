@@ -12,6 +12,15 @@
 
 static inline int vti_is_plugin(const char *name) { return strcmp(name, VTI_PLUGIN_NAME) == 0; }
 
+#define VTI_ASIO_NAME "TI Revive Virus Audio (ASIO)"
+
+static inline int vti_is_asio(const char *name) { return strcmp(name, VTI_ASIO_NAME) == 0; }
+
+// Who may set the Virus' sample rate (Windows: one stream for every client, like the original's single driver rate;
+// design-rate.md step 4): the owning plug-in, or the ASIO driver while no plug-in owns the Virus - never a client
+// next to another program's plug-in (E112: restarting the stream under the owner).
+static inline int vti_rate_setter(int is_owner, int has_owner, int asio) { return is_owner || (asio && !has_owner); }
+
 static inline int vti_client_waits(int plugin, int plugin_owner) { return plugin && !plugin_owner; }
 
 // the VTIMSG_STATE a client is told: 0 no Virus, 1 open, 2 another program's plug-in has it

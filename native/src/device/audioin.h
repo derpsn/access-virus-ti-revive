@@ -12,8 +12,8 @@ public:
     static constexpr int IN_CHANNELS = 6; // ring order: analog in L/R, USB 1 L/R, USB 2 L/R
     ~AudioIn();
     // Linux: map /dev/shm/tirevive-audio-<uid> (or the POSIX shm `linux_name`: unit tests with their own ring);
-    // Windows: the broker's mapping; macOS: Core Audio input
-    bool open(const char *linux_name = nullptr);
+    // Windows: the broker's mapping; macOS: Core Audio input, the device set to `rate` (44100/48000) when it differs
+    bool open(const char *linux_name = nullptr, int rate = 44100);
     void close();
     bool streaming() const;
     // n frames into usb1 (L, R) and usb2 (L, R); missing data -> silence. `latency` = target distance in frames.
@@ -33,6 +33,10 @@ public:
     // true once per rate switch of the broker (the ring's rate_gen counted up since the last call; the rate the ring
     // was opened with is none); `rate` = the new rate. A switch restarts the stream: re-anchor, new sync ping
     bool rate_changed(int &rate);
+    // macOS: switch the Virus' Core Audio rate for our own (re)start, at most once per second; Linux/Windows: the broker
+    // owns it (Broker::audio). Returns the rate in force afterwards. Blocks up to ~1 s on macOS (the device changes
+    // its clock): never from the audio thread - the plug-in's resume / setActive only.
+    int request_rate(int rate);
     // the highest absolute sample per raw channel (VTI_AUDIO_IN_CH, device order) over the newest `frames` frames:
     // diagnostics (which channels carry sound, e.g. the third USB output); false if not streaming
     bool raw_peaks(int frames, int peak[6]) const;

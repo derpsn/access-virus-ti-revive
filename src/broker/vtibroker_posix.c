@@ -757,7 +757,7 @@ static int audio_start(uint32_t wanted, int owner)
                 g_audio_on = 0;
                 return -1;
             }
-        } else if (wanted != cur)
+        } else if (vti_rate_wanted(wanted, cur) != cur)
             blog("audio: %.1f kHz asked, staying at %.1f kHz (%s)", wanted / 1000.0, cur / 1000.0,
                  owner ? "the last switch was less than a second ago" : "only the owner switches the rate");
         return 1;
@@ -774,11 +774,12 @@ static int audio_start(uint32_t wanted, int owner)
     g_shm->out_read = g_shm->out_write;
     g_out_playing = 0;
     g_out_frames = g_out_underruns = g_out_dropped = 0;
-    uint32_t rate = vti_rate_choose(g_shm->rate ? g_shm->rate : VLA_RATE, wanted, owner,
-                                    vti_rate_may_switch(&g_rate_guard, uptime_ms()));
-    if (rate != vti_rate_valid(wanted))
-        blog("audio: %.1f kHz asked, starting at %.1f kHz (%s)", wanted / 1000.0, rate / 1000.0,
-             owner ? "the last switch was less than a second ago" : "only the owner switches the rate");
+    // a fresh start protects no running stream: any explicit wish applies (still debounced); 0 keeps the last rate
+    uint32_t last = g_shm->rate ? g_shm->rate : VLA_RATE;
+    uint32_t rate = vti_rate_choose(last, wanted, 1, vti_rate_may_switch(&g_rate_guard, uptime_ms()));
+    if (rate != vti_rate_wanted(wanted, last))
+        blog("audio: %.1f kHz asked, starting at %.1f kHz (the last switch was less than a second ago)",
+             wanted / 1000.0, rate / 1000.0);
     shm_rate(rate);
     if (vla_start(ctx, h, rate, audio_in, audio_out, NULL))
         return -1;
