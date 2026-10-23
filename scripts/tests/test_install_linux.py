@@ -2,6 +2,7 @@
 so nothing is installed). Run: python3 -I -m unittest discover -s scripts/tests"""
 import os
 import subprocess
+import sys
 import tempfile
 import unittest
 
@@ -28,6 +29,7 @@ def tree(root, rel, files):
     return os.path.join(root, rel)
 
 
+@unittest.skipIf(sys.platform == "win32", "the Linux installer's shell functions, not used on Windows")
 class AccessSrc(unittest.TestCase):
     # the 5.1.7 x64 .msi unpacks Common/ twice (E324): the x64 one with the Control Center exe and a PE32 one
     # under Program Files without it; find's order depends on the file system, so the result must not
@@ -54,6 +56,7 @@ class AccessSrc(unittest.TestCase):
             self.assertEqual(call("access_src", t), "")
 
 
+@unittest.skipIf(sys.platform == "win32", "the Linux installer's shell functions, not used on Windows")
 class FindMsi(unittest.TestCase):
     def test_argument_wins(self):
         self.assertEqual(call("find_msi", "/some/where/my.msi"), "/some/where/my.msi")
