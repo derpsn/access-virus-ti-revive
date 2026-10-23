@@ -1,6 +1,6 @@
 # HANDOFF
 
-## START HERE - state at the end of 2026-10-23 (morning session, the user away from home)
+## START HERE - state 2026-10-23 afternoon (the user home, Virus on USB again)
 
 **Released:** v0.8.31 (2026-10-22, tag v0.8.31, release run 39824346270; site rebuilt by hand, run 39827849547).
 Release-triggered site deploys do NOT happen: always `gh workflow run site.yml` by hand.
@@ -8,8 +8,17 @@ Release-triggered site deploys do NOT happen: always `gh workflow run site.yml` 
 **Test machines (unchanged since 2026-10-22):** Linux = 0.8.31 release (broker ~/.local/lib/tirevive/vtibroker =
 release; CI build backed up in ~/.vst3-backup/0.8.31-ci). Mac = 0.8.31 release pushed to
 ~/Downloads/TI-Revive-0.8.31-release-mac - install not confirmed (check the receipt). win11 = 0.8.31 CI build (0.8.31c),
-release NOT installed, VM off. win10ref off. **Virus TI2 Desktop: NOT on USB since 2026-10-22 21:47:44 (switched off or
-unplugged; kernel log), so nothing of today ran on hardware.**
+release NOT installed, VM off. win10ref off. **Linux broker since 2026-10-23 14:27 = DEV broker (protocol 5, sha256
+b2ae0256..., work/build/linux/vtibroker); the 0.8.31 release one is ~/.local/lib/tirevive/vtibroker.0.8.31-release.**
+Virus TI2 Desktop on USB again (2026-10-23 afternoon).
+
+**NEXT item 1 DONE (2026-10-23 14:27-14:33, Linux, Virus TI2 Desktop, 44.1 kHz only, no rate switch):** dev broker +
+build-native plug-in (HEAD 4e9a65b, rebuilt; ctest 5/5). Capture captures/ours-startup-rate5-20261023: startup_diff vs
+orig-startup-lcd-20261022 = SAME START-UP; audio start = SET_CUR 44100 to EP 0x82, 0x01, 0x82, 0x01 (all Success), IN
+iso submitted 0.14 ms before OUT - as designed (step 3). Broker log "audio on (44.1 kHz asked) -> 1, 44.1 kHz".
+scripts/hil.sh: ALL PASS (H2-1, H2-2, H3 export 1.00x, H6 broker kill; max 0.91 ms, jitter <= 0.18 ms, drift <= 12 ppm).
+usbaudio "errors 1/2" at stop seen as before (older brokers 2026-10-20..23: 216x 0, 90x 1, 145x 2) - not new.
+Dev broker kept installed for items 2/3.
 
 **Branch round-0.8.32 (pushed, last 79e11c6).** Done 2026-10-22: start-up like the original (b3bde33, E321),
 scripts/startup_diff.py (SAME START-UP), E322, E323 + plan findings/design-rate.md, rate following steps 1-2 (eba76ab,
@@ -48,7 +57,7 @@ Linux with the user watching the display ("Audio clock changed" expected) and th
 hardware runs at 44.1 kHz only; no Mac/Windows test of a 48 kHz project. The installed 0.8.31 broker ignores the rate.
 
 **NEXT (in this order, when the user is home and the Virus is on):**
-1. 44.1 kHz check of the new start order: back up ~/.local/lib/tirevive/vtibroker (0.8.31 release), install
+1. DONE (see above). 44.1 kHz check of the new start order: back up ~/.local/lib/tirevive/vtibroker (0.8.31 release), install
    work/build/linux/vtibroker (dev, protocol 5), `scripts/hil.sh --plugin "build-native/VST3/Release/TI Revive Virus
    Control.vst3"` at 44.1 kHz; compare the start in a capture with startup_diff.py; then restore or keep the dev broker.
 2. The user reads "System Clock / SA Freq" in the CONFIG menu (E323 (6), E175/E241 hypothesis). Never sent as a request.
