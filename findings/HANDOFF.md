@@ -14,6 +14,15 @@ MIDI channels, missing = never started or cut off, chords or fast runs, automati
 User answers (2026-10-24 ~15:10): ONE instance with 3 presets (3 parts); the missing notes NEVER STARTED (not cut off);
 in dense chords and fast runs. User leans to the Virus' voice limit. Not settled: whether the Virus drops new notes or
 steals old voices when it runs out is not in the evidence; the EV_MAX counter would rule our side in or out.
+**Counter ADDED (2026-10-24 ~15:40, user OK):** native/src/device/blockevents.h (BlockEvents: MAX 256, counts what
+does not fit, flags a lost note-off; 4 tests), used by process(); DeviceOut::collect_lost -> the worker logs
+"N event(s) lost, more than 256 in one block" and sends all notes off when a note-off was among them (like the
+full-queue path). 393 tests, ctest 5/5, hil.sh ALL PASS. nativehost --stress 20 s: the new line 0 times; the old
+"queue from process() was full" 1645 lines / 20377 events (expected at ~2750 notes/s + 1000 params/s, way past the
+4 kB/s budget; that line logs every worker tick - spammy, not changed). The user's Ableton log had NEITHER line ->
+both queues were fine there; only the per-block limit was invisible before. NEXT: CI build, the user plays the same
+dense passage (one instance, 3 presets) and also the passage with only one preset; diag.log: if no "more than 256"
+line and notes come back with one preset -> the Virus' voice limit.
 
 Branch round-0.8.33. **Linux session 2026-10-24 (after the Windows PC session that wrote steps 1+2 without a compiler):**
 - Build broke on a name clash: `follow_` already is the PanelFollow -> the TimelineFollow member is `tl_follow_`.

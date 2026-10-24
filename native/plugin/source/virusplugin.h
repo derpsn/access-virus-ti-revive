@@ -20,6 +20,7 @@
 #include "device/sendguard.h"
 #include "device/stamprule.h"
 #include "device/offlinepace.h"
+#include "device/blockevents.h"
 #include "device/timelinefollow.h"
 #include "device/presencewatch.h"
 #include "device/stallwatch.h"
@@ -76,6 +77,14 @@ public:
     // from process() only (single producer, lock-free): a message of up to 16 bytes; false if the ring is full
     // `stamp` = frame on the Virus timeline (F5 time stamp before the message), -1 = the latest timeline position
     bool send_rt(const uint8_t *msg, size_t n, int64_t stamp = -1);
+    // events process() could not even collect (more than BlockEvents::MAX in one block): counted and logged by the
+    // worker like a full queue; a note-off among them makes the worker send all notes off
+    void collect_lost(int n, bool note_off)
+    {
+        ev_lost_.fetch_add(n, std::memory_order_relaxed);
+        if (note_off)
+            rt_lost_off_.store(true, std::memory_order_relaxed);
+    }
     // after a block's send_rt calls: wakes the worker (no lock; one notify per block instead of a 1 ms poll)
     void wake_rt() { cv_.notify_one(); }
     std::atomic<int64_t> timeline{-1};
@@ -229,6 +238,8 @@ private:
     std::atomic<int> rt_lost_{0};        // events process() could not queue (ring full); logged by the worker
     std::atomic<bool> rt_lost_off_{false}; // a note-off was among them: the worker sends all notes off
     int rt_lost_logged_ = 0;
+    std::atomic<int> ev_lost_{0}; // events process() could not collect (collect_lost); logged by the worker
+    int ev_lost_logged_ = 0;
     int blocked_logged_ = 0;
     std::atomic<bool> stop_{false};
     bool open_ = false;

@@ -680,6 +680,11 @@ void DeviceOut::run()
             log("Virus TI native: %d event(s) lost, the queue from process() was full\n", lost - rt_lost_logged_);
             rt_lost_logged_ = lost;
         }
+        if (int lost = ev_lost_.load(std::memory_order_relaxed); lost != ev_lost_logged_) {
+            log("Virus TI native: %d event(s) lost, more than %d in one block\n", lost - ev_lost_logged_,
+                BlockEvents::MAX);
+            ev_lost_logged_ = lost;
+        }
         if (rt_lost_off_.exchange(false, std::memory_order_relaxed))
             for (uint8_t ch = 0; ch < 16; ch++) { // a note-off was among them: nothing may keep sounding
                 send({(uint8_t)(0xB0 | ch), 64, 0});
@@ -1311,22 +1316,10 @@ tresult PLUGIN_API VirusPlugin::process(ProcessData &data)
                 out_->tl_steps.fetch_add(1, std::memory_order_relaxed);
         }
     }
-    struct Ev {
-        int64_t stamp;
-        uint8_t n, m[16];
-    };
-    // automation takes at most 96 slots and clock/bend/aftertouch a few dozen, so notes always keep 100+ (a dropped
-    // note-off would hang a note)
-    constexpr int EV_MAX = 256;
-    Ev evs[EV_MAX];
-    int nev = 0;
-    auto add = [&](int64_t stamp, const uint8_t *m, size_t n) {
-        if (nev < EV_MAX && n <= 16) {
-            evs[nev].stamp = stamp, evs[nev].n = (uint8_t)n;
-            memcpy(evs[nev].m, m, n);
-            nev++;
-        }
-    };
+    // automation takes at most 96 slots and clock/bend/aftertouch a few dozen, so notes always keep 100+; what does
+    // not fit is counted and logged (blockevents.h)
+    BlockEvents evs;
+    auto add = [&](int64_t stamp, const uint8_t *m, size_t n) { evs.add(stamp, m, n); };
     // Virus frames of this block: exact on average (a fractional rest carries over), so other host rates do not drift
     tl_acc_ += data.numSamples * ratio;
     int64_t block_frames = (int64_t)std::floor(tl_acc_ + 1e-9);
@@ -1422,7 +1415,7 @@ tresult PLUGIN_API VirusPlugin::process(ProcessData &data)
     // send waiting automation within the budget, oldest first (at the block start)
     automation_.refill(data.numSamples, rate_);
     if (out_)
-        automation_.drain(96 - nev, [&](uint32_t id) {
+        automation_.drain(96 - evs.n, [&](uint32_t id) {
             auto it = params_.find(id);
             if (it == params_.end() || it->second.pending < 0)
                 return false;
@@ -1459,13 +1452,13 @@ tresult PLUGIN_API VirusPlugin::process(ProcessData &data)
     // to the Virus in time order (clock ticks and events share the timeline); stable: at the same stamp automation
     // stays before the notes, so a note starts with the new values (insertion sort: stable, no allocation on the
     // audio thread, and the events come nearly in order)
-    for (int i = 1; i < nev; i++)
-        for (int j = i; j > 0 && evs[j].stamp < evs[j - 1].stamp; j--)
-            std::swap(evs[j], evs[j - 1]);
-    for (int i = 0; out_ && i < nev; i++)
-        out_->send_rt(evs[i].m, evs[i].n, evs[i].stamp);
-    if (out_ && nev > 0)
+    evs.sort();
+    for (int i = 0; out_ && i < evs.n; i++)
+        out_->send_rt(evs.ev[i].m, evs.ev[i].n, evs.ev[i].stamp);
+    if (out_ && evs.n > 0)
         out_->wake_rt();
+    if (out_ && evs.dropped > 0)
+        out_->collect_lost(evs.dropped, evs.dropped_off);
     int64_t block_start = tl_;
     if (tl_valid_) {
         tl_ += block_frames;
