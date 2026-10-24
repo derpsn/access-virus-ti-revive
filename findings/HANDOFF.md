@@ -1,6 +1,10 @@
 # HANDOFF
 
-## START HERE - state 2026-10-24 ~17:20: CI test build 0.8.33 RUNNING (run 40104018425 on d1a7a6d)
+## START HERE - state 2026-10-24 ~17:00: CI test build 0.8.33 GREEN (run 40104018425 on d1a7a6d)
+
+**Linux = CI build 0.8.33** (install.sh as the user, no sudo; plug-in b4b032e5.., broker e3787d73.. = the tarball;
+unpacked in ~/Downloads/TI-Revive-0.8.33-test). hil.sh on it: ALL PASS (work/hil/20261024-165448; max 0.57 ms).
+NEXT: win11 VM silent install, Mac push (INSTALL-COMMAND.txt + "Install test build.command"), Windows PC by the user.
 
 Round 0.8.33 so far: E337 crackle fix (Windows: crackle gone), per-block event counter (E341: missing notes = the
 Virus' voice limit), part following (E342), analog parts in sync with USB parts (E344, "perfectly in sync" on the
