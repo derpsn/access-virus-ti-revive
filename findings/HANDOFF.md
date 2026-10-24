@@ -67,7 +67,10 @@ parameter of page B) with Linux/Windows. Release notes: old Virus C libraries on
    analog outputs in time (E342, E344) added to the features (site + README, same words); Windows card: update note
    (64-bit only, E345); timing table unchanged (no new 16th-note DAW measurement; B1 hil-win is another measure),
    coverage 94 % (16 Oct) kept with its date. Site built locally only (not deployed). Release notes 0.8.33 in
-   build.yml (Tested-on line after the targeted round). Targeted round on the new CI build: VM setup.exe upgrade over
+   build.yml (Tested-on line after the targeted round). Site: new notice box above the hero (build.py NOTICES +
+   notice_section, style.css .notice; empty list = no box), first entry = the 64-bit Windows update note (E345); the
+   README starts with the same text. Checked in headless Firefox at 1400 and 390 px (scratchpad screenshots).
+   Targeted round spec: scripts/checklists/round-0.8.33-2.json (L1-L2, W1-W2, M1-M2). Targeted round on the new CI build: VM setup.exe upgrade over
    the 32-bit DLL (finish page text, DLL replaced, plug-in opens), Linux install.sh again + hil.sh + Incubation V2
    names, Mac install + one Virus A/B/C patch page B + hil-mac.
 

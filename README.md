@@ -6,6 +6,14 @@
 
 Website with downloads, features and help: **[derpsn.github.io/access-virus-ti-revive](https://derpsn.github.io/access-virus-ti-revive/)**
 
+> **Important - Windows: update with your Access .msi at hand (0.8.33).** Setups of TI Revive 0.8.32 and older could
+> copy the 32-bit `Virus Control.dll` from your Access installer instead of the 64-bit one; with it, old Virus A, B and
+> C patch libraries loaded empty. Since 0.8.33 TI Revive reads only the 64-bit file, and with the 32-bit one the
+> plug-in shows no editor. When you update, put the Access "Virus TI Software Suite" 64-bit `.msi` next to the setup
+> (or in Downloads) and keep "Set up the Access Virus TI files now" checked on the last page: the setup replaces the
+> file. Already updated without it: *Start, TI Revive, Set up Access Virus TI files*. Linux: run `./install.sh` again
+> with the `.msi`. The TI Revive Control Center says when it finds the 32-bit file. macOS is not affected.
+
 > ☕ **Free, and it will stay free.** Every change is tested on the real synth on Windows, macOS and Linux, often
 > back and forth between the three, and that takes a lot of evenings. If TI Revive gives your Virus a second life and
 > you'd like to say thanks, you can [buy me a coffee](https://buymeacoffee.com/callmederpsn). It is entirely

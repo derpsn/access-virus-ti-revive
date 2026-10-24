@@ -217,7 +217,7 @@ def page_landing(latest, releases, sums):
                    "The Control Center window needs gtkmm 3 (Ubuntu 24.04+ <code>libgtkmm-3.0-1t64</code>, Fedora "
                    "<code>gtkmm3.0</code>, Arch/CachyOS <code>gtkmm3</code>); <code>install.sh</code> names what is "
                    "missing."])
-    return f"""
+    return notice_section() + f"""
 <section class="hero">
   <div class="wrap">
     <div class="hero-text">
@@ -715,6 +715,32 @@ def page_changelog_landing(releases):
 SHARED_IMAGES = ["control-center.png", "control-center-nerd-mode.png", "plugin-help-mode.png", "plugin-help-inactive.png",
                  "plugin-menus.png"]
 TESTS = 403 # unit tests in native/tests (vtitests), as of 2026-10-24 (round 0.8.33)
+
+# Important information shown at the top of the page, newest first (empty list = no box). The README starts with the
+# same text ("Important" block), keep both identical. Remove an entry when it no longer matters to users.
+NOTICES = [
+    ("Windows: update with your Access .msi at hand (0.8.33)",
+     "Setups of TI Revive 0.8.32 and older could copy the 32-bit <code>Virus Control.dll</code> from your Access "
+     "installer instead of the 64-bit one; with it, old Virus A, B and C patch libraries loaded empty. Since 0.8.33 "
+     "TI Revive reads only the 64-bit file, and with the 32-bit one the plug-in shows no editor. When you update, put "
+     "the Access &ldquo;Virus TI Software Suite&rdquo; 64-bit <code>.msi</code> next to the setup (or in Downloads) and "
+     "keep &ldquo;Set up the Access Virus TI files now&rdquo; checked on the last page: the setup replaces the file. "
+     "Already updated without it: <em>Start, TI Revive, Set up Access Virus TI files</em>. Linux: run "
+     "<code>./install.sh</code> again with the <code>.msi</code>. The TI Revive Control Center says when it finds the "
+     "32-bit file. macOS is not affected."),
+]
+
+
+def notice_section():
+    if not NOTICES:
+        return ""
+    items = "".join(f"\n      <div><h3>{t}</h3><p>{x}</p></div>" for t, x in NOTICES)
+    return f"""
+<section class="notice" aria-label="Important information">
+  <div class="wrap"><div class="notice-box">
+      <h2>Important</h2>{items}
+  </div></div>
+</section>"""
 # line coverage of vticore, measured like CI (no Access files, empty home): gcov over the test run
 COVERAGE, COVERAGE_DATE = "94 %", "16 Oct 2026"
 
