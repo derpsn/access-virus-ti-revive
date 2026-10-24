@@ -889,6 +889,7 @@ tresult PLUGIN_API VirusPlugin::initialize(FUnknown *context)
         }
         drain_param_updates();
         load_reported_presets();
+        send_output_delays();
         report_offline();
         tick_sync_alert();
         diag_report(); // also with the editor closed (host rate and block sizes, E187)
@@ -3521,6 +3522,49 @@ void VirusPlugin::panel_message(const std::vector<uint8_t> &msg)
             else
                 pending_.push_back({it->second, c.value / 127.0});
         }
+    }
+}
+
+// a part's Output Select, from the form that applies (the third USB output on or off), as panel_message reads it
+int VirusPlugin::part_output(int part)
+{
+    static const std::string with3 = "Multi Part Parameter/pr Output Select Control3",
+                             without3 = "Multi Part Parameter/pr Output Select Control2";
+    const Parameter *p = cond_ ? cond_->find(with3) : nullptr;
+    return ui_value(p && meta_cond(*p, part) ? with3 : without3, part);
+}
+
+// worker (idle hook): parts on an analog output are held back by the plug-in's latency, so they sound together with
+// the USB parts (E344, like the original: 6F pp 7F ms for the parts that changed, all 16 at Play/Stop and after a new
+// connection); checked every 50 ms
+void VirusPlugin::send_output_delays()
+{
+    if (!out_)
+        return;
+    if (!ready_.load()) {
+        if (od_ready_seen_)
+            out_delay_.reset(); // the Virus' values are unknown after a reconnect
+        od_ready_seen_ = false;
+        return;
+    }
+    od_ready_seen_ = true;
+    const bool playing = host_playing_.load(std::memory_order_relaxed), all = playing != od_playing_seen_;
+    od_playing_seen_ = playing;
+    const auto now = std::chrono::steady_clock::now();
+    if (!all && now < od_next_)
+        return;
+    od_next_ = now + std::chrono::milliseconds(50);
+    int outputs[16], parts[16], ms[16];
+    for (int p = 0; p < 16; p++)
+        outputs[p] = part_output(p);
+    const int delay = (int)std::lround(latency_frames() * 1000.0 / virus_rate());
+    const int n = out_delay_.due(outputs, delay, all, parts, ms);
+    for (int i = 0; i < n; i++) {
+        const auto m = OutputDelay::message(parts[i], ms[i]);
+        out_->send(std::vector<uint8_t>(m.begin(), m.end()));
+        if (!all)
+            out_->log("Virus TI native: part %d output %d -> output delay %d ms\n", parts[i] + 1, outputs[parts[i]],
+                      ms[i]);
     }
 }
 

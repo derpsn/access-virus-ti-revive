@@ -21,6 +21,7 @@
 #include "device/stamprule.h"
 #include "device/offlinepace.h"
 #include "device/blockevents.h"
+#include "device/outputdelay.h"
 #include "device/timelinefollow.h"
 #include "device/presencewatch.h"
 #include "device/stallwatch.h"
@@ -687,6 +688,12 @@ private:
     std::vector<uint8_t> part_dump(int part); // the part's patch as it is now (edits included)
     std::mutex sync_alert_mu_;
     std::atomic<bool> host_playing_{false}; // audio thread -> worker
+    // analog parts held back by the latency like the original (outputdelay.h, E344); worker thread only
+    OutputDelay out_delay_;
+    bool od_ready_seen_ = false, od_playing_seen_ = false;
+    std::chrono::steady_clock::time_point od_next_{};
+    int part_output(int part);
+    void send_output_delays();
     int64_t sync_tick_ms_ = 0, sync_log_ms_ = 0; // worker
     int sync_logged_ = 0;                        // worker
     void tick_sync_alert();

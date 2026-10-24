@@ -104,7 +104,11 @@ send 0x1800a86b0, stamp 0x1800a8420). If the original does nothing special -> sa
 if it does -> copy it. RESULT = E344: the original sends F0 00 20 33 01 10 6F pp 7F ms F7 per part
 (ms = delay for analog parts, 0 for USB; likely its reported latency in ms); seen on the wire with 0 only; TI Revive
 never sends it. NEXT: capture of the ORIGINAL with part 1 on Out1 (VM) -> the real non-zero value and when it is
-sent; then implement in TI Revive test-first (send for each part whose output changes, at connect, on latency change).
+sent; then implement in TI Revive test-first (send for each part whose output changes, at connect, on latency change). DONE: ref-outdelay-1 = 6F 00 7F 1A (26 ms) for the analog
+part 1, 0 for the rest, all 16 at Play and Stop. IMPLEMENTED (outputdelay.h + VirusPlugin::send_output_delays in the
+idle hook, ms = reported latency in ms, max 127; 399 tests, ctest 5/5). NOT tested on hardware yet: VM still running
+with the Virus attached (Live open?) -> detach, VM off, install the dev build, user checks analog vs USB parts by ear
+in REAPER; diag.log shows "output delay N ms" per change.
 **VM test running:** win10ref ON, Virus attached (Access driver OK) - test: switch presets on the Virus (Multi edit
 mode) and see whether the ORIGINAL plug-in follows; capture ref-presetswitch-1. Then detach, VM off, the same with
 TI Revive (load_reported_presets, E152/E157).
