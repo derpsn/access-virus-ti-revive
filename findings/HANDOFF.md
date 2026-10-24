@@ -50,12 +50,11 @@ import whole libraries to RAM. No version number, no diag.log. Reply posted (iss
 asked for diag.log of a broken start, a screenshot of the part's output setting, the exact version. (2) and (3) not in
 the evidence yet -> NEXT: check output routing to the analog outs and the volume knob on our TI Desktop.
 
-**Volume knob over USB (issue #14 point 3; user asked for the feature 2026-10-24 ~16:45) = E338:** in the default
-"Volume>Virus" mode the knob sends nothing over USB and the USB audio does not change (TI2 Desktop, tested). The Global
-switch "Remote Main Volume Enable" = "Volume>MIDI" makes the knob send MIDI instead. NEXT: the user sets that mode on
-the Virus' own panel (no SysEx from us, rule 2), second nativehost run (VTI_NATIVE_PANELLOG + VTI_NATIVE_DEBUG): what
-arrives; REA on Virus Control.dll: does the original apply it to the USB audio. Then design (plug-in output gain from
-the knob), test-first.
+**Volume knob over USB (issue #14 point 3) = E338, CLOSED 2026-10-24 ~17:10:** the knob sends nothing over USB and
+does not change the USB audio - with TI Revive AND with the original (win10ref capture ref-mastervol-1); Access's
+Quickstart says so ("Master Volume will not have any effect when you are using the USB outs in Virus Control", also
+in Spanish). "Volume>MIDI" belongs to Remote Mode (SHIFT+CONFIG). No feature to build. For the #14 reply: same as the
+original, quote the Quickstart. win10ref was running with the Virus attached at the end of this test (see below).
 
 **Problem (E337, follow-up of E187):** Ableton on bare metal, Creative card 44.1 kHz / 2048 (no ASIO), crackles in
 stretches of about a minute, roughly every 6 minutes. diag.log: drops 0, process time fine, read margin >= 0; in those
