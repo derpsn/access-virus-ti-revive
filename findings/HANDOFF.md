@@ -89,6 +89,11 @@ selection -> FIXED (Panel Part report stored under the old part instead of as a 
 394 tests, ctest 5/5); dev build sha 2b50d878.. installed in ~/.vst3 (VM off, Virus on Linux). USER CHECKED in REAPER
 (~16:00): the window follows the selected part. DONE. Older plan line: does its window follow the Virus'
 part selection, part volume knob (CC 7 on the part's channel), mute, output - for parts other than 1 too.
+**#14 update 13:49 UTC (reporter):** the start-up crackle (point 1) is SOLVED by the update (likely 0.8.32); analog
+outs still give no signal (they prefer USB, not urgent); still wish: hardware volume knob (= original behaviour, E338;
+Multi edit mode works on the TI - Snow unknown) and save/load presets/banks (mostly exists: LOAD/SAVE, Personal
+Libraries, browser drag to RAM, Control Center backup/restore - tested on the TI2 only). Reply drafted (Spanish,
+scratchpad reply14b.md), waiting for the user's OK before posting.
 **VM test running:** win10ref ON, Virus attached (Access driver OK) - test: switch presets on the Virus (Multi edit
 mode) and see whether the ORIGINAL plug-in follows; capture ref-presetswitch-1. Then detach, VM off, the same with
 TI Revive (load_reported_presets, E152/E157).
