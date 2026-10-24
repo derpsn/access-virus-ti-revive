@@ -273,7 +273,10 @@ same with Access' own driver.
   has "Download entire bank from Virus TI" (reads all 128 again, about 2 minutes, progress on the LCD) and "Sort alphabetically" (writes
   only the slots that change; like the original, it cannot be undone).
 - **Library folders like the original's** (since 0.8.29): Patch libraries from the original's three places, each its own menu (since 0.8.29): Personal Libraries (your Documents folder), User Libraries and Public Libraries. On the Mac the factory libraries that Access installs in /Library/Application Support appear under Public Libraries. On Linux only Personal Libraries.
-- **Presets and soft knobs chosen on the Virus itself** are followed, as in the original.
+- **Presets, soft knobs and the part selected on the Virus itself** are followed, as in the original (the part since
+  0.8.33).
+- **Three stereo outputs over USB, plus the analog outputs of the Virus.** Parts on the analog outputs stay in time
+  with the USB parts: like the original, the Virus holds them back by the USB latency (since 0.8.33).
 - **Knobs on the Virus reach your DAW:** knobs you turn on the Virus reach your DAW like the plug-in's own knobs while the plug-in window is open (since 0.8.29, [issue #10](https://github.com/derpsn/access-virus-ti-revive/issues/10)): Ableton Live's Configure mode adds them and automation records them. Tested in Ableton Live 11 (Windows 11, VM), Ableton Live 12 (macOS) and REAPER (Linux).
 
 <p align="center">
@@ -448,7 +451,7 @@ hardware (TI2 Desktop) - details and raw numbers in [`findings/evidence.md`](fin
 - **Automation rate limit** (250 messages/s, coalesced per parameter): unthrottled parameter floods hung the Virus'
   audio until a power cycle within 4 minutes; with the limit a 4-minute full-load test (16 channels of notes + 32
   automation lanes) passes.
-- Checked with ThreadSanitizer and AddressSanitizer (one race in the broker connection found and fixed); 379 unit
+- Checked with ThreadSanitizer and AddressSanitizer (one race in the broker connection found and fixed); 403 unit
   tests run with every release build on Windows and Linux, plus two end-to-end tests on Linux in a virtual display
   (two editors of a duplicated track; the Control Center's window and close button).
 

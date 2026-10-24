@@ -278,6 +278,21 @@ jobs:
           native plug-in **"TI Revive Virus Control"**: looks and works like the original Virus Control and runs
           natively on Windows, macOS (Apple Silicon and Intel) and Linux - no Rosetta, Wine or yabridge.
 
+          **New in 0.8.33: no more crackle on Windows, analog outputs in time, and the right Access files.**
+
+          - Windows: the crackle that came in stretches (seen on a Windows 11 PC) is gone. The plug-in moved its clock
+            reference at every uneven buffer from the host; now it moves it only for a lasting offset (31 minutes in
+            Ableton Live on a real Windows 11 PC without crackle).
+          - Parts on the Virus' analog outputs stay in time with the parts on USB: like the original, the plug-in tells
+            the Virus to hold them back by the USB latency.
+          - The plug-in follows the part you select on the Virus (Multi edit mode), like the original.
+          - Only the 64-bit Virus Control.dll is used. Earlier Windows setups could copy the 32-bit one, and with it old
+            Virus A/B/C patch libraries loaded empty. When updating, keep the Access .msi next to the setup (or in
+            Downloads): the setup replaces the 32-bit file. Linux: install.sh does the same when run again with the .msi.
+            The Control Center says when it finds the 32-bit file.
+          - macOS: old Virus A/B/C library patches get the right default page B, the settings the original adds when
+            it converts them (the Mac plug-in took them from the wrong place in the Access files).
+
           **New in 0.8.32: the Virus follows your project's sample rate, like with the original.**
 
           - The Virus now runs at 44.1 or 48 kHz to match the project, the way the original driver did: a 48 kHz project

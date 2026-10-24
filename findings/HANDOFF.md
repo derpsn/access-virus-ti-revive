@@ -62,7 +62,14 @@ parameter of page B) with Linux/Windows. Release notes: old Virus C libraries on
    with skipped dumps.
 7. Reddit report "personal libraries aren't producing any sound": likely E345 -> ask whether their Common\Virus
    Control.dll is 32-bit (14,040,312 bytes) and whether only Virus A/B/C libraries were empty.
-8. Release: README/site (analog delay, part following, 64-bit only; tirevive-site-check), release notes, version.
+8. Release prep 2026-10-24 ~20:15 (user: targeted round, not a full one): native VERSION 0.8.33, pushed, CI run
+   40119192061 (3217a3a). Site check (tirevive-site-check): TESTS 379 -> 403 (site + README); part following and
+   analog outputs in time (E342, E344) added to the features (site + README, same words); Windows card: update note
+   (64-bit only, E345); timing table unchanged (no new 16th-note DAW measurement; B1 hil-win is another measure),
+   coverage 94 % (16 Oct) kept with its date. Site built locally only (not deployed). Release notes 0.8.33 in
+   build.yml (Tested-on line after the targeted round). Targeted round on the new CI build: VM setup.exe upgrade over
+   the 32-bit DLL (finish page text, DLL replaced, plug-in opens), Linux install.sh again + hil.sh + Incubation V2
+   names, Mac install + one Virus A/B/C patch page B + hil-mac.
 
 ## START HERE - state 2026-10-24 ~18:05: round 0.8.33 checklist - Linux, Mac, Windows PC DONE (B1 graded: all pass)
 
