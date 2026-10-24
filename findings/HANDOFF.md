@@ -50,11 +50,14 @@ import whole libraries to RAM. No version number, no diag.log. Reply posted (iss
 asked for diag.log of a broken start, a screenshot of the part's output setting, the exact version. (2) and (3) not in
 the evidence yet -> NEXT: check output routing to the analog outs and the volume knob on our TI Desktop.
 
-**Volume knob over USB (issue #14 point 3) = E338, CLOSED 2026-10-24 ~17:10:** the knob sends nothing over USB and
-does not change the USB audio - with TI Revive AND with the original (win10ref capture ref-mastervol-1); Access's
-Quickstart says so ("Master Volume will not have any effect when you are using the USB outs in Virus Control", also
-in Spanish). "Volume>MIDI" belongs to Remote Mode (SHIFT+CONFIG). No feature to build. For the #14 reply: same as the
-original, quote the Quickstart. win10ref was running with the Virus attached at the end of this test (see below).
+**Volume knob over USB (issue #14 point 3) = E338 + E339 (2026-10-24 ~17:15):** default mode: the knob does nothing on
+USB, with the original too (Access Quickstart says so). BUT with the Global switch "Remote Main Volume" = "Volume>MIDI"
+(the user set it on the Virus panel - it STAYS set on our TI2 Desktop; set it back when done) the knob sends CC 7 ch 1,
+and the ORIGINAL plug-in sends it back to the Virus itself (also with Live's input on "No Input") -> Patch Volume of
+part 1 -> USB level follows (user heard it). NEXT: same knob test with TI Revive on Linux (nativehost + PANELLOG,
+wav level): does our plug-in take the incoming CC 7 and send it back? If not -> feature = copy the original's echo
+(test-first). Also from the captures: panel Multi changes report as 72 00 29 vv (Output Select) / 72 00 48 (Part Mute)
+- useful for #14 point 2.
 
 **Problem (E337, follow-up of E187):** Ableton on bare metal, Creative card 44.1 kHz / 2048 (no ASIO), crackles in
 stretches of about a minute, roughly every 6 minutes. diag.log: drops 0, process time fine, read margin >= 0; in those
