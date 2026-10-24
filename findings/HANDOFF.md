@@ -1,6 +1,6 @@
 # HANDOFF
 
-## START HERE (2026-10-24 ~20:00): 64-bit Virus Control.dll only (E345) - steps 1-3 done, VM test next
+## START HERE (2026-10-24 ~21:20): 64-bit Virus Control.dll only (E345) + Mac page B fix (E346) - done, VM test done
 
 **Seen on the Windows PC (user):** LOAD > Personal Libraries > "Manuel Schleis/Manuel Schleis Incubation V2" is
 listed, its bank is EMPTY (no names; "worked already" on other machines). The file is fine: 128 Virus C dumps (267
@@ -39,9 +39,11 @@ Mach-O +0x2a0), tests for both layouts, vtimodel pageb: Mac bundle == Windows x6
 round item: Mac, load an old Virus A/B/C library patch, compare a page B value (e.g. a mod matrix slot or FX
 parameter of page B) with Linux/Windows. Release notes: old Virus C libraries on the Mac sounded with a wrong page B.
 **NEXT:**
-4. Short test on the win11 VM (snapshot first, no Virus attached): (a) tirevive-access.ps1 -Quiet with the .msi ->
-   Common\Virus Control.dll is PE32+ (a622f9a2..); (b) a normal Access install of the .msi -> which DLL lands in
-   Common (expected x64); revert the snapshot afterwards.
+4. DONE ~21:20 (win11 VM, snapshot before-e345-test, reverted; both VMs off): new tirevive-access.ps1 replaced the
+   VM's 32-bit DLL with a622f9a2.. (x64), rerun idempotent; a normal Access install puts x64 in Program Files\...\
+   Common, x86 in Program Files (x86) (E345). The VM is back to the 32-bit DLL = a real case for the next CI build
+   (setup.exe exit dialog / Set up Access files must fix it). win10 VM was started by mistake (vm.sh default) and
+   shut down again, nothing ran in it.
 5. A Linux-only item the user will name (part of 0.8.33).
 6. Open from the scan (not fixed): dumps of other sizes (202/158 bytes in "Yoz & Andy/Incubation V3 ... .mid.mid",
    31 of 128 kept; Cosmosis 54/59; Nice Bytes Toxic/Interactive 127/128) and upgrade_single false for version byte
