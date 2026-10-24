@@ -2,7 +2,8 @@
  "about": "Risk class per changed file (scripts/risk.py; findings/testing.md). First matching rule wins; a file no rule names counts as class C on every platform. A = logic covered by unit tests, docs, tools that are not shipped: no manual items. B = I/O, timing, threads, the send path: the core items named here (on Linux run by scripts/hil.sh where automated). C = platform code, installers, drivers, sleep/wake, rule-2 guards: the named core items on that platform by hand. Patterns use fnmatch (* also crosses /).",
  "platforms": {"linux": "linux", "windows": "vm", "mac": "mac"},
  "core_keys": ["cold", "reopen", "export", "power", "sleep"],
- "automated": {"linux": ["cold", "reopen", "export", "sleep"]},
+ "automated": {"linux": ["cold", "reopen", "export", "sleep"], "windows": ["cold", "reopen", "export"],
+               "mac": ["cold", "reopen", "export"]},
  "rotation": {"why": "no finding in rounds 0.8.23-0.8.27 (findings/testing.md, yield table): by hand for class B only every 3rd round",
               "keys": ["reopen", "power"], "every": 3},
  "rules": [

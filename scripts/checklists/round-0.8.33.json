@@ -1,7 +1,7 @@
 {
  "round": "0.8.33",
  "core": "core.json",
- "core_items": ["BC1", "BC2", "BC3", "MC1", "MC2", "MC3"],
+ "core_items": [],
  "lead": "Test build 0.8.33 (CI run 40104018425). New in this round: no more crackle when the host's block timing turns uneven (the timeline no longer jumps back and forth, E337), parts on an analog output are held back by the plug-in's latency so they sound together with the USB parts like in the original (E344), the window follows the part you select on the Virus in Multi edit mode (E342), and a log line when more than 256 MIDI events fall into one block (E341). On Linux all of this was tested with dev builds and hil.sh passed on the installed CI build. Mark each item, add a note where something looks different, then copy the results at the bottom into the chat.",
  "rules": [
   "Analog tests: keep the Virus' MASTER VOLUME low before you put headphones on, then raise it slowly.",
@@ -43,17 +43,18 @@
    "where": "MacBook Air M3, Ableton Live 12",
    "prep": [
     "Already installed by the user: the CI package (receipt 0.8.33, VST3 039b19e7.. = the package payload).",
-    "Plug the Virus into the Mac."
+    "Plug the Virus into the Mac.",
+    "Cold start, reopen and export are no longer separate hand items: M1 (hil-mac) runs them."
    ],
    "items": [
     {
      "id": "M1",
-     "title": "Automated hardware run (hil-mac)",
+     "title": "Automated hardware run (hil-mac): cold start, reopen x2, export, broker kill",
      "steps": [
       "Close Live. In Finder open <code>~/Downloads/TI-Revive-0.8.33-mac/hil</code> and double-click <code>hil-mac.command</code> (about 5 minutes, keep the Virus on and the Mac awake).",
       "Tell Claude the results folder name it prints at the end."
      ],
-     "expect": "'done, nothing failed'; Claude grades the folder."
+     "expect": "'done, nothing failed'; Claude grades the folder. Covers the core items cold start, reopen and export (automated since this round, findings/testing.md)."
     },
     {
      "id": "M2",
@@ -81,17 +82,18 @@
    "prep": [
     "Install the CI build: <code>TI-Revive-0.8.33-setup.exe</code> (in ~/Downloads/TI-Revive-0.8.33-test/msi on Linux, or from CI run 40104018425, artifact TI-Revive-msi).",
     "Plug-in log on: Control Center > diagnostics, or create the empty file <code>%LOCALAPPDATA%\\virus-ti-native\\diag.on</code>.",
-    "The hil kit: CI run 40104018425, artifact TI-Revive-hil-windows."
+    "The hil kit: CI run 40104018425, artifact TI-Revive-hil-windows.",
+    "Cold start, reopen and export are no longer separate hand items: B1 (hil-win) runs them."
    ],
    "items": [
     {
      "id": "B1",
-     "title": "Automated hardware run (hil-win)",
+     "title": "Automated hardware run (hil-win): cold start, reopen x2, export, broker kill",
      "steps": [
       "Unzip the hil kit, run <code>hil-win.ps1</code> (about 5 minutes).",
       "Copy the results folder it prints to Linux (like the last time, e.g. into /home/datoml/windows_tests)."
      ],
-     "expect": "'done, nothing failed'; Claude grades the folder."
+     "expect": "'done, nothing failed'; Claude grades the folder. Covers the core items cold start, reopen and export (automated since this round, findings/testing.md)."
     },
     {
      "id": "B2",

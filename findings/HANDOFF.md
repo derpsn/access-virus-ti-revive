@@ -16,7 +16,10 @@ delay 2048/256, L2 part following + part volume; M1 hil-mac, M2 analog delay, M3
 Ableton session (E337), B3 analog delay at Windows latency (at 2048 the needed ~131 ms is above the Virus' 127 ms max
 -> a few ms early expected), B4 dense MIDI counter. Read marks with ArtifactData list rounds/0.8.33/marks. LINUX DONE (17:07): L1 pass, L2 pass; diag.log on the CI build: only the analog part
 delayed (part 3 on Out1 / Out3 R), 56 ms at REAPER 48 kHz block 1024, 40 ms at block 256 (= (A+block+640)/48000);
-USB parts 0. NEXT: Mac block (MC1-3, M1 hil-mac, M2, M3), then the Windows PC. Windows PC: the user installs ~/Downloads/TI-Revive-0.8.33-test/msi/setup.exe.
+USB parts 0. CHANGED (user's question, 17:12): hil-mac + hil-win have both
+passed once (2026-10-23 / 2026-10-24), so risk.json now lists cold/reopen/export as automated on Windows and macOS too
+(testing.md updated); checklist republished as version 2 (same link, marks kept): MC1-3 and BC1-3 dropped, M1/B1
+cover them. NEXT: Mac block (M1 hil-mac, M2, M3), then the Windows PC (B1-B4). Windows PC: the user installs ~/Downloads/TI-Revive-0.8.33-test/msi/setup.exe.
 
 Round 0.8.33 so far: E337 crackle fix (Windows: crackle gone), per-block event counter (E341: missing notes = the
 Virus' voice limit), part following (E342), analog parts in sync with USB parts (E344, "perfectly in sync" on the
