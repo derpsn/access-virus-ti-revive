@@ -50,6 +50,13 @@ import whole libraries to RAM. No version number, no diag.log. Reply posted (iss
 asked for diag.log of a broken start, a screenshot of the part's output setting, the exact version. (2) and (3) not in
 the evidence yet -> NEXT: check output routing to the analog outs and the volume knob on our TI Desktop.
 
+**Volume knob over USB (issue #14 point 3; user asked for the feature 2026-10-24 ~16:45) = E338:** in the default
+"Volume>Virus" mode the knob sends nothing over USB and the USB audio does not change (TI2 Desktop, tested). The Global
+switch "Remote Main Volume Enable" = "Volume>MIDI" makes the knob send MIDI instead. NEXT: the user sets that mode on
+the Virus' own panel (no SysEx from us, rule 2), second nativehost run (VTI_NATIVE_PANELLOG + VTI_NATIVE_DEBUG): what
+arrives; REA on Virus Control.dll: does the original apply it to the USB audio. Then design (plug-in output gain from
+the knob), test-first.
+
 **Problem (E337, follow-up of E187):** Ableton on bare metal, Creative card 44.1 kHz / 2048 (no ASIO), crackles in
 stretches of about a minute, roughly every 6 minutes. diag.log: drops 0, process time fine, read margin >= 0; in those
 stretches `timeline steps` 195-587 and `anchors` (jumps) 2-198 per 10 s, err -767..852 (calm: err -184..256, 0 jumps).
