@@ -20,7 +20,7 @@ does not fit, flags a lost note-off; 4 tests), used by process(); DeviceOut::col
 full-queue path). 393 tests, ctest 5/5, hil.sh ALL PASS. nativehost --stress 20 s: the new line 0 times; the old
 "queue from process() was full" 1645 lines / 20377 events (expected at ~2750 notes/s + 1000 params/s, way past the
 4 kB/s budget; that line logs every worker tick - spammy, not changed). The user's Ableton log had NEITHER line ->
-both queues were fine there; only the per-block limit was invisible before. NEXT: CI build, the user plays the same
+both queues were fine there; only the per-block limit was invisible before. NEXT: CI build RUNNING (run 40095512298), the user plays the same
 dense passage (one instance, 3 presets) and also the passage with only one preset; diag.log: if no "more than 256"
 line and notes come back with one preset -> the Virus' voice limit.
 
