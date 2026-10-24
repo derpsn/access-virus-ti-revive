@@ -6,8 +6,9 @@
 unpacked in ~/Downloads/TI-Revive-0.8.33-test). hil.sh on it: ALL PASS (work/hil/20261024-165448; max 0.57 ms).
 **win11 VM = CI build 0.8.33** (setup.exe /quiet exit 0, entries "TI Revive 0.8.33", plug-in 1548eea1.. = the MSI's
 nativevst3; C:\tirevive-test\0.8.33; VM off). **Mac: package PUSHED** (~17:10) to ~/Downloads/TI-Revive-0.8.33-mac
-(pkg 1eebd732.. = CI) with hil/ kit, INSTALL-COMMAND.txt and "Install test build.command"; the user installs (no sudo
-from me). Check the receipt after: pkgutil --pkg-info for TI Revive. Windows PC: the user installs ~/Downloads/TI-Revive-0.8.33-test/msi/setup.exe.
+(pkg 1eebd732.. = CI) with hil/ kit, INSTALL-COMMAND.txt and "Install test build.command"; INSTALLED by the user (~17:15):
+receipt io.github.derpsn.tirevive 0.8.33, VST3 binary 039b19e7.. = the pkg payload. All three test machines + the
+Windows PC download ready; NEXT: round checklist (risk.py --round 0.8.33 + new items), hil-mac/hil-win by the user. Windows PC: the user installs ~/Downloads/TI-Revive-0.8.33-test/msi/setup.exe.
 
 Round 0.8.33 so far: E337 crackle fix (Windows: crackle gone), per-block event counter (E341: missing notes = the
 Virus' voice limit), part following (E342), analog parts in sync with USB parts (E344, "perfectly in sync" on the
