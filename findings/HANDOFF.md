@@ -1,5 +1,43 @@
 # HANDOFF
 
+## START HERE (new, 2026-10-24 ~19:00): Virus C libraries empty with the 32-bit Virus Control.dll
+
+**Seen on the Windows PC (user):** LOAD > Personal Libraries > "Manuel Schleis/Manuel Schleis Incubation V2" is
+listed, its bank is EMPTY (no names; "worked already" on other machines). The file is fine: 128 Virus C dumps (267
+bytes, version 7, bank byte 1, programs 0..127), unchanged since 2009.
+**Cause (static, Python copy of our logic against the user's files, no C++ build on that PC):** C:\Program Files\Access
+Music\Virus TI\Common\Virus Control.dll there was the **x86** build (PE machine 0x14c, sha256 3e844c35..; inventory.md
+"x86"). AccessFiles::default_page_b() (native/src/access/accessfiles.cpp:388) takes page B at `-Init-` dump - 0x400,
+which is the x64 layout (a622f9a2..: Init at 0x1c46b0, table OK). In the x86 DLL that spot has bytes > 0x7F -> {} ->
+load_library_file drops EVERY 267-byte dump -> all Virus A/B/C libraries load empty, TI-format ones (OS4/OS5 ...) are
+fine. Nothing in diag.log: neither a missing page B nor skipped dumps are logged.
+**How the x86 DLL got there:** an ADMINISTRATIVE extract of "Virus TI Software Suite 5.1.7.00 64-bit.msi" (msiexec /a)
+flattens the x64 and x86 trees into one Access Music/Virus TI/Common, and the x86 file (File key viruscontrol_dll)
+overwrites the x64 one (viruscontrol_dll64); the .vst3 comes out x86 too. The user's Downloads\VirusTI Driver folder
+(copied to Program Files on Oct 17) is such an extract. The x64 file comes out right with 7-Zip: Installer.cab ->
+viruscontrol_dll64.
+**Workaround DONE (2026-10-24 ~18:55):** x64 DLL (a622f9a2..) from the MSI's cab copied into Program Files\...\Common
+(elevated), the x86 one backed up in the session scratchpad; page B check on the installed file now OK. NOT yet
+checked in the plug-in: DAW restart -> Incubation V2 shows 128 names and plays (user). The Downloads\VirusTI Driver
+folder still holds the x86 DLL.
+**NEXT (Linux):**
+1. Fix default_page_b() for both builds. Lead (byte compare, not REA): the same 256 bytes are in the x86 DLL at
+   0x13af58 = `-Init-` (0x13b200) - 0x2a8. Confirm with REA (skill reverse-engineer-anything) how the original's Virus C
+   upgrade reaches page B in each build (x64 a622f9a2.., x86 3e844c35..), then pick it by PE machine (like the knob
+   templates' pointer size, accessfiles.cpp:228) or by what the code references, not by scanning. Unit test with a
+   synthetic image per layout (no Access bytes in git).
+2. diag.log lines: "default page B missing (Virus Control.dll <machine>)" once at start; per library with skipped
+   dumps "library <name>: n of m dumps skipped (Virus C without page B / unknown size)". Also seen in the user's
+   folder (scan, not fixed): dumps of other sizes (202/158 bytes in "Yoz & Andy/Incubation V3 ... .mid.mid", 31 of
+   128 kept; Cosmosis 54/59; Nice Bytes Toxic/Interactive 127/128) and upgrade_single returning false for version
+   byte 127 (Howard Scarr Sounds, 1 patch) - check with REA whether the original keeps any of them.
+3. Evidence entry E345 (cause above, HIGH for the x86 table position by byte compare, REA result when done); then the
+   Windows setup / tirevive-access.ps1: check which DLL a normal install puts in Common (should be x64) and warn in
+   Control Center / diag.log when the installed core is x86.
+4. Reddit report "personal libraries aren't producing any sound" (section below, closed as not reproduced): likely the
+   same cause -> ask the reporter whether their Common\Virus Control.dll is 32-bit (properties / size 14,040,312 vs
+   14,663,928 bytes) and whether only Virus A/B/C libraries were empty.
+
 ## START HERE - state 2026-10-24 ~18:05: round 0.8.33 checklist - Linux, Mac, Windows PC DONE (B1 grading open)
 
 **Windows PC session 2026-10-24 17:15-18:05 (CI run 40104018425):** artifacts fetched via nightly.link (no gh/login on
