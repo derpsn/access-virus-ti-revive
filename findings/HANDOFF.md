@@ -1,6 +1,25 @@
 # HANDOFF
 
-## START HERE - state 2026-10-24 ~17:20: round 0.8.33 checklist - Linux + Mac DONE, NEXT = the WINDOWS PC (B1-B4)
+## START HERE - state 2026-10-24 ~18:05: round 0.8.33 checklist - Linux, Mac, Windows PC DONE (B1 grading open)
+
+**Windows PC session 2026-10-24 17:15-18:05 (CI run 40104018425):** artifacts fetched via nightly.link (no gh/login on
+that PC; zip sizes = the API's), MSI plug-in 1548EEA1 = the VM's; setup.exe /quiet exit 0, installed binaries = MSI
+(replaced the earlier CCE39B57 of run 40093015139). All four marked pass by the user, notes in the checklist db.
+- **B1 hil-win:** results-20261024-172158, H1/H2.1/H2.2/H3/H6 ran, nothing failed. NOT GRADED yet (no Python on the
+  PC): zip C:\Users\thoma\Downloads\hil-win-0.8.33-results-20261024-172158.zip -> NEXT on Linux: hil_check.py --folder.
+- **B2:** Live 17:27-17:59 (31 min), 44.1 kHz, user: no crackle. diag: drops 0, over block 0, anchors 1 at the start
+  plus 1 each at 17:56:17 / 17:57:57, both next to a new Play ("N since Play" reset) - read as transport restarts, not
+  the E337 jumps. Uneven stretches (err up to +-800, once 2257 at the Play) handled by drift steps only (bursts
+  ~130-146); this morning's old build had 47-198 anchors per 10 s in the same kind of stretch -> E337 fix exercised.
+- **B3:** 'part 3 output 1 -> output delay 90 ms' = (3072+256+640)/44100; Live passed block 256 the whole session
+  (largest 256) even when the user switched 512 / 2048 - like the Mac. User: in sync at both.
+- **B4:** no 'more than 256 in one block', no 'event(s) lost', no full-queue line; some notes still missing in the
+  dense passage, same on Linux -> the Virus' voice limit (E341), not our side.
+Logs: Downloads\TI-Revive-0.8.33-run40104018425\windows-logs\diag-B2-173950.log, diag-B4-175934.log (not in git).
+NEXT: grade B1 on Linux; then README/site (analog delay, part following; tirevive-site-check), release notes in
+build.yml, version.
+
+## (state before, ~17:20)
 
 **For the Windows session (the user boots this PC into Windows and runs Claude Code there):** checklist
 https://claude.ai/artifact/RJnAcjRBphmuowwFqgeNCL (v2; marks L1, L2, M1, M2, M3 = pass). Items B1-B4:
