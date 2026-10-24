@@ -12,7 +12,7 @@ Branch round-0.8.33. **Linux session 2026-10-24 (after the Windows PC session th
   jumps / 10 s, notes skipping +-480 ms; NEW 0 jumps. `--ahead 100@20 --ahead 25@40` (E279 case): new 1+1 jumps vs old
   6+2, only the note at each moment off, grid exact after. hil.sh on the dev build ALL PASS (work/hil/20261024-092029).
   Details in E337.
-- **NEXT:** CI test build 0.8.33 (gh workflow run build.yml --ref round-0.8.33 -f version=0.8.33), the user installs it
+- **NEXT:** CI test build 0.8.33 RUNNING (run 40074101252 on 2b82122, started 09:26); when green the user installs it
   on the Windows PC and plays through two ~6-minute episodes in Ableton at 2048 (diag.log: anchors ~0, no crackle),
   hil-win.ps1; then a REAPER render check by hand (E279) and E337 final.
 
