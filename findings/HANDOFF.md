@@ -5,9 +5,9 @@
 **Linux = CI build 0.8.33** (install.sh as the user, no sudo; plug-in b4b032e5.., broker e3787d73.. = the tarball;
 unpacked in ~/Downloads/TI-Revive-0.8.33-test). hil.sh on it: ALL PASS (work/hil/20261024-165448; max 0.57 ms).
 **win11 VM = CI build 0.8.33** (setup.exe /quiet exit 0, entries "TI Revive 0.8.33", plug-in 1548eea1.. = the MSI's
-nativevst3; C:\tirevive-test\0.8.33; VM off). **Mac: NOT reachable** at ~17:05 (ssh no route to host, asleep?) - zip
-ready in ~/Downloads/TI-Revive-0.8.33-test/mac (TI-Revive-0.8.33-mac.zip); push + INSTALL-COMMAND.txt + "Install test
-build.command" when it is awake. Windows PC: the user installs ~/Downloads/TI-Revive-0.8.33-test/msi/setup.exe.
+nativevst3; C:\tirevive-test\0.8.33; VM off). **Mac: package PUSHED** (~17:10) to ~/Downloads/TI-Revive-0.8.33-mac
+(pkg 1eebd732.. = CI) with hil/ kit, INSTALL-COMMAND.txt and "Install test build.command"; the user installs (no sudo
+from me). Check the receipt after: pkgutil --pkg-info for TI Revive. Windows PC: the user installs ~/Downloads/TI-Revive-0.8.33-test/msi/setup.exe.
 
 Round 0.8.33 so far: E337 crackle fix (Windows: crackle gone), per-block event counter (E341: missing notes = the
 Virus' voice limit), part following (E342), analog parts in sync with USB parts (E344, "perfectly in sync" on the
