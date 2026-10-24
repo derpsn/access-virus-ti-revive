@@ -70,7 +70,11 @@ DONE 15:16-15:18 (E340): VM off, Virus back on Linux (ACL ok, no udevadm needed)
 (look at how the editor's "Part output" / "Part on/off" controls are sent). Plug-in view following the panel: user said
 "works" (to confirm per item).
 Linux plug-in since 2026-10-24 ~15:30 = DEV build of 1e83740 (sha 40d322e9.., ~/.vst3); the one before (b65b0744..,
-installed 2026-10-23 21:12) in ~/.vst3-backup/0.8.32-installed-b65b0744. User tests output/mute in REAPER.
+installed 2026-10-23 21:12) in ~/.vst3-backup/0.8.32-installed-b65b0744. User tests output/mute in REAPER. RESULT: output/mute follow both ways in REAPER (user) -> #14
+point 2 not reproduced on the TI2 (ask the Snow reporter for the screenshot/log). Dense-MIDI "missing notes" on Linux
+too (E341): nothing lost or late on our side while playing -> the Virus' voice limit by elimination. NEXT: user mutes
+2 of 3 parts and plays the same passage (notes back = voice limit); then E341 final. The Virus is still in
+"Volume>MIDI" mode (set back to "Volume>Virus" on the panel when done).
 
 **Problem (E337, follow-up of E187):** Ableton on bare metal, Creative card 44.1 kHz / 2048 (no ASIO), crackles in
 stretches of about a minute, roughly every 6 minutes. diag.log: drops 0, process time fine, read margin >= 0; in those
