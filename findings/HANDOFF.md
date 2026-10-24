@@ -1,6 +1,6 @@
 # HANDOFF
 
-## START HERE (2026-10-24 ~21:00): v0.8.33 TAGGED, release CI 40122288225 running
+## START HERE (2026-10-24 ~21:10): **v0.8.33 RELEASED** - site live, release on Linux + win11, Mac package pushed
 
 **Seen on the Windows PC (user):** LOAD > Personal Libraries > "Manuel Schleis/Manuel Schleis Incubation V2" is
 listed, its bank is EMPTY (no names; "worked already" on other machines). The file is fine: 128 Virus C dumps (267
@@ -56,6 +56,16 @@ parameter of page B) with Linux/Windows. Release notes: old Virus C libraries on
    E349 (TI Revive on Linux: amplifier Volume/Pan and the mixer part slider follow - nothing to build on the TI2; we
    do not echo, by design). Open for the Snow: which knob the reporter means (big VOLUME = analog master, never USB;
    Shift+Value 1 = Patch Volume) -> reply on #14 drafted for the user, not posted. Virus back on Linux, win10ref off.
+** v0.8.33 RELEASED 2026-10-24 18:51 UTC: release CI 40122288225 all green, release public + Latest, 6 assets
+   (setup.exe, msi, mac.zip, linux.tar.gz, tirevive-usbinfo.ps1, libusb source). Site rebuilt by hand (run 40122650350,
+   main 9773607): live page shows Download 0.8.33, the Important notice box (64-bit), 403 unit tests, part following.
+   Release on the test machines: Linux install.sh (plug-in 868214e3.. = release tarball, broker e3787d73..; the CI
+   test build backed up in ~/.vst3-backup/0.8.33-ci2), win11 setup.exe /quiet exit 0, entries 0.8.33, DLL a622f9a2..
+   (C:\tirevive-test\0.8.33-release), VM off; Mac: release unpacked in ~/Downloads/TI-Revive-0.8.33-release-mac (pkg
+   e548f83f.. = release, INSTALL-COMMAND.txt + Install test build.command) - the user installs. win10ref: user check
+   done, VM shut down by the user; Virus on Linux (ACL access ok, broker socket active).
+   NEXT (next round): hover value in the LCD (5b, check the original first), #14 answer from the Snow reporter
+   (Shift+Value 1), the library scan items (6), Reddit report (7).
 ** RELEASE 0.8.33 (user: "yes, release it", ~20:50): merge f4f05de on main (parents 03e281c main + c3f2c4e round,
    tree = round 9f1bcc58, merge message from a file), pushed; tag v0.8.33 (annotated) on f4f05de pushed separately ->
    release CI run 40122288225 (event push, v0.8.33). NEXT: when green -> check the release (6 assets, notes),
