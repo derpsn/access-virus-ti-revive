@@ -3460,7 +3460,12 @@ void VirusPlugin::panel_message(const std::vector<uint8_t> &msg)
         const Parameter *p = cond_ ? cond_->find(path) : nullptr;
         return !p || meta_cond(*p, part);
     };
-    for (auto &c : PanelFollow::reports_by_condition(dev_.decode(msg), holds)) {
+    auto reports = PanelFollow::reports_by_condition(dev_.decode(msg), holds);
+    PanelFollow::globals_without_part(reports, [this](const std::string &path) {
+        const Parameter *p = cond_ ? cond_->find(path) : nullptr;
+        return p && p->part == "none";
+    });
+    for (auto &c : reports) {
         // a soft knob turned on the Virus: in plug-in mode it only reports the knob's value and leaves the sound alone
         // (E152, user test in REAPER: no change until the host sends it). Like the original (0x180081980 -> the soft
         // knob's setter 0x1800a2840 -> the target's setter): the panel part's destination parameter takes the value
@@ -3497,7 +3502,7 @@ void VirusPlugin::panel_message(const std::vector<uint8_t> &msg)
         if (ready_ && PanelFollow::is_preset_path(c.path) && ui_value(c.path, c.part) != c.value)
             follow_.preset_report(c.path, c.part, PanelFollow::Clock::now());
         set_part_value(c.part, c.path, c.value);
-        {
+        if (c.part >= 0) { // like ui_set: globals (the panel part) have no linked parameters
             std::lock_guard<std::recursive_mutex> mk(meta_mu_);
             meta_source(c.path, c.part, c.value, false); // e.g. the FX switches follow the send knobs on the Virus
         }

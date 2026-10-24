@@ -84,7 +84,10 @@ NOT arrive (email attachments; no image links); "closing and reopening Virus Rev
 out via MIDI [USB?], not via audio [analog?]" (ambiguous). Reply (draft with the user): ask to drag the screenshots into
 the GitHub page; still need version + diag.log.
 **E342 (15:38-15:40):** the original's window follows the part selected on the Virus (Panel Part 72 00 1d vv), it
-sends nothing back. NEXT: VM off (user closes Live first), then TI Revive in REAPER: does its window follow the Virus'
+sends nothing back. TI Revive (15:43, trv-partsel-1): volume/mute/output fine, window did NOT follow the part
+selection -> FIXED (Panel Part report stored under the old part instead of as a global; PanelFollow::globals_without_part,
+394 tests, ctest 5/5); dev build sha 2b50d878.. installed in ~/.vst3 (VM off, Virus on Linux). NEXT: user checks in
+REAPER that the window follows parts 1-5. Older plan line: does its window follow the Virus'
 part selection, part volume knob (CC 7 on the part's channel), mute, output - for parts other than 1 too.
 **VM test running:** win10ref ON, Virus attached (Access driver OK) - test: switch presets on the Virus (Multi edit
 mode) and see whether the ORIGINAL plug-in follows; capture ref-presetswitch-1. Then detach, VM off, the same with

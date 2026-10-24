@@ -114,3 +114,16 @@ TEST(panel_reports_by_condition)
     std::vector<C> one = {{"Filter 1/Cutoff", 0, 90}}; // a single parameter is kept even if its condition is false
     CHECK(PanelFollow::reports_by_condition(one, [](const std::string &, int) { return false; }).size() == 1);
 }
+
+// a part selected on the Virus (Multi edit mode) reports Panel Part as 72 pp 1d vv with pp = the part selected BEFORE
+// and vv = the new one (E342: 00->01, 01->02, ... 04->03). Panel Part is not per part: the report is kept as a global
+// (-1), where the editor reads and sets it - stored under pp the editor never saw it (TI Revive did not follow, E342)
+TEST(panel_reports_globals_have_no_part)
+{
+    using C = RemoteDevice::Change;
+    std::vector<C> r = {{"Multi Parameters/Panel Part", 3, 4}, {"Multi Part Parameter/Output Select Control2", 2, 9}};
+    auto global = [](const std::string &p) { return p == "Multi Parameters/Panel Part"; };
+    PanelFollow::globals_without_part(r, global);
+    CHECK(r[0].part == -1 && r[0].value == 4); // the new part, not the old one
+    CHECK(r[1].part == 2 && r[1].value == 9);  // per-part parameters keep their part
+}
