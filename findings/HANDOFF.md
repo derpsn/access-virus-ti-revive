@@ -108,7 +108,8 @@ sent; then implement in TI Revive test-first (send for each part whose output ch
 part 1, 0 for the rest, all 16 at Play and Stop. IMPLEMENTED (outputdelay.h + VirusPlugin::send_output_delays in the
 idle hook, ms = reported latency in ms, max 127; 399 tests, ctest 5/5). NOT tested on hardware yet: VM still running
 with the Virus attached (Live open?) -> detach, VM off, install the dev build, user checks analog vs USB parts by ear
-in REAPER; diag.log shows "output delay N ms" per change.
+in REAPER; diag.log shows "output delay N ms" per change. VM off, Virus on Linux (ACL ok); dev build of 5ce094c (sha 11e9e883..)
+installed in ~/.vst3 (16:35); user tests by ear in REAPER.
 **VM test running:** win10ref ON, Virus attached (Access driver OK) - test: switch presets on the Virus (Multi edit
 mode) and see whether the ORIGINAL plug-in follows; capture ref-presetswitch-1. Then detach, VM off, the same with
 TI Revive (load_reported_presets, E152/E157).
