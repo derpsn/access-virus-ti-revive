@@ -96,7 +96,12 @@ Libraries, browser drag to RAM, Control Center backup/restore - tested on the TI
 scratchpad reply14b.md), waiting for the user's OK before posting.
 **E343 (16:00):** analog Out1/2/3 + headphones work with TI Revive on the TI2 (REAPER, user); Output Select values
 decoded (1/4/7 = Out1/2/3 L+R, 10 = USB1 L+R). #14 reply draft updated (point 1 = Multi edit part volume, not master);
-open: the reporter's "slight delay on analog" - how to measure (loopback recording) being discussed with the user.
+USER HEARD IT (~16:10): part 1 on Out1 (Virus headphones, one ear) vs parts 2/3 on USB (PC, other ear) are audibly
+out of sync - expected from the USB return path (Virus -> USB -> plug-in -> host buffer -> sound card), so analog is
+probably EARLY. Not measured (no line-in cable). Open question: does the ORIGINAL align analog parts (per-part
+timing)? REA analysis started (background agent, x64 DLL a622f9a2.., snapshot work/rea/...ghidra12.snapshot; known:
+send 0x1800a86b0, stamp 0x1800a8420). If the original does nothing special -> same as original, tell the reporter;
+if it does -> copy it.
 **VM test running:** win10ref ON, Virus attached (Access driver OK) - test: switch presets on the Virus (Multi edit
 mode) and see whether the ORIGINAL plug-in follows; capture ref-presetswitch-1. Then detach, VM off, the same with
 TI Revive (load_reported_presets, E152/E157).
