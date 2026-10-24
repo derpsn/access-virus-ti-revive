@@ -132,6 +132,11 @@ int main(int argc, char **argv)
             fclose(o);
         }
         printf("wrote %s\n", args[1].c_str());
+    } else if (cmd == "pageb") { // the default page B for Virus C dumps (inspection only - output stays local)
+        auto d = files->default_page_b();
+        for (size_t i = 0; i < d.size(); i++)
+            printf("%02X%s", d[i], i % 32 == 31 ? "\n" : " ");
+        printf("default page B: %zu bytes\n", d.size());
     } else if (cmd == "initmulti" && !args.empty()) { // the plug-in's embedded multi to a file
         auto d = files->init_multi();
         if (FILE *f = fopen(args[0].c_str(), "wb")) {

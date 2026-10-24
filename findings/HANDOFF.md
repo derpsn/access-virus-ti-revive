@@ -33,7 +33,11 @@ The user's libraries from the PC are in ~/Dokumente/Access Music/Virus TI/Patche
 **Also 2026-10-24 ~20:20:** MSI finish page text (WIXUI_EXITDIALOGOPTIONALTEXT): updating from 0.8.32 or older ->
 keep the box checked and the Access .msi at hand (not built yet). **Mac finding E346:** default_page_b() on the Mac
 binary takes init - 0x400 = wrong 7-bit bytes (137/256 differ), the real page B is at init + 0x2a0 -> Virus C
-libraries on the Mac load with a wrong page B since 7121a5e. Fix proposed to the user (by binary type, REA check).
+libraries on the Mac load with a wrong page B since 7121a5e. FIXED ~20:45 (user: 'really important'): REA confirmed
+the Mac upgrader FUN_000e5c00 copies page B from init + 0x2a0; default_page_b() now picks by format (PE -0x400,
+Mach-O +0x2a0), tests for both layouts, vtimodel pageb: Mac bundle == Windows x64 bytes. Not run on the Mac yet ->
+round item: Mac, load an old Virus A/B/C library patch, compare a page B value (e.g. a mod matrix slot or FX
+parameter of page B) with Linux/Windows. Release notes: old Virus C libraries on the Mac sounded with a wrong page B.
 **NEXT:**
 4. Short test on the win11 VM (snapshot first, no Virus attached): (a) tirevive-access.ps1 -Quiet with the .msi ->
    Common\Virus Control.dll is PE32+ (a622f9a2..); (b) a normal Access install of the .msi -> which DLL lands in

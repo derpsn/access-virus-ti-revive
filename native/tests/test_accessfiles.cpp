@@ -175,10 +175,14 @@ TEST(accessfiles_bundle_dumps)
     TempDir t("bundle");
     fs::path bundle = t.dir / "Virus Control.bundle";
     write(bundle / "Contents" / "Resources" / "remotedevice.xml", REMOTE);
-    // the bundle binary: 0x400 bytes of 7-bit data (the default page B), the init single, an init multi
-    Bytes bin(0x500, 0x05);
+    // the bundle binary (a Mach-O): 7-bit data where the Windows DLL keeps page B (init - 0x400, a decoy here), the
+    // init single, the default page B at init + 0x2a0 (E346), an init multi
+    Bytes bin = {0xCF, 0xFA, 0xED, 0xFE};
+    bin.insert(bin.end(), 0x500, 0x05);
     Bytes single = fake_dump(0x10, 524, 249, " -Init-"), multi = fake_dump(0x11, 267, 13, "MultiCtrl!");
     bin.insert(bin.end(), single.begin(), single.end());
+    bin.insert(bin.end(), 0x2a0 - single.size(), 0x00);
+    bin.insert(bin.end(), 0x100, 0x06);
     bin.insert(bin.end(), 7, 0x00);
     bin.insert(bin.end(), multi.begin(), multi.end());
     write(bundle / "Contents" / "MacOS" / "Virus Control", bin);
@@ -192,8 +196,7 @@ TEST(accessfiles_bundle_dumps)
         return;
     CHECK(a->init_single() == single);
     CHECK(a->init_multi() == multi);
-    Bytes page = a->default_page_b();
-    CHECK(page.size() == 0x100 && page[0] == 0x05);
+    CHECK(a->default_page_b() == Bytes(0x100, 0x06));
     // a folder holding the bundle is found too
     auto b = AccessFiles::open(t.dir.string(), err);
     CHECK(b && b->init_single() == single);
@@ -233,6 +236,24 @@ TEST(accessfiles_pe_image)
     env.set("WINEPREFIX", wine.string());
     auto c = AccessFiles::open("", err);
     CHECK(c && c->get("remotedevice.xml").size() == REMOTE.size());
+}
+
+TEST(accessfiles_pe_page_b)
+{
+    // the 64-bit Windows DLL keeps the default page B 0x400 before the init single (E345), 7-bit data after it
+    TempDir t("pepageb");
+    fs::path dll = t.dir / "Virus Control.dll";
+    Bytes d = fake_pe({{"REMOTEDEVICE.XML", REMOTE}}), single = fake_dump(0x10, 524, 249, " -Init-");
+    d.insert(d.end(), 0x100, 0x07);
+    d.insert(d.end(), 0x300, 0x00);
+    d.insert(d.end(), single.begin(), single.end());
+    d.insert(d.end(), 0x400, 0x05);
+    write(dll, d);
+    Env env;
+    no_installation(env, t.dir / "home");
+    std::string err;
+    auto a = AccessFiles::open(dll.string(), err);
+    CHECK(a && a->default_page_b() == Bytes(0x100, 0x07));
 }
 
 TEST(accessfiles_pe32_refused)

@@ -38,7 +38,8 @@ public:
     // The fixed multi dump the original sends at start-up and stores in its state ("MultiCtrl!", 267 bytes).
     std::vector<uint8_t> init_multi() const;
     // the default page B the original gives old (Virus C, 267-byte) single dumps when upgrading them: 256 bytes
-    // 0x400 before the embedded init patch in the plug-in binary; empty if not plausible (all bytes must be 7-bit)
+    // next to the embedded init patch in the plug-in binary (Windows DLL: 0x400 before it; Mac binary: 0x2a0 after
+    // it, E346); empty if not plausible (all bytes must be 7-bit)
     std::vector<uint8_t> default_page_b() const;
     // the classic oscillator display's 64 waves (64 x 64 floats, the WaveSelect row first; E180), found in the plug-in
     // binary by content; empty if not found (the display then shows a sine for every wave)

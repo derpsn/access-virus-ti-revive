@@ -386,9 +386,21 @@ std::vector<uint8_t> AccessFiles::default_page_b() const
 {
     std::vector<uint8_t> bin;
     size_t off = 0;
-    if (find_dump(0x10, 524, 249, " -Init-", &bin, &off).empty() || off < 0x400)
+    if (find_dump(0x10, 524, 249, " -Init-", &bin, &off).empty())
         return {};
-    std::vector<uint8_t> t(bin.begin() + off - 0x400, bin.begin() + off - 0x300);
+    // where the original's upgrader copies page B from, relative to the init single: the 64-bit Windows DLL 0x400
+    // before it (E345), the Mac binary 0x2a0 after it, in both slices of the universal file (E346, FUN_000e5c00)
+    const uint32_t magic = le32(bin, 0);
+    size_t at;
+    if (bin.size() >= 2 && bin[0] == 'M' && bin[1] == 'Z' && off >= 0x400)
+        at = off - 0x400;
+    else if (magic == 0xFEEDFACF || magic == 0xBEBAFECA) // thin 64-bit / universal Mach-O
+        at = off + 0x2a0;
+    else
+        return {};
+    if (at + 0x100 > bin.size())
+        return {};
+    std::vector<uint8_t> t(bin.begin() + at, bin.begin() + at + 0x100);
     for (auto b : t)
         if (b > 0x7F)
             return {};
