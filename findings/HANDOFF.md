@@ -93,7 +93,10 @@ part selection, part volume knob (CC 7 on the part's channel), mute, output - fo
 outs still give no signal (they prefer USB, not urgent); still wish: hardware volume knob (= original behaviour, E338;
 Multi edit mode works on the TI - Snow unknown) and save/load presets/banks (mostly exists: LOAD/SAVE, Personal
 Libraries, browser drag to RAM, Control Center backup/restore - tested on the TI2 only). Reply drafted (Spanish,
-scratchpad reply14b.md), waiting for the user's OK before posting.
+scratchpad reply14b.md) -> REPLACED and POSTED 2026-10-24 ~17:15 (issuecomment-6385574844, Spanish, AI note): part
+volume in Multi edit, library features, analog delay fixed for the next version (E344), no-signal open; asked for the
+next version's diag.log (output change lines: line + no sound = Snow/cabling/Apollo side; no line = our side, e.g.
+Logic/AU), version number, files dragged into GitHub (email attachments do not arrive).
 **E343 (16:00):** analog Out1/2/3 + headphones work with TI Revive on the TI2 (REAPER, user); Output Select values
 decoded (1/4/7 = Out1/2/3 L+R, 10 = USB1 L+R). #14 reply draft updated (point 1 = Multi edit part volume, not master);
 USER HEARD IT (~16:10): part 1 on Out1 (Virus headphones, one ear) vs parts 2/3 on USB (PC, other ear) are audibly
