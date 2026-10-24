@@ -109,7 +109,9 @@ part 1, 0 for the rest, all 16 at Play and Stop. IMPLEMENTED (outputdelay.h + Vi
 idle hook, ms = reported latency in ms, max 127; 399 tests, ctest 5/5). NOT tested on hardware yet: VM still running
 with the Virus attached (Live open?) -> detach, VM off, install the dev build, user checks analog vs USB parts by ear
 in REAPER; diag.log shows "output delay N ms" per change. VM off, Virus on Linux (ACL ok); dev build of 5ce094c (sha 11e9e883..)
-installed in ~/.vst3 (16:35); user tests by ear in REAPER.
+installed in ~/.vst3 (16:35); user tests by ear in REAPER. RESULT: no effect - BUG: Snow parameter name on a TI (every part
+read 0 = analog, all 16 delayed alike). FIXED (part_output via dev_.decode(72 pp 29); 400 tests, ctest 5/5); dev build
+74c6079d.. installed (~16:50). NEXT: user's second ear test (512 and 2048).
 **VM test running:** win10ref ON, Virus attached (Access driver OK) - test: switch presets on the Virus (Multi edit
 mode) and see whether the ORIGINAL plug-in follows; capture ref-presetswitch-1. Then detach, VM off, the same with
 TI Revive (load_reported_presets, E152/E157).

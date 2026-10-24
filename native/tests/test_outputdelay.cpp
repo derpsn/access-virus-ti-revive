@@ -3,6 +3,9 @@
 // Hardware-free.
 #include "check.h"
 #include "../src/device/outputdelay.h"
+#include "access/accessfiles.h"
+#include "model/remotedevice.h"
+#include <string>
 
 using vti::OutputDelay;
 
@@ -79,4 +82,33 @@ TEST(outputdelay_all_parts_at_play_stop_and_after_reset)
     CHECK(ms[0] == 26 && ms[1] == 0);
     d.reset(); // a new connection: the Virus' values are unknown again
     CHECK(d.due(out, 26, false, parts, ms) == 16);
+}
+
+// the part's Output Select is found through its message (72 pp 29), not by name: the TI calls it "Output Select
+// Control2/3", the Snow "pr Output Select Control2/3" - a fixed Snow name read nothing on a TI (every part looked
+// analog, the USB parts were delayed too; user, REAPER, 2026-10-24)
+TEST(outputdelay_select_found_by_message_in_both_models)
+{
+    std::string err;
+    auto files = vti::AccessFiles::open("", err);
+    if (!files)
+        SKIP("no Access installation");
+    auto r = OutputDelay::select_report(2);
+    CHECK(r[6] == 0x72 && r[7] == 2 && r[8] == 0x29);
+    for (const char *name : {"remotedevice.xml", "remotedevicePR.xml"}) {
+        auto xml = files->get(name);
+        if (xml.empty())
+            continue; // the Snow description only where the installer has it
+        vti::RemoteDevice dev;
+        CHECK(dev.load(xml, err));
+        auto changes = dev.decode(std::vector<uint8_t>(r.begin(), r.end()));
+        CHECK(changes.size() == 2); // the forms with and without the third USB output
+        for (auto &c : changes) {
+            const bool form = c.path.size() > 15 && (c.path.compare(c.path.size() - 15, 15, "Select Control2") == 0 ||
+                                                     c.path.compare(c.path.size() - 15, 15, "Select Control3") == 0);
+            if (!form)
+                std::fprintf(stderr, "  %s: %s\n", name, c.path.c_str());
+            CHECK(form && c.part == 2);
+        }
+    }
 }

@@ -21,6 +21,13 @@ public:
         return {0xF0, 0x00, 0x20, 0x33, 0x01, 0x10, 0x6F, (uint8_t)(part & 15), 0x7F, (uint8_t)v, 0xF7};
     }
 
+    // the Output Select report of a part (value 0): decoded by the loaded description it names that model's
+    // parameters - "Output Select Control2/3" on the TI, "pr Output Select Control2/3" on the Snow
+    static std::array<uint8_t, 11> select_report(int part)
+    {
+        return {0xF0, 0x00, 0x20, 0x33, 0x01, 0x10, 0x72, (uint8_t)(part & 15), 0x29, 0x00, 0xF7};
+    }
+
     // the Virus' values are unknown again (a new connection)
     void reset()
     {

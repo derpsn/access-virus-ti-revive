@@ -3525,13 +3525,20 @@ void VirusPlugin::panel_message(const std::vector<uint8_t> &msg)
     }
 }
 
-// a part's Output Select, from the form that applies (the third USB output on or off), as panel_message reads it
+// a part's Output Select, from the form that applies (the third USB output on or off) as panel_message reads it; found
+// through its message, since the models name it differently (TI "Output Select Control2", Snow "pr Output Select ...")
 int VirusPlugin::part_output(int part)
 {
-    static const std::string with3 = "Multi Part Parameter/pr Output Select Control3",
-                             without3 = "Multi Part Parameter/pr Output Select Control2";
-    const Parameter *p = cond_ ? cond_->find(with3) : nullptr;
-    return ui_value(p && meta_cond(*p, part) ? with3 : without3, part);
+    const auto r = OutputDelay::select_report(part);
+    auto forms = dev_.decode(std::vector<uint8_t>(r.begin(), r.end()));
+    if (forms.empty())
+        return 10; // unknown here: USB1 L+R, the default - nothing is held back
+    for (auto &c : forms) {
+        const Parameter *p = cond_ ? cond_->find(c.path) : nullptr;
+        if (p && meta_cond(*p, part))
+            return ui_value(c.path, part);
+    }
+    return ui_value(forms[0].path, part);
 }
 
 // worker (idle hook): parts on an analog output are held back by the plug-in's latency, so they sound together with
