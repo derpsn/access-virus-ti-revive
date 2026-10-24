@@ -111,7 +111,7 @@ with the Virus attached (Live open?) -> detach, VM off, install the dev build, u
 in REAPER; diag.log shows "output delay N ms" per change. VM off, Virus on Linux (ACL ok); dev build of 5ce094c (sha 11e9e883..)
 installed in ~/.vst3 (16:35); user tests by ear in REAPER. RESULT: no effect - BUG: Snow parameter name on a TI (every part
 read 0 = analog, all 16 delayed alike). FIXED (part_output via dev_.decode(72 pp 29); 400 tests, ctest 5/5); dev build
-74c6079d.. installed (~16:50). NEXT: user's second ear test (512 and 2048).
+74c6079d.. installed (~16:50). USER: "Perfectly sync now" (~17:00). DONE on the TI2.
 **VM test running:** win10ref ON, Virus attached (Access driver OK) - test: switch presets on the Virus (Multi edit
 mode) and see whether the ORIGINAL plug-in follows; capture ref-presetswitch-1. Then detach, VM off, the same with
 TI Revive (load_reported_presets, E152/E157).
