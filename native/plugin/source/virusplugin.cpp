@@ -1237,7 +1237,7 @@ tresult PLUGIN_API VirusPlugin::process(ProcessData &data)
         rs_valid_ = false;
         sc_[vidx(vrate)].reset();
         fe_.set_rate(vrate);
-        follow_.set_window(vrate / 2);
+        tl_follow_.set_window(vrate / 2);
     }
     int64_t newest = ring_newest();
     if (out_ && out_->generation.load() != generation_seen_) { // the Virus came back: a new audio stream
@@ -1284,7 +1284,7 @@ tresult PLUGIN_API VirusPlugin::process(ProcessData &data)
                         (long long)err, (long long)newest, data.numSamples);
             tl_ = target;
             next_tick_ = (double)tl_;
-            follow_.reset();
+            tl_follow_.reset();
             bool new_stream = !tl_valid_;
             if (new_stream)
                 marker_retries_ = 0; // a new stream (start, the Virus came back)
@@ -1299,7 +1299,7 @@ tresult PLUGIN_API VirusPlugin::process(ProcessData &data)
             // with the marker the Virus' stamp clock is tied to the ring, not to our anchor, so a lasting offset
             // jumps back to real time (hosts that process ahead in bursts - REAPER's anticipative FX - or stall)
             // without a new FE/F2/ping; an uneven cadence alone no longer jumps back and forth (clicks, E337)
-            const TimelineFollow::Move mv = follow_.update(err, whole, out_->marker.load() >= 0);
+            const TimelineFollow::Move mv = tl_follow_.update(err, whole, out_->marker.load() >= 0);
             tl_ += mv.delta;
             next_tick_ += (double)mv.delta;
             if (mv.jump) {

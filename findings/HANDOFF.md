@@ -1,23 +1,20 @@
 # HANDOFF
 
-## START HERE - state 2026-10-24 morning: crackle fix to do and test ON THE WINDOWS BARE-METAL PC
+## START HERE - state 2026-10-24 ~09:40: E337 fix built + checked on Linux; NEXT = CI test build -> Ableton on the Windows PC
 
-**Continue on the real Windows PC (the user now runs Claude Code there).** Branch round-0.8.33.
-
-**Progress 2026-10-24 (Windows PC session): steps 1+2 WRITTEN, NOT BUILT.** The Windows PC has no compiler (no Visual
-Studio/MSVC, no cmake, vst3sdk submodule not checked out, no Python except a uv-managed one); the user chose NOT to
-install Build Tools there ("no build here"): the build comes from CI or the Linux side. Done: native/src/device/
-timelinefollow.h (TimelineFollow: jump = err beyond 512 on one side for 0.5 s -> jump by its mean; or the 2 s mean
-beyond 512; or abs(err) > 4096 at once (REAPER ahead, status.md -8548); drift steps one frame per block when the 2 s
-mean is beyond 256, until it is back at 128; anchor and 8192 re-anchor unchanged), used in process() (follow_.update(err,
-whole, marker), reset at every anchor, window vrate/2 on a rate change), tests native/tests/test_timelinefollow.cpp
-(6 tests: rough cadence 4 seeds no jumps / <400 steps; lasting 1000 offset one jump 0.4-0.6 s later; far offset at once;
-offset in rough cadence one jump <= 2.5 s; no marker only steps; +-200 ppm drift err within +-600). Test-first was done
-in a Python model of the same arithmetic (not in C++): old rule ~3700 jumps in the rough minute, new 0 (numbers in E337).
-**NEXT (Linux side):** build + ctest (expect 6 new tests to pass; -Werror on CI), check the thresholds of the tests hold
-in C++, nativehost run if possible, then a CI test build for the Windows PC (the user installs it and plays through two
-~6-minute episodes in Ableton at 2048; diag.log anchors ~0), hil-win.ps1, then the REAPER render check (step 4: jumps
-now come 0.5 s after a lasting offset instead of at once - E279's case must still be fine).
+Branch round-0.8.33. **Linux session 2026-10-24 (after the Windows PC session that wrote steps 1+2 without a compiler):**
+- Build broke on a name clash: `follow_` already is the PanelFollow -> the TimelineFollow member is `tl_follow_`.
+- 389 unit tests pass, ctest 5/5. Mutation check: the old per-block jump rule put back into timelinefollow.h fails 3 of
+  the 6 timeline tests -> the tests guard the fix.
+- New nativehost `--rough T1:T2` (tools/hostclock.h RoughCadence, 4 tests in test_hostclock.cpp): bursts of 8 blocks,
+  +-20 ms jitter, one burst 40 ms late every ~5 s (harsher than Ableton: err -2100..2780 vs E337's -767..852).
+- Device runs (Virus TI2 Desktop, dev build, scratch logs not kept): `--block 256 --rough 15:75`, 80 s: OLD rule 315-627
+  jumps / 10 s, notes skipping +-480 ms; NEW 0 jumps. `--ahead 100@20 --ahead 25@40` (E279 case): new 1+1 jumps vs old
+  6+2, only the note at each moment off, grid exact after. hil.sh on the dev build ALL PASS (work/hil/20261024-092029).
+  Details in E337.
+- **NEXT:** CI test build 0.8.33 (gh workflow run build.yml --ref round-0.8.33 -f version=0.8.33), the user installs it
+  on the Windows PC and plays through two ~6-minute episodes in Ableton at 2048 (diag.log: anchors ~0, no crackle),
+  hil-win.ps1; then a REAPER render check by hand (E279) and E337 final.
 
 **Problem (E337, follow-up of E187):** Ableton on bare metal, Creative card 44.1 kHz / 2048 (no ASIO), crackles in
 stretches of about a minute, roughly every 6 minutes. diag.log: drops 0, process time fine, read margin >= 0; in those

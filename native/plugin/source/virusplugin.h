@@ -646,7 +646,7 @@ private:
     TransportWatch transport_; // Play and loop restarts: the original's F2 + 73 00 23 01 + 6F <part> 7F 00 (E275)
     double stat_acc_ = 0; // the same for the host-frames statistic
     int64_t stream_start_ = -1;
-    TimelineFollow follow_; // after the anchor: jumps and drift steps from the error over time, not per block (E337)
+    TimelineFollow tl_follow_; // after the anchor: jumps and drift steps from the error over time, not per block (E337)
     // offline render (export, freeze): each block waits for the Virus' audio; the worker logs mode changes and timeouts
     OfflinePacer pacer_;
     bool offline_ = false;                   // audio thread: the last block's mode
