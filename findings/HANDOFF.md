@@ -76,6 +76,18 @@ too (E341): nothing lost or late on our side while playing -> the Virus' voice l
 muted -> nothing missing = the Virus' voice limit (E341 final, closed; the per-block counter stays as a diagnostic). The Virus is still in
 "Volume>MIDI" mode (set back to "Volume>Virus" on the panel when done).
 
+**2026-10-24 ~15:45 - CORRECTION from the user:** there is NO "Volume>MIDI" mode the user switched on the panel; the
+Global volume only affects the outputs. What the user did in the knob tests: Shift+Edit = Multi edit mode, where the
+knobs control the selected part -> that is where the CC 7 ch 1 came from. E339/E340 wording ("Volume>MIDI mode") must be
+corrected (asked which knob was turned). The remotedevice "Remote Main Volume Enable" switch exists, but was not used.
+**#14 update 13:21-13:28 UTC (Spanish, by email):** "screenshot attached, updated to the latest" - the screenshots did
+NOT arrive (email attachments; no image links); "closing and reopening Virus Revive makes the sound work; sound comes
+out via MIDI [USB?], not via audio [analog?]" (ambiguous). Reply (draft with the user): ask to drag the screenshots into
+the GitHub page; still need version + diag.log.
+**VM test running:** win10ref ON, Virus attached (Access driver OK) - test: switch presets on the Virus (Multi edit
+mode) and see whether the ORIGINAL plug-in follows; capture ref-presetswitch-1. Then detach, VM off, the same with
+TI Revive (load_reported_presets, E152/E157).
+
 **Problem (E337, follow-up of E187):** Ableton on bare metal, Creative card 44.1 kHz / 2048 (no ASIO), crackles in
 stretches of about a minute, roughly every 6 minutes. diag.log: drops 0, process time fine, read margin >= 0; in those
 stretches `timeline steps` 195-587 and `anchors` (jumps) 2-198 per 10 s, err -767..852 (calm: err -184..256, 0 jumps).
