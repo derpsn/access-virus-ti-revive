@@ -1,6 +1,6 @@
 # HANDOFF
 
-## START HERE (2026-10-24 ~21:20): 64-bit Virus Control.dll only (E345) + Mac page B fix (E346) - done, VM test done
+## START HERE (2026-10-24 ~20:45): ROUND 0.8.33-2 6/6 PASS (E350) - ready for the release decision
 
 **Seen on the Windows PC (user):** LOAD > Personal Libraries > "Manuel Schleis/Manuel Schleis Incubation V2" is
 listed, its bank is EMPTY (no names; "worked already" on other machines). The file is fine: 128 Virus C dumps (267
@@ -56,6 +56,11 @@ parameter of page B) with Linux/Windows. Release notes: old Virus C libraries on
    E349 (TI Revive on Linux: amplifier Volume/Pan and the mixer part slider follow - nothing to build on the TI2; we
    do not echo, by design). Open for the Snow: which knob the reporter means (big VOLUME = analog master, never USB;
    Shift+Value 1 = Patch Volume) -> reply on #14 drafted for the user, not posted. Virus back on Linux, win10ref off.
+** ROUND 0.8.33-2 DONE 2026-10-24 ~20:45: 6/6 pass (E350): L1, L2, W1, W2, M1 (hil-mac ALL PASS graded on Linux),
+   M2 (20/70/70). Tested-on line in the release notes. win11 + win10ref off, Virus on the Mac (moved for M1/M2).
+   NEXT: release decision with the user: push, merge round-0.8.33 -> main with -F <file>, verify the merge commit,
+   tag v0.8.33 (separate command), release CI, then site rebuild by hand (gh workflow run site.yml) - the new notice
+   box goes live with it; install the release on Linux / win11 / Mac.
 5b. Wish (user, 2026-10-24, M2): show a knob's value in the bottom LCD on hover (today the LCD changes only when a
    value changes: ui_set -> set_lcd). FIRST check what the original Virus Control does on hover (win10ref, no
    guessing); like the original -> a gap to close, else our own addition, say so. Next round, not 0.8.33.
