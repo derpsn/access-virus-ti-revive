@@ -1,6 +1,15 @@
 # HANDOFF
 
-## START HERE - state 2026-10-24 ~15:00: E337 Windows test done (crackle gone); open: "missing notes" with dense MIDI
+## START HERE - state 2026-10-24 ~17:20: CI test build 0.8.33 RUNNING (run 40104018425 on d1a7a6d)
+
+Round 0.8.33 so far: E337 crackle fix (Windows: crackle gone), per-block event counter (E341: missing notes = the
+Virus' voice limit), part following (E342), analog parts in sync with USB parts (E344, "perfectly in sync" on the
+TI2 in REAPER), output/mute both ways + analog outs confirmed (E343). #14 reply posted. NEXT: run green -> install
+on Linux (install.sh), win11 VM / Windows PC, Mac; risk.py --round 0.8.33, hil.sh, hil-win, hil-mac, checklist with the
+new items (analog delay at different buffers incl. Windows A=3072, part following, E337 episodes on the Windows PC);
+README/site: analog delay + part following (tirevive-site-check).
+
+## (previous START HERE)
 
 **Windows test 2026-10-24 afternoon (CI build 40093015139, logs in /home/datoml/windows_tests, not in git):** hil-win
 ALL PASS (graded on Linux). Ableton 14:25-14:32: user "crackle gone"; timeline: 0 jumps after the anchor, one burst of
