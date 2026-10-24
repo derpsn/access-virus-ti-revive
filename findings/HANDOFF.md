@@ -1,6 +1,6 @@
 # HANDOFF
 
-## START HERE (2026-10-24 ~20:45): ROUND 0.8.33-2 6/6 PASS (E350) - ready for the release decision
+## START HERE (2026-10-24 ~21:00): v0.8.33 TAGGED, release CI 40122288225 running
 
 **Seen on the Windows PC (user):** LOAD > Personal Libraries > "Manuel Schleis/Manuel Schleis Incubation V2" is
 listed, its bank is EMPTY (no names; "worked already" on other machines). The file is fine: 128 Virus C dumps (267
@@ -56,6 +56,12 @@ parameter of page B) with Linux/Windows. Release notes: old Virus C libraries on
    E349 (TI Revive on Linux: amplifier Volume/Pan and the mixer part slider follow - nothing to build on the TI2; we
    do not echo, by design). Open for the Snow: which knob the reporter means (big VOLUME = analog master, never USB;
    Shift+Value 1 = Patch Volume) -> reply on #14 drafted for the user, not posted. Virus back on Linux, win10ref off.
+** RELEASE 0.8.33 (user: "yes, release it", ~20:50): merge f4f05de on main (parents 03e281c main + c3f2c4e round,
+   tree = round 9f1bcc58, merge message from a file), pushed; tag v0.8.33 (annotated) on f4f05de pushed separately ->
+   release CI run 40122288225 (event push, v0.8.33). NEXT: when green -> check the release (6 assets, notes),
+   site rebuild by hand (gh workflow run site.yml; notice box goes live), install the release on Linux / win11 /
+   Mac. Meanwhile (user's request): win10ref running, Virus attached (Access driver 2.9.66) for a check by the user;
+   detach only after Live is closed (E327).
 ** ROUND 0.8.33-2 DONE 2026-10-24 ~20:45: 6/6 pass (E350): L1, L2, W1, W2, M1 (hil-mac ALL PASS graded on Linux),
    M2 (20/70/70). Tested-on line in the release notes. win11 + win10ref off, Virus on the Mac (moved for M1/M2).
    NEXT: release decision with the user: push, merge round-0.8.33 -> main with -F <file>, verify the merge commit,
