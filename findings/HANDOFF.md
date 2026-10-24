@@ -1,6 +1,25 @@
 # HANDOFF
 
-## START HERE - state 2026-10-24 ~17:00: CI test build 0.8.33 GREEN (run 40104018425 on d1a7a6d)
+## START HERE - state 2026-10-24 ~17:20: round 0.8.33 checklist - Linux + Mac DONE, NEXT = the WINDOWS PC (B1-B4)
+
+**For the Windows session (the user boots this PC into Windows and runs Claude Code there):** checklist
+https://claude.ai/artifact/RJnAcjRBphmuowwFqgeNCL (v2; marks L1, L2, M1, M2, M3 = pass). Items B1-B4:
+- install the CI build: TI-Revive-0.8.33-setup.exe (CI run 40104018425, artifact TI-Revive-msi; also on Linux in
+  ~/Downloads/TI-Revive-0.8.33-test/msi), plug-in log on (%LOCALAPPDATA%\virus-ti-native\diag.on);
+- B1 hil-win (artifact TI-Revive-hil-windows; no Python on that PC -> grade the folder on Linux with
+  hil_check.py --folder, or copy it to Linux like /home/datoml/windows_tests); covers cold/reopen/export;
+- B2 Ableton >= 15 min at the Creative card 44.1 kHz / 2048 (E337 episodes): no crackle; diag.log 'anchors' 0 after
+  the start, err ranges (steps only in uneven stretches);
+- B3 analog part in time at Ableton buffers 512 and 2048; the Windows latency is A 3072 + block + 640 frames: at plugin
+  block 2048 ~131 ms > the Virus' max 127 ms -> a few ms early possible; NOTE: Live passes small plug-in blocks (Mac:
+  128-512 at any Live buffer, diag 'host ... block'), so the delay may stay well below 127 ms - check the diag line
+  'part N output X -> output delay N ms';
+- B4 dense MIDI passage: no 'more than 256 in one block' line (notes may still be missing: voice limit, E341).
+Mac block (17:10-17:16): M1 hil-mac ALL PASS (results-20261024-170929, max 0.96 ms, export 1.00x), M2 analog in
+sync at Live 512 and 2048 (diag: part 2 Out1 -> 44 ms; Live plug-in blocks 128-512), M3 part following - all pass.
+After Windows: README/site (analog delay, part following; tirevive-site-check), release notes in build.yml, version.
+
+## (state before)
 
 **Linux = CI build 0.8.33** (install.sh as the user, no sudo; plug-in b4b032e5.., broker e3787d73.. = the tarball;
 unpacked in ~/Downloads/TI-Revive-0.8.33-test). hil.sh on it: ALL PASS (work/hil/20261024-165448; max 0.57 ms).
