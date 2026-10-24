@@ -30,6 +30,10 @@ real DLLs (vtimodel files --access): x86 refused with the message, x64 opens. NO
 here) -> win11 VM next, together with step 4.
 The user's libraries from the PC are in ~/Dokumente/Access Music/Virus TI/Patches (no overwrite; the Linux
 "My Patches.mid" kept) -> Incubation V2 can be checked on Linux.
+**Also 2026-10-24 ~20:20:** MSI finish page text (WIXUI_EXITDIALOGOPTIONALTEXT): updating from 0.8.32 or older ->
+keep the box checked and the Access .msi at hand (not built yet). **Mac finding E346:** default_page_b() on the Mac
+binary takes init - 0x400 = wrong 7-bit bytes (137/256 differ), the real page B is at init + 0x2a0 -> Virus C
+libraries on the Mac load with a wrong page B since 7121a5e. Fix proposed to the user (by binary type, REA check).
 **NEXT:**
 4. Short test on the win11 VM (snapshot first, no Virus attached): (a) tirevive-access.ps1 -Quiet with the .msi ->
    Common\Virus Control.dll is PE32+ (a622f9a2..); (b) a normal Access install of the .msi -> which DLL lands in
