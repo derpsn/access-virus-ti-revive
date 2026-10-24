@@ -44,7 +44,13 @@ parameter of page B) with Linux/Windows. Release notes: old Virus C libraries on
    Common, x86 in Program Files (x86) (E345). The VM is back to the 32-bit DLL = a real case for the next CI build
    (setup.exe exit dialog / Set up Access files must fix it). win10 VM was started by mistake (vm.sh default) and
    shut down again, nothing ran in it.
-5. A Linux-only item the user will name (part of 0.8.33).
+5. Linux item (user, 2026-10-24 ~19:30): issue #14 - the reporter wants the Virus' volume knob to move the plug-in's
+   volume. ORIGINAL checked (E347, win10ref, captures/ref-volknob-1): in Multi edit mode the knob sends CC 7 on the
+   part's channel, the original's MIXER part slider ("07 Volume" = Part Volume) follows and it echoes CC 7 thinned;
+   the amplifier section's Patch Volume (CC 91) does NOT move. Normal mode: nothing (E338). The Snow prints PART
+   VOLUME under VALUE 1 (photo) -> likely CC 7 in normal use there. NEXT: the same on Linux with TI Revive (REAPER,
+   Multi edit, knob on part 1): does our mixer part slider follow, do we echo CC 7 like the original (capture
+   trv-volknob-1)? Then decide what to build.
 6. Open from the scan (not fixed): dumps of other sizes (202/158 bytes in "Yoz & Andy/Incubation V3 ... .mid.mid",
    31 of 128 kept; Cosmosis 54/59; Nice Bytes Toxic/Interactive 127/128) and upgrade_single false for version byte
    127 (Howard Scarr Sounds, 1 patch) - check with REA whether the original keeps them; a diag.log line per library
