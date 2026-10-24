@@ -1237,6 +1237,7 @@ tresult PLUGIN_API VirusPlugin::process(ProcessData &data)
         rs_valid_ = false;
         sc_[vidx(vrate)].reset();
         fe_.set_rate(vrate);
+        follow_.set_window(vrate / 2);
     }
     int64_t newest = ring_newest();
     if (out_ && out_->generation.load() != generation_seen_) { // the Virus came back: a new audio stream
@@ -1248,7 +1249,8 @@ tresult PLUGIN_API VirusPlugin::process(ProcessData &data)
     wait_offline(data, ratio, newest, avail); // offline render: at the Virus' pace
     if (newest >= 0) {
         // anchor once the stream has run for ~0.5 s (the first blocks arrive in bursts), then follow drift gently:
-        // one frame per block, re-anchor (new song position) only on a large jump (DAW or USB stall)
+        // one-frame steps from the error's mean, jumps only on a lasting offset (TimelineFollow, E337), re-anchor
+        // (new song position) only on a large jump (DAW or USB stall)
         if (stream_start_ < 0)
             stream_start_ = newest;
         int64_t target = newest - S, err = target - tl_;
@@ -1282,6 +1284,7 @@ tresult PLUGIN_API VirusPlugin::process(ProcessData &data)
                         (long long)err, (long long)newest, data.numSamples);
             tl_ = target;
             next_tick_ = (double)tl_;
+            follow_.reset();
             bool new_stream = !tl_valid_;
             if (new_stream)
                 marker_retries_ = 0; // a new stream (start, the Virus came back)
@@ -1292,19 +1295,20 @@ tresult PLUGIN_API VirusPlugin::process(ProcessData &data)
             rs_valid_ = false; // the resampled output jumps with the timeline, like the direct one (E279)
             if (!env_no_ping())
                 out_->calibrate(newest, new_stream); // the marker follows the ping sent in this block
-        } else if (tl_valid_ && out_->marker.load() >= 0 && std::llabs(err) > 512) {
-            // with the marker the Virus' stamp clock is tied to the ring, not to our anchor: jump back to real time
-            // (hosts that process ahead in bursts - REAPER's anticipative FX - or stall) without a new FE/F2/ping
-            tl_ += err;
-            next_tick_ += (double)err;
-            out_->anchors.fetch_add(1, std::memory_order_relaxed);
-            // the resampled output (host rate != 44.1 kHz) jumps too: steering at 0.2 % took >10 s for the ~1000
-            // frames after a render in REAPER - notes late, then catching up (user, L3; E279)
-            rs_valid_ = false;
-        } else if (tl_valid_ && std::llabs(err) > 256) {
-            tl_ += err > 0 ? 1 : -1;
-            next_tick_ += err > 0 ? 1 : -1;
-            out_->tl_steps.fetch_add(1, std::memory_order_relaxed);
+        } else if (tl_valid_) {
+            // with the marker the Virus' stamp clock is tied to the ring, not to our anchor, so a lasting offset
+            // jumps back to real time (hosts that process ahead in bursts - REAPER's anticipative FX - or stall)
+            // without a new FE/F2/ping; an uneven cadence alone no longer jumps back and forth (clicks, E337)
+            const TimelineFollow::Move mv = follow_.update(err, whole, out_->marker.load() >= 0);
+            tl_ += mv.delta;
+            next_tick_ += (double)mv.delta;
+            if (mv.jump) {
+                out_->anchors.fetch_add(1, std::memory_order_relaxed);
+                // the resampled output (host rate != 44.1 kHz) jumps too: steering at 0.2 % took >10 s for the
+                // ~1000 frames after a render in REAPER - notes late, then catching up (user, L3; E279)
+                rs_valid_ = false;
+            } else if (mv.delta != 0)
+                out_->tl_steps.fetch_add(1, std::memory_order_relaxed);
         }
     }
     struct Ev {

@@ -4,6 +4,21 @@
 
 **Continue on the real Windows PC (the user now runs Claude Code there).** Branch round-0.8.33.
 
+**Progress 2026-10-24 (Windows PC session): steps 1+2 WRITTEN, NOT BUILT.** The Windows PC has no compiler (no Visual
+Studio/MSVC, no cmake, vst3sdk submodule not checked out, no Python except a uv-managed one); the user chose NOT to
+install Build Tools there ("no build here"): the build comes from CI or the Linux side. Done: native/src/device/
+timelinefollow.h (TimelineFollow: jump = err beyond 512 on one side for 0.5 s -> jump by its mean; or the 2 s mean
+beyond 512; or abs(err) > 4096 at once (REAPER ahead, status.md -8548); drift steps one frame per block when the 2 s
+mean is beyond 256, until it is back at 128; anchor and 8192 re-anchor unchanged), used in process() (follow_.update(err,
+whole, marker), reset at every anchor, window vrate/2 on a rate change), tests native/tests/test_timelinefollow.cpp
+(6 tests: rough cadence 4 seeds no jumps / <400 steps; lasting 1000 offset one jump 0.4-0.6 s later; far offset at once;
+offset in rough cadence one jump <= 2.5 s; no marker only steps; +-200 ppm drift err within +-600). Test-first was done
+in a Python model of the same arithmetic (not in C++): old rule ~3700 jumps in the rough minute, new 0 (numbers in E337).
+**NEXT (Linux side):** build + ctest (expect 6 new tests to pass; -Werror on CI), check the thresholds of the tests hold
+in C++, nativehost run if possible, then a CI test build for the Windows PC (the user installs it and plays through two
+~6-minute episodes in Ableton at 2048; diag.log anchors ~0), hil-win.ps1, then the REAPER render check (step 4: jumps
+now come 0.5 s after a lasting offset instead of at once - E279's case must still be fine).
+
 **Problem (E337, follow-up of E187):** Ableton on bare metal, Creative card 44.1 kHz / 2048 (no ASIO), crackles in
 stretches of about a minute, roughly every 6 minutes. diag.log: drops 0, process time fine, read margin >= 0; in those
 stretches `timeline steps` 195-587 and `anchors` (jumps) 2-198 per 10 s, err -767..852 (calm: err -184..256, 0 jumps).
