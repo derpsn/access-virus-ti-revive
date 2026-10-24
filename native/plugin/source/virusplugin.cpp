@@ -680,6 +680,11 @@ void DeviceOut::run()
             log("Virus TI native: %d event(s) lost, the queue from process() was full\n", lost - rt_lost_logged_);
             rt_lost_logged_ = lost;
         }
+        if (int lost = ev_lost_.load(std::memory_order_relaxed); lost != ev_lost_logged_) {
+            log("Virus TI native: %d event(s) lost, more than %d in one block\n", lost - ev_lost_logged_,
+                BlockEvents::MAX);
+            ev_lost_logged_ = lost;
+        }
         if (rt_lost_off_.exchange(false, std::memory_order_relaxed))
             for (uint8_t ch = 0; ch < 16; ch++) { // a note-off was among them: nothing may keep sounding
                 send({(uint8_t)(0xB0 | ch), 64, 0});
@@ -801,6 +806,11 @@ tresult PLUGIN_API VirusPlugin::initialize(FUnknown *context)
     if (!files || !dev_.load(files->get("remotedevice.xml"), err) || !load_automation(files->get("automation.xml"), autom, err)) {
         // without the user's Access installation there is nothing to show; the host still gets a valid instance
         fprintf(stderr, "Virus TI native: %s\n", err.c_str());
+        if (diag_enabled()) // no device worker (and so no log) without the files: the reason, e.g. a 32-bit DLL (E345)
+            if (FILE *f = fopen((own_cache_dir() + "/../diag.log").c_str(), "a")) {
+                fprintf(f, "%ld Virus TI native: no Access files: %s\n", (long)std::time(nullptr), err.c_str());
+                fclose(f);
+            }
         return kResultOk;
     }
     single_template_ = dev_.message("VirusTI_Singledump");
@@ -884,6 +894,7 @@ tresult PLUGIN_API VirusPlugin::initialize(FUnknown *context)
         }
         drain_param_updates();
         load_reported_presets();
+        send_output_delays();
         report_offline();
         tick_sync_alert();
         diag_report(); // also with the editor closed (host rate and block sizes, E187)
@@ -1237,6 +1248,7 @@ tresult PLUGIN_API VirusPlugin::process(ProcessData &data)
         rs_valid_ = false;
         sc_[vidx(vrate)].reset();
         fe_.set_rate(vrate);
+        tl_follow_.set_window(vrate / 2);
     }
     int64_t newest = ring_newest();
     if (out_ && out_->generation.load() != generation_seen_) { // the Virus came back: a new audio stream
@@ -1248,7 +1260,8 @@ tresult PLUGIN_API VirusPlugin::process(ProcessData &data)
     wait_offline(data, ratio, newest, avail); // offline render: at the Virus' pace
     if (newest >= 0) {
         // anchor once the stream has run for ~0.5 s (the first blocks arrive in bursts), then follow drift gently:
-        // one frame per block, re-anchor (new song position) only on a large jump (DAW or USB stall)
+        // one-frame steps from the error's mean, jumps only on a lasting offset (TimelineFollow, E337), re-anchor
+        // (new song position) only on a large jump (DAW or USB stall)
         if (stream_start_ < 0)
             stream_start_ = newest;
         int64_t target = newest - S, err = target - tl_;
@@ -1282,6 +1295,7 @@ tresult PLUGIN_API VirusPlugin::process(ProcessData &data)
                         (long long)err, (long long)newest, data.numSamples);
             tl_ = target;
             next_tick_ = (double)tl_;
+            tl_follow_.reset();
             bool new_stream = !tl_valid_;
             if (new_stream)
                 marker_retries_ = 0; // a new stream (start, the Virus came back)
@@ -1292,37 +1306,26 @@ tresult PLUGIN_API VirusPlugin::process(ProcessData &data)
             rs_valid_ = false; // the resampled output jumps with the timeline, like the direct one (E279)
             if (!env_no_ping())
                 out_->calibrate(newest, new_stream); // the marker follows the ping sent in this block
-        } else if (tl_valid_ && out_->marker.load() >= 0 && std::llabs(err) > 512) {
-            // with the marker the Virus' stamp clock is tied to the ring, not to our anchor: jump back to real time
-            // (hosts that process ahead in bursts - REAPER's anticipative FX - or stall) without a new FE/F2/ping
-            tl_ += err;
-            next_tick_ += (double)err;
-            out_->anchors.fetch_add(1, std::memory_order_relaxed);
-            // the resampled output (host rate != 44.1 kHz) jumps too: steering at 0.2 % took >10 s for the ~1000
-            // frames after a render in REAPER - notes late, then catching up (user, L3; E279)
-            rs_valid_ = false;
-        } else if (tl_valid_ && std::llabs(err) > 256) {
-            tl_ += err > 0 ? 1 : -1;
-            next_tick_ += err > 0 ? 1 : -1;
-            out_->tl_steps.fetch_add(1, std::memory_order_relaxed);
+        } else if (tl_valid_) {
+            // with the marker the Virus' stamp clock is tied to the ring, not to our anchor, so a lasting offset
+            // jumps back to real time (hosts that process ahead in bursts - REAPER's anticipative FX - or stall)
+            // without a new FE/F2/ping; an uneven cadence alone no longer jumps back and forth (clicks, E337)
+            const TimelineFollow::Move mv = tl_follow_.update(err, whole, out_->marker.load() >= 0);
+            tl_ += mv.delta;
+            next_tick_ += (double)mv.delta;
+            if (mv.jump) {
+                out_->anchors.fetch_add(1, std::memory_order_relaxed);
+                // the resampled output (host rate != 44.1 kHz) jumps too: steering at 0.2 % took >10 s for the
+                // ~1000 frames after a render in REAPER - notes late, then catching up (user, L3; E279)
+                rs_valid_ = false;
+            } else if (mv.delta != 0)
+                out_->tl_steps.fetch_add(1, std::memory_order_relaxed);
         }
     }
-    struct Ev {
-        int64_t stamp;
-        uint8_t n, m[16];
-    };
-    // automation takes at most 96 slots and clock/bend/aftertouch a few dozen, so notes always keep 100+ (a dropped
-    // note-off would hang a note)
-    constexpr int EV_MAX = 256;
-    Ev evs[EV_MAX];
-    int nev = 0;
-    auto add = [&](int64_t stamp, const uint8_t *m, size_t n) {
-        if (nev < EV_MAX && n <= 16) {
-            evs[nev].stamp = stamp, evs[nev].n = (uint8_t)n;
-            memcpy(evs[nev].m, m, n);
-            nev++;
-        }
-    };
+    // automation takes at most 96 slots and clock/bend/aftertouch a few dozen, so notes always keep 100+; what does
+    // not fit is counted and logged (blockevents.h)
+    BlockEvents evs;
+    auto add = [&](int64_t stamp, const uint8_t *m, size_t n) { evs.add(stamp, m, n); };
     // Virus frames of this block: exact on average (a fractional rest carries over), so other host rates do not drift
     tl_acc_ += data.numSamples * ratio;
     int64_t block_frames = (int64_t)std::floor(tl_acc_ + 1e-9);
@@ -1418,7 +1421,7 @@ tresult PLUGIN_API VirusPlugin::process(ProcessData &data)
     // send waiting automation within the budget, oldest first (at the block start)
     automation_.refill(data.numSamples, rate_);
     if (out_)
-        automation_.drain(96 - nev, [&](uint32_t id) {
+        automation_.drain(96 - evs.n, [&](uint32_t id) {
             auto it = params_.find(id);
             if (it == params_.end() || it->second.pending < 0)
                 return false;
@@ -1455,13 +1458,13 @@ tresult PLUGIN_API VirusPlugin::process(ProcessData &data)
     // to the Virus in time order (clock ticks and events share the timeline); stable: at the same stamp automation
     // stays before the notes, so a note starts with the new values (insertion sort: stable, no allocation on the
     // audio thread, and the events come nearly in order)
-    for (int i = 1; i < nev; i++)
-        for (int j = i; j > 0 && evs[j].stamp < evs[j - 1].stamp; j--)
-            std::swap(evs[j], evs[j - 1]);
-    for (int i = 0; out_ && i < nev; i++)
-        out_->send_rt(evs[i].m, evs[i].n, evs[i].stamp);
-    if (out_ && nev > 0)
+    evs.sort();
+    for (int i = 0; out_ && i < evs.n; i++)
+        out_->send_rt(evs.ev[i].m, evs.ev[i].n, evs.ev[i].stamp);
+    if (out_ && evs.n > 0)
         out_->wake_rt();
+    if (out_ && evs.dropped > 0)
+        out_->collect_lost(evs.dropped, evs.dropped_off);
     int64_t block_start = tl_;
     if (tl_valid_) {
         tl_ += block_frames;
@@ -3463,7 +3466,12 @@ void VirusPlugin::panel_message(const std::vector<uint8_t> &msg)
         const Parameter *p = cond_ ? cond_->find(path) : nullptr;
         return !p || meta_cond(*p, part);
     };
-    for (auto &c : PanelFollow::reports_by_condition(dev_.decode(msg), holds)) {
+    auto reports = PanelFollow::reports_by_condition(dev_.decode(msg), holds);
+    PanelFollow::globals_without_part(reports, [this](const std::string &path) {
+        const Parameter *p = cond_ ? cond_->find(path) : nullptr;
+        return p && p->part == "none";
+    });
+    for (auto &c : reports) {
         // a soft knob turned on the Virus: in plug-in mode it only reports the knob's value and leaves the sound alone
         // (E152, user test in REAPER: no change until the host sends it). Like the original (0x180081980 -> the soft
         // knob's setter 0x1800a2840 -> the target's setter): the panel part's destination parameter takes the value
@@ -3500,7 +3508,7 @@ void VirusPlugin::panel_message(const std::vector<uint8_t> &msg)
         if (ready_ && PanelFollow::is_preset_path(c.path) && ui_value(c.path, c.part) != c.value)
             follow_.preset_report(c.path, c.part, PanelFollow::Clock::now());
         set_part_value(c.part, c.path, c.value);
-        {
+        if (c.part >= 0) { // like ui_set: globals (the panel part) have no linked parameters
             std::lock_guard<std::recursive_mutex> mk(meta_mu_);
             meta_source(c.path, c.part, c.value, false); // e.g. the FX switches follow the send knobs on the Virus
         }
@@ -3519,6 +3527,56 @@ void VirusPlugin::panel_message(const std::vector<uint8_t> &msg)
             else
                 pending_.push_back({it->second, c.value / 127.0});
         }
+    }
+}
+
+// a part's Output Select, from the form that applies (the third USB output on or off) as panel_message reads it; found
+// through its message, since the models name it differently (TI "Output Select Control2", Snow "pr Output Select ...")
+int VirusPlugin::part_output(int part)
+{
+    const auto r = OutputDelay::select_report(part);
+    auto forms = dev_.decode(std::vector<uint8_t>(r.begin(), r.end()));
+    if (forms.empty())
+        return 10; // unknown here: USB1 L+R, the default - nothing is held back
+    for (auto &c : forms) {
+        const Parameter *p = cond_ ? cond_->find(c.path) : nullptr;
+        if (p && meta_cond(*p, part))
+            return ui_value(c.path, part);
+    }
+    return ui_value(forms[0].path, part);
+}
+
+// worker (idle hook): parts on an analog output are held back by the plug-in's latency, so they sound together with
+// the USB parts (E344, like the original: 6F pp 7F ms for the parts that changed, all 16 at Play/Stop and after a new
+// connection); checked every 50 ms
+void VirusPlugin::send_output_delays()
+{
+    if (!out_)
+        return;
+    if (!ready_.load()) {
+        if (od_ready_seen_)
+            out_delay_.reset(); // the Virus' values are unknown after a reconnect
+        od_ready_seen_ = false;
+        return;
+    }
+    od_ready_seen_ = true;
+    const bool playing = host_playing_.load(std::memory_order_relaxed), all = playing != od_playing_seen_;
+    od_playing_seen_ = playing;
+    const auto now = std::chrono::steady_clock::now();
+    if (!all && now < od_next_)
+        return;
+    od_next_ = now + std::chrono::milliseconds(50);
+    int outputs[16], parts[16], ms[16];
+    for (int p = 0; p < 16; p++)
+        outputs[p] = part_output(p);
+    const int delay = (int)std::lround(latency_frames() * 1000.0 / virus_rate());
+    const int n = out_delay_.due(outputs, delay, all, parts, ms);
+    for (int i = 0; i < n; i++) {
+        const auto m = OutputDelay::message(parts[i], ms[i]);
+        out_->send(std::vector<uint8_t>(m.begin(), m.end()));
+        if (!all)
+            out_->log("Virus TI native: part %d output %d -> output delay %d ms\n", parts[i] + 1, outputs[parts[i]],
+                      ms[i]);
     }
 }
 

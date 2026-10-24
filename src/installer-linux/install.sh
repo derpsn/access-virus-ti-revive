@@ -47,10 +47,16 @@ unpack_msi() { # $1 = .msi, $2 = empty folder; fails without msiextract or Wine
 }
 # The .msi holds Common/ twice (E324, issue #15): the x64 files with the Control Center exe and, under Program Files,
 # the 32-bit DLL without it. find's order depends on the file system, so take the copy that has the exe.
-access_src() { # $1 = unpacked .msi -> its .../Access Music/Virus TI folder, empty if there is no Virus Control.dll
+pe64() { # $1 = file: a 64-bit Windows image (PE32+); the plug-in reads only the 64-bit Virus Control.dll (E345)
+    [ "$(od -An -c -N2 "$1" 2>/dev/null | tr -d ' ')" = MZ ] || return 1
+    off=$(od -An -tu4 -j60 -N4 "$1" | tr -d ' ')
+    [ "$(od -An -tx1 -j$((off + 24)) -N2 "$1" | tr -d ' ')" = 0b02 ]
+}
+access_src() { # $1 = unpacked .msi -> its .../Access Music/Virus TI folder, empty if there is no 64-bit Virus Control.dll
     find "$1" -path '*Access Music/Virus TI/Common/Virus Control.dll' | {
         best=""
         while IFS= read -r dll; do
+            pe64 "$dll" || continue # the .msi also holds the 32-bit DLL
             d=$(dirname "$(dirname "$dll")")
             [ -n "$best" ] || best=$d
             if [ -f "$d/Common/$CC_EXE" ]; then best=$d; break; fi
@@ -122,7 +128,10 @@ fi
 # --- 3. the Access files ---------------------------------------------------------------------------------------------
 say "Access Virus TI files"
 OLD_COMMON="$PREFIX/drive_c/Program Files/Access Music/Virus TI/Common" # TI Revive 0.7 installed Access into Wine
-if [ -f "$ACCESS/Common/Virus Control.dll" ] && [ -f "$ACCESS/Common/firmware.bin" ]; then
+if [ -f "$ACCESS/Common/Virus Control.dll" ] && ! pe64 "$ACCESS/Common/Virus Control.dll"; then
+    echo "the installed Virus Control.dll is the 32-bit one; the plug-in needs the 64-bit one: replacing it"
+fi
+if pe64 "$ACCESS/Common/Virus Control.dll" && [ -f "$ACCESS/Common/firmware.bin" ]; then
     echo "already set up in $ACCESS"
     [ -f "$ACCESS/Common/$CC_EXE" ] || [ ! -f "$OLD_COMMON/$CC_EXE" ] || cp "$OLD_COMMON/$CC_EXE" "$ACCESS/Common/"
     # installs before 0.8.32 could miss the exe (issue #15): take it from the .msi when it is at hand, else go on
@@ -142,7 +151,7 @@ if [ -f "$ACCESS/Common/Virus Control.dll" ] && [ -f "$ACCESS/Common/firmware.bi
         echo "NOTE: $CC_EXE is missing, so the Control Center shows its plain look; for the Access look run"
         echo "      ./install.sh \"/path/to/Virus TI Software Suite 5.1.7.00 64-bit.msi\""
     fi
-elif [ -f "$OLD_COMMON/Virus Control.dll" ] && [ -f "$OLD_COMMON/firmware.bin" ]; then
+elif [ -f "$OLD_COMMON/Virus Control.dll" ] && pe64 "$OLD_COMMON/Virus Control.dll" && [ -f "$OLD_COMMON/firmware.bin" ]; then
     mkdir -p "$ACCESS/Common"
     cp "$OLD_COMMON/Virus Control.dll" "$OLD_COMMON/firmware.bin" "$ACCESS/Common/"
     [ ! -f "$OLD_COMMON/$CC_EXE" ] || cp "$OLD_COMMON/$CC_EXE" "$ACCESS/Common/"
@@ -157,7 +166,8 @@ else
         die "to unpack the Access .msi install msitools (Ubuntu/Debian: sudo apt install msitools) or Wine, then run ./install.sh again"
     unpack_msi "$MSI" "$TMP" || die "could not unpack $MSI"
     SRC=$(access_src "$TMP") # .../Access Music/Virus TI
-    [ -n "$SRC" ] || die "no Virus Control.dll in $MSI - is it the 64-bit \"Virus TI Software Suite\" .msi?"
+    [ -n "$SRC" ] || die "no 64-bit Virus Control.dll in $MSI - is it the 64-bit \"Virus TI Software Suite\" .msi?
+       (Wine's unpacking keeps only the 32-bit DLL: install msitools, e.g. sudo apt install msitools, and run again)"
     mkdir -p "$ACCESS/Common"
     cp "$SRC/Common/Virus Control.dll" "$SRC/Common/firmware.bin" "$ACCESS/Common/"
     [ ! -f "$SRC/Common/$CC_EXE" ] || cp "$SRC/Common/$CC_EXE" "$ACCESS/Common/"

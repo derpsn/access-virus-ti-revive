@@ -93,6 +93,9 @@
     <!-- exit dialog: install the user's Access software now (as the user; msiexec elevates itself) -->
     <Property Id="WIXUI_EXITDIALOGOPTIONALCHECKBOXTEXT" Value="Set up the Access Virus TI files now (recommended)" />
     <Property Id="WIXUI_EXITDIALOGOPTIONALCHECKBOX" Value="1" />
+    <!-- 0.8.32 and older could set up the 32-bit Virus Control.dll, which the plug-in no longer reads (E345); the
+         set-up below replaces it, but only with the Access .msi at hand -->
+    <Property Id="WIXUI_EXITDIALOGOPTIONALTEXT" Value="Updating from 0.8.32 or older? Keep the box below checked and the Access 64-bit .msi next to this installer or in Downloads: older setups could copy the 32-bit Virus Control.dll, which TI Revive no longer reads." />
     <CustomAction Id="CA_LaunchAccess" Directory="INSTALLFOLDER" Return="asyncNoWait" Impersonate="yes"
                   ExeCommand="&quot;[System64Folder]WindowsPowerShell\v1.0\powershell.exe&quot; -NoProfile -ExecutionPolicy Bypass -WindowStyle Hidden -File &quot;[INSTALLFOLDER]tirevive-access.ps1&quot; -FromMsi &quot;[OriginalDatabase]&quot; -SourceDir &quot;[TIREVIVE_SOURCEDIR]&quot;" />
     <!-- set by TI-Revive-setup.exe (TIReviveSetup.wxs): the folder of the setup.exe, where the Access .msi usually is -->

@@ -1,0 +1,91 @@
+{
+ "round": "0.8.33-2",
+ "lead": "Targeted round on test build 0.8.33 (CI run 40119192061) after the first 0.8.33 round passed: only the changes since then. New: TI Revive reads only the 64-bit Virus Control.dll (E345) and the Windows setup / Linux install.sh replace a 32-bit one; the MSI's last page tells updaters to keep the Access .msi at hand; on the Mac old Virus A/B/C library patches get the right default page B (E346). Mark each item, add a note where something looks different, then copy the results at the bottom into the chat.",
+ "rules": [
+  "Order: Linux first (the Virus is on this PC), then the Windows VM, then the Mac. Close the DAW before the Virus moves."
+ ],
+ "sections": [
+  {
+   "id": "linux",
+   "title": "Linux",
+   "where": "REAPER, Virus on this PC",
+   "prep": [
+    "Claude installs the CI build with install.sh and runs hil.sh (cold start, reopen, export) before this block."
+   ],
+   "items": [
+    {
+     "id": "L1",
+     "title": "install.sh again keeps the 64-bit Access files",
+     "steps": [
+      "Claude ran <code>./install.sh</code> of the CI build over the existing setup (output in the chat)."
+     ],
+     "expect": "No 'replacing' line for Virus Control.dll; the installed DLL is still the 64-bit one (a622f9a2..)."
+    },
+    {
+     "id": "L2",
+     "title": "Old Virus C library loads with names",
+     "steps": [
+      "REAPER, TI Revive: LOAD > Personal Libraries > Manuel Schleis > Manuel Schleis Incubation V2.",
+      "Load two or three of its patches into part 1 and play them."
+     ],
+     "expect": "128 names in the list; the patches load and play."
+    }
+   ]
+  },
+  {
+   "id": "win",
+   "title": "Windows 11 (VM)",
+   "where": "win11 VM, Ableton Live 11; the VM still has the 32-bit Virus Control.dll from an older TI Revive setup",
+   "prep": [
+    "Claude copies the CI build's TI-Revive-0.8.33-setup.exe into the VM's Downloads, next to the Access .msi, and attaches the Virus."
+   ],
+   "items": [
+    {
+     "id": "W1",
+     "title": "Update: the finish page and the 64-bit DLL",
+     "steps": [
+      "In the VM, double-click TI-Revive-0.8.33-setup.exe in Downloads and click through.",
+      "On the last page read the new text above the checkbox; keep the box checked and click Finish; confirm the admin prompt."
+     ],
+     "expect": "The text is fully readable (not cut off) and the checkbox is not covered; a message says the Access files are set up; Claude then finds the 64-bit DLL (a622f9a2..) in Common."
+    },
+    {
+     "id": "W2",
+     "title": "Plug-in opens after the update",
+     "steps": [
+      "Start Live 11, load TI Revive Virus Control on a MIDI track, play a few notes.",
+      "LOAD > Personal Libraries: open an old Virus A/B/C library if one is there (else skip that part)."
+     ],
+     "expect": "The editor opens and plays; an old library shows its names."
+    }
+   ]
+  },
+  {
+   "id": "mac",
+   "title": "macOS",
+   "where": "MacBook Air M3, Ableton Live 12",
+   "prep": [
+    "Claude pushes the CI package to the Mac (INSTALL-COMMAND.txt and 'Install test build.command' in the unpacked folder); you run the installer, then hil-mac.command."
+   ],
+   "items": [
+    {
+     "id": "M1",
+     "title": "hil-mac on the new build",
+     "steps": [
+      "Run hil-mac.command from the unpacked folder's hil folder (about 5 minutes) and send the result folder."
+     ],
+     "expect": "ALL PASS (cold start, reopen, export)."
+    },
+    {
+     "id": "M2",
+     "title": "Virus C patch with the right page B",
+     "steps": [
+      "Live 12, TI Revive: LOAD > Personal Libraries > Manuel Schleis > Manuel Schleis Incubation V2 (Claude copies it to the Mac's Documents/Access Music/Virus TI/Patches) and load its first patch into part 1.",
+      "The first patch is \"Exciter MS\". On the filter page, FILTER / AUX ENVELOPES, click tab <b>3</b> and read Attack, Decay and Release (hover or the help shows the value)."
+     ],
+     "expect": "The patch loads and plays; envelope 3: Attack 20, Decay 70, Release 70 (the old Mac version showed 0 / 0 / 0 there)."
+    }
+   ]
+  }
+ ]
+}

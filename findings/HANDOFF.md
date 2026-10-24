@@ -1,6 +1,311 @@
 # HANDOFF
 
-## START HERE - state 2026-10-23 afternoon (the user home, Virus on USB again)
+## START HERE (2026-10-24 ~20:45): ROUND 0.8.33-2 6/6 PASS (E350) - ready for the release decision
+
+**Seen on the Windows PC (user):** LOAD > Personal Libraries > "Manuel Schleis/Manuel Schleis Incubation V2" is
+listed, its bank is EMPTY (no names; "worked already" on other machines). The file is fine: 128 Virus C dumps (267
+bytes, version 7, bank byte 1, programs 0..127), unchanged since 2009.
+**Cause (static, Python copy of our logic against the user's files, no C++ build on that PC):** C:\Program Files\Access
+Music\Virus TI\Common\Virus Control.dll there was the **x86** build (PE machine 0x14c, sha256 3e844c35..; inventory.md
+"x86"). AccessFiles::default_page_b() (native/src/access/accessfiles.cpp:388) takes page B at `-Init-` dump - 0x400,
+which is the x64 layout (a622f9a2..: Init at 0x1c46b0, table OK). In the x86 DLL that spot has bytes > 0x7F -> {} ->
+load_library_file drops EVERY 267-byte dump -> all Virus A/B/C libraries load empty, TI-format ones (OS4/OS5 ...) are
+fine. Nothing in diag.log: neither a missing page B nor skipped dumps are logged.
+**How the x86 DLL got there:** an ADMINISTRATIVE extract of "Virus TI Software Suite 5.1.7.00 64-bit.msi" (msiexec /a)
+flattens the x64 and x86 trees into one Access Music/Virus TI/Common, and the x86 file (File key viruscontrol_dll)
+overwrites the x64 one (viruscontrol_dll64); the .vst3 comes out x86 too. The user's Downloads\VirusTI Driver folder
+(copied to Program Files on Oct 17) is such an extract. The x64 file comes out right with 7-Zip: Installer.cab ->
+viruscontrol_dll64.
+**Workaround DONE (2026-10-24 ~18:55):** x64 DLL (a622f9a2..) from the MSI's cab copied into Program Files\...\Common
+(elevated), the x86 one backed up in the session scratchpad; page B check on the installed file now OK. NOT yet
+checked in the plug-in: DAW restart -> Incubation V2 shows 128 names and plays (user). The Downloads\VirusTI Driver
+folder still holds the x86 DLL.
+**DECIDED (user, 2026-10-24): only the 64-bit Virus Control.dll (E345). Steps 1-3 DONE ~20:00 (Linux, unit tests):**
+(1) AccessFiles::open() skips a PE32 DLL and names it in the error -> Control Center status line at start, plug-in
+diag.log line "no Access files: ..." (no editor, as without an installation); (2) install.sh picks the PE32+ copy
+(pe64) and replaces an installed 32-bit one on a re-run; tirevive-access.ps1 treats a 32-bit DLL as missing and takes
+viruscontrol_dll64 from the embedded #Installer.cab (Add-Type over msi.dll + expand.exe); (3) the knob template reader
+reads 64-bit pointers only (E202's PE32 path removed). README: one note each for Windows and Linux. Checked on the
+real DLLs (vtimodel files --access): x86 refused with the message, x64 opens. NOT RUN: the PowerShell path (no pwsh
+here) -> win11 VM next, together with step 4.
+The user's libraries from the PC are in ~/Dokumente/Access Music/Virus TI/Patches (no overwrite; the Linux
+"My Patches.mid" kept) -> Incubation V2 can be checked on Linux.
+**Also 2026-10-24 ~20:20:** MSI finish page text (WIXUI_EXITDIALOGOPTIONALTEXT): updating from 0.8.32 or older ->
+keep the box checked and the Access .msi at hand (not built yet). **Mac finding E346:** default_page_b() on the Mac
+binary takes init - 0x400 = wrong 7-bit bytes (137/256 differ), the real page B is at init + 0x2a0 -> Virus C
+libraries on the Mac load with a wrong page B since 7121a5e. FIXED ~20:45 (user: 'really important'): REA confirmed
+the Mac upgrader FUN_000e5c00 copies page B from init + 0x2a0; default_page_b() now picks by format (PE -0x400,
+Mach-O +0x2a0), tests for both layouts, vtimodel pageb: Mac bundle == Windows x64 bytes. Not run on the Mac yet ->
+round item: Mac, load an old Virus A/B/C library patch, compare a page B value (e.g. a mod matrix slot or FX
+parameter of page B) with Linux/Windows. Release notes: old Virus C libraries on the Mac sounded with a wrong page B.
+**NEXT:**
+4. DONE ~21:20 (win11 VM, snapshot before-e345-test, reverted; both VMs off): new tirevive-access.ps1 replaced the
+   VM's 32-bit DLL with a622f9a2.. (x64), rerun idempotent; a normal Access install puts x64 in Program Files\...\
+   Common, x86 in Program Files (x86) (E345). The VM is back to the 32-bit DLL = a real case for the next CI build
+   (setup.exe exit dialog / Set up Access files must fix it). win10 VM was started by mistake (vm.sh default) and
+   shut down again, nothing ran in it.
+5. Linux item (user, 2026-10-24 ~19:30): issue #14 - the reporter wants the Virus' volume knob to move the plug-in's
+   volume. ORIGINAL checked (E347, win10ref, captures/ref-volknob-1): in Multi edit mode the knob sends CC 7 on the
+   part's channel, the original's MIXER part slider ("07 Volume" = Part Volume) follows and it echoes CC 7 thinned;
+   the amplifier section's Patch Volume (CC 91) does NOT move. Normal mode: nothing (E338). The Snow prints PART
+   VOLUME under VALUE 1 (photo) -> likely CC 7 in normal use there. NEXT: the same on Linux with TI Revive (REAPER,
+   Multi edit, knob on part 1): does our mixer part slider follow, do we echo CC 7 like the original (capture
+   trv-volknob-1)? Then decide what to build.
+   DONE ~20:00: E348 (original: every Shift function is an ordinary report; Shift+Attack = Patch Volume CC 91,
+   Shift+Osc Balance = Panorama; the original echoes only automatable ones; its window follows Patch Volume) and
+   E349 (TI Revive on Linux: amplifier Volume/Pan and the mixer part slider follow - nothing to build on the TI2; we
+   do not echo, by design). Open for the Snow: which knob the reporter means (big VOLUME = analog master, never USB;
+   Shift+Value 1 = Patch Volume) -> reply on #14 drafted for the user, not posted. Virus back on Linux, win10ref off.
+** ROUND 0.8.33-2 DONE 2026-10-24 ~20:45: 6/6 pass (E350): L1, L2, W1, W2, M1 (hil-mac ALL PASS graded on Linux),
+   M2 (20/70/70). Tested-on line in the release notes. win11 + win10ref off, Virus on the Mac (moved for M1/M2).
+   NEXT: release decision with the user: push, merge round-0.8.33 -> main with -F <file>, verify the merge commit,
+   tag v0.8.33 (separate command), release CI, then site rebuild by hand (gh workflow run site.yml) - the new notice
+   box goes live with it; install the release on Linux / win11 / Mac.
+5b. Wish (user, 2026-10-24, M2): show a knob's value in the bottom LCD on hover (today the LCD changes only when a
+   value changes: ui_set -> set_lcd). FIRST check what the original Virus Control does on hover (win10ref, no
+   guessing); like the original -> a gap to close, else our own addition, say so. Next round, not 0.8.33.
+6. Open from the scan (not fixed): dumps of other sizes (202/158 bytes in "Yoz & Andy/Incubation V3 ... .mid.mid",
+   31 of 128 kept; Cosmosis 54/59; Nice Bytes Toxic/Interactive 127/128) and upgrade_single false for version byte
+   127 (Howard Scarr Sounds, 1 patch) - check with REA whether the original keeps them; a diag.log line per library
+   with skipped dumps.
+7. Reddit report "personal libraries aren't producing any sound": likely E345 -> ask whether their Common\Virus
+   Control.dll is 32-bit (14,040,312 bytes) and whether only Virus A/B/C libraries were empty.
+8. Release prep 2026-10-24 ~20:15 (user: targeted round, not a full one): native VERSION 0.8.33, pushed, CI run
+   40119192061 (3217a3a). Site check (tirevive-site-check): TESTS 379 -> 403 (site + README); part following and
+   analog outputs in time (E342, E344) added to the features (site + README, same words); Windows card: update note
+   (64-bit only, E345); timing table unchanged (no new 16th-note DAW measurement; B1 hil-win is another measure),
+   coverage 94 % (16 Oct) kept with its date. Site built locally only (not deployed). Release notes 0.8.33 in
+   build.yml (Tested-on line after the targeted round). Site: new notice box above the hero (build.py NOTICES +
+   notice_section, style.css .notice; empty list = no box), first entry = the 64-bit Windows update note (E345); the
+   README starts with the same text. Checked in headless Firefox at 1400 and 390 px (scratchpad screenshots).
+   Targeted round spec: scripts/checklists/round-0.8.33-2.json (L1-L2, W1-W2, M1-M2), checklist artifact
+   https://claude.ai/artifact/HQvBECEREpToNdDWRyYZRz (db, marks rounds/0.8.33-2/marks). CI run 40119192061 ALL GREEN.
+   LINUX: install.sh of the CI build over the existing setup = "already set up", DLL a622f9a2.. kept, plug-in
+   7a544108.. = tarball, broker e3787d73.. unchanged (old plug-in backed up in ~/.vst3-backup/0.8.33-ci1); hil.sh
+   ALL PASS (max 0.66 ms); L1, L2 marked pass by the user. M2 marker (vtimodel libdump, new): Incubation V2 patch 0
+   "Exciter MS", correct page B -> Envelope 3/4 Attack 20, Decay 70, Release 70; the old Mac bytes gave 0/0/0, Delay
+   Type 105 and ASCII in the arp user pattern. Mac: package pushed + unpacked (~/Downloads/TI-Revive-0.8.33-mac, pkg
+   eef65c1d.. = CI, hil kit, INSTALL-COMMAND.txt, Install test build.command), Incubation V2 copied to the Mac's
+   Personal Libraries. win11 VM running, setup.exe (d9865ba6.. = CI) in Downloads next to the Access .msi, VM DLL
+   still 32-bit (3e844c35..) = the update case. Targeted round on the new CI build: VM setup.exe upgrade over
+   the 32-bit DLL (finish page text, DLL replaced, plug-in opens), Linux install.sh again + hil.sh + Incubation V2
+   names, Mac install + one Virus A/B/C patch page B + hil-mac.
+
+## START HERE - state 2026-10-24 ~18:05: round 0.8.33 checklist - Linux, Mac, Windows PC DONE (B1 graded: all pass)
+
+**Windows PC session 2026-10-24 17:15-18:05 (CI run 40104018425):** artifacts fetched via nightly.link (no gh/login on
+that PC; zip sizes = the API's), MSI plug-in 1548EEA1 = the VM's; setup.exe /quiet exit 0, installed binaries = MSI
+(replaced the earlier CCE39B57 of run 40093015139). All four marked pass by the user, notes in the checklist db.
+- **B1 hil-win:** results-20261024-172158, H1/H2.1/H2.2/H3/H6 ran, nothing failed. GRADED on Linux 2026-10-24 ~19:10
+  (hil_check.py --folder, zip copied to ~/windows_tests): ALL PASS (H2.1 max 0.14 ms, H2.2 0.43 ms, H3 export 1.00x,
+  H6 0.75 ms / +4 ppm).
+- **B2:** Live 17:27-17:59 (31 min), 44.1 kHz, user: no crackle. diag: drops 0, over block 0, anchors 1 at the start
+  plus 1 each at 17:56:17 / 17:57:57, both next to a new Play ("N since Play" reset) - read as transport restarts, not
+  the E337 jumps. Uneven stretches (err up to +-800, once 2257 at the Play) handled by drift steps only (bursts
+  ~130-146); this morning's old build had 47-198 anchors per 10 s in the same kind of stretch -> E337 fix exercised.
+- **B3:** 'part 3 output 1 -> output delay 90 ms' = (3072+256+640)/44100; Live passed block 256 the whole session
+  (largest 256) even when the user switched 512 / 2048 - like the Mac. User: in sync at both.
+- **B4:** no 'more than 256 in one block', no 'event(s) lost', no full-queue line; some notes still missing in the
+  dense passage, same on Linux -> the Virus' voice limit (E341), not our side.
+Logs: Downloads\TI-Revive-0.8.33-run40104018425\windows-logs\diag-B2-173950.log, diag-B4-175934.log (not in git).
+NEXT: grade B1 on Linux; then README/site (analog delay, part following; tirevive-site-check), release notes in
+build.yml, version.
+
+## (state before, ~17:20)
+
+**For the Windows session (the user boots this PC into Windows and runs Claude Code there):** checklist
+https://claude.ai/artifact/RJnAcjRBphmuowwFqgeNCL (v2; marks L1, L2, M1, M2, M3 = pass). Items B1-B4:
+- install the CI build: TI-Revive-0.8.33-setup.exe (CI run 40104018425, artifact TI-Revive-msi; also on Linux in
+  ~/Downloads/TI-Revive-0.8.33-test/msi), plug-in log on (%LOCALAPPDATA%\virus-ti-native\diag.on);
+- B1 hil-win (artifact TI-Revive-hil-windows; no Python on that PC -> grade the folder on Linux with
+  hil_check.py --folder, or copy it to Linux like /home/datoml/windows_tests); covers cold/reopen/export;
+- B2 Ableton >= 15 min at the Creative card 44.1 kHz / 2048 (E337 episodes): no crackle; diag.log 'anchors' 0 after
+  the start, err ranges (steps only in uneven stretches);
+- B3 analog part in time at Ableton buffers 512 and 2048; the Windows latency is A 3072 + block + 640 frames: at plugin
+  block 2048 ~131 ms > the Virus' max 127 ms -> a few ms early possible; NOTE: Live passes small plug-in blocks (Mac:
+  128-512 at any Live buffer, diag 'host ... block'), so the delay may stay well below 127 ms - check the diag line
+  'part N output X -> output delay N ms';
+- B4 dense MIDI passage: no 'more than 256 in one block' line (notes may still be missing: voice limit, E341).
+Mac block (17:10-17:16): M1 hil-mac ALL PASS (results-20261024-170929, max 0.96 ms, export 1.00x), M2 analog in
+sync at Live 512 and 2048 (diag: part 2 Out1 -> 44 ms; Live plug-in blocks 128-512), M3 part following - all pass.
+After Windows: README/site (analog delay, part following; tirevive-site-check), release notes in build.yml, version.
+
+## (state before)
+
+**Linux = CI build 0.8.33** (install.sh as the user, no sudo; plug-in b4b032e5.., broker e3787d73.. = the tarball;
+unpacked in ~/Downloads/TI-Revive-0.8.33-test). hil.sh on it: ALL PASS (work/hil/20261024-165448; max 0.57 ms).
+**win11 VM = CI build 0.8.33** (setup.exe /quiet exit 0, entries "TI Revive 0.8.33", plug-in 1548eea1.. = the MSI's
+nativevst3; C:\tirevive-test\0.8.33; VM off). **Mac: package PUSHED** (~17:10) to ~/Downloads/TI-Revive-0.8.33-mac
+(pkg 1eebd732.. = CI) with hil/ kit, INSTALL-COMMAND.txt and "Install test build.command"; INSTALLED by the user (~17:15):
+receipt io.github.derpsn.tirevive 0.8.33, VST3 binary 039b19e7.. = the pkg payload. All three test machines + the
+Windows PC download ready; CHECKLIST published 2026-10-24 ~17:25:
+https://claude.ai/artifact/RJnAcjRBphmuowwFqgeNCL (spec scripts/checklists/round-0.8.33.json; db, marks in
+rounds/0.8.33/marks - empty at publish). risk.py: class C (CI files); Linux core by hil.sh (done, all pass); Windows
+core on the Windows PC (BC1-3, not the VM: E337 + analog delay need real timing), Mac MC1-3. New items: L1 analog
+delay 2048/256, L2 part following + part volume; M1 hil-mac, M2 analog delay, M3 part following; B1 hil-win, B2 long
+Ableton session (E337), B3 analog delay at Windows latency (at 2048 the needed ~131 ms is above the Virus' 127 ms max
+-> a few ms early expected), B4 dense MIDI counter. Read marks with ArtifactData list rounds/0.8.33/marks. LINUX DONE (17:07): L1 pass, L2 pass; diag.log on the CI build: only the analog part
+delayed (part 3 on Out1 / Out3 R), 56 ms at REAPER 48 kHz block 1024, 40 ms at block 256 (= (A+block+640)/48000);
+USB parts 0. CHANGED (user's question, 17:12): hil-mac + hil-win have both
+passed once (2026-10-23 / 2026-10-24), so risk.json now lists cold/reopen/export as automated on Windows and macOS too
+(testing.md updated); checklist republished as version 2 (same link, marks kept): MC1-3 and BC1-3 dropped, M1/B1
+cover them. Mac M1 DONE: hil-mac on the installed CI build, results-20261024-170929
+(pulled to ~/Downloads/TI-Revive-0.8.33-test/hil-mac-results): ALL PASS (H1, H2 x2, H3, H6), graded on Linux too.
+Note: the hil zip unpacks into hil/hil/ on the Mac (zip has its own folder). NEXT: M2, M3, then the Windows PC. Windows PC: the user installs ~/Downloads/TI-Revive-0.8.33-test/msi/setup.exe.
+
+Round 0.8.33 so far: E337 crackle fix (Windows: crackle gone), per-block event counter (E341: missing notes = the
+Virus' voice limit), part following (E342), analog parts in sync with USB parts (E344, "perfectly in sync" on the
+TI2 in REAPER), output/mute both ways + analog outs confirmed (E343). #14 reply posted. NEXT: run green -> install
+on Linux (install.sh), win11 VM / Windows PC, Mac; risk.py --round 0.8.33, hil.sh, hil-win, hil-mac, checklist with the
+new items (analog delay at different buffers incl. Windows A=3072, part following, E337 episodes on the Windows PC);
+README/site: analog delay + part following (tirevive-site-check).
+
+## (previous START HERE)
+
+**Windows test 2026-10-24 afternoon (CI build 40093015139, logs in /home/datoml/windows_tests, not in git):** hil-win
+ALL PASS (graded on Linux). Ableton 14:25-14:32: user "crackle gone"; timeline: 0 jumps after the anchor, one burst of
+134 drift steps at 14:30:29; drops 0, USB errors 0. But no strong uneven stretch came up (err max 509 vs +-800 in the
+morning) -> the jump suppression was not really exercised on Windows yet (details E337). **New report:** at the end,
+3 presets with very dense MIDI, some notes seemed missing. Log: no "event(s) lost", no sync error, no rule-2 drop.
+Candidates: (a) the Virus' own voice limit / voice stealing (heavy patches, 3 parts) - most likely, unproven;
+(b) process() collects at most EV_MAX = 256 events per block and drops the rest SILENTLY (virusplugin.cpp ~1320,
+no counter) - a counter + log line would settle it. Questions to the user: one instance with 3 parts or 3 instances,
+MIDI channels, missing = never started or cut off, chords or fast runs, automation/MPE on those tracks.
+User answers (2026-10-24 ~15:10): ONE instance with 3 presets (3 parts); the missing notes NEVER STARTED (not cut off);
+in dense chords and fast runs. User leans to the Virus' voice limit. Not settled: whether the Virus drops new notes or
+steals old voices when it runs out is not in the evidence; the EV_MAX counter would rule our side in or out.
+**Counter ADDED (2026-10-24 ~15:40, user OK):** native/src/device/blockevents.h (BlockEvents: MAX 256, counts what
+does not fit, flags a lost note-off; 4 tests), used by process(); DeviceOut::collect_lost -> the worker logs
+"N event(s) lost, more than 256 in one block" and sends all notes off when a note-off was among them (like the
+full-queue path). 393 tests, ctest 5/5, hil.sh ALL PASS. nativehost --stress 20 s: the new line 0 times; the old
+"queue from process() was full" 1645 lines / 20377 events (expected at ~2750 notes/s + 1000 params/s, way past the
+4 kB/s budget; that line logs every worker tick - spammy, not changed). The user's Ableton log had NEITHER line ->
+both queues were fine there; only the per-block limit was invisible before. NEXT: CI build RUNNING (run 40095512298), the user plays the same
+dense passage (one instance, 3 presets) and also the passage with only one preset; diag.log: if no "more than 256"
+line and notes come back with one preset -> the Virus' voice limit.
+
+Branch round-0.8.33. **Linux session 2026-10-24 (after the Windows PC session that wrote steps 1+2 without a compiler):**
+- Build broke on a name clash: `follow_` already is the PanelFollow -> the TimelineFollow member is `tl_follow_`.
+- 389 unit tests pass, ctest 5/5. Mutation check: the old per-block jump rule put back into timelinefollow.h fails 3 of
+  the 6 timeline tests -> the tests guard the fix.
+- New nativehost `--rough T1:T2` (tools/hostclock.h RoughCadence, 4 tests in test_hostclock.cpp): bursts of 8 blocks,
+  +-20 ms jitter, one burst 40 ms late every ~5 s (harsher than Ableton: err -2100..2780 vs E337's -767..852).
+- Device runs (Virus TI2 Desktop, dev build, scratch logs not kept): `--block 256 --rough 15:75`, 80 s: OLD rule 315-627
+  jumps / 10 s, notes skipping +-480 ms; NEW 0 jumps. `--ahead 100@20 --ahead 25@40` (E279 case): new 1+1 jumps vs old
+  6+2, only the note at each moment off, grid exact after. hil.sh on the dev build ALL PASS (work/hil/20261024-092029).
+  Details in E337.
+- CI run 40074101252 FAILED in native-windows only: `FAR` is a windows.h macro (C2059 timelinefollow.h:18) -> renamed
+  AT_ONCE, `(std::max)` in hostclock.h (6f7c93f; checked under g++ with windows.h-style macros, not built with MSVC).
+- **NEXT (Windows PC):** CI test build 0.8.33 RUNNING = run 40093015139 on 6f7c93f (started ~12:50). Check it:
+  `gh run view 40093015139`; if native-windows fails again read `gh run view 40093015139 --log-failed`. When green:
+  download the MSI/setup from the run's artifacts, install, then Ableton at 2048 through two ~6-minute episodes (diag.log
+  via Control Center "collect logs": anchors ~0, no crackle), hil-win.ps1, then a REAPER render check by hand (E279) and
+  E337 final.
+
+**Issue #14 (Snow, Mac Studio M1, Sequoia, Logic/Ableton) - reporter update 2026-10-24 10:39 UTC (Spanish), read with
+the user:** (1) plug-in opened with the Snow already on -> broken/crackling sound until a power cycle; (2) audio only
+over USB, choosing another output in the plug-in does not move it to the analog outs; (3) the Snow's volume knob does
+nothing over USB; (4) earlier, when analog out worked, delay in Logic (USB fine); (5) wish: copy/paste/move presets,
+import whole libraries to RAM. No version number, no diag.log. Reply posted (issuecomment-6384039769, Spanish, AI note):
+asked for diag.log of a broken start, a screenshot of the part's output setting, the exact version. (2) and (3) not in
+the evidence yet -> NEXT: check output routing to the analog outs and the volume knob on our TI Desktop.
+
+**Volume knob over USB (issue #14 point 3) = E338 + E339 (2026-10-24 ~17:15):** default mode: the knob does nothing on
+USB, with the original too (Access Quickstart says so). BUT with the Global switch "Remote Main Volume" = "Volume>MIDI"
+(the user set it on the Virus panel - it STAYS set on our TI2 Desktop; set it back when done) the knob sends CC 7 ch 1,
+and the ORIGINAL plug-in sends it back to the Virus itself (also with Live's input on "No Input") -> Patch Volume of
+part 1 -> USB level follows (user heard it). NEXT: same knob test with TI Revive on Linux (nativehost + PANELLOG,
+wav level): does our plug-in take the incoming CC 7 and send it back? If not -> feature = copy the original's echo
+(test-first). Also from the captures: panel Multi changes report as 72 00 29 vv (Output Select) / 72 00 48 (Part Mute)
+- useful for #14 point 2.
+The original follows Output Select + Part Mute BOTH ways (user, 2026-10-24 ~17:25; no echo on the wire). User wants
+TI Revive to do everything the original does: (1) knob CC 7 echo, (2) output/mute plug-in -> Virus (#14 point 2),
+(3) output/mute Virus -> plug-in (TI Revive's generic panel follow probably covers it - verify). STATE NOW: win10ref
+RUNNING with the Virus attached and Live 11 open; the Virus is in "Volume>MIDI" mode. NEXT: user quits Live -> check
+no Ableton process -> vm.sh detach + shutdown -> user runs udevadm trigger -> the three tests with TI Revive on Linux
+(nativehost + VTI_NATIVE_PANELLOG, wav level) -> build what is missing, test-first.
+DONE 15:16-15:18 (E340): VM off, Virus back on Linux (ACL ok, no udevadm needed). TI Revive: knob works WITHOUT echo
+(the Virus applies CC 7 to part 1 itself), panel mute/output applied by the Virus. Plug-in -> Virus output/mute: NO
+72 00 29 / 72 00 48 sent in the run - ask the user whether they changed it in the plug-in; if yes = #14 point 2 bug
+(look at how the editor's "Part output" / "Part on/off" controls are sent). Plug-in view following the panel: user said
+"works" (to confirm per item).
+Linux plug-in since 2026-10-24 ~15:30 = DEV build of 1e83740 (sha 40d322e9.., ~/.vst3); the one before (b65b0744..,
+installed 2026-10-23 21:12) in ~/.vst3-backup/0.8.32-installed-b65b0744. User tests output/mute in REAPER. RESULT: output/mute follow both ways in REAPER (user) -> #14
+point 2 not reproduced on the TI2 (ask the Snow reporter for the screenshot/log). Dense-MIDI "missing notes" on Linux
+too (E341): nothing lost or late on our side while playing -> the Virus' voice limit by elimination. CONFIRMED: one part
+muted -> nothing missing = the Virus' voice limit (E341 final, closed; the per-block counter stays as a diagnostic). (The "Volume>MIDI" remark was wrong: Multi edit mode, see the correction.)
+
+**2026-10-24 ~15:45 - CORRECTION from the user:** there is NO "Volume>MIDI" mode the user switched on the panel; the
+Global volume only affects the outputs. What the user did in the knob tests: Shift+Edit = Multi edit mode, where the
+knobs control the selected part -> that is where the CC 7 ch 1 came from. E339/E340 wording ("Volume>MIDI mode") must be
+corrected (asked which knob was turned). The remotedevice "Remote Main Volume Enable" switch exists, but was not used.
+**#14 update 13:21-13:28 UTC (Spanish, by email):** "screenshot attached, updated to the latest" - the screenshots did
+NOT arrive (email attachments; no image links); "closing and reopening Virus Revive makes the sound work; sound comes
+out via MIDI [USB?], not via audio [analog?]" (ambiguous). Reply (draft with the user): ask to drag the screenshots into
+the GitHub page; still need version + diag.log.
+**E342 (15:38-15:40):** the original's window follows the part selected on the Virus (Panel Part 72 00 1d vv), it
+sends nothing back. TI Revive (15:43, trv-partsel-1): volume/mute/output fine, window did NOT follow the part
+selection -> FIXED (Panel Part report stored under the old part instead of as a global; PanelFollow::globals_without_part,
+394 tests, ctest 5/5); dev build sha 2b50d878.. installed in ~/.vst3 (VM off, Virus on Linux). USER CHECKED in REAPER
+(~16:00): the window follows the selected part. DONE. Older plan line: does its window follow the Virus'
+part selection, part volume knob (CC 7 on the part's channel), mute, output - for parts other than 1 too.
+**#14 update 13:49 UTC (reporter):** the start-up crackle (point 1) is SOLVED by the update (likely 0.8.32); analog
+outs still give no signal (they prefer USB, not urgent); still wish: hardware volume knob (= original behaviour, E338;
+Multi edit mode works on the TI - Snow unknown) and save/load presets/banks (mostly exists: LOAD/SAVE, Personal
+Libraries, browser drag to RAM, Control Center backup/restore - tested on the TI2 only). Reply drafted (Spanish,
+scratchpad reply14b.md) -> REPLACED and POSTED 2026-10-24 ~17:15 (issuecomment-6385574844, Spanish, AI note): part
+volume in Multi edit, library features, analog delay fixed for the next version (E344), no-signal open; asked for the
+next version's diag.log (output change lines: line + no sound = Snow/cabling/Apollo side; no line = our side, e.g.
+Logic/AU), version number, files dragged into GitHub (email attachments do not arrive).
+**E343 (16:00):** analog Out1/2/3 + headphones work with TI Revive on the TI2 (REAPER, user); Output Select values
+decoded (1/4/7 = Out1/2/3 L+R, 10 = USB1 L+R). #14 reply draft updated (point 1 = Multi edit part volume, not master);
+USER HEARD IT (~16:10): part 1 on Out1 (Virus headphones, one ear) vs parts 2/3 on USB (PC, other ear) are audibly
+out of sync - expected from the USB return path (Virus -> USB -> plug-in -> host buffer -> sound card), so analog is
+probably EARLY. Not measured (no line-in cable). Open question: does the ORIGINAL align analog parts (per-part
+timing)? REA analysis started (background agent, x64 DLL a622f9a2.., snapshot work/rea/...ghidra12.snapshot; known:
+send 0x1800a86b0, stamp 0x1800a8420). If the original does nothing special -> same as original, tell the reporter;
+if it does -> copy it. RESULT = E344: the original sends F0 00 20 33 01 10 6F pp 7F ms F7 per part
+(ms = delay for analog parts, 0 for USB; likely its reported latency in ms); seen on the wire with 0 only; TI Revive
+never sends it. NEXT: capture of the ORIGINAL with part 1 on Out1 (VM) -> the real non-zero value and when it is
+sent; then implement in TI Revive test-first (send for each part whose output changes, at connect, on latency change). DONE: ref-outdelay-1 = 6F 00 7F 1A (26 ms) for the analog
+part 1, 0 for the rest, all 16 at Play and Stop. IMPLEMENTED (outputdelay.h + VirusPlugin::send_output_delays in the
+idle hook, ms = reported latency in ms, max 127; 399 tests, ctest 5/5). NOT tested on hardware yet: VM still running
+with the Virus attached (Live open?) -> detach, VM off, install the dev build, user checks analog vs USB parts by ear
+in REAPER; diag.log shows "output delay N ms" per change. VM off, Virus on Linux (ACL ok); dev build of 5ce094c (sha 11e9e883..)
+installed in ~/.vst3 (16:35); user tests by ear in REAPER. RESULT: no effect - BUG: Snow parameter name on a TI (every part
+read 0 = analog, all 16 delayed alike). FIXED (part_output via dev_.decode(72 pp 29); 400 tests, ctest 5/5); dev build
+74c6079d.. installed (~16:50). USER: "Perfectly sync now" (~17:00). DONE on the TI2.
+**VM test running:** win10ref ON, Virus attached (Access driver OK) - test: switch presets on the Virus (Multi edit
+mode) and see whether the ORIGINAL plug-in follows; capture ref-presetswitch-1. Then detach, VM off, the same with
+TI Revive (load_reported_presets, E152/E157).
+
+**Problem (E337, follow-up of E187):** Ableton on bare metal, Creative card 44.1 kHz / 2048 (no ASIO), crackles in
+stretches of about a minute, roughly every 6 minutes. diag.log: drops 0, process time fine, read margin >= 0; in those
+stretches `timeline steps` 195-587 and `anchors` (jumps) 2-198 per 10 s, err -767..852 (calm: err -184..256, 0 jumps).
+Cause: process() in native/plugin/source/virusplugin.cpp (timeline block after wait_offline, ~line 1250-1310) reacts
+to the INSTANTANEOUS err per block: abs(err) > 512 with a marker -> `tl_ += err` (jump back to real time, E279),
+abs(err) > 256 -> one-frame step. With uneven host block timing err swings +-800 within a second -> jumps back and
+forth, each a 12-19 ms skip/repeat = click.
+
+**Plan (user agreed 2026-10-24), test-first (ecc:tdd-workflow):**
+1. Failing test: feed the timeline uneven host cadence (e.g. bursts of 8 x 256 frames, irregular gaps, a steady ring)
+   and assert no jumps / few steps; plus keep a test that a REAL lasting offset (REAPER render, E279; a DAW stall)
+   still jumps at once-ish. If the timeline logic is not testable in isolation, factor it into a small pure struct
+   first (no behaviour change), like OfflinePacer.
+2. Fix: jump only when the error stays beyond the threshold for a while (~0.5 s, same sign; e.g. the min of abs(err)
+   over the window), and take the one-frame drift steps from a filtered error (window mean or midpoint of min/max),
+   not the last block. No extra work worth mentioning on the audio thread, no allocation.
+3. Headless check if available (nativehost with uneven blocks), then the user in Ableton at 2048: play through at
+   least two of the ~6-minute episodes; diag.log (Control Center "collect logs") should show anchors 0 or near 0 and
+   no crackle. Also re-run hil-win.ps1 (all pass before: H1, H2-1, H2-2, H3, H6 on 2026-10-24 07:29).
+4. Then REAPER render check (E279 behaviour must stay: no slow catch-up after a render), Linux hil.sh, evidence entry
+   with the result, README only if users see a difference.
+
+## State 2026-10-23 afternoon (the user home, Virus on USB again)
+
+**Site changelog fix DEPLOYED (2026-10-23 ~21:17):** changelog.html repeated every older version's notes under each newer one (summary() in scripts/site/build.py did not stop at the next "**New in"). Fix 3c8c2ac fast-forwarded onto main (only build.py), site run 40010175419 green; live changelog 114 KB -> 55 KB, 0.8.29 text once.
+
+**CI caching + pinned actions (branch round-0.8.33, 2026-10-23):** apt lists in .github/apt/*.txt, installed by .github/actions/apt-install (own action on actions/cache: .deb files cached per list + runner image, apt-get update and 3 retries only when something is missing; awalsh128/cache-apt-pkgs-action NOT used: on a miss it pipes an unpinned apt-fast install script from master into bash as root). cache.yml fills the apt cache on main (a tag run reads only its tag + main; push to main on list changes, Mon/Thu 03:23 UTC, by hand) - it only exists once on main. ccache for native-linux (actions/cache, key per sha; tag runs start empty). Mac/Windows: no compiler cache (Xcode / VS generators, ~4 min builds). All actions latest + SHA-pinned (upload-pages-artifact v3->v5, deploy-pages v4->v5 major bumps; no dotfiles in site/dist). risk.json: .github/actions + .github/apt = class C like build.yml, cache.yml = A. Run 1 (40010912452, cold): all green; caches saved (apt-binaries 110 MB, apt-native-linux 8.5 MB, ccache 7 MB); install without apt-get update worked (image lists present). ccache: 173 compiles cached but 159 'uncacheable' - reason unknown, so --show-stats --verbose added. Run 2 (40011696420): all green; apt 'Need to get 0 B' for binaries (115 MB) and native-linux (cache hit); ccache 173/173 hits, the 159 others 'Could not use precompiled header' (VSTGUI target_precompile_headers). Fix: CCACHE_SLOPPINESS=pch_defines,time_macros (__DATE__ only in two SDK sample tools). Run 3 (40012537722): green; this run 173 hits, 150 new misses (the PCH compiles now stored), 9 uncacheable (stats accumulate in the cache dir -> ccache --zero-stats added). Run 4 (40013258368): green; ccache 323/328 hits (98.5 %), 4 uncacheable (the PCH builds); native-linux Build step 120 s (run 1, cold) -> 21 s; apt 'Need to get 0 B' (the install step stays ~15 s: dpkg unpack, but no mirror needed). CI caching DONE on round-0.8.33 (head after this commit). ON MAIN (user OK): 03e281c (only .github + risk.json from round-0.8.33) pushed 2026-10-23 ~21:48; site run 40014265329 green with upload-pages-artifact v5 / deploy-pages v5 (live page 200, changelog 55 KB); cache run 40014265136: native-linux + linux lists done, binaries list still downloading the 115 MB mingw from the slow mirror (first fill on main, >10 min, job limit 20 min) - if it times out: gh run rerun 40014265136 --failed.
 
 **Released:** v0.8.31 (2026-10-22, tag v0.8.31, release run 39824346270; site rebuilt by hand, run 39827849547).
 Release-triggered site deploys do NOT happen: always `gh workflow run site.yml` by hand.
@@ -61,7 +366,7 @@ hardware runs at 44.1 kHz only; no Mac/Windows test of a 48 kHz project. The ins
    work/build/linux/vtibroker (dev, protocol 5), `scripts/hil.sh --plugin "build-native/VST3/Release/TI Revive Virus
    Control.vst3"` at 44.1 kHz; compare the start in a capture with startup_diff.py; then restore or keep the dev broker.
 2. DONE (E325: System Clock page "Source Auto", "Freq 44.1"; which parameter Freq is stays LOW). The user reads "System Clock / SA Freq" in the CONFIG menu (E323 (6), E175/E241 hypothesis). Never sent as a request.
-3. PARTLY DONE (E326: 44.1 -> 48 -> 44.1 as fresh starts pass, 'Audio clock changed' seen, display Freq stays 44.1; OPEN: in-run switch + debounce need a nativehost option; the original plug-in checked 2026-10-23 ~14:55 in win10ref: display Freq stays 44.1 there too, it sends no 0x0F/0x10/0x11 either, the Virus reports 0x10 itself = E327; win10ref crashed at the detach: bug check 0xCE, the detach was a surprise removal while Live was still open - E327 corrected. DONE 15:02-15:19: second original session (clean quit + VM shutdown, no crash; Virus back on Linux, broker socket active, win10ref off): 32/96 kHz refused by the Access ASIO driver (Live's engine off, no SET_CUR, no display message); the Access driver sets 48 kHz (23x SET_CUR) when it releases the Virus, 2/2 = E327 (corrected). Open: an in-run switch + debounce on our side; 96 k with another sound card dropped (user). nativehost --rate-at R@T written 2026-10-23 ~15:25 (tools/hostclock.h, tests/test_hostclock.cpp, 376 tests; WAV per rate segment WAV.2.wav..; regression 44.1 k without a switch pass) - Run A (in-run 44.1 -> 48 at 15 s) DONE = E328: switch on the wire as designed, 14/14 notes, but the first two notes after the switch are off (+4 / +52 ms vs +45 steady) -> REA (E329): the original also sends notes in that window against its old reference (never holds/drops) - holding would be our own improvement, decide with the user; old REA snapshot no longer loads, new one work/rea/virus-control-5.1.7-x64.ghidra12.snapshot. Run B (debounce) DONE = E330: one switch on the wire for three requests, the plug-in converts when the broker keeps its rate, 19/19 notes after, pass. E175/E241 investigated 2026-10-23 evening (E331): a SET_CUR with the chip's stored rate is ignored; host CPU FUN_5953 can put the DSP to 48 k without the chip -> the broker's recovery (SET_CUR x3 + 73 00 10 00) is a no-op there; candidate: a real 44.1->48->44.1 switch; reproduction: 2 tries (replug after/during 48 k) NOT reproduced = E332. Recovery DONE 2026-10-23 ~18:30: ratesw.h vti_relock (switch away, 1 s, back; 3 tries, then the power-cycle message) in the Linux device thread and the Windows stream thread; SET_CUR-again and the 73 00 10 send removed (no-ops, E331); report logging kept. 379 tests, ctest 5/5, Linux + Windows brokers build; cpp-reviewer: 2 Windows findings fixed (refused switch away left a stale target; BACK lost in the read path), 1 LOW accepted (a wish for the away rate during the 1 s is dropped). hil.sh ALL PASS + a short run with the final broker (dev broker installed, sha c88f4295..). NOT tested: the recovery itself (E175 not reproducible, E332) - watch for 'switching to 48.0 kHz and back' in logs. E333 (18:37): the 23x SET_CUR 48000 burst is Linux' snd-usb-audio at every connect (not the Access driver, E327 corrected) - a likely E175 trigger on Linux; panel System Clock page locked while USB is up; the user set Freq = 48 with the cable out (to be set back to 44.1). Replug with a waiting client tried 18:41 (E333 (4)): clean, E175 not reproduced (3 tries in total); Freq back at 44.1 (user). Open decision: keep snd-usb-audio off the Virus' audio function on Linux (mitigation idea, not built). CI TEST BUILD 0.8.32 STARTED 2026-10-23 18:45: run 39989412010 on 65aed06 (rate following, E175 recovery, #15 fix). It FAILED only in native-windows scripts_py: test_install_linux.py ran the Linux install.sh on Windows (path forms) -> skipped on win32 like test_handoff_hook (4775265); NEW run 39990990671 on 4775265. 39990990671: everything green except binaries (cancelled: apt install mingw-w64/libusb hung past the 10-min job limit, both runs; runner side) -> gh run rerun --failed. RERUN GREEN (all jobs incl. binaries + msi) = CI test build 0.8.32 (run 39990990671, 4775265). Installed: Linux via install.sh (no sudo; broker bc06b909.., plug-in .so ad40058e.. = tarball; 0.8.31 release plug-in + the dev broker backed up in ~/.vst3-backup/0.8.31-release-b; unpacked ~/Downloads/TI-Revive-0.8.32-test); win11 VM setup.exe /quiet exit 0, entries 0.8.32, plug-in 56413c52.. = CI (C:\tirevive-test\0.8.32), VM running without the Virus; Mac: not reachable over ssh at ~19:20 (asleep?) - push pending. risk.py --round 0.8.32: class C everywhere (Linux: power by hand, hil cold/reopen/export/sleep; Windows + Mac all by hand). hil.sh on the installed CI build: ALL PASS (H1, H2 x2, H3 export 1.00x, H6; max 0.85 ms). Mac: package pushed + unzipped in ~/Downloads/TI-Revive-0.8.32-mac (pkg 7181a551.. = CI) with INSTALL-COMMAND.txt + 'Install test build.command'; user installs. CHECKLIST published 2026-10-23 ~19:35: https://claude.ai/artifact/4Wys5kAm3yy5AU8Hcg8z5h (spec scripts/checklists/round-0.8.32.json; db, marks in rounds/0.8.32/marks - empty at publish): Linux LC4, LC5, L1 48 kHz via pw-metadata, L2 install from the .msi (#15); VM WC1-WC4, W1 48 kHz in Live; Mac MC1-MC5, M1 48 kHz, M2 AU load/unload x5 (#16). LINUX BLOCK 2026-10-23 ~19:15-19:26: LC4, LC5, L1, L2 marked pass; broker log: all REAPER streams at 48 kHz (this PC's PipeWire default clock.rate 48000, allowed [48000]) - power cycle 19:19:20 and sleep 19:20:29 reconnected at 48 k; the step 'force-rate 0 = back to 44.1' was wrong for this PC, so L1 republished (v2) as a redo: force-rate 44100, REAPER from a 48 k Virus. L1 redo pass (19:27:07 REAPER asked 44.1, switched from 48). VM BLOCK ~19:28-19:35: WC1-WC4, W1 marked pass; a power cycle in the VM drops the Virus to Linux as a new device and leaves a stale hostdev (vm.sh detach + attach reattaches it; no VM crash this time). hil-win.ps1 first real run (E334): all pass except H2-2 drift +115 ppm (VM clock; not judged) - check on the real PC. MAC: receipt 0.8.32 (installed ~20:03), hil kit in ~/Downloads/TI-Revive-0.8.32-mac/hil; hil-mac.command by the user (results-20261023-200900): ALL PASS (H1, H2 x2, H3 export 1.00x, H6; max 0.90 ms, jitter <= 0.27 ms, drift -6..+1 ppm). Mac items: MC1-MC5, M1 pass; M2 marked skip first ('Ableton doesn't support AU') - Live needs Settings > Plug-Ins > Use Audio Units v2; user: GarageBand load/unload x5 no crash, AU in Live works -> M2 set to pass with that note. ROUND 0.8.32: 16/16 PASS = E335. RELEASE PREP 2026-10-23 ~20:40 (user: 'Prepare for full release and ship it'): tirevive-site-check - stale: every 'the Virus runs at 44.1 kHz' claim (README timing bullet, Mac audio device line, 'Any sample rate' bullet; site Timing text) -> 44.1 or 48 kHz like the original (E321-E330, E335); Linux replug known issue + sleep sentence -> the 0.8.32 recovery, marked untested against the fault (E331-E333); tests 345 -> 379; new status row and 'same as the original' item (rate following + 'Audio clock changed'); timing table unchanged (no new 16th-note DAW measurement this round). Note: the 0.8.31 release notes say Windows was tested 'with the new automated run' - E334 is the first recorded hil-win run (that 0.8.31 line has no source). native VERSION 0.8.32, release notes in build.yml. Site built locally (not deployed). NEXT: item 5 (README/site texts: rate following, E175 recovery note?, timing rows at 48 k; tirevive-site-check), native version 0.8.32 + release notes in build.yml, then the release decision with the user. NEXT: when green -> round test (item 4: install Linux/win11/Mac, risk.py, hil, checklist). USER DECISION 2026-10-23: notes after an in-run switch stay as they are (like the original, E329; a switch while playing is not expected in practice). Step 3 DONE. NEXT: round test (item 4) - CI build 39904309933 (0eb60a4) lacks the #15 install.sh fix (ff1ce70), so a new CI run on the round head is needed first. After every VM session: the Virus' /dev/bus/usb node stays root:root -> the user runs `sudo udevadm trigger --action=add --subsystem-match=usb --attr-match=idVendor=133e`.) Controlled first switch with the user: nativehost --rate 48000 (44.1 -> 48), then 48 -> 44.1, then quick changes
+3. PARTLY DONE (E326: 44.1 -> 48 -> 44.1 as fresh starts pass, 'Audio clock changed' seen, display Freq stays 44.1; OPEN: in-run switch + debounce need a nativehost option; the original plug-in checked 2026-10-23 ~14:55 in win10ref: display Freq stays 44.1 there too, it sends no 0x0F/0x10/0x11 either, the Virus reports 0x10 itself = E327; win10ref crashed at the detach: bug check 0xCE, the detach was a surprise removal while Live was still open - E327 corrected. DONE 15:02-15:19: second original session (clean quit + VM shutdown, no crash; Virus back on Linux, broker socket active, win10ref off): 32/96 kHz refused by the Access ASIO driver (Live's engine off, no SET_CUR, no display message); the Access driver sets 48 kHz (23x SET_CUR) when it releases the Virus, 2/2 = E327 (corrected). Open: an in-run switch + debounce on our side; 96 k with another sound card dropped (user). nativehost --rate-at R@T written 2026-10-23 ~15:25 (tools/hostclock.h, tests/test_hostclock.cpp, 376 tests; WAV per rate segment WAV.2.wav..; regression 44.1 k without a switch pass) - Run A (in-run 44.1 -> 48 at 15 s) DONE = E328: switch on the wire as designed, 14/14 notes, but the first two notes after the switch are off (+4 / +52 ms vs +45 steady) -> REA (E329): the original also sends notes in that window against its old reference (never holds/drops) - holding would be our own improvement, decide with the user; old REA snapshot no longer loads, new one work/rea/virus-control-5.1.7-x64.ghidra12.snapshot. Run B (debounce) DONE = E330: one switch on the wire for three requests, the plug-in converts when the broker keeps its rate, 19/19 notes after, pass. E175/E241 investigated 2026-10-23 evening (E331): a SET_CUR with the chip's stored rate is ignored; host CPU FUN_5953 can put the DSP to 48 k without the chip -> the broker's recovery (SET_CUR x3 + 73 00 10 00) is a no-op there; candidate: a real 44.1->48->44.1 switch; reproduction: 2 tries (replug after/during 48 k) NOT reproduced = E332. Recovery DONE 2026-10-23 ~18:30: ratesw.h vti_relock (switch away, 1 s, back; 3 tries, then the power-cycle message) in the Linux device thread and the Windows stream thread; SET_CUR-again and the 73 00 10 send removed (no-ops, E331); report logging kept. 379 tests, ctest 5/5, Linux + Windows brokers build; cpp-reviewer: 2 Windows findings fixed (refused switch away left a stale target; BACK lost in the read path), 1 LOW accepted (a wish for the away rate during the 1 s is dropped). hil.sh ALL PASS + a short run with the final broker (dev broker installed, sha c88f4295..). NOT tested: the recovery itself (E175 not reproducible, E332) - watch for 'switching to 48.0 kHz and back' in logs. E333 (18:37): the 23x SET_CUR 48000 burst is Linux' snd-usb-audio at every connect (not the Access driver, E327 corrected) - a likely E175 trigger on Linux; panel System Clock page locked while USB is up; the user set Freq = 48 with the cable out (to be set back to 44.1). Replug with a waiting client tried 18:41 (E333 (4)): clean, E175 not reproduced (3 tries in total); Freq back at 44.1 (user). Open decision: keep snd-usb-audio off the Virus' audio function on Linux (mitigation idea, not built). CI TEST BUILD 0.8.32 STARTED 2026-10-23 18:45: run 39989412010 on 65aed06 (rate following, E175 recovery, #15 fix). It FAILED only in native-windows scripts_py: test_install_linux.py ran the Linux install.sh on Windows (path forms) -> skipped on win32 like test_handoff_hook (4775265); NEW run 39990990671 on 4775265. 39990990671: everything green except binaries (cancelled: apt install mingw-w64/libusb hung past the 10-min job limit, both runs; runner side) -> gh run rerun --failed. RERUN GREEN (all jobs incl. binaries + msi) = CI test build 0.8.32 (run 39990990671, 4775265). Installed: Linux via install.sh (no sudo; broker bc06b909.., plug-in .so ad40058e.. = tarball; 0.8.31 release plug-in + the dev broker backed up in ~/.vst3-backup/0.8.31-release-b; unpacked ~/Downloads/TI-Revive-0.8.32-test); win11 VM setup.exe /quiet exit 0, entries 0.8.32, plug-in 56413c52.. = CI (C:\tirevive-test\0.8.32), VM running without the Virus; Mac: not reachable over ssh at ~19:20 (asleep?) - push pending. risk.py --round 0.8.32: class C everywhere (Linux: power by hand, hil cold/reopen/export/sleep; Windows + Mac all by hand). hil.sh on the installed CI build: ALL PASS (H1, H2 x2, H3 export 1.00x, H6; max 0.85 ms). Mac: package pushed + unzipped in ~/Downloads/TI-Revive-0.8.32-mac (pkg 7181a551.. = CI) with INSTALL-COMMAND.txt + 'Install test build.command'; user installs. CHECKLIST published 2026-10-23 ~19:35: https://claude.ai/artifact/4Wys5kAm3yy5AU8Hcg8z5h (spec scripts/checklists/round-0.8.32.json; db, marks in rounds/0.8.32/marks - empty at publish): Linux LC4, LC5, L1 48 kHz via pw-metadata, L2 install from the .msi (#15); VM WC1-WC4, W1 48 kHz in Live; Mac MC1-MC5, M1 48 kHz, M2 AU load/unload x5 (#16). LINUX BLOCK 2026-10-23 ~19:15-19:26: LC4, LC5, L1, L2 marked pass; broker log: all REAPER streams at 48 kHz (this PC's PipeWire default clock.rate 48000, allowed [48000]) - power cycle 19:19:20 and sleep 19:20:29 reconnected at 48 k; the step 'force-rate 0 = back to 44.1' was wrong for this PC, so L1 republished (v2) as a redo: force-rate 44100, REAPER from a 48 k Virus. L1 redo pass (19:27:07 REAPER asked 44.1, switched from 48). VM BLOCK ~19:28-19:35: WC1-WC4, W1 marked pass; a power cycle in the VM drops the Virus to Linux as a new device and leaves a stale hostdev (vm.sh detach + attach reattaches it; no VM crash this time). hil-win.ps1 first real run (E334): all pass except H2-2 drift +115 ppm (VM clock; not judged) - check on the real PC. MAC: receipt 0.8.32 (installed ~20:03), hil kit in ~/Downloads/TI-Revive-0.8.32-mac/hil; hil-mac.command by the user (results-20261023-200900): ALL PASS (H1, H2 x2, H3 export 1.00x, H6; max 0.90 ms, jitter <= 0.27 ms, drift -6..+1 ppm). Mac items: MC1-MC5, M1 pass; M2 marked skip first ('Ableton doesn't support AU') - Live needs Settings > Plug-Ins > Use Audio Units v2; user: GarageBand load/unload x5 no crash, AU in Live works -> M2 set to pass with that note. ROUND 0.8.32: 16/16 PASS = E335. RELEASE PREP 2026-10-23 ~20:40 (user: 'Prepare for full release and ship it'): tirevive-site-check - stale: every 'the Virus runs at 44.1 kHz' claim (README timing bullet, Mac audio device line, 'Any sample rate' bullet; site Timing text) -> 44.1 or 48 kHz like the original (E321-E330, E335); Linux replug known issue + sleep sentence -> the 0.8.32 recovery, marked untested against the fault (E331-E333); tests 345 -> 379; new status row and 'same as the original' item (rate following + 'Audio clock changed'); timing table unchanged (no new 16th-note DAW measurement this round). Note: the 0.8.31 release notes say Windows was tested 'with the new automated run' - E334 is the first recorded hil-win run (that 0.8.31 line has no source). native VERSION 0.8.32, release notes in build.yml. Site built locally (not deployed). MERGED: main f05194f (merge of f801634, tree identical, -F file), tag v0.8.32 on it, pushed 2026-10-23 ~20:45; release CI run 40005096326 (binaries cancelled again by the apt install hang - 3rd time today; rerun --failed started ~21:00; consider a retry/timeout for that apt step in build.yml). Rerun 1 cancelled the same way: Azure mirror (azure.archive.ubuntu.com) delivered the 115 MB mingw .debs at a few KB/s (not a hang). Rerun 2 GREEN: **v0.8.32 RELEASED** 2026-10-23 (run 40005096326, 6 assets, Latest). Site rebuilt by hand (run 40008457144): live page shows 0.8.32, 379 unit tests, '44.1 or 48 kHz'. Release on test machines: win11 setup.exe /quiet exit 0, entries 0.8.32 (plug-in 58c2f588.., C:\tirevive-test\0.8.32-release), VM off; Linux unpacked in ~/Downloads/TI-Revive-0.8.32-release (broker = CI build bc06b909..), CI plug-in backed up in ~/.vst3-backup/0.8.32-ci, install.sh NOT run yet (Virus at the Mac -> install.sh wants sudo for the udev rule; the user runs it); Mac asleep - push of the release zip (pkg f38a3101..) to ~/Downloads/TI-Revive-0.8.32-release-mac pending. #15 closed with a note (user OK, 2026-10-23). User asked about cache actions: plan for the next round - awalsh128/cache-apt-pkgs-action (pinned SHA) for native-linux + binaries, retry + step timeout for apt, ccache (hendrikmuhs/ccache-action) for Linux/mac; not on main under the release run. NEXT: green -> site rebuild by hand (gh workflow run site.yml), install the release on Linux/win11/Mac, close #15 with the user. #16 update read with the user (~20:50): AU crash in FL Studio when the channel is deleted with the window open = E336 (inner plugin.vst3 unloaded by the SDK wrapper; hypothesis: editor async work outlives terminate) - candidate for 0.8.33; reply posted on #16 (issuecomment-6372317265: cause guess, workaround close the window first / use VST3, asked for FL's own crash log). NEXT: item 5 (README/site texts: rate following, E175 recovery note?, timing rows at 48 k; tirevive-site-check), native version 0.8.32 + release notes in build.yml, then the release decision with the user. NEXT: when green -> round test (item 4: install Linux/win11/Mac, risk.py, hil, checklist). USER DECISION 2026-10-23: notes after an in-run switch stay as they are (like the original, E329; a switch while playing is not expected in practice). Step 3 DONE. NEXT: round test (item 4) - CI build 39904309933 (0eb60a4) lacks the #15 install.sh fix (ff1ce70), so a new CI run on the round head is needed first. After every VM session: the Virus' /dev/bus/usb node stays root:root -> the user runs `sudo udevadm trigger --action=add --subsystem-match=usb --attr-match=idVendor=133e`.) Controlled first switch with the user: nativehost --rate 48000 (44.1 -> 48), then 48 -> 44.1, then quick changes
    (debounce must hold them); log + display; new evidence entry (E324+).
 4. Round test: install the CI build (Linux install.sh, win11 VM=win11 silent, Mac INSTALL-COMMAND), risk.py --round
    0.8.32 (class C everywhere), hil at 44.1/48/96, exports at 48 k/128, startup_diff at 48 k, the ASIO driver at 48 k

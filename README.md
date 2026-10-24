@@ -6,6 +6,14 @@
 
 Website with downloads, features and help: **[derpsn.github.io/access-virus-ti-revive](https://derpsn.github.io/access-virus-ti-revive/)**
 
+> **Important - Windows: update with your Access .msi at hand (0.8.33).** Setups of TI Revive 0.8.32 and older could
+> copy the 32-bit `Virus Control.dll` from your Access installer instead of the 64-bit one; with it, old Virus A, B and
+> C patch libraries loaded empty. Since 0.8.33 TI Revive reads only the 64-bit file, and with the 32-bit one the
+> plug-in shows no editor. When you update, put the Access "Virus TI Software Suite" 64-bit `.msi` next to the setup
+> (or in Downloads) and keep "Set up the Access Virus TI files now" checked on the last page: the setup replaces the
+> file. Already updated without it: *Start, TI Revive, Set up Access Virus TI files*. Linux: run `./install.sh` again
+> with the `.msi`. The TI Revive Control Center says when it finds the 32-bit file. macOS is not affected.
+
 > ☕ **Free, and it will stay free.** Every change is tested on the real synth on Windows, macOS and Linux, often
 > back and forth between the three, and that takes a lot of evenings. If TI Revive gives your Virus a second life and
 > you'd like to say thanks, you can [buy me a coffee](https://buymeacoffee.com/callmederpsn). It is entirely
@@ -104,7 +112,9 @@ work and are the simpler choice), an Access Virus TI on USB, your own **Access "
    **"Set up the Access Virus TI files now"** checked: TI Revive unpacks your Access `.msi` (nothing of it is
    installed) and copies `Virus Control.dll`, `firmware.bin` and the manuals to `C:\Program Files\Access Music\Virus
    TI` and the factory patch libraries to *Documents\Access Music\Virus TI\Patches*. Later: *Start → TI Revive →
-   Set up Access Virus TI files*.
+   Set up Access Virus TI files*. TI Revive reads only the 64-bit `Virus Control.dll`; setups of 0.8.32 and older
+   could copy the 32-bit one (old Virus A/B/C patch libraries then load empty). Since 0.8.33 the plug-in shows no
+   editor with the 32-bit DLL and the Control Center says why; run *Set up Access Virus TI files* again to fix it.
 4. Connect the Virus TI. In your DAW, rescan plug-ins and use **"TI Revive Virus Control"** (vendor *TI Revive*).
    For the Virus as a sound card choose the ASIO device **"TI Revive Virus Audio"**.
 
@@ -158,6 +168,8 @@ system. While TI Revive uses the Virus, it is not available as a Linux sound car
 after the plug-in is closed. Uninstall with `./uninstall.sh`. Details: `README-linux.txt` in the package.
 Control Center in its plain look instead of the Access look: `install.sh` of 0.8.31 and older could miss
 `Virus Control Center.exe` in the `.msi` (issue #15); run `./install.sh` with the `.msi` again, it adds the file.
+TI Revive reads only the 64-bit `Virus Control.dll` (since 0.8.33); if the Control Center reports a 32-bit one, run
+`./install.sh` with the `.msi` again (unpacking with Wine instead of msitools gives only the 32-bit DLL).
 Known issue: after a USB cable replug, or when the Virus is switched on while no DAW runs, it can come back without
 sound. Since 0.8.32 the plug-in tries to bring it back by itself (it switches the sample rate away and back, which the
 Virus cannot ignore); this could not be tested against the fault yet. If it stays silent, switch it off and on once
@@ -269,7 +281,10 @@ same with Access' own driver.
   has "Download entire bank from Virus TI" (reads all 128 again, about 2 minutes, progress on the LCD) and "Sort alphabetically" (writes
   only the slots that change; like the original, it cannot be undone).
 - **Library folders like the original's** (since 0.8.29): Patch libraries from the original's three places, each its own menu (since 0.8.29): Personal Libraries (your Documents folder), User Libraries and Public Libraries. On the Mac the factory libraries that Access installs in /Library/Application Support appear under Public Libraries. On Linux only Personal Libraries.
-- **Presets and soft knobs chosen on the Virus itself** are followed, as in the original.
+- **Presets, soft knobs and the part selected on the Virus itself** are followed, as in the original (the part since
+  0.8.33).
+- **Three stereo outputs over USB, plus the analog outputs of the Virus.** Parts on the analog outputs stay in time
+  with the USB parts: like the original, the Virus holds them back by the USB latency (since 0.8.33).
 - **Knobs on the Virus reach your DAW:** knobs you turn on the Virus reach your DAW like the plug-in's own knobs while the plug-in window is open (since 0.8.29, [issue #10](https://github.com/derpsn/access-virus-ti-revive/issues/10)): Ableton Live's Configure mode adds them and automation records them. Tested in Ableton Live 11 (Windows 11, VM), Ableton Live 12 (macOS) and REAPER (Linux).
 
 <p align="center">
@@ -444,7 +459,7 @@ hardware (TI2 Desktop) - details and raw numbers in [`findings/evidence.md`](fin
 - **Automation rate limit** (250 messages/s, coalesced per parameter): unthrottled parameter floods hung the Virus'
   audio until a power cycle within 4 minutes; with the limit a 4-minute full-load test (16 channels of notes + 32
   automation lanes) passes.
-- Checked with ThreadSanitizer and AddressSanitizer (one race in the broker connection found and fixed); 379 unit
+- Checked with ThreadSanitizer and AddressSanitizer (one race in the broker connection found and fixed); 403 unit
   tests run with every release build on Windows and Linux, plus two end-to-end tests on Linux in a virtual display
   (two editors of a duplicated track; the Control Center's window and close button).
 

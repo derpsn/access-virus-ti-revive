@@ -132,6 +132,11 @@ int main(int argc, char **argv)
             fclose(o);
         }
         printf("wrote %s\n", args[1].c_str());
+    } else if (cmd == "pageb") { // the default page B for Virus C dumps (inspection only - output stays local)
+        auto d = files->default_page_b();
+        for (size_t i = 0; i < d.size(); i++)
+            printf("%02X%s", d[i], i % 32 == 31 ? "\n" : " ");
+        printf("default page B: %zu bytes\n", d.size());
     } else if (cmd == "initmulti" && !args.empty()) { // the plug-in's embedded multi to a file
         auto d = files->init_multi();
         if (FILE *f = fopen(args[0].c_str(), "wb")) {
@@ -185,6 +190,19 @@ int main(int argc, char **argv)
                 printf("  first \"%.10s\" version %d", (const char *)&l.dumps[0][249], l.dumps[0][9]);
             printf("\n");
         }
+    } else if (cmd == "libdump" && args.size() >= 3) { // patch N of a library file, upgraded like the plug-in loads it
+        vti::PatchLibrary lib;
+        const size_t n = (size_t)atoi(args[1].c_str());
+        if (!vti::load_library_file(args[0], lib, files->default_page_b()) || n >= lib.dumps.size() ||
+            lib.dumps[n].empty()) {
+            fprintf(stderr, "vtimodel: no patch %zu in %s\n", n, args[0].c_str());
+            return 1;
+        }
+        if (FILE *f = fopen(args[2].c_str(), "wb")) {
+            fwrite(lib.dumps[n].data(), 1, lib.dumps[n].size(), f);
+            fclose(f);
+        }
+        printf("patch %zu: %zu bytes\n", n, lib.dumps[n].size());
     } else if (cmd == "init") { // start-up messages (GlobalInit + ParamInit)
         for (auto &m : dev.init_messages()) {
             for (auto b : m)

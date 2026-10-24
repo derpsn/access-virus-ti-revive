@@ -32,7 +32,85 @@ function AccessProduct {
                      HKLM:\Software\WOW6432Node\Microsoft\Windows\CurrentVersion\Uninstall\* -ErrorAction SilentlyContinue |
         Where-Object { $_.DisplayName -match '^Virus TI Software Suite' -and $_.Publisher -match 'Access' } | Select-Object -First 1
 }
-function HaveFiles { -not ($needed | Where-Object { -not (Test-Path (Join-Path $target "Common\$_")) }) }
+function Is64([string]$file) { # a 64-bit Windows image (PE32+): the plug-in reads only the 64-bit Virus Control.dll (E345)
+    try { $b = [byte[]]::new(0x400); $f = [IO.File]::OpenRead($file); $n = $f.Read($b, 0, $b.Length); $f.Close() } catch { return $false }
+    if ($n -lt 0x40 -or $b[0] -ne 0x4D -or $b[1] -ne 0x5A) { return $false }
+    $pe = [BitConverter]::ToInt32($b, 0x3C)
+    return ($pe -gt 0 -and $pe + 26 -le $n -and [BitConverter]::ToUInt16($b, $pe + 24) -eq 0x20B)
+}
+function HaveFiles {
+    -not ($needed | Where-Object { -not (Test-Path (Join-Path $target "Common\$_")) }) -and (Is64 (Join-Path $target 'Common\Virus Control.dll'))
+}
+# An administrative extract (msiexec /a) puts the x64 and the x86 files into one Common folder and the 32-bit Virus
+# Control.dll wins. The 64-bit one is taken from the .msi's embedded cabinet instead: its File table names the cabinet
+# entries, Windows' msi.dll reads the stream, expand.exe unpacks the entry.
+function Extract64Dll([string]$msiPath, [string]$common) {
+    if (-not ('TIReviveMsi' -as [type])) {
+        Add-Type -TypeDefinition @'
+using System; using System.Collections.Generic; using System.IO; using System.Runtime.InteropServices; using System.Text;
+public static class TIReviveMsi {
+    [DllImport("msi.dll", CharSet = CharSet.Unicode)] static extern uint MsiOpenDatabase(string path, IntPtr persist, out IntPtr db);
+    [DllImport("msi.dll", CharSet = CharSet.Unicode)] static extern uint MsiDatabaseOpenView(IntPtr db, string query, out IntPtr view);
+    [DllImport("msi.dll")] static extern uint MsiViewExecute(IntPtr view, IntPtr rec);
+    [DllImport("msi.dll")] static extern uint MsiViewFetch(IntPtr view, out IntPtr rec);
+    [DllImport("msi.dll", CharSet = CharSet.Unicode)] static extern uint MsiRecordGetString(IntPtr rec, uint field, StringBuilder buf, ref uint size);
+    [DllImport("msi.dll")] static extern uint MsiRecordReadStream(IntPtr rec, uint field, byte[] buf, ref uint size);
+    [DllImport("msi.dll")] static extern uint MsiCloseHandle(IntPtr h);
+    static List<IntPtr> Rows(IntPtr db, string query) {
+        var rows = new List<IntPtr>(); IntPtr view, rec;
+        if (MsiDatabaseOpenView(db, query, out view) != 0) return rows;
+        if (MsiViewExecute(view, IntPtr.Zero) == 0) while (MsiViewFetch(view, out rec) == 0) rows.Add(rec);
+        MsiCloseHandle(view);
+        return rows;
+    }
+    static string Str(IntPtr rec, uint field) {
+        var sb = new StringBuilder(512); uint n = 512;
+        return MsiRecordGetString(rec, field, sb, ref n) == 0 ? sb.ToString() : "";
+    }
+    // the cabinet entries (File keys) of every file named `name`, and the embedded cabinets saved into `dir`
+    public static string[] Extract(string msi, string name, string dir, List<string> cabs) {
+        IntPtr db; var keys = new List<string>();
+        if (MsiOpenDatabase(msi, IntPtr.Zero, out db) != 0) return keys.ToArray();
+        foreach (var r in Rows(db, "SELECT `File`, `FileName` FROM `File`")) {
+            string fn = Str(r, 2); int bar = fn.IndexOf('|');
+            if (string.Equals(bar >= 0 ? fn.Substring(bar + 1) : fn, name, StringComparison.OrdinalIgnoreCase)) keys.Add(Str(r, 1));
+            MsiCloseHandle(r);
+        }
+        foreach (var m in Rows(db, "SELECT `Cabinet` FROM `Media`")) {
+            string cab = Str(m, 1); MsiCloseHandle(m);
+            if (!cab.StartsWith("#")) continue; // only embedded cabinets
+            foreach (var r in Rows(db, "SELECT `Data` FROM `_Streams` WHERE `Name`='" + cab.Substring(1).Replace("'", "") + "'")) {
+                string outPath = Path.Combine(dir, cab.Substring(1));
+                using (var f = File.Create(outPath)) {
+                    var buf = new byte[1 << 16]; uint n;
+                    do { n = (uint)buf.Length; if (MsiRecordReadStream(r, 1, buf, ref n) != 0) break; f.Write(buf, 0, (int)n); } while (n > 0);
+                }
+                cabs.Add(outPath); MsiCloseHandle(r);
+            }
+        }
+        MsiCloseHandle(db);
+        return keys.ToArray();
+    }
+}
+'@
+    }
+    $work = Join-Path $env:TEMP 'tirevive-access-dll64'
+    Remove-Item -Recurse -Force $work -ErrorAction SilentlyContinue
+    New-Item -ItemType Directory -Force $work | Out-Null
+    try {
+        $cabs = New-Object 'System.Collections.Generic.List[string]'
+        $keys = [TIReviveMsi]::Extract($msiPath, 'Virus Control.dll', $work, $cabs)
+        foreach ($cab in $cabs) {
+            foreach ($k in $keys) {
+                & "$env:SystemRoot\System32\expand.exe" $cab "-F:$k" $work | Out-Null
+                $dll = Join-Path $work $k
+                if ((Test-Path $dll) -and (Is64 $dll)) { Copy-Item $dll (Join-Path $common 'Virus Control.dll') -Force; return $true }
+            }
+        }
+        return $false
+    } catch { Write-Host "taking the 64-bit Virus Control.dll from the .msi failed: $_"; return $false }
+    finally { Remove-Item -Recurse -Force $work -ErrorAction SilentlyContinue }
+}
 
 # ---- the admin part: remove the Access installation (keeping the files), copy the extracted files -----------------
 if ($Elevated) {
@@ -104,6 +182,11 @@ if ($Msi -and ($needed_missing -or $look_missing)) {
     }
     if ($p.ExitCode -ne 0 -or -not (Test-Path (Join-Path $extracted 'Access Music\Virus TI\Common\Virus Control.dll'))) {
         Say "Unpacking the Access installer failed (code $($p.ExitCode)). Is it the 64-bit `"Virus TI Software Suite`" .msi?" 'Error'
+        exit 1
+    }
+    $common = Join-Path $extracted 'Access Music\Virus TI\Common'
+    if (-not (Is64 (Join-Path $common 'Virus Control.dll')) -and -not (Extract64Dll $Msi $common)) {
+        Say "The Access installer holds no 64-bit Virus Control.dll. Is it the 64-bit `"Virus TI Software Suite`" .msi?" 'Error'
         exit 1
     }
     # the factory patch libraries into the user's Documents (no admin needed; existing files stay untouched)

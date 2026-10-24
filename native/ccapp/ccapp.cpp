@@ -122,6 +122,9 @@ public:
         window_->setContentView(frame_);
         window_->registerWindowListener(this);
         set(&Shared::folder, vti::cc::default_backup_dir());
+        std::string access; // a 32-bit Virus Control.dll is refused (E345): say why the plug-in shows nothing
+        if (!vti::AccessFiles::open("", access) && access.find("32-bit") != std::string::npos)
+            set(&Shared::status, access);
         show_page(skin_ ? kSkinPage : kPlainPage); // also sets the window size (GTK does not apply config.size)
         window_->show();
         timer_ = makeOwned<CVSTGUITimer>([this](CVSTGUITimer *) { tick(); }, 100, true);

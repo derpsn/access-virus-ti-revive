@@ -237,6 +237,7 @@ int main(int argc, char **argv)
     double sc_sine = 0; // --sidechain-sine HZ: a sine (-6 dBFS) on the Sidechain bus (input bus 1)
     std::vector<std::pair<double, double>> aheads; // (at s, ms)
     int block = 512; // --block N: host block size
+    RoughCadence rough; // --rough T1:T2
     int rate = 44100; // --rate N: host sample rate
     std::vector<RateAt> rate_ats; // --rate-at R@T: the host rate R from T s on (a DAW whose project rate is switched)
     struct Action {
@@ -298,7 +299,12 @@ int main(int argc, char **argv)
             aheads.push_back({t, ms});
         } else if (!strcmp(argv[i], "--stress-stop") && i + 1 < argc) // the automation of --stress ends after N s
             stress_stop = atof(argv[++i]);
-        else if (!strcmp(argv[i], "--block") && i + 1 < argc)
+        else if (!strcmp(argv[i], "--rough") && i + 1 < argc) { // --rough T1:T2: uneven block cadence (E337)
+            if (!parse_rough(argv[++i], rough)) {
+                fprintf(stderr, "--rough wants T1:T2 seconds, T1 < T2\n");
+                return 2;
+            }
+        } else if (!strcmp(argv[i], "--block") && i + 1 < argc)
             block = atoi(argv[++i]);
         else if (!strcmp(argv[i], "--rate") && i + 1 < argc) // host sample rate (the plug-in asks the Virus for 44.1 or 48 kHz)
             rate = atoi(argv[++i]);
@@ -826,7 +832,7 @@ int main(int argc, char **argv)
         if (offline)
             t_next = std::chrono::steady_clock::now(); // as fast as the plug-in returns
         else
-            std::this_thread::sleep_until(t_next);
+            std::this_thread::sleep_until(t_next + std::chrono::microseconds(rough.shift_us(clk, b + 1)));
     }
     if (offline_at >= 0 && t_offline != std::chrono::steady_clock::time_point{}) {
         bool ended = t_offline_end != std::chrono::steady_clock::time_point{};

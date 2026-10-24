@@ -136,6 +136,8 @@ ring, no FE/F2/ping needed), reads are clamped to available frames, A 2048 -> 10
 latency 2176 frames (49 ms at 512, was 75). nativehost --ahead 200@12 --ahead 200@16 (REAPER-like): marker kept,
 K = 6024 for 24/24 notes, no gaps/jumps. Diagnostics: diag.on now also logs the R5 stats/marker lines to diag.log.
 For exact timing in REAPER the Virus track should not use anticipative FX processing (track > Performance options).
+(Since round 0.8.33 the jump needs a lasting error - 0.5 s beyond 512, a 2 s mean beyond 512, or beyond 4096 at
+once - because an uneven host cadence made it jump back and forth: E337, device/timelinefollow.h.)
 
 REAPER test 2 (2026-10-14, build bf34426): playback starts right away, live input snappy again (user); diag.log: one
 marker, no re-ping, read margin >= 129, 22 timeline jumps after playback starts. Timing render (16ths at 120 BPM,

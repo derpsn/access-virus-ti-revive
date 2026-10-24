@@ -21,6 +21,7 @@ class AccessFiles {
 public:
     // Locate and open the Access installation. `hint` may name Virus Control.dll / .bundle or its folder; empty =
     // search the standard locations (and $VTI_ACCESS_DIR). Returns nullptr and sets `error` if nothing is found.
+    // Only the 64-bit (PE32+) Virus Control.dll counts; a 32-bit one is skipped and named in `error` (E345).
     static std::unique_ptr<AccessFiles> open(const std::string &hint, std::string &error);
     // The skin of Access' "Virus Control Center" (layout editor.xml + engine.xml and its PNGs, resources of
     // "Virus Control Center.exe"; a folder with those files also works), for TI Revive's Control Center app.
@@ -37,7 +38,8 @@ public:
     // The fixed multi dump the original sends at start-up and stores in its state ("MultiCtrl!", 267 bytes).
     std::vector<uint8_t> init_multi() const;
     // the default page B the original gives old (Virus C, 267-byte) single dumps when upgrading them: 256 bytes
-    // 0x400 before the embedded init patch in the plug-in binary; empty if not plausible (all bytes must be 7-bit)
+    // next to the embedded init patch in the plug-in binary (Windows DLL: 0x400 before it; Mac binary: 0x2a0 after
+    // it, E346); empty if not plausible (all bytes must be 7-bit)
     std::vector<uint8_t> default_page_b() const;
     // the classic oscillator display's 64 waves (64 x 64 floats, the WaveSelect row first; E180), found in the plug-in
     // binary by content; empty if not found (the display then shows a sine for every wave)
@@ -50,6 +52,7 @@ private:
                                    std::vector<uint8_t> *binary = nullptr, size_t *offset = nullptr) const;
     std::map<std::string, std::vector<uint8_t>> files_; // key: lower-case name
     std::string source_;
+    bool pe32_ = false; // load_pe read a 32-bit (PE32) image
     // `required`: a resource the file must contain to count (the plug-in's: remotedevice.xml)
     bool load_pe(const std::string &dll, std::string &error, const char *required = "remotedevice.xml");
     bool load_dir(const std::string &dir, std::string &error, const char *required = "remotedevice.xml");

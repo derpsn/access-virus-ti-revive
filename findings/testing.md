@@ -94,7 +94,7 @@ found the missing "Configuring Virus TI" message and the wrong multi dump (E321)
 requests for banks 2-4 are a side effect of its timer (E322) and counted as known. On the fixed build: SAME START-UP. Run it in rounds that touch the start-up (initialize, state, MemorySync, the
 broker's device open); the reference capture is captures/orig-startup-lcd-20261022 (original 5.1.7, TI2).
 
-### The same run on Windows and macOS (added 2026-10-22, not yet run on hardware)
+### The same run on Windows and macOS (added 2026-10-22; passed on both, automated since round 0.8.33)
 
 `scripts/hil-win.ps1` (started with `hil-win.cmd`) and `scripts/hil-mac.command` play the items H1, H2 x2, H3 and H6
 with the installed plug-in in `nativehost` and write `results-<time>/` next to themselves (NAME.err = the plug-in's
@@ -104,8 +104,12 @@ is there. The CI test build makes them as the artifacts `TI-Revive-hil-windows` 
 plus the scripts; steps that may fail, never part of the release). Both must run in the desktop session: on the Mac an
 ssh session gets no Microphone access and the plug-in records silence (E103; the first double-click asks for
 Microphone access for Terminal), on Windows the broker's shared memory is per session (E047; for the VM a scheduled
-task with /IT). H6 on Windows kills the broker hard (Stop-Process), like a crash. Until both have passed once on the
-Virus, `risk.json` keeps cold/reopen/export as hand items on Windows and macOS.
+task with /IT). H6 on Windows kills the broker hard (Stop-Process), like a crash. Until both had passed once on the
+Virus, `risk.json` kept cold/reopen/export as hand items on Windows and macOS. Both have passed (hil-mac 2026-10-23,
+results-20261023-200900, round 0.8.32; hil-win on the Windows PC 2026-10-24, results-20261024-142018, graded on
+Linux), so since round 0.8.33 `risk.json` lists cold/reopen/export as automated there too: the checklist runs
+hil-mac / hil-win instead of those hand items. They test the plug-in in `nativehost`, not in a DAW - the round's own
+items still use the DAW. Sleep and Virus power stay by hand on both.
 
 ## Pre-releases for testers
 

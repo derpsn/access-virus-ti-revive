@@ -1,0 +1,128 @@
+{
+ "round": "0.8.33",
+ "core": "core.json",
+ "core_items": [],
+ "lead": "Test build 0.8.33 (CI run 40104018425). New in this round: no more crackle when the host's block timing turns uneven (the timeline no longer jumps back and forth, E337), parts on an analog output are held back by the plug-in's latency so they sound together with the USB parts like in the original (E344), the window follows the part you select on the Virus in Multi edit mode (E342), and a log line when more than 256 MIDI events fall into one block (E341). On Linux all of this was tested with dev builds and hil.sh passed on the installed CI build. Mark each item, add a note where something looks different, then copy the results at the bottom into the chat.",
+ "rules": [
+  "Analog tests: keep the Virus' MASTER VOLUME low before you put headphones on, then raise it slowly.",
+  "Order: Linux first (the Virus is on this PC), then macOS, then the Windows PC (one session; boot into Windows last). Close the DAW before the Virus moves."
+ ],
+ "sections": [
+  {
+   "id": "linux",
+   "title": "Linux",
+   "where": "REAPER, Virus on this PC",
+   "prep": [
+    "Already installed by Claude: the CI build (install.sh; plug-in b4b032e5.., broker e3787d73.. = the tarball; unpacked in ~/Downloads/TI-Revive-0.8.33-test).",
+    "Claude ran hil.sh on this build (cold start, reopen x2, export, broker kill): ALL PASS (max 0.57 ms off the grid) - the core items cold, reopen and export are covered by it."
+   ],
+   "items": [
+    {
+     "id": "L1",
+     "title": "Analog part in time with the USB parts",
+     "steps": [
+      "REAPER buffer 2048. Part 1 on Out1 (headphones on the Virus' HEADPHONES socket, one ear), parts 2 and 3 on USB (other ear), the same rhythm on all three. Press Play.",
+      "Buffer 256 (Options > Preferences > Audio > Device), Play again."
+     ],
+     "expect": "Part 1 and the USB parts sound together at both buffers (tested by the user on a dev build: 'perfectly in sync'). diag.log: 'part 1 output 1 -> output delay N ms' with N about 84 at 2048 and about 44 at 256; the USB parts 0."
+    },
+    {
+     "id": "L2",
+     "title": "Part selection and part volume from the Virus (Multi edit)",
+     "steps": [
+      "Plug-in window open. On the Virus: SHIFT + EDIT (Multi edit), select parts 1 to 5 one after the other.",
+      "On part 3: turn the volume knob down and up, mute and unmute, change its output and back."
+     ],
+     "expect": "The window jumps to each part selected on the Virus; part 3's volume, mute and output follow in the window; the sound follows."
+    }
+   ]
+  },
+  {
+   "id": "mac",
+   "title": "macOS",
+   "where": "MacBook Air M3, Ableton Live 12",
+   "prep": [
+    "Already installed by the user: the CI package (receipt 0.8.33, VST3 039b19e7.. = the package payload).",
+    "Plug the Virus into the Mac.",
+    "Cold start, reopen and export are no longer separate hand items: M1 (hil-mac) runs them."
+   ],
+   "items": [
+    {
+     "id": "M1",
+     "title": "Automated hardware run (hil-mac): cold start, reopen x2, export, broker kill",
+     "steps": [
+      "Close Live. In Finder open <code>~/Downloads/TI-Revive-0.8.33-mac/hil</code> and double-click <code>hil-mac.command</code> (about 5 minutes, keep the Virus on and the Mac awake).",
+      "Tell Claude the results folder name it prints at the end."
+     ],
+     "expect": "'done, nothing failed'; Claude grades the folder. Covers the core items cold start, reopen and export (automated since this round, findings/testing.md)."
+    },
+    {
+     "id": "M2",
+     "title": "Analog part in time with the USB parts",
+     "steps": [
+      "Live buffer 512: part 1 on Out1 (Virus headphones, one ear), parts 2 and 3 on USB (Mac output, other ear), same rhythm. Play.",
+      "Live buffer 2048 (Settings > Audio > Buffer Size), Play again."
+     ],
+     "expect": "Part 1 and the USB parts sound together at both buffers."
+    },
+    {
+     "id": "M3",
+     "title": "Part selection from the Virus (Multi edit)",
+     "steps": [
+      "Plug-in window open (VST3). On the Virus: SHIFT + EDIT, select parts 1 to 5."
+     ],
+     "expect": "The window follows the part selected on the Virus."
+    }
+   ]
+  },
+  {
+   "id": "win",
+   "title": "Windows PC",
+   "where": "this PC booted into Windows, Ableton Live, Creative card 44.1 kHz / 2048 (no ASIO)",
+   "prep": [
+    "Install the CI build: <code>TI-Revive-0.8.33-setup.exe</code> (in ~/Downloads/TI-Revive-0.8.33-test/msi on Linux, or from CI run 40104018425, artifact TI-Revive-msi).",
+    "Plug-in log on: Control Center > diagnostics, or create the empty file <code>%LOCALAPPDATA%\\virus-ti-native\\diag.on</code>.",
+    "The hil kit: CI run 40104018425, artifact TI-Revive-hil-windows.",
+    "Cold start, reopen and export are no longer separate hand items: B1 (hil-win) runs them."
+   ],
+   "items": [
+    {
+     "id": "B1",
+     "title": "Automated hardware run (hil-win): cold start, reopen x2, export, broker kill",
+     "steps": [
+      "Unzip the hil kit, run <code>hil-win.ps1</code> (about 5 minutes).",
+      "Copy the results folder it prints to Linux (like the last time, e.g. into /home/datoml/windows_tests)."
+     ],
+     "expect": "'done, nothing failed'; Claude grades the folder. Covers the core items cold start, reopen and export (automated since this round, findings/testing.md)."
+    },
+    {
+     "id": "B2",
+     "title": "Long Ableton session at 2048 (crackle, E337)",
+     "steps": [
+      "Ableton at the Creative card, 2048, a project with the Virus playing; at least 15 minutes (the crackle came about every 6 minutes for about a minute).",
+      "Control Center: collect logs, copy the file to Linux."
+     ],
+     "expect": "No crackle. In the log the 'anchors' count stays at 0 after the start (timeline jumps), also in uneven stretches."
+    },
+    {
+     "id": "B3",
+     "title": "Analog part in time with the USB parts (Windows latency)",
+     "steps": [
+      "Ableton buffer 512: part 1 on Out1 (Virus headphones, one ear), parts 2 and 3 on USB (other ear), same rhythm. Play.",
+      "Buffer 2048, Play again."
+     ],
+     "expect": "At 512 in time. At 2048 the needed delay (about 131 ms on Windows) is above the 127 ms the Virus takes, so part 1 may be a few milliseconds early - note what you hear."
+    },
+    {
+     "id": "B4",
+     "title": "Dense MIDI: the event counter",
+     "steps": [
+      "Play the dense passage with three heavy presets again (the one with the missing notes).",
+      "Collect logs."
+     ],
+     "expect": "Notes may still be missing (the Virus' voice limit, E341), but the log has no 'more than 256 in one block' line."
+    }
+   ]
+  }
+ ]
+}

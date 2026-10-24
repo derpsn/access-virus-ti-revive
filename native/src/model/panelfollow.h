@@ -40,6 +40,17 @@ public:
         return r.empty() ? changes : r;
     }
 
+    // parameters that are not per part (part="none": Panel Part, the multi's own settings) keep their report as a global
+    // (-1), where the editor reads and sets them: byte 7 of such a report is not their part - for Panel Part it is the
+    // part selected before the switch (E342), so stored under it the editor never followed the Virus' part selection
+    template <class IsGlobal>
+    static void globals_without_part(std::vector<RemoteDevice::Change> &changes, IsGlobal is_global)
+    {
+        for (auto &c : changes)
+            if (is_global(c.path))
+                c.part = -1;
+    }
+
     // "Global Soft Knob Configuration/Value Softknob0..2" -> soft knob 1..3, else 0
     static int softknob_report(const std::string &path);
 
