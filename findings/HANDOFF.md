@@ -16,6 +16,14 @@ Branch round-0.8.33. **Linux session 2026-10-24 (after the Windows PC session th
   on the Windows PC and plays through two ~6-minute episodes in Ableton at 2048 (diag.log: anchors ~0, no crackle),
   hil-win.ps1; then a REAPER render check by hand (E279) and E337 final.
 
+**Issue #14 (Snow, Mac Studio M1, Sequoia, Logic/Ableton) - reporter update 2026-10-24 10:39 UTC (Spanish), read with
+the user:** (1) plug-in opened with the Snow already on -> broken/crackling sound until a power cycle; (2) audio only
+over USB, choosing another output in the plug-in does not move it to the analog outs; (3) the Snow's volume knob does
+nothing over USB; (4) earlier, when analog out worked, delay in Logic (USB fine); (5) wish: copy/paste/move presets,
+import whole libraries to RAM. No version number, no diag.log. Reply posted (issuecomment-6384039769, Spanish, AI note):
+asked for diag.log of a broken start, a screenshot of the part's output setting, the exact version. (2) and (3) not in
+the evidence yet -> NEXT: check output routing to the analog outs and the volume knob on our TI Desktop.
+
 **Problem (E337, follow-up of E187):** Ableton on bare metal, Creative card 44.1 kHz / 2048 (no ASIO), crackles in
 stretches of about a minute, roughly every 6 minutes. diag.log: drops 0, process time fine, read margin >= 0; in those
 stretches `timeline steps` 195-587 and `anchors` (jumps) 2-198 per 10 s, err -767..852 (calm: err -184..256, 0 jumps).
