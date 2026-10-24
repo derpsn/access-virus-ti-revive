@@ -58,7 +58,7 @@ struct RoughCadence {
         if (t < from || t >= to)
             return 0;
         const long burst = b / 8;
-        const long every = std::max(1L, std::lround(5.0 * c.rate / (8.0 * c.block))); // bursts per ~5 s
+        const long every = (std::max)(1L, std::lround(5.0 * c.rate / (8.0 * c.block))); // bursts per ~5 s
         const double period = (double)c.block / c.rate;
         double wake = c.seconds(burst * 8 + 4) - period / 2;
         if (burst % every == every / 2)

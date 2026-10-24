@@ -15,7 +15,7 @@ namespace vti {
 class TimelineFollow {
 public:
     static constexpr int64_t JUMP = 512; // jump back to real time beyond this (with the marker only)...
-    static constexpr int64_t FAR = 4096; // ...at once beyond this: no jitter comes near (E337: 852), REAPER ahead does
+    static constexpr int64_t AT_ONCE = 4096; // ...at once beyond this: no jitter comes near (E337: 852), REAPER ahead does
     static constexpr int64_t STEP = 256; // drift: start stepping when the mean error is beyond this...
     static constexpr int64_t HOLD = 128; // ...and step until it is back inside this
 
@@ -39,7 +39,7 @@ public:
     // then may the timeline jump without a new anchor, E279)
     Move update(int64_t err, int64_t frames, bool marker)
     {
-        if (marker && (err > FAR || err < -FAR)) { // REAPER processing ahead after Play (up to -8548): no waiting
+        if (marker && (err > AT_ONCE || err < -AT_ONCE)) { // REAPER processing ahead after Play (up to -8548): no waiting
             reset();
             return {err, true};
         }
