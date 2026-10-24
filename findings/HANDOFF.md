@@ -73,8 +73,7 @@ Linux plug-in since 2026-10-24 ~15:30 = DEV build of 1e83740 (sha 40d322e9.., ~/
 installed 2026-10-23 21:12) in ~/.vst3-backup/0.8.32-installed-b65b0744. User tests output/mute in REAPER. RESULT: output/mute follow both ways in REAPER (user) -> #14
 point 2 not reproduced on the TI2 (ask the Snow reporter for the screenshot/log). Dense-MIDI "missing notes" on Linux
 too (E341): nothing lost or late on our side while playing -> the Virus' voice limit by elimination. CONFIRMED: one part
-muted -> nothing missing = the Virus' voice limit (E341 final, closed; the per-block counter stays as a diagnostic). The Virus is still in
-"Volume>MIDI" mode (set back to "Volume>Virus" on the panel when done).
+muted -> nothing missing = the Virus' voice limit (E341 final, closed; the per-block counter stays as a diagnostic). (The "Volume>MIDI" remark was wrong: Multi edit mode, see the correction.)
 
 **2026-10-24 ~15:45 - CORRECTION from the user:** there is NO "Volume>MIDI" mode the user switched on the panel; the
 Global volume only affects the outputs. What the user did in the knob tests: Shift+Edit = Multi edit mode, where the
@@ -84,6 +83,9 @@ corrected (asked which knob was turned). The remotedevice "Remote Main Volume En
 NOT arrive (email attachments; no image links); "closing and reopening Virus Revive makes the sound work; sound comes
 out via MIDI [USB?], not via audio [analog?]" (ambiguous). Reply (draft with the user): ask to drag the screenshots into
 the GitHub page; still need version + diag.log.
+**E342 (15:38-15:40):** the original's window follows the part selected on the Virus (Panel Part 72 00 1d vv), it
+sends nothing back. NEXT: VM off (user closes Live first), then TI Revive in REAPER: does its window follow the Virus'
+part selection, part volume knob (CC 7 on the part's channel), mute, output - for parts other than 1 too.
 **VM test running:** win10ref ON, Virus attached (Access driver OK) - test: switch presets on the Virus (Multi edit
 mode) and see whether the ORIGINAL plug-in follows; capture ref-presetswitch-1. Then detach, VM off, the same with
 TI Revive (load_reported_presets, E152/E157).
