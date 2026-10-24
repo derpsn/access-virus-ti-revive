@@ -1,6 +1,32 @@
 # HANDOFF
 
-## START HERE - state 2026-10-23 afternoon (the user home, Virus on USB again)
+## START HERE - state 2026-10-24 morning: crackle fix to do and test ON THE WINDOWS BARE-METAL PC
+
+**Continue on the real Windows PC (the user now runs Claude Code there).** Branch round-0.8.33.
+
+**Problem (E337, follow-up of E187):** Ableton on bare metal, Creative card 44.1 kHz / 2048 (no ASIO), crackles in
+stretches of about a minute, roughly every 6 minutes. diag.log: drops 0, process time fine, read margin >= 0; in those
+stretches `timeline steps` 195-587 and `anchors` (jumps) 2-198 per 10 s, err -767..852 (calm: err -184..256, 0 jumps).
+Cause: process() in native/plugin/source/virusplugin.cpp (timeline block after wait_offline, ~line 1250-1310) reacts
+to the INSTANTANEOUS err per block: abs(err) > 512 with a marker -> `tl_ += err` (jump back to real time, E279),
+abs(err) > 256 -> one-frame step. With uneven host block timing err swings +-800 within a second -> jumps back and
+forth, each a 12-19 ms skip/repeat = click.
+
+**Plan (user agreed 2026-10-24), test-first (ecc:tdd-workflow):**
+1. Failing test: feed the timeline uneven host cadence (e.g. bursts of 8 x 256 frames, irregular gaps, a steady ring)
+   and assert no jumps / few steps; plus keep a test that a REAL lasting offset (REAPER render, E279; a DAW stall)
+   still jumps at once-ish. If the timeline logic is not testable in isolation, factor it into a small pure struct
+   first (no behaviour change), like OfflinePacer.
+2. Fix: jump only when the error stays beyond the threshold for a while (~0.5 s, same sign; e.g. the min of abs(err)
+   over the window), and take the one-frame drift steps from a filtered error (window mean or midpoint of min/max),
+   not the last block. No extra work worth mentioning on the audio thread, no allocation.
+3. Headless check if available (nativehost with uneven blocks), then the user in Ableton at 2048: play through at
+   least two of the ~6-minute episodes; diag.log (Control Center "collect logs") should show anchors 0 or near 0 and
+   no crackle. Also re-run hil-win.ps1 (all pass before: H1, H2-1, H2-2, H3, H6 on 2026-10-24 07:29).
+4. Then REAPER render check (E279 behaviour must stay: no slow catch-up after a render), Linux hil.sh, evidence entry
+   with the result, README only if users see a difference.
+
+## State 2026-10-23 afternoon (the user home, Virus on USB again)
 
 **Site changelog fix DEPLOYED (2026-10-23 ~21:17):** changelog.html repeated every older version's notes under each newer one (summary() in scripts/site/build.py did not stop at the next "**New in"). Fix 3c8c2ac fast-forwarded onto main (only build.py), site run 40010175419 green; live changelog 114 KB -> 55 KB, 0.8.29 text once.
 
