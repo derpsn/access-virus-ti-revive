@@ -81,9 +81,9 @@
      "title": "Virus C patch with the right page B",
      "steps": [
       "Live 12, TI Revive: LOAD > Personal Libraries > Manuel Schleis > Manuel Schleis Incubation V2 (Claude copies it to the Mac's Documents/Access Music/Virus TI/Patches) and load its first patch into part 1.",
-      "Note one page B setting of it (for example the second effect's type or the mod matrix slot 4 destination) and tell it in the note; Claude compares it with Linux."
+      "The first patch is \"Exciter MS\". On the filter page, FILTER / AUX ENVELOPES, click tab <b>3</b> and read Attack, Decay and Release (hover or the help shows the value)."
      ],
-     "expect": "The patch loads and plays; the page B setting matches the same patch on Linux."
+     "expect": "The patch loads and plays; envelope 3: Attack 20, Decay 70, Release 70 (the old Mac version showed 0 / 0 / 0 there)."
     }
    ]
   }

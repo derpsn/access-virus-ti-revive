@@ -70,7 +70,16 @@ parameter of page B) with Linux/Windows. Release notes: old Virus C libraries on
    build.yml (Tested-on line after the targeted round). Site: new notice box above the hero (build.py NOTICES +
    notice_section, style.css .notice; empty list = no box), first entry = the 64-bit Windows update note (E345); the
    README starts with the same text. Checked in headless Firefox at 1400 and 390 px (scratchpad screenshots).
-   Targeted round spec: scripts/checklists/round-0.8.33-2.json (L1-L2, W1-W2, M1-M2). Targeted round on the new CI build: VM setup.exe upgrade over
+   Targeted round spec: scripts/checklists/round-0.8.33-2.json (L1-L2, W1-W2, M1-M2), checklist artifact
+   https://claude.ai/artifact/HQvBECEREpToNdDWRyYZRz (db, marks rounds/0.8.33-2/marks). CI run 40119192061 ALL GREEN.
+   LINUX: install.sh of the CI build over the existing setup = "already set up", DLL a622f9a2.. kept, plug-in
+   7a544108.. = tarball, broker e3787d73.. unchanged (old plug-in backed up in ~/.vst3-backup/0.8.33-ci1); hil.sh
+   ALL PASS (max 0.66 ms); L1, L2 marked pass by the user. M2 marker (vtimodel libdump, new): Incubation V2 patch 0
+   "Exciter MS", correct page B -> Envelope 3/4 Attack 20, Decay 70, Release 70; the old Mac bytes gave 0/0/0, Delay
+   Type 105 and ASCII in the arp user pattern. Mac: package pushed + unpacked (~/Downloads/TI-Revive-0.8.33-mac, pkg
+   eef65c1d.. = CI, hil kit, INSTALL-COMMAND.txt, Install test build.command), Incubation V2 copied to the Mac's
+   Personal Libraries. win11 VM running, setup.exe (d9865ba6.. = CI) in Downloads next to the Access .msi, VM DLL
+   still 32-bit (3e844c35..) = the update case. Targeted round on the new CI build: VM setup.exe upgrade over
    the 32-bit DLL (finish page text, DLL replaced, plug-in opens), Linux install.sh again + hil.sh + Incubation V2
    names, Mac install + one Virus A/B/C patch page B + hil-mac.
 
