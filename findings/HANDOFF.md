@@ -19,7 +19,9 @@ delayed (part 3 on Out1 / Out3 R), 56 ms at REAPER 48 kHz block 1024, 40 ms at b
 USB parts 0. CHANGED (user's question, 17:12): hil-mac + hil-win have both
 passed once (2026-10-23 / 2026-10-24), so risk.json now lists cold/reopen/export as automated on Windows and macOS too
 (testing.md updated); checklist republished as version 2 (same link, marks kept): MC1-3 and BC1-3 dropped, M1/B1
-cover them. NEXT: Mac block (M1 hil-mac, M2, M3), then the Windows PC (B1-B4). Windows PC: the user installs ~/Downloads/TI-Revive-0.8.33-test/msi/setup.exe.
+cover them. Mac M1 DONE: hil-mac on the installed CI build, results-20261024-170929
+(pulled to ~/Downloads/TI-Revive-0.8.33-test/hil-mac-results): ALL PASS (H1, H2 x2, H3, H6), graded on Linux too.
+Note: the hil zip unpacks into hil/hil/ on the Mac (zip has its own folder). NEXT: M2, M3, then the Windows PC. Windows PC: the user installs ~/Downloads/TI-Revive-0.8.33-test/msi/setup.exe.
 
 Round 0.8.33 so far: E337 crackle fix (Windows: crackle gone), per-block event counter (E341: missing notes = the
 Virus' voice limit), part following (E342), analog parts in sync with USB parts (E344, "perfectly in sync" on the
