@@ -36,6 +36,9 @@ code { font: 0.86em var(--mono); background: var(--raised); border: 1px solid va
 .gh svg { display: block; }
 .bar nav a { color: var(--soft); font-weight: 400; }
 .bar nav a:hover { color: var(--text); text-decoration: none; }
+/* home link on the left of the bar: back to the main page from anywhere */
+.bar .home { color: var(--text); font-weight: 600; font-size: 1rem; white-space: nowrap; }
+.bar .home:hover { text-decoration: none; }
 
 /* important information above the hero (build.py NOTICES) */
 .notice { padding: clamp(1rem, 3vw, 1.75rem) 0 0; }
@@ -220,6 +223,14 @@ footer p { margin: 0 0 0.6rem; max-width: 48rem; }
 }
 @media (max-width: 600px) {
   .bar nav { gap: 0.9rem; font-size: 0.85rem; }
+  .bar .wrap { gap: 0.8rem; }
+  .bar .home { font-size: 0.9rem; }
+  .bar nav a { white-space: nowrap; }
+}
+/* small phones: the bar must fit in one line next to the home link; GitHub stays linked in the footer */
+@media (max-width: 400px) {
+  .bar nav { gap: 0.7rem; font-size: 0.8rem; }
+  .bar nav .gh { display: none; }
   .needs div { grid-template-columns: 1fr; gap: 0.2rem; }
   .rel, .log .rel { grid-template-columns: 1fr; gap: 0.6rem; }
   .matrix, .data { font-size: 0.82rem; }

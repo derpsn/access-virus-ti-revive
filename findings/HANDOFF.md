@@ -64,6 +64,9 @@ parameter of page B) with Linux/Windows. Release notes: old Virus C libraries on
    (C:\tirevive-test\0.8.33-release), VM off; Mac: release unpacked in ~/Downloads/TI-Revive-0.8.33-release-mac (pkg
    e548f83f.. = release, INSTALL-COMMAND.txt + Install test build.command) - the user installs. win10ref: user check
    done, VM shut down by the user; Virus on Linux (ACL access ok, broker socket active).
+   Site 2026-10-24 ~21:20 (user): home link "TI Revive" on the left of the top bar on every page (base.html,
+   style.css .bar .home); small phones (<= 400 px): links one line, the GitHub icon hidden (footer links GitHub);
+   checked in headless Firefox at 360 / 390 / 600 / 1400 px.
    NEXT (next round): hover value in the LCD (5b, check the original first), #14 answer from the Snow reporter
    (Shift+Value 1), the library scan items (6), Reddit report (7).
 ** RELEASE 0.8.33 (user: "yes, release it", ~20:50): merge f4f05de on main (parents 03e281c main + c3f2c4e round,
