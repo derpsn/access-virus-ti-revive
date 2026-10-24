@@ -11,6 +11,9 @@ Candidates: (a) the Virus' own voice limit / voice stealing (heavy patches, 3 pa
 (b) process() collects at most EV_MAX = 256 events per block and drops the rest SILENTLY (virusplugin.cpp ~1320,
 no counter) - a counter + log line would settle it. Questions to the user: one instance with 3 parts or 3 instances,
 MIDI channels, missing = never started or cut off, chords or fast runs, automation/MPE on those tracks.
+User answers (2026-10-24 ~15:10): ONE instance with 3 presets (3 parts); the missing notes NEVER STARTED (not cut off);
+in dense chords and fast runs. User leans to the Virus' voice limit. Not settled: whether the Virus drops new notes or
+steals old voices when it runs out is not in the evidence; the EV_MAX counter would rule our side in or out.
 
 Branch round-0.8.33. **Linux session 2026-10-24 (after the Windows PC session that wrote steps 1+2 without a compiler):**
 - Build broke on a name clash: `follow_` already is the PanelFollow -> the TimelineFollow member is `tl_follow_`.
