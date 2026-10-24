@@ -69,6 +69,8 @@ DONE 15:16-15:18 (E340): VM off, Virus back on Linux (ACL ok, no udevadm needed)
 72 00 29 / 72 00 48 sent in the run - ask the user whether they changed it in the plug-in; if yes = #14 point 2 bug
 (look at how the editor's "Part output" / "Part on/off" controls are sent). Plug-in view following the panel: user said
 "works" (to confirm per item).
+Linux plug-in since 2026-10-24 ~15:30 = DEV build of 1e83740 (sha 40d322e9.., ~/.vst3); the one before (b65b0744..,
+installed 2026-10-23 21:12) in ~/.vst3-backup/0.8.32-installed-b65b0744. User tests output/mute in REAPER.
 
 **Problem (E337, follow-up of E187):** Ableton on bare metal, Creative card 44.1 kHz / 2048 (no ASIO), crackles in
 stretches of about a minute, roughly every 6 minutes. diag.log: drops 0, process time fine, read margin >= 0; in those
