@@ -56,6 +56,9 @@ parameter of page B) with Linux/Windows. Release notes: old Virus C libraries on
    E349 (TI Revive on Linux: amplifier Volume/Pan and the mixer part slider follow - nothing to build on the TI2; we
    do not echo, by design). Open for the Snow: which knob the reporter means (big VOLUME = analog master, never USB;
    Shift+Value 1 = Patch Volume) -> reply on #14 drafted for the user, not posted. Virus back on Linux, win10ref off.
+5b. Wish (user, 2026-10-24, M2): show a knob's value in the bottom LCD on hover (today the LCD changes only when a
+   value changes: ui_set -> set_lcd). FIRST check what the original Virus Control does on hover (win10ref, no
+   guessing); like the original -> a gap to close, else our own addition, say so. Next round, not 0.8.33.
 6. Open from the scan (not fixed): dumps of other sizes (202/158 bytes in "Yoz & Andy/Incubation V3 ... .mid.mid",
    31 of 128 kept; Cosmosis 54/59; Nice Bytes Toxic/Interactive 127/128) and upgrade_single false for version byte
    127 (Howard Scarr Sounds, 1 patch) - check with REA whether the original keeps them; a diag.log line per library
