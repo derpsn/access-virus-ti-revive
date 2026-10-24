@@ -67,6 +67,22 @@ parameter of page B) with Linux/Windows. Release notes: old Virus C libraries on
    Site 2026-10-24 ~21:20 (user): home link "TI Revive" on the left of the top bar on every page (base.html,
    style.css .bar .home); small phones (<= 400 px): links one line, the GitHub icon hidden (footer links GitHub);
    checked in headless Firefox at 360 / 390 / 600 / 1400 px.
+   #14 status (read with the user ~21:30, reporter's comments 18:19 / 18:59; the user replied 18:36 / 19:04): Snow +
+   Mac Studio M1 + Live stable, no crashes, start-up sound solved; the reporter tests Shift+Value 1 tomorrow.
+   Open from #14 (next round, nothing posted by Claude):
+   a) the red "data loss" message at the first load (16:05, unanswered; later "no errors with the update") - if it
+      returns: exact text / screenshot + diag.log (our sync message or 'event(s) lost'?).
+   b) bank file dragged from Finder into the plug-in does nothing (reporter + Gemini tried): our drag works only
+      inside the browser (library pane -> RAM slot). Explain the path (.mid into Documents/Access Music/Virus TI/
+      Patches -> Personal Libraries -> drag onto RAM); check whether the ORIGINAL accepts file drops from Finder
+      (gap vs own addition); maybe a README help line.
+   c) saving an edited sound: the reporter expects right-click > overwrite and did not find SAVE (asked 15:20 and
+      18:59) -> short answer with where SAVE is / drag the part's patch name onto a RAM slot, ideally a screenshot.
+   d) "the Snow has only 4 parts, not 16": the Snow's description lists the same parts as the TI (E151), we always
+      show 16; what the ORIGINAL shows with a Snow is unknown -> REA on the model handling (no Snow here).
+   e) Logic Pro sync problems from the first report: not mentioned since -> ask whether 0.8.33 still has them.
+   f) analog/USB delay: fixed on our TI2 (E344, by ear) -> the reporter's confirmation on the Snow.
+   Reply tomorrow after their test: volume result, bank-to-RAM in 3 steps, how to save, screenshot request, Logic.
    NEXT (next round): hover value in the LCD (5b, check the original first), #14 answer from the Snow reporter
    (Shift+Value 1), the library scan items (6), Reddit report (7).
 ** RELEASE 0.8.33 (user: "yes, release it", ~20:50): merge f4f05de on main (parents 03e281c main + c3f2c4e round,
