@@ -14,7 +14,9 @@ rounds/0.8.33/marks - empty at publish). risk.py: class C (CI files); Linux core
 core on the Windows PC (BC1-3, not the VM: E337 + analog delay need real timing), Mac MC1-3. New items: L1 analog
 delay 2048/256, L2 part following + part volume; M1 hil-mac, M2 analog delay, M3 part following; B1 hil-win, B2 long
 Ableton session (E337), B3 analog delay at Windows latency (at 2048 the needed ~131 ms is above the Virus' 127 ms max
--> a few ms early expected), B4 dense MIDI counter. Read marks with ArtifactData list rounds/0.8.33/marks. Windows PC: the user installs ~/Downloads/TI-Revive-0.8.33-test/msi/setup.exe.
+-> a few ms early expected), B4 dense MIDI counter. Read marks with ArtifactData list rounds/0.8.33/marks. LINUX DONE (17:07): L1 pass, L2 pass; diag.log on the CI build: only the analog part
+delayed (part 3 on Out1 / Out3 R), 56 ms at REAPER 48 kHz block 1024, 40 ms at block 256 (= (A+block+640)/48000);
+USB parts 0. NEXT: Mac block (MC1-3, M1 hil-mac, M2, M3), then the Windows PC. Windows PC: the user installs ~/Downloads/TI-Revive-0.8.33-test/msi/setup.exe.
 
 Round 0.8.33 so far: E337 crackle fix (Windows: crackle gone), per-block event counter (E341: missing notes = the
 Virus' voice limit), part following (E342), analog parts in sync with USB parts (E344, "perfectly in sync" on the
