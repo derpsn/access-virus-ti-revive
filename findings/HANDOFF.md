@@ -8,7 +8,13 @@ unpacked in ~/Downloads/TI-Revive-0.8.33-test). hil.sh on it: ALL PASS (work/hil
 nativevst3; C:\tirevive-test\0.8.33; VM off). **Mac: package PUSHED** (~17:10) to ~/Downloads/TI-Revive-0.8.33-mac
 (pkg 1eebd732.. = CI) with hil/ kit, INSTALL-COMMAND.txt and "Install test build.command"; INSTALLED by the user (~17:15):
 receipt io.github.derpsn.tirevive 0.8.33, VST3 binary 039b19e7.. = the pkg payload. All three test machines + the
-Windows PC download ready; NEXT: round checklist (risk.py --round 0.8.33 + new items), hil-mac/hil-win by the user. Windows PC: the user installs ~/Downloads/TI-Revive-0.8.33-test/msi/setup.exe.
+Windows PC download ready; CHECKLIST published 2026-10-24 ~17:25:
+https://claude.ai/artifact/RJnAcjRBphmuowwFqgeNCL (spec scripts/checklists/round-0.8.33.json; db, marks in
+rounds/0.8.33/marks - empty at publish). risk.py: class C (CI files); Linux core by hil.sh (done, all pass); Windows
+core on the Windows PC (BC1-3, not the VM: E337 + analog delay need real timing), Mac MC1-3. New items: L1 analog
+delay 2048/256, L2 part following + part volume; M1 hil-mac, M2 analog delay, M3 part following; B1 hil-win, B2 long
+Ableton session (E337), B3 analog delay at Windows latency (at 2048 the needed ~131 ms is above the Virus' 127 ms max
+-> a few ms early expected), B4 dense MIDI counter. Read marks with ArtifactData list rounds/0.8.33/marks. Windows PC: the user installs ~/Downloads/TI-Revive-0.8.33-test/msi/setup.exe.
 
 Round 0.8.33 so far: E337 crackle fix (Windows: crackle gone), per-block event counter (E341: missing notes = the
 Virus' voice limit), part following (E342), analog parts in sync with USB parts (E344, "perfectly in sync" on the
