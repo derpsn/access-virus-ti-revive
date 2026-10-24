@@ -20,6 +20,11 @@ viruscontrol_dll64.
 (elevated), the x86 one backed up in the session scratchpad; page B check on the installed file now OK. NOT yet
 checked in the plug-in: DAW restart -> Incubation V2 shows 128 names and plays (user). The Downloads\VirusTI Driver
 folder still holds the x86 DLL.
+**User's view (2026-10-24 ~19:10): support only the 64-bit Virus Control.dll, not both.** Not decided in detail yet;
+the steps below assume both and must be re-planned (detect x86 by PE machine, say so in Control Center/diag.log,
+let the setup scripts take viruscontrol_dll64 from the MSI cab). The user's libraries from the PC were copied to
+~/Dokumente/Access Music/Virus TI/Patches (no overwrite; the Linux "My Patches.mid" kept, the PC one is the empty
+26-byte file) -> Incubation V2 can be checked on Linux too.
 **NEXT (Linux):**
 1. Fix default_page_b() for both builds. Lead (byte compare, not REA): the same 256 bytes are in the x86 DLL at
    0x13af58 = `-Init-` (0x13b200) - 0x2a8. Confirm with REA (skill reverse-engineer-anything) how the original's Virus C
@@ -38,13 +43,14 @@ folder still holds the x86 DLL.
    same cause -> ask the reporter whether their Common\Virus Control.dll is 32-bit (properties / size 14,040,312 vs
    14,663,928 bytes) and whether only Virus A/B/C libraries were empty.
 
-## START HERE - state 2026-10-24 ~18:05: round 0.8.33 checklist - Linux, Mac, Windows PC DONE (B1 grading open)
+## START HERE - state 2026-10-24 ~18:05: round 0.8.33 checklist - Linux, Mac, Windows PC DONE (B1 graded: all pass)
 
 **Windows PC session 2026-10-24 17:15-18:05 (CI run 40104018425):** artifacts fetched via nightly.link (no gh/login on
 that PC; zip sizes = the API's), MSI plug-in 1548EEA1 = the VM's; setup.exe /quiet exit 0, installed binaries = MSI
 (replaced the earlier CCE39B57 of run 40093015139). All four marked pass by the user, notes in the checklist db.
-- **B1 hil-win:** results-20261024-172158, H1/H2.1/H2.2/H3/H6 ran, nothing failed. NOT GRADED yet (no Python on the
-  PC): zip C:\Users\thoma\Downloads\hil-win-0.8.33-results-20261024-172158.zip -> NEXT on Linux: hil_check.py --folder.
+- **B1 hil-win:** results-20261024-172158, H1/H2.1/H2.2/H3/H6 ran, nothing failed. GRADED on Linux 2026-10-24 ~19:10
+  (hil_check.py --folder, zip copied to ~/windows_tests): ALL PASS (H2.1 max 0.14 ms, H2.2 0.43 ms, H3 export 1.00x,
+  H6 0.75 ms / +4 ppm).
 - **B2:** Live 17:27-17:59 (31 min), 44.1 kHz, user: no crackle. diag: drops 0, over block 0, anchors 1 at the start
   plus 1 each at 17:56:17 / 17:57:57, both next to a new Play ("N since Play" reset) - read as transport restarts, not
   the E337 jumps. Uneven stretches (err up to +-800, once 2257 at the Play) handled by drift steps only (bursts
