@@ -94,6 +94,9 @@ outs still give no signal (they prefer USB, not urgent); still wish: hardware vo
 Multi edit mode works on the TI - Snow unknown) and save/load presets/banks (mostly exists: LOAD/SAVE, Personal
 Libraries, browser drag to RAM, Control Center backup/restore - tested on the TI2 only). Reply drafted (Spanish,
 scratchpad reply14b.md), waiting for the user's OK before posting.
+**E343 (16:00):** analog Out1/2/3 + headphones work with TI Revive on the TI2 (REAPER, user); Output Select values
+decoded (1/4/7 = Out1/2/3 L+R, 10 = USB1 L+R). #14 reply draft updated (point 1 = Multi edit part volume, not master);
+open: the reporter's "slight delay on analog" - how to measure (loopback recording) being discussed with the user.
 **VM test running:** win10ref ON, Virus attached (Access driver OK) - test: switch presets on the Virus (Multi edit
 mode) and see whether the ORIGINAL plug-in follows; capture ref-presetswitch-1. Then detach, VM off, the same with
 TI Revive (load_reported_presets, E152/E157).
