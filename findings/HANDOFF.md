@@ -58,6 +58,12 @@ part 1 -> USB level follows (user heard it). NEXT: same knob test with TI Revive
 wav level): does our plug-in take the incoming CC 7 and send it back? If not -> feature = copy the original's echo
 (test-first). Also from the captures: panel Multi changes report as 72 00 29 vv (Output Select) / 72 00 48 (Part Mute)
 - useful for #14 point 2.
+The original follows Output Select + Part Mute BOTH ways (user, 2026-10-24 ~17:25; no echo on the wire). User wants
+TI Revive to do everything the original does: (1) knob CC 7 echo, (2) output/mute plug-in -> Virus (#14 point 2),
+(3) output/mute Virus -> plug-in (TI Revive's generic panel follow probably covers it - verify). STATE NOW: win10ref
+RUNNING with the Virus attached and Live 11 open; the Virus is in "Volume>MIDI" mode. NEXT: user quits Live -> check
+no Ableton process -> vm.sh detach + shutdown -> user runs udevadm trigger -> the three tests with TI Revive on Linux
+(nativehost + VTI_NATIVE_PANELLOG, wav level) -> build what is missing, test-first.
 
 **Problem (E337, follow-up of E187):** Ableton on bare metal, Creative card 44.1 kHz / 2048 (no ASIO), crackles in
 stretches of about a minute, roughly every 6 minutes. diag.log: drops 0, process time fine, read margin >= 0; in those
