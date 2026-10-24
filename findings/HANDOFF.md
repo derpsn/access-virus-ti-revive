@@ -64,6 +64,11 @@ TI Revive to do everything the original does: (1) knob CC 7 echo, (2) output/mut
 RUNNING with the Virus attached and Live 11 open; the Virus is in "Volume>MIDI" mode. NEXT: user quits Live -> check
 no Ableton process -> vm.sh detach + shutdown -> user runs udevadm trigger -> the three tests with TI Revive on Linux
 (nativehost + VTI_NATIVE_PANELLOG, wav level) -> build what is missing, test-first.
+DONE 15:16-15:18 (E340): VM off, Virus back on Linux (ACL ok, no udevadm needed). TI Revive: knob works WITHOUT echo
+(the Virus applies CC 7 to part 1 itself), panel mute/output applied by the Virus. Plug-in -> Virus output/mute: NO
+72 00 29 / 72 00 48 sent in the run - ask the user whether they changed it in the plug-in; if yes = #14 point 2 bug
+(look at how the editor's "Part output" / "Part on/off" controls are sent). Plug-in view following the panel: user said
+"works" (to confirm per item).
 
 **Problem (E337, follow-up of E187):** Ableton on bare metal, Creative card 44.1 kHz / 2048 (no ASIO), crackles in
 stretches of about a minute, roughly every 6 minutes. diag.log: drops 0, process time fine, read margin >= 0; in those
