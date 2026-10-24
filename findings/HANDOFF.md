@@ -1,6 +1,16 @@
 # HANDOFF
 
-## START HERE - state 2026-10-24 ~09:40: E337 fix built + checked on Linux; NEXT = CI test build -> Ableton on the Windows PC
+## START HERE - state 2026-10-24 ~15:00: E337 Windows test done (crackle gone); open: "missing notes" with dense MIDI
+
+**Windows test 2026-10-24 afternoon (CI build 40093015139, logs in /home/datoml/windows_tests, not in git):** hil-win
+ALL PASS (graded on Linux). Ableton 14:25-14:32: user "crackle gone"; timeline: 0 jumps after the anchor, one burst of
+134 drift steps at 14:30:29; drops 0, USB errors 0. But no strong uneven stretch came up (err max 509 vs +-800 in the
+morning) -> the jump suppression was not really exercised on Windows yet (details E337). **New report:** at the end,
+3 presets with very dense MIDI, some notes seemed missing. Log: no "event(s) lost", no sync error, no rule-2 drop.
+Candidates: (a) the Virus' own voice limit / voice stealing (heavy patches, 3 parts) - most likely, unproven;
+(b) process() collects at most EV_MAX = 256 events per block and drops the rest SILENTLY (virusplugin.cpp ~1320,
+no counter) - a counter + log line would settle it. Questions to the user: one instance with 3 parts or 3 instances,
+MIDI channels, missing = never started or cut off, chords or fast runs, automation/MPE on those tracks.
 
 Branch round-0.8.33. **Linux session 2026-10-24 (after the Windows PC session that wrote steps 1+2 without a compiler):**
 - Build broke on a name clash: `follow_` already is the PanelFollow -> the TimelineFollow member is `tl_follow_`.
