@@ -104,7 +104,9 @@ work and are the simpler choice), an Access Virus TI on USB, your own **Access "
    **"Set up the Access Virus TI files now"** checked: TI Revive unpacks your Access `.msi` (nothing of it is
    installed) and copies `Virus Control.dll`, `firmware.bin` and the manuals to `C:\Program Files\Access Music\Virus
    TI` and the factory patch libraries to *Documents\Access Music\Virus TI\Patches*. Later: *Start → TI Revive →
-   Set up Access Virus TI files*.
+   Set up Access Virus TI files*. TI Revive reads only the 64-bit `Virus Control.dll`; setups of 0.8.32 and older
+   could copy the 32-bit one (old Virus A/B/C patch libraries then load empty). Since 0.8.33 the plug-in shows no
+   editor with the 32-bit DLL and the Control Center says why; run *Set up Access Virus TI files* again to fix it.
 4. Connect the Virus TI. In your DAW, rescan plug-ins and use **"TI Revive Virus Control"** (vendor *TI Revive*).
    For the Virus as a sound card choose the ASIO device **"TI Revive Virus Audio"**.
 
@@ -158,6 +160,8 @@ system. While TI Revive uses the Virus, it is not available as a Linux sound car
 after the plug-in is closed. Uninstall with `./uninstall.sh`. Details: `README-linux.txt` in the package.
 Control Center in its plain look instead of the Access look: `install.sh` of 0.8.31 and older could miss
 `Virus Control Center.exe` in the `.msi` (issue #15); run `./install.sh` with the `.msi` again, it adds the file.
+TI Revive reads only the 64-bit `Virus Control.dll` (since 0.8.33); if the Control Center reports a 32-bit one, run
+`./install.sh` with the `.msi` again (unpacking with Wine instead of msitools gives only the 32-bit DLL).
 Known issue: after a USB cable replug, or when the Virus is switched on while no DAW runs, it can come back without
 sound. Since 0.8.32 the plug-in tries to bring it back by itself (it switches the sample rate away and back, which the
 Virus cannot ignore); this could not be tested against the fault yet. If it stays silent, switch it off and on once

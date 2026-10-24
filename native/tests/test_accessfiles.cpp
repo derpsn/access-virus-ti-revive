@@ -78,11 +78,13 @@ Bytes fake_dump(uint8_t cmd, size_t size, size_t name_at, const char *name)
     return d;
 }
 
-// a minimal PE32+ image: one section holding a resource tree type -> name -> language -> data, for the named
-// resources (type "XML" or "PNG"), plus an id-typed resource (skipped like icons)
-Bytes fake_pe(const std::vector<std::pair<std::string, std::string>> &xml, bool with_resources = true)
+// a minimal PE32+ image (`pe32`: a PE32 one, like the 32-bit Virus Control.dll): one section holding a resource tree
+// type -> name -> language -> data, for the named resources (type "XML" or "PNG"), plus an id-typed resource
+// (skipped like icons)
+Bytes fake_pe(const std::vector<std::pair<std::string, std::string>> &xml, bool with_resources = true,
+              bool pe32 = false)
 {
-    const uint32_t pe = 0x40, optsz = 240, sec_raw = 0x400, sec_va = 0x1000;
+    const uint32_t pe = 0x40, optsz = pe32 ? 224 : 240, dirs = pe32 ? 96 : 112, sec_raw = 0x400, sec_va = 0x1000;
     Bytes rs; // resource section
     auto put16 = [](Bytes &b, size_t o, uint16_t v) { b[o] = v & 0xFF, b[o + 1] = v >> 8; };
     auto put32 = [](Bytes &b, size_t o, uint32_t v) {
@@ -126,12 +128,13 @@ Bytes fake_pe(const std::vector<std::pair<std::string, std::string>> &xml, bool 
     d[0] = 'M', d[1] = 'Z';
     put32(d, 0x3c, pe);
     memcpy(d.data() + pe, "PE\0\0", 4);
+    put16(d, pe + 4, pe32 ? 0x14c : 0x8664); // machine: x86 / x64
     put16(d, pe + 6, 1);              // one section
     put16(d, pe + 20, optsz);
-    put16(d, pe + 24, 0x20b);         // PE32+
+    put16(d, pe + 24, pe32 ? 0x10b : 0x20b); // PE32 / PE32+
     if (with_resources) {
-        put32(d, pe + 24 + 112 + 16, sec_va); // data directory 2: resources
-        put32(d, pe + 24 + 112 + 20, (uint32_t)rs.size());
+        put32(d, pe + 24 + dirs + 16, sec_va); // data directory 2: resources
+        put32(d, pe + 24 + dirs + 20, (uint32_t)rs.size());
     }
     size_t sh = pe + 24 + optsz;
     put32(d, sh + 8, (uint32_t)rs.size()), put32(d, sh + 12, sec_va);
@@ -230,6 +233,40 @@ TEST(accessfiles_pe_image)
     env.set("WINEPREFIX", wine.string());
     auto c = AccessFiles::open("", err);
     CHECK(c && c->get("remotedevice.xml").size() == REMOTE.size());
+}
+
+TEST(accessfiles_pe32_refused)
+{
+    // only the 64-bit Virus Control.dll counts (E345): an extracted 64-bit installer can leave the 32-bit one in
+    // Common, whose tables (page B for Virus C patches) lie elsewhere
+    TempDir t("pe32");
+    fs::path x86 = t.dir / "x86" / "Virus Control.dll", x64 = t.dir / "x64" / "Virus Control.dll";
+    write(x86, fake_pe({{"REMOTEDEVICE.XML", REMOTE}}, true, true));
+    write(x64, fake_pe({{"REMOTEDEVICE.XML", REMOTE}}));
+    Env env;
+    no_installation(env, t.dir / "home");
+    std::string err;
+    CHECK(!AccessFiles::open(x86.string(), err));
+    // the reason survives the standard places tried after the hint
+    CHECK(err.find("32-bit") != std::string::npos && err.find(x86.string()) != std::string::npos);
+    // a 64-bit one later in the search order is taken
+    env.set("VTI_ACCESS_DIR", x64.parent_path().string());
+    auto a = AccessFiles::open(x86.parent_path().string(), err);
+    CHECK(a && a->source() == x64.string());
+}
+
+TEST(accessfiles_pe32_control_center)
+{
+    // the Control Center's resources come from Virus Control Center.exe, which may be a 32-bit program: still read
+    TempDir t("pe32cc");
+    fs::path exe = t.dir / "Virus Control Center.exe";
+    write(exe, fake_pe({{"ENGINE.XML", "<Engine/>"}, {"EDITOR.XML", "<Editor/>"}}, true, true));
+    Env env;
+    no_installation(env, t.dir / "home");
+    env.set("VTI_ACCESS_CC", exe.string());
+    std::string err;
+    auto a = AccessFiles::open_control_center(err);
+    CHECK(a && a->get("engine.xml").size() == 9);
 }
 
 TEST(accessfiles_pe_errors)
@@ -445,15 +482,10 @@ TEST(accessfiles_knob_templates_pe)
     CHECK(find_knob_templates(std::vector<uint8_t>(100, 0)).empty());
 }
 
-// the 32-bit Windows DLL (an Access installation with the 32-bit Virus Control.dll in "Program Files/Access Music/
-// Virus TI/Common", round 0.8.22 test W2: the knob template arrow opened nothing): the same table, 4-byte pointers
+// the 32-bit Windows DLL is not supported (E345: open() refuses it): its table of 4-byte pointers is not read
 TEST(accessfiles_knob_templates_pe32)
 {
-    auto t = find_knob_templates(pe32_with_table(35));
-    CHECK(t.size() == 35);
-    CHECK(t[0].name == "Group 0/Entry 0" && t[0].midi == "F0 7F FF F7");
-    CHECK(t[34].name == "Group 8/Entry 34" && t[5].midi == "B0 05 FF");
-    CHECK(find_knob_templates(pe32_with_table(7)).empty());
+    CHECK(find_knob_templates(pe32_with_table(35)).empty());
 }
 
 // a thin 64-bit Mach-O (the Mac bundle's binary): addresses through its LC_SEGMENT_64 commands

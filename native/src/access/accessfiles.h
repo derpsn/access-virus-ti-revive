@@ -21,6 +21,7 @@ class AccessFiles {
 public:
     // Locate and open the Access installation. `hint` may name Virus Control.dll / .bundle or its folder; empty =
     // search the standard locations (and $VTI_ACCESS_DIR). Returns nullptr and sets `error` if nothing is found.
+    // Only the 64-bit (PE32+) Virus Control.dll counts; a 32-bit one is skipped and named in `error` (E345).
     static std::unique_ptr<AccessFiles> open(const std::string &hint, std::string &error);
     // The skin of Access' "Virus Control Center" (layout editor.xml + engine.xml and its PNGs, resources of
     // "Virus Control Center.exe"; a folder with those files also works), for TI Revive's Control Center app.
@@ -50,6 +51,7 @@ private:
                                    std::vector<uint8_t> *binary = nullptr, size_t *offset = nullptr) const;
     std::map<std::string, std::vector<uint8_t>> files_; // key: lower-case name
     std::string source_;
+    bool pe32_ = false; // load_pe read a 32-bit (PE32) image
     // `required`: a resource the file must contain to count (the plug-in's: remotedevice.xml)
     bool load_pe(const std::string &dll, std::string &error, const char *required = "remotedevice.xml");
     bool load_dir(const std::string &dir, std::string &error, const char *required = "remotedevice.xml");

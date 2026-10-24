@@ -51,6 +51,7 @@ bool AccessFiles::load_pe(const std::string &dll, std::string &error, const char
         error = dll + " is not a PE image";
         return false;
     }
+    pe32_ = magic == 0x10b;
     size_t dd = pe + 24 + (magic == 0x20b ? 112 : 96); // data directories
     uint32_t rsrc_rva = 0;
     rd(d, dd + 2 * 8, rsrc_rva);
@@ -224,9 +225,7 @@ struct AddressRange {
     uint64_t addr, size;
     size_t file;
 };
-struct AddressMap : std::vector<AddressRange> {
-    int ptr = 8; // the size of a pointer in this binary (4: the 32-bit Windows DLL)
-};
+using AddressMap = std::vector<AddressRange>;
 
 size_t to_file(const AddressMap &m, uint64_t a)
 {
@@ -236,7 +235,7 @@ size_t to_file(const AddressMap &m, uint64_t a)
     return SIZE_MAX;
 }
 
-// a PE (64 or 32 bit): absolute addresses = image base + RVA
+// a 64-bit PE (PE32+; the 32-bit DLL is not supported, E345): absolute addresses = image base + RVA
 bool pe_map(const std::vector<uint8_t> &b, AddressMap &m)
 {
     if (b.size() < 0x40 || b[0] != 'M' || b[1] != 'Z')
@@ -246,10 +245,9 @@ bool pe_map(const std::vector<uint8_t> &b, AddressMap &m)
         return false;
     size_t nsec = b[pe + 6] | b[pe + 7] << 8, optsz = b[pe + 20] | b[pe + 21] << 8, opt = pe + 24;
     const int magic = opt + 32 <= b.size() ? b[opt] | b[opt + 1] << 8 : 0;
-    if (magic != 0x20B && magic != 0x10B) // PE32+, PE32
+    if (magic != 0x20B) // PE32+
         return false;
-    m.ptr = magic == 0x20B ? 8 : 4;
-    uint64_t base = m.ptr == 8 ? le64(b, opt + 24) : le32(b, opt + 28);
+    uint64_t base = le64(b, opt + 24);
     for (size_t i = 0, sec = opt + optsz; i < nsec && sec + 40 <= b.size(); i++, sec += 40)
         m.push_back({base + le32(b, sec + 12), le32(b, sec + 16), le32(b, sec + 20)});
     return true;
@@ -326,10 +324,9 @@ std::vector<KnobTemplate> find_knob_templates(const std::vector<uint8_t> &bin)
     // the first run of at least 8 entries; in the Windows DLL it ends right before template 0's name record, in the
     // Mac binary it lies elsewhere, so the shape alone decides (E197)
     for (auto &m : address_maps(bin)) {
-        const size_t p = m.ptr, pair = 2 * p;
-        auto ptr = [&](size_t at) -> uint64_t { return p == 8 ? le64(bin, at) : le32(bin, at); };
+        const size_t p = 8, pair = 2 * p;
         auto entry = [&](size_t at, KnobTemplate &k) {
-            size_t n = to_file(m, ptr(at)), d = to_file(m, ptr(at + p));
+            size_t n = to_file(m, le64(bin, at)), d = to_file(m, le64(bin, at + p));
             if (n == SIZE_MAX || d == SIZE_MAX)
                 return false;
             k = {c_string(bin, n, 100), c_string(bin, d, 59)};
@@ -400,6 +397,12 @@ std::vector<uint8_t> AccessFiles::default_page_b() const
 
 std::vector<uint8_t> AccessFiles::init_multi() const { return find_dump(0x11, 267, 13, "MultiCtrl!"); }
 
+#if defined(_WIN32)
+#define FIX_32BIT "run \"Set up Access Virus TI files\" from the Start menu (TI Revive)"
+#else
+#define FIX_32BIT "run TI Revive's install.sh again"
+#endif
+
 std::unique_ptr<AccessFiles> AccessFiles::open(const std::string &hint, std::string &error)
 {
     std::vector<std::string> cands;
@@ -435,7 +438,7 @@ std::unique_ptr<AccessFiles> AccessFiles::open(const std::string &hint, std::str
     if (!prefix.empty())
         cands.push_back(prefix + "/drive_c/Program Files/" + common);
 #endif
-    std::string last = "no Access Virus TI installation found";
+    std::string last = "no Access Virus TI installation found", x86;
     for (auto c : cands) {
         fs::path p(c);
         std::error_code ec;
@@ -447,10 +450,16 @@ std::unique_ptr<AccessFiles> AccessFiles::open(const std::string &hint, std::str
             p = p / "Virus Control.bundle" / "Contents" / "Resources";
         std::unique_ptr<AccessFiles> a(new AccessFiles);
         bool ok = fs::is_directory(p, ec) ? a->load_dir(p.string(), last) : a->load_pe(p.string(), last);
+        if (ok && a->pe32_) { // only the 64-bit DLL: the 32-bit one's tables lie elsewhere (E345); keep the reason
+            if (x86.empty())
+                x86 = p.string() + " is the 32-bit Virus Control.dll; TI Revive needs the 64-bit one from the "
+                                   "\"Virus TI Software Suite 5.1.7.00 64-bit.msi\": " FIX_32BIT;
+            continue;
+        }
         if (ok)
             return a;
     }
-    error = last;
+    error = x86.empty() ? last : x86;
     return nullptr;
 }
 

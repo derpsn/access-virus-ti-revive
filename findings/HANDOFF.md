@@ -1,6 +1,6 @@
 # HANDOFF
 
-## START HERE (new, 2026-10-24 ~19:00): Virus C libraries empty with the 32-bit Virus Control.dll
+## START HERE (2026-10-24 ~20:00): 64-bit Virus Control.dll only (E345) - steps 1-3 done, VM test next
 
 **Seen on the Windows PC (user):** LOAD > Personal Libraries > "Manuel Schleis/Manuel Schleis Incubation V2" is
 listed, its bank is EMPTY (no names; "worked already" on other machines). The file is fine: 128 Virus C dumps (267
@@ -20,28 +20,28 @@ viruscontrol_dll64.
 (elevated), the x86 one backed up in the session scratchpad; page B check on the installed file now OK. NOT yet
 checked in the plug-in: DAW restart -> Incubation V2 shows 128 names and plays (user). The Downloads\VirusTI Driver
 folder still holds the x86 DLL.
-**User's view (2026-10-24 ~19:10): support only the 64-bit Virus Control.dll, not both.** Not decided in detail yet;
-the steps below assume both and must be re-planned (detect x86 by PE machine, say so in Control Center/diag.log,
-let the setup scripts take viruscontrol_dll64 from the MSI cab). The user's libraries from the PC were copied to
-~/Dokumente/Access Music/Virus TI/Patches (no overwrite; the Linux "My Patches.mid" kept, the PC one is the empty
-26-byte file) -> Incubation V2 can be checked on Linux too.
-**NEXT (Linux):**
-1. Fix default_page_b() for both builds. Lead (byte compare, not REA): the same 256 bytes are in the x86 DLL at
-   0x13af58 = `-Init-` (0x13b200) - 0x2a8. Confirm with REA (skill reverse-engineer-anything) how the original's Virus C
-   upgrade reaches page B in each build (x64 a622f9a2.., x86 3e844c35..), then pick it by PE machine (like the knob
-   templates' pointer size, accessfiles.cpp:228) or by what the code references, not by scanning. Unit test with a
-   synthetic image per layout (no Access bytes in git).
-2. diag.log lines: "default page B missing (Virus Control.dll <machine>)" once at start; per library with skipped
-   dumps "library <name>: n of m dumps skipped (Virus C without page B / unknown size)". Also seen in the user's
-   folder (scan, not fixed): dumps of other sizes (202/158 bytes in "Yoz & Andy/Incubation V3 ... .mid.mid", 31 of
-   128 kept; Cosmosis 54/59; Nice Bytes Toxic/Interactive 127/128) and upgrade_single returning false for version
-   byte 127 (Howard Scarr Sounds, 1 patch) - check with REA whether the original keeps any of them.
-3. Evidence entry E345 (cause above, HIGH for the x86 table position by byte compare, REA result when done); then the
-   Windows setup / tirevive-access.ps1: check which DLL a normal install puts in Common (should be x64) and warn in
-   Control Center / diag.log when the installed core is x86.
-4. Reddit report "personal libraries aren't producing any sound" (section below, closed as not reproduced): likely the
-   same cause -> ask the reporter whether their Common\Virus Control.dll is 32-bit (properties / size 14,040,312 vs
-   14,663,928 bytes) and whether only Virus A/B/C libraries were empty.
+**DECIDED (user, 2026-10-24): only the 64-bit Virus Control.dll (E345). Steps 1-3 DONE ~20:00 (Linux, unit tests):**
+(1) AccessFiles::open() skips a PE32 DLL and names it in the error -> Control Center status line at start, plug-in
+diag.log line "no Access files: ..." (no editor, as without an installation); (2) install.sh picks the PE32+ copy
+(pe64) and replaces an installed 32-bit one on a re-run; tirevive-access.ps1 treats a 32-bit DLL as missing and takes
+viruscontrol_dll64 from the embedded #Installer.cab (Add-Type over msi.dll + expand.exe); (3) the knob template reader
+reads 64-bit pointers only (E202's PE32 path removed). README: one note each for Windows and Linux. Checked on the
+real DLLs (vtimodel files --access): x86 refused with the message, x64 opens. NOT RUN: the PowerShell path (no pwsh
+here) -> win11 VM next, together with step 4.
+The user's libraries from the PC are in ~/Dokumente/Access Music/Virus TI/Patches (no overwrite; the Linux
+"My Patches.mid" kept) -> Incubation V2 can be checked on Linux.
+**NEXT:**
+4. Short test on the win11 VM (snapshot first, no Virus attached): (a) tirevive-access.ps1 -Quiet with the .msi ->
+   Common\Virus Control.dll is PE32+ (a622f9a2..); (b) a normal Access install of the .msi -> which DLL lands in
+   Common (expected x64); revert the snapshot afterwards.
+5. A Linux-only item the user will name (part of 0.8.33).
+6. Open from the scan (not fixed): dumps of other sizes (202/158 bytes in "Yoz & Andy/Incubation V3 ... .mid.mid",
+   31 of 128 kept; Cosmosis 54/59; Nice Bytes Toxic/Interactive 127/128) and upgrade_single false for version byte
+   127 (Howard Scarr Sounds, 1 patch) - check with REA whether the original keeps them; a diag.log line per library
+   with skipped dumps.
+7. Reddit report "personal libraries aren't producing any sound": likely E345 -> ask whether their Common\Virus
+   Control.dll is 32-bit (14,040,312 bytes) and whether only Virus A/B/C libraries were empty.
+8. Release: README/site (analog delay, part following, 64-bit only; tirevive-site-check), release notes, version.
 
 ## START HERE - state 2026-10-24 ~18:05: round 0.8.33 checklist - Linux, Mac, Windows PC DONE (B1 graded: all pass)
 

@@ -806,6 +806,11 @@ tresult PLUGIN_API VirusPlugin::initialize(FUnknown *context)
     if (!files || !dev_.load(files->get("remotedevice.xml"), err) || !load_automation(files->get("automation.xml"), autom, err)) {
         // without the user's Access installation there is nothing to show; the host still gets a valid instance
         fprintf(stderr, "Virus TI native: %s\n", err.c_str());
+        if (diag_enabled()) // no device worker (and so no log) without the files: the reason, e.g. a 32-bit DLL (E345)
+            if (FILE *f = fopen((own_cache_dir() + "/../diag.log").c_str(), "a")) {
+                fprintf(f, "%ld Virus TI native: no Access files: %s\n", (long)std::time(nullptr), err.c_str());
+                fclose(f);
+            }
         return kResultOk;
     }
     single_template_ = dev_.message("VirusTI_Singledump");
