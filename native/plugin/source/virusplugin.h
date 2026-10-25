@@ -3,6 +3,7 @@
 // through the TI Revive broker. Audio and editor follow in later steps.
 #pragma once
 #include "access/accessfiles.h"
+#include "access/library.h"
 #include "device/audioin.h"
 #include "editor/editormodel.h"
 #include "editor/lcdhover.h"
@@ -350,6 +351,13 @@ public:
     // the original's "Create Empty Library" (E217): an empty library file at the path chosen in the save dialog
     // (".mid" added like the original), listed at once
     bool create_library(const std::string &chosen);
+    // a library file dropped on the browser (TI Revive's own addition, E357): copied into Personal Libraries
+    // (import_library) and listed at once; `library` = its index (-1 when nothing was imported)
+    LibraryImport import_library_file(const std::string &src, int &library);
+    // a short note in the LCD (two lines, no part, no [stored value]) - e.g. what a file drop did
+    void lcd_message(const std::string &line1, const std::string &line2);
+    // a hint while a file is dragged over the browser: on saves the LCD, off restores it (unless a message came)
+    void lcd_hint(bool on, const std::string &line1 = {}, const std::string &line2 = {});
     // does a stored patch have category `cat` (filter menu index, 0 = any) and contain `q` in its name?
     bool patch_matches(int bank, int program, int cat, const std::string &q);
     static constexpr int SEARCH_BANK = 1000;             // "Search Results" (search://): the current page
@@ -547,6 +555,8 @@ private:
     void set_editor_value(const std::string &path, int part, int value, bool persist = false);
     std::string lcd_param_, lcd_value_, lcd_part_, lcd_orig_; // the last edited parameter for the LCD
     LcdHover lcd_hover_; // values_mu_
+    bool lcd_hint_on_ = false; // values_mu_: lcd_hint's text is shown, lcd_saved_ holds what it covered
+    LcdFields lcd_saved_;
     std::string value_text(const Parameter &p, int value) const; // a value as the LCD shows it (value list text)
     SystemInfo sysinfo_{VTI_NATIVE_VERSION, {}, {}}; // PATCH UTILITY > INFO (values_mu_): versions, Virus OS
     // PATCH UTILITY > REMOTE (E193, E196, E199): edited here, kept in our cache file and sent to the Virus like the

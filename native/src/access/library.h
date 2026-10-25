@@ -25,6 +25,19 @@ bool save_library(const PatchLibrary &lib, std::string &error);
 // the original's "Create Empty Library" (E217): the name chosen in its save dialog ends in ".mid" (".midi" loses the
 // "i", any other name gets ".mid"; case-sensitive like the original)
 std::string library_file_name(const std::string &chosen);
+// a library file dropped on the browser (TI Revive's own addition, E357; the original refuses file drops, E355)
+struct LibraryImport {
+    std::string path, name;  // the library in `dir` and its name; empty when nothing was imported
+    std::string error;       // why nothing was imported (no Virus patches, cannot read or write)
+    int patches = 0, skipped = 0; // patches in it, damaged ones left out (load_library_file)
+    bool existed = false;    // the same patches are already in `dir` (or the file is in it): nothing copied
+};
+// .mid, .midi or .syx, any case: what import_library takes
+bool importable_library(const std::string &path);
+// copies `src` into `dir` (the Personal Libraries folder): a .mid/.midi byte for byte, a .syx of up to 128 patches as
+// the original's .mid (it reads no .syx), a larger .syx as it is; a free name ("Bank", "Bank 2", ...) - never
+// overwrites; a file without Virus patches is not copied
+LibraryImport import_library(const std::string &src, const std::string &dir, const std::vector<uint8_t> &page_b = {});
 // writes the original's empty library file to `path` (SMF type 0, one track with only its end, division 480),
 // replacing an existing file
 bool write_empty_library(const std::string &path, std::string &error);

@@ -3197,6 +3197,77 @@ bool VirusPlugin::create_library(const std::string &chosen)
     return true;
 }
 
+LibraryImport VirusPlugin::import_library_file(const std::string &src, int &library)
+{
+    library = -1;
+    LibraryImport r = import_library(src, library_dir(), files_ ? files_->default_page_b() : std::vector<uint8_t>());
+    if (r.path.empty())
+        return r;
+    PatchLibrary lib;
+    if (!load_library_file(r.path, lib, files_ ? files_->default_page_b() : std::vector<uint8_t>())) {
+        r.error = "Cannot read " + std::filesystem::path(r.path).filename().string();
+        return r;
+    }
+    // already listed (a drop of a library that is there)? The same file whatever the separators (Windows): the file
+    // system is asked outside banks_mu_, the strings first. The list only grows, so an index stays valid
+    std::vector<std::string> paths;
+    {
+        std::lock_guard<std::mutex> lk(banks_mu_);
+        paths = lib_paths_;
+    }
+    int listed = -1;
+    for (size_t i = 0; i < paths.size() && listed < 0; i++)
+        if (paths[i] == r.path)
+            listed = (int)i;
+    for (size_t i = 0; i < paths.size() && listed < 0; i++) {
+        std::error_code ec;
+        if (std::filesystem::equivalent(paths[i], r.path, ec))
+            listed = (int)i;
+    }
+    {
+        std::lock_guard<std::mutex> lk(banks_mu_);
+        if (listed >= 0) {
+            library = listed;
+        } else {
+            library = (int)lib_names_.size();
+            lib_names_.push_back(r.name);
+            lib_paths_.push_back(r.path);
+            lib_roots_.push_back("Personal Libraries");
+        }
+        banks_[LIB_BASE + library] = lib.dumps;
+    }
+    // the name only, no path (rule 5)
+    fprintf(stderr, "Virus TI native: library %s %s: %d patch(es), %d skipped\n", r.name.c_str(),
+            r.existed ? "already there" : "added from a dropped file", r.patches, r.skipped);
+    ui_dirty_ = true;
+    return r;
+}
+
+void VirusPlugin::lcd_message(const std::string &line1, const std::string &line2)
+{
+    std::lock_guard<std::mutex> lk(values_mu_);
+    lcd_param_ = line1, lcd_value_ = line2, lcd_part_.clear(), lcd_orig_.clear();
+    lcd_hover_.release(); // moving off a control must not clear it
+    lcd_hint_on_ = false; // a drop's result replaces the hint for good
+    lcd_dirty_ = true;
+}
+
+void VirusPlugin::lcd_hint(bool on, const std::string &line1, const std::string &line2)
+{
+    std::lock_guard<std::mutex> lk(values_mu_);
+    if (on == lcd_hint_on_)
+        return;
+    if (on) { // what the LCD showed comes back when the drag leaves
+        lcd_saved_ = {lcd_param_, lcd_value_, lcd_orig_, lcd_part_};
+        lcd_param_ = line1, lcd_value_ = line2, lcd_part_.clear(), lcd_orig_.clear();
+    } else {
+        lcd_param_ = lcd_saved_.param, lcd_value_ = lcd_saved_.value, lcd_orig_ = lcd_saved_.orig;
+        lcd_part_ = lcd_saved_.part;
+    }
+    lcd_hint_on_ = on;
+    lcd_dirty_ = true;
+}
+
 bool VirusPlugin::store_to_library(int part, int library, int slot)
 {
     std::vector<uint8_t> d;

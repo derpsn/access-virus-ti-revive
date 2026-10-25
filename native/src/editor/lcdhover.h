@@ -49,6 +49,9 @@ public:
         return true;
     }
 
+    // a message was written over hover's text: leaving the control must not clear it
+    void release() { owned_ = false; }
+
 private:
     bool owned_ = false;
 };

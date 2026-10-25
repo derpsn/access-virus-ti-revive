@@ -1036,6 +1036,19 @@ void PopupLevelView::onKeyboardEvent(KeyboardEvent &event)
         owner_->key_event(event, false);
 }
 
+// files dragged in from the desktop (Explorer, Finder, a file manager): VSTGUI hands them to the view under the
+// cursor; the canvas decides what they mean (the browser's own drags never get here, they are mouse tracking)
+class FileDropTarget : public IDropTarget, public NonAtomicReferenceCounted {
+public:
+    std::function<DragOperation(DragEventData)> move;
+    std::function<void()> leave;
+    std::function<bool(DragEventData)> drop;
+    DragOperation onDragEnter(DragEventData d) override { return move(d); }
+    DragOperation onDragMove(DragEventData d) override { return move(d); }
+    void onDragLeave(DragEventData) override { leave(); }
+    bool onDrop(DragEventData d) override { return drop(d); }
+};
+
 class EditorCanvasView : public CView, public IControlListener, public TextEditListenerAdapter, public IKeyboardHook,
                         public IMouseObserver {
 public:
@@ -1650,7 +1663,96 @@ public:
     }
     std::vector<CTextEdit *> remove_later_;
 
+    // a library file dropped on the browser becomes a personal library (TI Revive's own addition, E357)
+    SharedPointer<IDropTarget> getDropTarget() override
+    {
+        auto t = makeOwned<FileDropTarget>();
+        t->move = [this](DragEventData d) { return file_drag(d); };
+        t->leave = [this]() { file_drag_end(); };
+        t->drop = [this](DragEventData d) { return file_drop(d); };
+        return t;
+    }
+
 private:
+    // the .mid/.midi/.syx paths in a drag from outside (anything else is ignored)
+    static std::vector<std::string> dropped_libraries(IDataPackage *p)
+    {
+        std::vector<std::string> out;
+        for (uint32_t i = 0; p && i < p->getCount(); i++) {
+            const void *buf = nullptr;
+            IDataPackage::Type type = IDataPackage::kError;
+            const uint32_t n = p->getData(i, buf, type);
+            if (type != IDataPackage::kFilePath || !buf || n == 0)
+                continue;
+            std::string path((const char *)buf, n);
+            while (!path.empty() && path.back() == '\0')
+                path.pop_back();
+#ifdef _WIN32
+            // VSTGUI gives UTF-8; the plug-in's paths are narrow (ANSI code page) like library_dir(): converted, a
+            // name the code page cannot hold is kept and fails with "Cannot read" instead of opening something else
+            try {
+                path = std::filesystem::u8path(path).string();
+            } catch (...) {
+            }
+#endif
+            if (importable_library(path))
+                out.push_back(path);
+        }
+        return out;
+    }
+    const Element *browser_at(const CPoint &p)
+    {
+        Hit t = renderer_.hit_test((int)p.x, (int)p.y);
+        return t.element && t.element->type == "PatchBrowser" ? t.element : nullptr;
+    }
+    // over a browser with a library file: the copy cursor and a hint in the LCD (a drop takes the whole file, so no
+    // slot is highlighted); anywhere else, or other files: no drop
+    DragOperation file_drag(const DragEventData &d)
+    {
+        const bool ok = browser_at(d.pos) && !dropped_libraries(d.drag).empty();
+        plugin_->lcd_hint(ok, "Drop to add a library", "to Personal Libraries"); // off: the LCD as it was
+        return ok ? DragOperation::Copy : DragOperation::None;
+    }
+    void file_drag_end() { plugin_->lcd_hint(false); }
+    bool file_drop(const DragEventData &d)
+    {
+        plugin_->lcd_hint(false);
+        const Element *browser = browser_at(d.pos);
+        const auto files = dropped_libraries(d.drag);
+        if (!browser || files.empty())
+            return false;
+        int shown = -1, added = 0, there = 0, failed = 0;
+        LibraryImport one;
+        for (auto &f : files) {
+            int lib = -1;
+            one = plugin_->import_library_file(f, lib);
+            if (lib < 0)
+                failed++;
+            else {
+                shown = lib;
+                (one.existed ? there : added)++;
+            }
+        }
+        if (shown >= 0) // the pane it was dropped on shows the (last) library
+            plugin_->ui_set(browser->get("Parameter"), -1, VirusPlugin::LIB_BASE + shown);
+        if (files.size() == 1 && failed)
+            plugin_->lcd_message("Library not added", one.error);
+        else if (files.size() == 1) {
+            std::string what = one.name + ": " + std::to_string(one.patches) + " patches";
+            if (one.skipped)
+                what += ", " + std::to_string(one.skipped) + " damaged left out";
+            plugin_->lcd_message(one.existed ? "Library already there" : "Library added", what);
+        } else {
+            std::string more;
+            if (there)
+                more = std::to_string(there) + " already there";
+            if (failed)
+                more += (more.empty() ? "" : ", ") + std::to_string(failed) + " not added";
+            plugin_->lcd_message(std::to_string(added) + " libraries added", more);
+        }
+        invalid();
+        return shown >= 0;
+    }
     // help mode ("?"): frames around the explained controls, a note for the one under the mouse (or clicked)
     bool help_ = false, help_pinned_ = false;
     Hit help_hit_;

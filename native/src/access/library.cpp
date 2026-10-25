@@ -95,6 +95,113 @@ std::vector<PatchLibrary> load_libraries(const std::string &dir, const std::vect
     return out;
 }
 
+namespace {
+std::string lower_ext(const fs::path &p)
+{
+    std::string ext = p.extension().string();
+    for (auto &ch : ext)
+        ch = (char)tolower(ch);
+    return ext;
+}
+
+// the same patches in the same slots (the slot layout is the user's); the bank/program bytes and the checksums may
+// differ (save_library sets them)
+bool same_patches(const PatchLibrary &a, const PatchLibrary &b)
+{
+    static const std::vector<uint8_t> gap;
+    const size_t n = std::max(a.dumps.size(), b.dumps.size());
+    for (size_t i = 0; i < n; i++) {
+        const auto &x = i < a.dumps.size() ? a.dumps[i] : gap, &y = i < b.dumps.size() ? b.dumps[i] : gap;
+        if (x.size() != y.size())
+            return false;
+        for (size_t k = 0; k < x.size(); k++)
+            if (k != 7 && k != 8 && k != 265 && k != 522 && x[k] != y[k])
+                return false;
+    }
+    return true;
+}
+} // namespace
+
+bool importable_library(const std::string &path)
+{
+    const fs::path p(path);
+    const std::string ext = lower_ext(p);
+    return !p.stem().empty() && (ext == ".mid" || ext == ".midi" || ext == ".syx");
+}
+
+LibraryImport import_library(const std::string &src, const std::string &dir, const std::vector<uint8_t> &page_b)
+{
+    LibraryImport r;
+    const fs::path from(src);
+    const std::string file = from.filename().string();
+    if (dir.empty()) { // no documents folder known: a relative path would land in the host's working folder
+        r.error = "No Personal Libraries folder";
+        return r;
+    }
+    PatchLibrary lib;
+    if (!importable_library(src) || !load_library_file(src, lib, page_b)) {
+        r.error = "Cannot read " + file;
+        return r;
+    }
+    r.skipped = lib.skipped;
+    r.patches = (int)std::count_if(lib.dumps.begin(), lib.dumps.end(), [](const std::vector<uint8_t> &d) { return !d.empty(); });
+    if (r.patches == 0) {
+        r.error = "No Virus patches in " + file;
+        return r;
+    }
+    std::error_code ec;
+    // already in the folder (a drop from Personal Libraries itself): listed under its own name
+    const fs::path base = fs::weakly_canonical(dir, ec), canon = fs::weakly_canonical(from, ec);
+    const fs::path rel = canon.lexically_relative(base);
+    if (!rel.empty() && *rel.begin() != "..") {
+        r.existed = true;
+        r.path = src;
+        r.name = (rel.parent_path() / rel.stem()).generic_string();
+        return r;
+    }
+    // a .syx becomes a .mid unless it holds more than one bank (save_library writes 128 positions)
+    const bool as_mid = lower_ext(from) != ".syx" || lib.dumps.size() <= 128;
+    const std::string ext = as_mid ? ".mid" : ".syx", stem = from.stem().string();
+    for (int n = 1; n < 1000; n++) {
+        const std::string name = n == 1 ? stem : stem + " " + std::to_string(n);
+        const fs::path mid = fs::path(dir) / (name + ".mid"), syx = fs::path(dir) / (name + ".syx");
+        bool taken = false;
+        for (const fs::path &p : {mid, syx}) { // both would be listed as `name`
+            if (!fs::exists(p, ec))
+                continue;
+            taken = true;
+            PatchLibrary there;
+            if (load_library_file(p.string(), there, page_b) && same_patches(there, lib)) {
+                r.existed = true;
+                r.path = p.string();
+                r.name = name;
+                return r;
+            }
+        }
+        if (taken)
+            continue;
+        const fs::path to = ext == ".mid" ? mid : syx;
+        fs::create_directories(dir, ec);
+        std::string err;
+        if (as_mid && lower_ext(from) == ".syx") {
+            PatchLibrary out = lib;
+            out.path = to.string();
+            if (!save_library(out, err)) {
+                r.error = err;
+                return r;
+            }
+        } else if (!fs::copy_file(from, to, ec)) {
+            r.error = "Cannot copy " + file + ": " + ec.message();
+            return r;
+        }
+        r.path = to.string();
+        r.name = name;
+        return r;
+    }
+    r.error = "No free name for " + file;
+    return r;
+}
+
 std::string library_file_name(const std::string &chosen)
 {
     auto ends = [&](const std::string &e) {

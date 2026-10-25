@@ -261,3 +261,92 @@ TEST(library_counts_skipped_dumps)
     CHECK(load_library_file((dir / "mixed.syx").string(), lib) && lib.skipped == 2); // a reload starts from 0
     fs::remove_all(dir);
 }
+
+// a library file dropped on the browser (TI Revive's own addition, E357; the original refuses file drops, E355):
+// .mid/.midi copied byte for byte, .syx written as the original's .mid; nothing is overwritten, the same patches
+// already there are only shown, a file without Virus patches is not copied
+TEST(library_import)
+{
+    fs::path dir = fs::temp_directory_path() / "vtitests-library-import";
+    fs::remove_all(dir);
+    fs::create_directories(dir / "Patches");
+    fs::create_directories(dir / "Downloads");
+    const std::string patches = (dir / "Patches").string(), dl = (dir / "Downloads").string();
+    CHECK(importable_library("a/Bank.mid") && importable_library("Bank.MIDI") && importable_library("x.SyX"));
+    CHECK(!importable_library("notes.txt") && !importable_library("mid") && !importable_library("a.mid.txt"));
+
+    PatchLibrary src;
+    src.dumps = {single(0), single(1)};
+    src.path = dl + "/Bank.mid";
+    std::string err;
+    CHECK(save_library(src, err));
+    auto r = import_library(src.path, patches);
+    CHECK(r.error.empty() && !r.existed && r.patches == 2 && r.skipped == 0 && r.name == "Bank");
+    CHECK(r.path == (fs::path(patches) / "Bank.mid").string());
+    auto bytes = [](const std::string &p) {
+        std::ifstream f(p, std::ios::binary);
+        return Dump((std::istreambuf_iterator<char>(f)), std::istreambuf_iterator<char>());
+    };
+    CHECK(bytes(r.path) == bytes(src.path)); // a .mid is copied as it is
+
+    auto again = import_library(src.path, patches); // the same file again: shown, not copied
+    CHECK(again.existed && again.path == r.path && again.name == "Bank");
+    CHECK(!fs::exists(fs::path(patches) / "Bank 2.mid"));
+    auto inside = import_library(r.path, patches); // a file from the Personal Libraries folder itself
+    CHECK(inside.existed && inside.path == r.path);
+
+    PatchLibrary other; // another bank of the same name: next to it, never over it
+    other.dumps = {single(5)};
+    fs::create_directories(dir / "Downloads" / "b");
+    other.path = dl + "/b/Bank.mid";
+    CHECK(save_library(other, err));
+    auto second = import_library(other.path, patches);
+    CHECK(second.error.empty() && !second.existed && second.name == "Bank 2" && second.patches == 1);
+    CHECK(bytes(r.path) == bytes(src.path));
+
+    CHECK(cc::write_syx({single(3), single(4)}, dl + "/Sys.syx", err)); // .syx -> the original's .mid
+    auto syx = import_library(dl + "/Sys.syx", patches);
+    CHECK(syx.error.empty() && syx.name == "Sys" && syx.path == (fs::path(patches) / "Sys.mid").string());
+    PatchLibrary back;
+    CHECK(load_library_file(syx.path, back));
+    CHECK(std::count_if(back.dumps.begin(), back.dumps.end(), [](const Dump &d) { return !d.empty(); }) == 2);
+    CHECK(import_library(dl + "/Sys.syx", patches).existed); // the same patches as the converted file
+
+    std::ofstream(dl + "/empty.mid") << "MThd but no Virus";
+    auto none = import_library(dl + "/empty.mid", patches);
+    CHECK(!none.error.empty() && none.path.empty() && !fs::exists(fs::path(patches) / "empty.mid"));
+    CHECK(!import_library(dl + "/missing.mid", patches).error.empty());
+
+    Dump cut = single(6); // damaged patches: imported, counted
+    cut.resize(300);
+    cut[299] = 0xF7;
+    CHECK(cc::write_syx({single(7), cut}, dl + "/Part.syx", err));
+    auto part = import_library(dl + "/Part.syx", patches);
+    CHECK(part.error.empty() && part.patches == 1 && part.skipped == 1);
+    fs::remove_all(dir);
+}
+
+// review of E357: the same patches in other slots are another library (the slot layout is the user's); without a
+// Personal Libraries folder (no HOME/USERPROFILE) nothing is written (not into the host's working folder)
+TEST(library_import_slots_and_no_folder)
+{
+    fs::path dir = fs::temp_directory_path() / "vtitests-library-import2";
+    fs::remove_all(dir);
+    fs::create_directories(dir / "Patches");
+    const std::string patches = (dir / "Patches").string();
+    std::string err;
+    PatchLibrary a, b;
+    a.dumps = {single(0), single(1)};
+    b.dumps.resize(10);
+    b.dumps[5] = single(0), b.dumps[9] = single(1);
+    a.path = (dir / "Bank.mid").string();
+    fs::create_directories(dir / "other");
+    b.path = (dir / "other" / "Bank.mid").string();
+    CHECK(save_library(a, err) && save_library(b, err));
+    CHECK(!import_library(a.path, patches).existed);
+    auto moved = import_library(b.path, patches);
+    CHECK(!moved.existed && moved.name == "Bank 2");
+    auto none = import_library(a.path, "");
+    CHECK(!none.error.empty() && none.path.empty());
+    fs::remove_all(dir);
+}

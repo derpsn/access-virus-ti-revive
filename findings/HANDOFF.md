@@ -20,7 +20,19 @@ work/rea/virus-control-5.1.7-x64.ghidra12.snapshot, session closed):
   /version text with the same font; the Delay Clock difference (orig 105 vs ours 149, Reverb 186-205 vs 161) goes
   both ways, so it is not a plain alpha. Our disabled_alpha 0.4 (editorrender.h) has no source. Needs the original's
   inactive draw rule found with REA (or a win10ref pixel comparison) first - stays open.
-README/site: tests 409 -> 410, library bullet (same words in both). risk.py --round 0.8.35: class B (virusplugin.cpp),
+**Library file drop (user: 'Lets do this', 2026-10-25, E357) - our own addition:** a .mid/.midi/.syx dragged from
+the desktop onto a browser pane is imported into Personal Libraries (import_library in access/library: .mid copied,
+.syx <= 128 -> .mid, free name 'X 2', same patches in the same slots = only shown, no patches = not copied, no
+folder = refused), listed at once, the pane switches to it, LCD hint while dragging (lcd_hint saves/restores the
+LCD) and the result after (lcd_message releases the hover). No drop onto RAM (rule 2). cpp-reviewer: fixed UTF-8
+paths on Windows (u8path, not compiled with MSVC yet), slot-blind same_patches, empty library_dir, LCD vs hover,
+disk I/O under banks_mu_, uninitialised type; accepted: copied-but-unreadable (re-read fails) not listed;
+coordinates unchanged (same as mouse events). Tests library_import, library_import_slots_and_no_folder,
+lcdhover_release_keeps_a_message: vtitests 413/413, ctest 5/5 (Linux). Dev .so ce77ca88 in ~/.vst3 (0.8.34
+release backed up in ~/.vst3-backup/0.8.34-release-24bf7c3c). Test files in the session scratchpad droptest/
+('Drop Test.mid' = Nice Bytes Toxic copy, 'Drop Test Syx.syx' = Electro (Toxic).syx, notes.txt). OPEN: does REAPER
+on Linux pass XDND drops to the embedded plug-in window? Then Windows (Live) and Mac (Live/Logic) by hand.
+README/site: tests 409 -> 413, library bullet (same words in both). risk.py --round 0.8.35: class B (virusplugin.cpp),
 by hand nothing; automated cold/reopen/export on all three (hil.sh, hil-win, hil-mac). NEXT: user decides whether
 to add more to the round (e.g. #14 replies, item 2 after REA); then dev build smoke test by the user, CI test build,
 hil on the three machines, round checklist (L: diag line with a damaged library).
