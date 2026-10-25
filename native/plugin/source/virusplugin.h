@@ -61,6 +61,7 @@ namespace vti {
 // the original; VTI_NATIVE_DROPIN=ON builds with the original id (loads projects saved with the original).
 extern const Steinberg::FUID kVirusTIClassId;
 extern const Steinberg::FUID kOriginalClassId; // the Access plug-in's id: a second class for its projects (E221)
+extern const Steinberg::FUID kSnowClassId;     // the Snow plug-in: the Snow's 4-part editor and files (E361)
 
 // Messages to the Virus, sent by a worker thread (socket writes do not belong in process()).
 class DeviceOut {
@@ -268,7 +269,13 @@ private:
 
 class VirusPlugin : public Steinberg::Vst::SingleComponentEffect, public Steinberg::Vst::IMidiMapping {
 public:
+    // like the original, the plug-in decides the device type: the Snow plug-in uses the Snow's editor and files
+    explicit VirusPlugin(DeviceType type = DeviceType::TI) : type_(type) {}
     static Steinberg::FUnknown *create(void *) { return (Steinberg::Vst::IAudioProcessor *)new VirusPlugin; }
+    static Steinberg::FUnknown *create_snow(void *)
+    {
+        return (Steinberg::Vst::IAudioProcessor *)new VirusPlugin(DeviceType::Snow);
+    }
 
     Steinberg::tresult PLUGIN_API initialize(Steinberg::FUnknown *context) override;
     Steinberg::tresult PLUGIN_API terminate() override;
@@ -510,6 +517,7 @@ private:
     AutomationQueue automation_{AUTOMATION_RATE};
     RemoteDevice dev_, ed_;
     std::unique_ptr<AccessFiles> files_;
+    const DeviceType type_; // TI or Snow plug-in (E361)
     EditorLayout layout_;
     std::vector<float> osc_waves_;
     bool osc_waves_read_ = false;

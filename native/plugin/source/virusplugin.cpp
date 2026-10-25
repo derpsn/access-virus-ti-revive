@@ -44,6 +44,8 @@ const FUID kVirusTIClassId(0xB49F90D9, 0x735F4305, 0xAC5397BE, 0x8958CD31 ^ 0x5A
 // As a FUID (the words hosts store, e.g. Live's Uid Fields): D9909FB4 5F730543 ...; the wrapper's id above was made
 // from the raw bytes (B4 9F 90 D9 ..., E221) and stays: projects saved with it exist
 const FUID kOriginalClassId(0xD9909FB4, 0x5F730543, 0xAC5397BE, 0x8958CD31);
+// the Snow plug-in (round 0.8.35): its own id on every platform, nothing older to replace
+const FUID kSnowClassId(0x8A5A1125, 0x38534D61, 0xB902C288, 0x02DBCE2C);
 
 static bool env_debug()
 {
@@ -806,7 +808,11 @@ tresult PLUGIN_API VirusPlugin::initialize(FUnknown *context)
     files_ = AccessFiles::open("", err);
     auto &files = files_;
     std::vector<AutomationEntry> autom;
-    if (!files || !dev_.load(files->get("remotedevice.xml"), err) || !load_automation(files->get("automation.xml"), autom, err)) {
+    // the device type's files: the Snow plug-in the Snow's editor (4 parts), description and automation list (E361)
+    const DeviceFiles df = files ? files->files_for(type_) : device_files(type_);
+    if (type_ == DeviceType::Snow)
+        fprintf(stderr, "Virus TI native: Snow plug-in, %s (%d parts)\n", df.editor, df.parts);
+    if (!files || !dev_.load(files->get(df.remotedevice), err) || !load_automation(files->get(df.automation), autom, err)) {
         // without the user's Access installation there is nothing to show; the host still gets a valid instance
         fprintf(stderr, "Virus TI native: %s\n", err.c_str());
         if (diag_enabled()) // no device worker (and so no log) without the files: the reason, e.g. a 32-bit DLL (E345)
@@ -821,7 +827,7 @@ tresult PLUGIN_API VirusPlugin::initialize(FUnknown *context)
     ui_state_["VirusControl/RecallProgress"] = 127;
     load_banks();
     load_remote_templates();
-    if (ed_.load(files->get("editordevice.xml"), err) && layout_.load(files->get("editor.xml"), err))
+    if (ed_.load(files->get(df.editordevice), err) && layout_.load(files->get(df.editor), err))
         cond_ = std::make_unique<Conditions>(dev_, ed_);
     else
         fprintf(stderr, "Virus TI native: no editor (%s)\n", err.c_str());

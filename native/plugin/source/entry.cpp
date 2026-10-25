@@ -41,6 +41,10 @@ DEF_CLASS2(INLINE_UID_FROM_FUID(vti::kVirusTIClassId), PClassInfo::kManyInstance
 DEF_CLASS2(INLINE_UID_FROM_FUID(vti::kOriginalClassId), PClassInfo::kManyInstances, kVstAudioEffectClass,
            VTI_NATIVE_NAME " (original projects)", 0, Steinberg::Vst::PlugType::kInstrumentSynth, VTI_NATIVE_VERSION,
            kVstVersionString, vti::VirusPlugin::create)
+// the Snow plug-in, like the original's own Snow plug-in: the Snow's 4-part editor and files (E361)
+DEF_CLASS2(INLINE_UID_FROM_FUID(vti::kSnowClassId), PClassInfo::kManyInstances, kVstAudioEffectClass,
+           VTI_NATIVE_NAME " (Snow)", 0, Steinberg::Vst::PlugType::kInstrumentSynth, VTI_NATIVE_VERSION,
+           kVstVersionString, vti::VirusPlugin::create_snow)
 #endif
 
 END_FACTORY

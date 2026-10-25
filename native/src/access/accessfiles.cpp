@@ -515,6 +515,22 @@ std::unique_ptr<AccessFiles> AccessFiles::open_control_center(std::string &error
     return nullptr;
 }
 
+DeviceFiles device_files(DeviceType type)
+{
+    if (type == DeviceType::Snow)
+        return {"remotedevicePR.xml", "editordevice.xml", "editorPR.xml", "automationPR.xml", 4};
+    return {"remotedevice.xml", "editordevice.xml", "editor.xml", "automation.xml", 16};
+}
+
+DeviceFiles AccessFiles::files_for(DeviceType type) const
+{
+    DeviceFiles f = device_files(type);
+    for (const char *n : {f.remotedevice, f.editordevice, f.editor, f.automation})
+        if (get(n).empty())
+            return device_files(DeviceType::TI);
+    return f;
+}
+
 const std::vector<uint8_t> &AccessFiles::get(const std::string &name) const
 {
     static const std::vector<uint8_t> none;

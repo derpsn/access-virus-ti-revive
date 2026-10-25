@@ -75,7 +75,10 @@ contains no Access material. No kernel code of its own is installed.
   earlier versions installed is offered for removal; the files the plug-in needs stay.
 - **Virus TI Snow:** works with the native plug-in according to user reports (macOS, 0.8.3 and later:
   sound, both USB outputs, parameters; with 0.8.20 also USB 3 and the soft knobs); not tested by us - we have no
-  Snow. Please tell us in a
+  Snow. Since 0.8.35 there is also a Snow plug-in, "TI Revive Virus Control (Snow)": like the original's own Snow
+  plug-in it shows the Snow's editor with its 4 parts and uses the Snow's files from your Access installer (VST3; not
+  as Audio Unit yet). It is new and not tested on a Snow; the regular plug-in keeps working with the Snow as before,
+  and existing projects stay on it. Please tell us in a
   [GitHub issue](https://github.com/derpsn/access-virus-ti-revive/issues) what works and what not.
   [TI Revive 0.7.4](https://github.com/derpsn/access-virus-ti-revive/releases/tag/v0.7.4) with its classic plug-in
   "Virus TI Snow (TI Revive)" stays available for Windows. If TI Revive does not find your Snow, run
@@ -467,7 +470,7 @@ hardware (TI2 Desktop) - details and raw numbers in [`findings/evidence.md`](fin
 - **Automation rate limit** (250 messages/s, coalesced per parameter): unthrottled parameter floods hung the Virus'
   audio until a power cycle within 4 minutes; with the limit a 4-minute full-load test (16 channels of notes + 32
   automation lanes) passes.
-- Checked with ThreadSanitizer and AddressSanitizer (one race in the broker connection found and fixed); 414 unit
+- Checked with ThreadSanitizer and AddressSanitizer (one race in the broker connection found and fixed); 415 unit
   tests run with every release build on Windows and Linux, plus two end-to-end tests on Linux in a virtual display
   (two editors of a duplicated track; the Control Center's window and close button).
 

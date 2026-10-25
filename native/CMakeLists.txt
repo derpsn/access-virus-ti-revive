@@ -186,7 +186,8 @@ endif()
 add_test(NAME factory_classes
          COMMAND ${CMAKE_COMMAND} -DTOOL=$<TARGET_FILE:moduleinfotool> -DBUNDLE=$<TARGET_FILE_DIR:VirusTINative>/../..
                  -DOUT=${CMAKE_CURRENT_BINARY_DIR}/factory_classes.json -DOWN=${VTI_CID_OWN}
-                 -DORIGINAL=D9909FB45F730543AC5397BE8958CD31 -P ${CMAKE_CURRENT_SOURCE_DIR}/tests/factory_classes.cmake)
+                 -DORIGINAL=D9909FB45F730543AC5397BE8958CD31 -DSNOW=8A5A112538534D61B902C28802DBCE2C
+                 -P ${CMAKE_CURRENT_SOURCE_DIR}/tests/factory_classes.cmake)
 
 # end-to-end checks in a virtual X display (Linux; skipped without xvfb-run): two editors of a duplicated track (E183),
 # the Control Center's window size and close button (E185)

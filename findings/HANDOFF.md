@@ -23,7 +23,12 @@ NEXT: the CI build of 0.8.35 with autest --delete-open 40 (no AUTEST_PIN) on the
 by DisabledFont only (a DisabledBack picture no longer makes the text opaque). Test editor_render_inactive_text;
 vtitests 414. Not built: the original's fade between active and inactive. Visible with the Access skin: only
 0.4 -> 0.373 (no element has text AND a DisabledBack); the Delay Clock 105/149 difference stays unexplained. No user
-check needed beyond the round checklist. NEXT: (3) #14 d Snow parts.
+check needed beyond the round checklist. (3) DONE in code (E361, user chose 'separate Snow plug-in' like the
+original): VST3 class 'TI Revive Virus Control (Snow)' (kSnowClassId 8A5A1125..) with the Snow's files (editorPR.xml:
+4 parts, no REMOTE page; remotedevicePR.xml, automationPR.xml). Not as AU (SDK wrapper takes the first class).
+vtitests 415, ctest 5/5 (factory_classes checks the Snow class). README Snow bullet (site has no such paragraph).
+Rule 2: the Snow class was NOT activated against our TI2 (it would send the Snow description's start-up). A look at
+the Snow editor: only with the Virus switched off. NEXT: #14 reply (with the user) asking the reporter to test it.
 
 **User's goal:** open tasks that need no full all-OS run. Picked: (1) #14 b file drop from Finder/Explorer, (2) inactive
 text strength, (5) HANDOFF item 6 library scan (odd dump sizes, version 127). REA on the x64 DLL (snapshot

@@ -170,6 +170,37 @@ TEST(accessfiles_resource_folder)
     CHECK(!AccessFiles::open((t.dir / "empty").string(), err) && !err.empty());
 }
 
+// E361: the original's device types use their own files - the Snow its 4-part editor (editorPR.xml), its device
+// description and automation list; the editor's device file is shared. Without the Snow's files (an installation
+// that lacks them) the Snow plug-in uses the TI's, so it still opens.
+TEST(accessfiles_device_files)
+{
+    DeviceFiles ti = device_files(DeviceType::TI), snow = device_files(DeviceType::Snow);
+    CHECK(std::string(ti.editor) == "editor.xml" && std::string(ti.remotedevice) == "remotedevice.xml" &&
+          std::string(ti.automation) == "automation.xml" && ti.parts == 16);
+    CHECK(std::string(snow.editor) == "editorPR.xml" && std::string(snow.remotedevice) == "remotedevicePR.xml" &&
+          std::string(snow.automation) == "automationPR.xml" && snow.parts == 4);
+    CHECK(std::string(snow.editordevice) == "editordevice.xml" && std::string(ti.editordevice) == "editordevice.xml");
+
+    TempDir t("types");
+    write(t.dir / "remotedevice.xml", REMOTE);
+    Env env;
+    no_installation(env, t.dir / "home");
+    std::string err;
+    auto a = AccessFiles::open(t.dir.string(), err);
+    CHECK(a != nullptr);
+    if (!a)
+        return;
+    CHECK(std::string(a->files_for(DeviceType::Snow).editor) == "editor.xml"); // no Snow files: the TI's
+    CHECK(a->files_for(DeviceType::Snow).parts == 16);
+    for (const char *n : {"remotedevicePR.xml", "editorPR.xml", "automationPR.xml", "editordevice.xml"})
+        write(t.dir / n, std::string("<x/>"));
+    a = AccessFiles::open(t.dir.string(), err);
+    CHECK(a && std::string(a->files_for(DeviceType::Snow).editor) == "editorPR.xml" &&
+          a->files_for(DeviceType::Snow).parts == 4);
+    CHECK(a && std::string(a->files_for(DeviceType::TI).editor) == "editor.xml");
+}
+
 TEST(accessfiles_bundle_dumps)
 {
     TempDir t("bundle");
