@@ -16,11 +16,11 @@ struct LcdFields {
 };
 
 // what the original leaves out: its editor's own parameters and the internal ones (browser state ...), except the
-// MIDI standard parameters; and global settings (`part` "none": the LCD stays blank, E353)
-inline bool lcd_hover_shows(const std::string &path, const std::string &part = std::string())
+// MIDI standard parameters (the page tabs are VirusControl/SelectedPage: no hover, E353)
+inline bool lcd_hover_shows(const std::string &path)
 {
     auto starts = [&](const char *s) { return path.rfind(s, 0) == 0; };
-    if (path.empty() || part == "none" || starts("VirusControl"))
+    if (path.empty() || starts("VirusControl"))
         return false;
     return !starts("Internal") || starts("Internal MIDI Standard Parameters");
 }

@@ -61,9 +61,9 @@ TEST(lcdhover_skips_the_editors_own_and_internal_parameters)
     CHECK(!lcd_hover_shows(""));
 }
 
-TEST(lcdhover_skips_parameters_without_a_part)
+TEST(lcdhover_shows_global_settings)
 {
-    // a global setting (COMMON page, PATCH UTILITY): the original's LCD stays blank (E353)
-    CHECK(lcd_hover_shows("Filter 1/Cutoff", "single"));
-    CHECK(!lcd_hover_shows("Global/Master Tune", "none"));
+    // Master Tune, Clock Tempo ... (no part): shown like the others; the page tabs are VirusControl/... (E353)
+    CHECK(lcd_hover_shows("Global Master/Tuning"));
+    CHECK(lcd_hover_shows("Multi Parameters/Clock Tempo"));
 }
