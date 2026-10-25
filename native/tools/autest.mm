@@ -1,9 +1,12 @@
 // autest.mm - test host for the Audio Unit (au/tirevive_au.mm): loads a component bundle directly and calls its factory,
 // registers it in this process (AudioComponentRegister), so it works over SSH (auval needs the GUI session's registry). Opens the unit, optionally restores an AU state
 // (ClassInfo, e.g. one in the classic TI Revive Audio Unit's format) and saves the current one, plays notes and
-// renders, and saves the Cocoa view as PNG.
+// renders, and saves the Cocoa view as PNG. --delete-open N closes the unit the way FL Studio deletes a channel with the
+// window open (issue #16, E336): the view outlives the unit, then N seconds of run loop (the broker exits 30 s after its
+// last client), and it prints whether the inner plug-in (plugin.vst3) is still loaded.
 // Build: clang++ -std=c++17 -fobjc-arc -o autest autest.mm -framework Cocoa -framework AudioToolbox -framework AudioUnit
 // usage: autest <X.component> [--load state.plist] [--save state.plist] [--png view.png] [--seconds N] [--no-notes]
+//               [--delete-open N]
 #import <AudioToolbox/AudioToolbox.h>
 #import <AudioUnit/AUCocoaUIView.h>
 #import <Cocoa/Cocoa.h>
@@ -11,6 +14,7 @@
 #include <cstdio>
 #include <cstring>
 #include <dlfcn.h>
+#include <mach-o/dyld.h>
 #include <string>
 #include <vector>
 
@@ -20,7 +24,7 @@ int main(int argc, char **argv)
     if (argc < 2)
         return fprintf(stderr, "usage: autest <X.component> [--load f] [--save f] [--png f] [--seconds N] [--no-notes]\n"), 1;
     const char *load = nullptr, *save = nullptr, *png = nullptr;
-    int secs = 2;
+    int secs = 2, delete_open = -1;
     bool notes = true;
     for (int i = 2; i < argc; i++) {
         if (!strcmp(argv[i], "--no-notes")) // e.g. to watch a bank sync run (notes pause it)
@@ -31,6 +35,7 @@ int main(int argc, char **argv)
         else if (!strcmp(argv[i], "--save")) save = argv[++i];
         else if (!strcmp(argv[i], "--png")) png = argv[++i];
         else if (!strcmp(argv[i], "--seconds")) secs = atoi(argv[++i]);
+        else if (!strcmp(argv[i], "--delete-open")) delete_open = atoi(argv[++i]);
     }
     @autoreleasepool {
         [NSApplication sharedApplication];
@@ -130,6 +135,38 @@ int main(int argc, char **argv)
                     [[NSRunLoop currentRunLoop] runUntilDate:[NSDate dateWithTimeIntervalSinceNow:0.02]];
             } else
                 printf("no Cocoa view\n");
+        }
+        if (delete_open >= 0) { // the view is still alive (the host releases it later) while the unit goes
+            auto inner_loaded = [] {
+                for (uint32_t k = 0; k < _dyld_image_count(); k++)
+                    if (strstr(_dyld_get_image_name(k), "plugin.vst3"))
+                        return true;
+                return false;
+            };
+            UInt32 vsz = 0;
+            Boolean w;
+            NSView *v = nil;
+            if (AudioUnitGetPropertyInfo(au, kAudioUnitProperty_CocoaUI, kAudioUnitScope_Global, 0, &vsz, &w) == noErr && vsz) {
+                std::vector<char> buf(vsz);
+                get(kAudioUnitProperty_CocoaUI, kAudioUnitScope_Global, 0, buf.data(), &vsz);
+                auto *info = (AudioUnitCocoaViewInfo *)buf.data();
+                NSBundle *vb = [NSBundle bundleWithURL:(__bridge NSURL *)info->mCocoaAUViewBundleLocation];
+                Class cls = [vb classNamed:(__bridge NSString *)info->mCocoaAUViewClass[0]];
+                id<AUCocoaUIBase> factory = [[cls alloc] init];
+                v = [factory uiViewForAudioUnit:au withSize:NSMakeSize(907, 513)];
+                for (int k = 0; k < 40; k++)
+                    [[NSRunLoop currentRunLoop] runUntilDate:[NSDate dateWithTimeIntervalSinceNow:0.05]];
+            }
+            printf("view %s, inner plug-in loaded: %s\n", v ? "open" : "none", inner_loaded() ? "yes" : "no");
+            [v removeFromSuperview]; // the window closes, the view itself is not released yet
+            AudioUnitUninitialize(au);
+            AudioComponentInstanceDispose(au); // the last instance: the wrapper unloads the inner plug-in
+            printf("unit disposed, inner plug-in loaded: %s\n", inner_loaded() ? "yes" : "no");
+            v = nil; // now the host lets go of the view
+            for (int k = 0; k < delete_open * 10; k++)
+                [[NSRunLoop currentRunLoop] runUntilDate:[NSDate dateWithTimeIntervalSinceNow:0.1]];
+            printf("%d s later: no crash, inner plug-in loaded: %s\n", delete_open, inner_loaded() ? "yes" : "no");
+            return 0;
         }
         AudioUnitUninitialize(au);
         AudioComponentInstanceDispose(au);

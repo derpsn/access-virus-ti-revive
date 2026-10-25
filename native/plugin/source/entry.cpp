@@ -2,6 +2,26 @@
 #include "public.sdk/source/main/pluginfactory.h"
 #include "virusplugin.h"
 
+#ifdef __APPLE__
+#include <dlfcn.h>
+
+// The binary stays loaded until the host quits (issue #16, E336). The Audio Unit wrapper unloads the inner plug-in
+// when its last instance goes, while things the plug-in started may still use its code: the thread that waits for
+// the broker it started (waitpid returns into this binary when the broker exits, 30 s later), a view the host
+// releases after deleting the unit. Hosts that keep plug-ins loaded (Ableton Live, GarageBand) behave as before.
+namespace {
+struct KeepLoaded {
+    KeepLoaded()
+    {
+        Dl_info info;
+        if (dladdr((const void *)&anchor, &info) && info.dli_fname) // this binary's own path
+            dlopen(info.dli_fname, RTLD_LAZY | RTLD_NOLOAD | RTLD_NODELETE); // one more reference, never closed
+    }
+    static void anchor() {}
+} keep_loaded;
+} // namespace
+#endif
+
 #ifndef VTI_NATIVE_VERSION
 #define VTI_NATIVE_VERSION "0.0.0" // set by CMake (project version)
 #endif
