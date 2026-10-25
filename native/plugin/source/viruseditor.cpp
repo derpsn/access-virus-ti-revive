@@ -1710,7 +1710,7 @@ private:
     DragOperation file_drag(const DragEventData &d)
     {
         const bool ok = browser_at(d.pos) && !dropped_libraries(d.drag).empty();
-        plugin_->lcd_hint(ok, "Drop to add a library", "to Personal Libraries"); // off: the LCD as it was
+        plugin_->lcd_hint(ok, "Drop to add a library", "(Personal Libraries)"); // off: the LCD as it was
         return ok ? DragOperation::Copy : DragOperation::None;
     }
     void file_drag_end() { plugin_->lcd_hint(false); }
@@ -1735,17 +1735,18 @@ private:
         }
         if (shown >= 0) // the pane it was dropped on shows the (last) library
             plugin_->ui_set(browser->get("Parameter"), -1, VirusPlugin::LIB_BASE + shown);
+        // the LCD's second line holds 20 characters, the first a few more: the library's name goes below
         if (files.size() == 1 && failed)
             plugin_->lcd_message("Library not added", one.error);
         else if (files.size() == 1) {
-            std::string what = one.name + ": " + std::to_string(one.patches) + " patches";
-            if (one.skipped)
-                what += ", " + std::to_string(one.skipped) + " damaged left out";
-            plugin_->lcd_message(one.existed ? "Library already there" : "Library added", what);
+            std::string what = one.existed ? "Library already there" : "Library added";
+            if (!one.existed && one.skipped) // damaged patches left out (E356)
+                what = "Added (" + std::to_string(one.skipped) + " damaged)";
+            plugin_->lcd_message(what, one.name);
         } else {
             std::string more;
             if (there)
-                more = std::to_string(there) + " already there";
+                more = std::to_string(there) + (failed ? " there" : " already there");
             if (failed)
                 more += (more.empty() ? "" : ", ") + std::to_string(failed) + " not added";
             plugin_->lcd_message(std::to_string(added) + " libraries added", more);

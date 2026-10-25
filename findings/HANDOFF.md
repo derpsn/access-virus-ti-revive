@@ -35,7 +35,14 @@ first: nothing happened -> E358: two VSTGUI X11 bugs (REAPER/SWELL forwards drag
 5; VSTGUI kept the drag's entry position, so drops went to the lower pane), fixed in
 native/patches/vstgui-x11-xdnd.patch, applied by native/CMakeLists.txt on Linux only (git status then shows the
 vst3sdk submodule as modified - expected). User test 2026-10-25: 'works!' (pane under the mouse, already-there,
-.syx -> .mid). OPEN: Windows (Live) and Mac (Live/Logic) by hand.
+.syx -> .mid). LCD texts were cut at 20 characters on line 2 ('to Personal Librarie', 'My Sounds: 128 patch')
+-> shortened (hint 'Drop to add a library' / '(Personal Libraries)', result 'Library added' + name, 'Added (N
+damaged)', short import errors <= 20, failed import logged with the file name); vtitests 413/413. Website + README
+(user, 2026-10-25): new feature 'Libraries by drag and drop' (same words in both) with screenshot
+docs/images/plugin-library-drop.png (captured from REAPER's plug-in window with XGetImage, frame after a drop of 'My
+Sounds.syx' = Electro (Toxic) copy; site built locally, checked in headless Firefox, NOT deployed; tirevive-site-check
+still due before the release). Test libraries removed from the Patches folder after each test. OPEN: Windows (Live)
+and Mac (Live/Logic) by hand.
 README/site: tests 409 -> 413, library bullet (same words in both). risk.py --round 0.8.35: now class C on all
 three (native/CMakeLists.txt + native/patches, new rule in risk.json) -> core items all automated (hil cold/reopen/
 export per OS), nothing from core by hand; the drop by hand on Windows and the Mac. NEXT: user decides whether

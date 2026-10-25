@@ -129,24 +129,24 @@ bool importable_library(const std::string &path)
     return !p.stem().empty() && (ext == ".mid" || ext == ".midi" || ext == ".syx");
 }
 
+// errors are short: the plug-in shows them on the LCD's second line (20 characters)
 LibraryImport import_library(const std::string &src, const std::string &dir, const std::vector<uint8_t> &page_b)
 {
     LibraryImport r;
     const fs::path from(src);
-    const std::string file = from.filename().string();
     if (dir.empty()) { // no documents folder known: a relative path would land in the host's working folder
-        r.error = "No Personal Libraries folder";
+        r.error = "No library folder";
         return r;
     }
     PatchLibrary lib;
     if (!importable_library(src) || !load_library_file(src, lib, page_b)) {
-        r.error = "Cannot read " + file;
+        r.error = "Cannot read file";
         return r;
     }
     r.skipped = lib.skipped;
     r.patches = (int)std::count_if(lib.dumps.begin(), lib.dumps.end(), [](const std::vector<uint8_t> &d) { return !d.empty(); });
     if (r.patches == 0) {
-        r.error = "No Virus patches in " + file;
+        r.error = "No Virus patches";
         return r;
     }
     std::error_code ec;
@@ -187,18 +187,18 @@ LibraryImport import_library(const std::string &src, const std::string &dir, con
             PatchLibrary out = lib;
             out.path = to.string();
             if (!save_library(out, err)) {
-                r.error = err;
+                r.error = "Cannot write file";
                 return r;
             }
         } else if (!fs::copy_file(from, to, ec)) {
-            r.error = "Cannot copy " + file + ": " + ec.message();
+            r.error = "Cannot copy file";
             return r;
         }
         r.path = to.string();
         r.name = name;
         return r;
     }
-    r.error = "No free name for " + file;
+    r.error = "No free file name";
     return r;
 }
 

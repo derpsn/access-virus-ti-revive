@@ -557,6 +557,20 @@ def features_section():
     </div>
 
     <div class="feature">
+      <div><h3>Libraries by drag and drop</h3>
+      <p>Drag a library's .mid or .syx file from Explorer, Finder or your file manager onto one of the two browser
+      panes (since 0.8.35, our own addition: the original takes no file drops). While you drag, the LCD says
+      &ldquo;Drop to add a library&rdquo;. The file is copied into Personal Libraries (Access Music/Virus TI/Patches
+      in your Documents folder), never over an existing file, and the pane you dropped it on shows it at once; a
+      .syx is saved as a .mid so the original finds it too. Dropping the same library again only shows it. Tested on
+      Linux (REAPER); not tested on Windows and macOS yet.</p></div>
+      <figure class="shot"><img src="plugin-library-drop.png" width="907" height="513"
+      alt="The browser after a drop: the upper pane shows the new library My Sounds, the LCD says Library added">
+      <figcaption>A library dropped onto the upper browser pane (Linux), drawn from your own Access installer. TI Revive
+      is not affiliated with Access Music or Kemper.</figcaption></figure>
+    </div>
+
+    <div class="feature">
       <div><h3>Help mode</h3>
       <p>Click the ? at the bottom right of the editor: every control gets a short note on what it does. Point at a
       control to read it, click to keep the note on screen; clicks do not change values in this mode, and the page tabs
@@ -715,7 +729,7 @@ def page_changelog_landing(releases):
 
 # the README's screenshots that the site shows too (copied at build time)
 SHARED_IMAGES = ["control-center.png", "control-center-nerd-mode.png", "plugin-help-mode.png", "plugin-help-inactive.png",
-                 "plugin-menus.png"]
+                 "plugin-menus.png", "plugin-library-drop.png"]
 TESTS = 413 # unit tests in native/tests (vtitests), as of 2026-10-25 (round 0.8.35)
 
 # Important information shown at the top of the page, newest first (empty list = no box). The README starts with the

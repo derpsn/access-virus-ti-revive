@@ -224,6 +224,13 @@ control says why, for example "Inactive now: Chorus Type is Off." or "depends on
   <sub>Help note on a greyed-out control, drawn from your own Access installer. TI Revive is not affiliated with Access Music or Kemper.</sub>
 </p>
 
+**Libraries by drag and drop.** Drag a library's .mid or .syx file from Explorer, Finder or your file manager onto one of the two browser panes (since 0.8.35, our own addition: the original takes no file drops). While you drag, the LCD says "Drop to add a library". The file is copied into Personal Libraries (Access Music/Virus TI/Patches in your Documents folder), never over an existing file, and the pane you dropped it on shows it at once; a .syx is saved as a .mid so the original finds it too. Dropping the same library again only shows it. Tested on Linux (REAPER); not tested on Windows and macOS yet.
+
+<p align="center">
+  <img src="docs/images/plugin-library-drop.png" alt="The browser after a drop: the upper pane shows the new library My Sounds, the LCD says Library added" width="680"><br>
+  <sub>A library dropped onto the upper browser pane (Linux), drawn from your own Access installer. TI Revive is not affiliated with Access Music or Kemper.</sub>
+</p>
+
 **Projects bring back every patch setting** (0.8.18). Older versions saved the parts in a format the Virus converts
 itself, and it reset about 20 newer settings on loading: Input Mode, unison, arpeggiator mode, chorus type, envelopes
 3 and 4 and more. Projects now keep the current format; older projects are converted when they open, and settings

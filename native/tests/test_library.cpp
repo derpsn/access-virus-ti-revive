@@ -315,7 +315,9 @@ TEST(library_import)
     std::ofstream(dl + "/empty.mid") << "MThd but no Virus";
     auto none = import_library(dl + "/empty.mid", patches);
     CHECK(!none.error.empty() && none.path.empty() && !fs::exists(fs::path(patches) / "empty.mid"));
-    CHECK(!import_library(dl + "/missing.mid", patches).error.empty());
+    auto missing = import_library(dl + "/missing.mid", patches);
+    CHECK(!missing.error.empty());
+    CHECK(none.error.size() <= 20 && missing.error.size() <= 20); // the LCD's second line holds 20 characters
 
     Dump cut = single(6); // damaged patches: imported, counted
     cut.resize(300);
@@ -347,6 +349,6 @@ TEST(library_import_slots_and_no_folder)
     auto moved = import_library(b.path, patches);
     CHECK(!moved.existed && moved.name == "Bank 2");
     auto none = import_library(a.path, "");
-    CHECK(!none.error.empty() && none.path.empty());
+    CHECK(!none.error.empty() && none.path.empty() && none.error.size() <= 20);
     fs::remove_all(dir);
 }

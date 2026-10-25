@@ -3201,11 +3201,13 @@ LibraryImport VirusPlugin::import_library_file(const std::string &src, int &libr
 {
     library = -1;
     LibraryImport r = import_library(src, library_dir(), files_ ? files_->default_page_b() : std::vector<uint8_t>());
-    if (r.path.empty())
-        return r;
     PatchLibrary lib;
-    if (!load_library_file(r.path, lib, files_ ? files_->default_page_b() : std::vector<uint8_t>())) {
-        r.error = "Cannot read " + std::filesystem::path(r.path).filename().string();
+    if (r.path.empty() || !load_library_file(r.path, lib, files_ ? files_->default_page_b() : std::vector<uint8_t>())) {
+        if (r.error.empty())
+            r.error = "Cannot read file";
+        // the file name only, no path (rule 5); the LCD has only room for the reason
+        fprintf(stderr, "Virus TI native: dropped file %s not added: %s\n",
+                std::filesystem::path(src).filename().string().c_str(), r.error.c_str());
         return r;
     }
     // already listed (a drop of a library that is there)? The same file whatever the separators (Windows): the file
