@@ -29,6 +29,12 @@ original): VST3 class 'TI Revive Virus Control (Snow)' (kSnowClassId 8A5A1125..)
 vtitests 415, ctest 5/5 (factory_classes checks the Snow class). README Snow bullet (site has no such paragraph).
 Rule 2: the Snow class was NOT activated against our TI2 (it would send the Snow description's start-up). A look at
 the Snow editor: only with the Virus switched off. NEXT: #14 reply (with the user) asking the reporter to test it.
+**Logic on the Mac (E363, 2026-10-25 ~19:15-21:00):** analog vs USB in sync in Logic (user, all buffers) - the
+reporter's 'analog out of sync' is not reproduced; BUT Logic gives many late notes (sync reports 18-42 per Play vs
+1-2 in Ableton) and the red sync error shows - likely the reporter's Logic sync problem. NEXT: analyse the Logic
+diag logs (scratchpad logic/diag4.log: block sizes, read margin, timeline steps, stamps) against an Ableton session,
+find why notes reach the Virus late under Logic; rewrite the #14 draft point 4 accordingly (reproduced, sync errors).
+Logic Pro (trial) installed on the Mac; diag.on + klog.on set there.
 #14 new comment (2026-10-25 17:14): Logic - analog-output parts out of time (USB fine; Live fine) -> new, needs
 details + diag.log; volume (SHIFT held) confirmed; dragging a library file did nothing (= our 0.8.35 drop); missed
 copy/paste and Init. Drafts (not posted): scratchpad issue14-reply.md (Spanish + English) and issue16-reply.md;
