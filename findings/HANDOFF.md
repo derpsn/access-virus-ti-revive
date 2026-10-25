@@ -1,6 +1,13 @@
 # HANDOFF
 
 ## START HERE (2026-10-25, afternoon): round 0.8.35 on branch `round-0.8.35` (from main 6f8b79d) - a small UI/library round
+**Decided (user, 2026-10-25 evening): WEEKLY releases.** Testing took most of the time for small rounds, so 0.8.35
+becomes a bigger round: as many open tasks and features as possible, then one test run and the release.
+**Release notes no longer pile up (2026-10-25):** build.yml's notes carried every 'New in' since 0.8.2 (v0.8.34 body
+26 KB, all repeated in every release). Now: header, this version's 'New in', the tested-on line, a pointer to the
+earlier releases + the site's changelog, the notice. At release prep REPLACE the 'New in' part (do not add on top).
+Site: summary() stops at 'Earlier versions: ' / 'Not affiliated with ' (scripts/tests/test_site_changelog.py, 2
+tests; script tests 80/80). Old releases keep their texts (the site already cut them, 0cc5b58).
 
 **User's goal:** open tasks that need no full all-OS run. Picked: (1) #14 b file drop from Finder/Explorer, (2) inactive
 text strength, (5) HANDOFF item 6 library scan (odd dump sizes, version 127). REA on the x64 DLL (snapshot

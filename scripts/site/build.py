@@ -91,9 +91,10 @@ def summary(rel):
     if tag in CHANGELOG_EXTRA:
         return CHANGELOG_EXTRA[tag]
     body = body.replace("\r", "")
-    # later release texts repeat the older versions' "New in" parts below their own: stop at the next one
+    # later release texts repeat the older versions' "New in" parts below their own: stop at the next one; since
+    # 0.8.35 a text holds only its own version, followed by the pointer to earlier versions and the notice
     m = re.search(r"^\*\*New in [^*]*\*\*.*?(?=^\*\*New in |^\*\*Since |^\*\*Windows |^\*\*macOS |^\*\*Linux |"
-                  r"^\*\*Coming |\Z)",
+                  r"^\*\*Coming |^Earlier versions: |^Not affiliated with |\Z)",
                   body, re.M | re.S)
     if m:
         return re.sub(r"^\*\*New in [^*]*\*\*\s*", "", m.group(0).strip(), count=1)
