@@ -523,6 +523,7 @@ def features_section():
         bank's right-click menu has "Download entire bank from Virus TI" (reads all 128 again, about 2 minutes, progress on the LCD) and
         "Sort alphabetically" (writes only the slots that change; like the original, it cannot be undone).</li>
         <li>Patch libraries from the original's three places, each its own menu (since 0.8.29): Personal Libraries (your Documents folder), User Libraries and Public Libraries. On the Mac the factory libraries that Access installs in /Library/Application Support appear under Public Libraries. On Linux only Personal Libraries.</li>
+        <li>The LCD shows the control under the mouse (since 0.8.34), as in the original: its name, its value, the value stored in the patch in brackets, and the part.</li>
         <li>Presets, soft knobs and the part selected on the Virus itself are followed, as in the original (the part since 0.8.33).</li>
         <li>Knobs you turn on the Virus reach your DAW like the plug-in's own knobs while the plug-in window is open (since 0.8.29, <a href="{GH}/issues/10">issue #10</a>): Ableton Live's Configure mode adds them and automation records them. Tested in Ableton Live 11 (Windows 11, VM), Ableton Live 12 (macOS) and REAPER (Linux).</li>
         <li>Three stereo outputs over USB, plus the analog outputs of the Virus. Parts on the analog outputs stay in time with the USB parts: like the original, the Virus holds them back by the USB latency (since 0.8.33).</li>
@@ -632,6 +633,7 @@ def features_section():
         <li>When the Virus is busy for a moment, for example while you change a patch on its panel, it holds back what the computer sends. Since 0.8.26 the plug-in sends it again instead of dropping it, so a bank sync or patch dump no longer breaks.</li>
         <li>Choosing a patch for one part no longer stops the other parts for a moment. Since 0.8.27 the plug-in sends the patch like the original: in small pieces on its own USB-MIDI cable, with the other parts' notes in between.</li>
         <li>At every Play and loop restart the plug-in sends the song position like the original (since 0.8.27), so the arpeggiator and clock-synced LFOs restart on the beat.</li>
+        <li>A Virus switched on after the DAW no longer causes sync errors at every Play. Since 0.8.34 the plug-in also takes the Virus' sample rate when it starts the audio later; before, it kept counting 44.1 kHz while the Virus ran at 48 kHz.</li>
         <li>At host sample rates other than 44.1 kHz the first notes after Play and after a render no longer come late and catch up over several seconds (since 0.8.27).</li>
         <li>The Virus drops the message right after a multi dump. The plug-in pauses after one, so new projects reset
         the synth reliably.</li>
@@ -714,7 +716,7 @@ def page_changelog_landing(releases):
 # the README's screenshots that the site shows too (copied at build time)
 SHARED_IMAGES = ["control-center.png", "control-center-nerd-mode.png", "plugin-help-mode.png", "plugin-help-inactive.png",
                  "plugin-menus.png"]
-TESTS = 403 # unit tests in native/tests (vtitests), as of 2026-10-24 (round 0.8.33)
+TESTS = 409 # unit tests in native/tests (vtitests), as of 2026-10-25 (round 0.8.34)
 
 # Important information shown at the top of the page, newest first (empty list = no box). The README starts with the
 # same text ("Important" block), keep both identical. Remove an entry when it no longer matters to users.
