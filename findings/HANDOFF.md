@@ -8,6 +8,13 @@ becomes a bigger round: as many open tasks and features as possible, then one te
 earlier releases + the site's changelog, the notice. At release prep REPLACE the 'New in' part (do not add on top).
 Site: summary() stops at 'Earlier versions: ' / 'Not affiliated with ' (scripts/tests/test_site_changelog.py, 2
 tests; script tests 80/80). Old releases keep their texts (the site already cut them, 0cc5b58).
+**Round 0.8.35 plan (user 'sounds good. Lets go', 2026-10-25):** 1) #16 AU crash (E336/E359), 2) item 2 inactive text
+(REA), 3) #14 d: Snow parts (REA). (1) STARTED: E359 - a thread of ours (waitpid for the broker the plug-in started)
+sits in unloaded code in the reporter's macOS report; fix: entry.cpp KeepLoaded (macOS: dlopen RTLD_NODELETE on
+itself). autest --delete-open N added (FL's order: view alive, unit disposed, N s run loop, prints whether
+plugin.vst3 is still loaded). Mac unreachable 2026-10-25 evening -> NEXT on the Mac: build autest, run
+`autest "/Library/Audio/Plug-Ins/Components/TI Revive Virus Control.component" --delete-open 40` with 0.8.34
+(reproduce) and later with the CI build (fix).
 
 **User's goal:** open tasks that need no full all-OS run. Picked: (1) #14 b file drop from Finder/Explorer, (2) inactive
 text strength, (5) HANDOFF item 6 library scan (odd dump sizes, version 127). REA on the x64 DLL (snapshot
