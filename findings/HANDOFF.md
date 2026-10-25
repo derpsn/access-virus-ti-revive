@@ -43,6 +43,13 @@ docs/images/plugin-library-drop.png (captured from REAPER's plug-in window with 
 Sounds.syx' = Electro (Toxic) copy; site built locally, checked in headless Firefox, NOT deployed; tirevive-site-check
 still due before the release). Test libraries removed from the Patches folder after each test. OPEN: Windows (Live)
 and Mac (Live/Logic) by hand.
+**Issue #17 (2026-10-25, TI Desktop OS 5.1.7, MacBook Pro M2 Max, macOS 26.6.2, Cubase 15, TI Revive 0.8.33):** Virus
+rarely detected; better with a 1 m cable than 2-3 m, port-dependent, CalDigit TS4 dock on another port; the user also
+runs AURA Virus HE (works with the 3 m cable). Screenshots only: System Information shows 'Virus TI' at 12 Mb/s
+(normal: full-speed device) on its own built-in bus. Suspect: AURA's USB MIDI driver racing TI Revive for the
+interfaces (E134) - hypothesis, no log yet. Reply posted with the user (issuecomment-6399775473): asked for
+/tmp/tirevive-vtibroker.log, ls of MIDI Drivers/HAL, ioreg Exclusive owner; test with AURA's driver plugin moved out
++ restart; update to 0.8.34. WAITING for their logs.
 README/site: tests 409 -> 413, library bullet (same words in both). risk.py --round 0.8.35: now class C on all
 three (native/CMakeLists.txt + native/patches, new rule in risk.json) -> core items all automated (hil cold/reopen/
 export per OS), nothing from core by hand; the drop by hand on Windows and the Mac. NEXT: user decides whether
