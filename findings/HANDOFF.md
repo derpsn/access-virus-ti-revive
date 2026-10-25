@@ -21,8 +21,9 @@ wrapper's dlclose); with AUTEST_PIN=1 (the fix's technique from outside) 0.8.34 
 NEXT: the CI build of 0.8.35 with autest --delete-open 40 (no AUTEST_PIN) on the Mac.
 (2) DONE in code (E360): the original's inactive rule found with REA - opacity 95/255 (not our 0.4), inactive text
 by DisabledFont only (a DisabledBack picture no longer makes the text opaque). Test editor_render_inactive_text;
-vtitests 414. Not built: the original's fade between active and inactive. NEXT: user look in REAPER (Delay Clock
-with Delay off, chorus knobs with Chorus Off), then (3) #14 d Snow parts.
+vtitests 414. Not built: the original's fade between active and inactive. Visible with the Access skin: only
+0.4 -> 0.373 (no element has text AND a DisabledBack); the Delay Clock 105/149 difference stays unexplained. No user
+check needed beyond the round checklist. NEXT: (3) #14 d Snow parts.
 
 **User's goal:** open tasks that need no full all-OS run. Picked: (1) #14 b file drop from Finder/Explorer, (2) inactive
 text strength, (5) HANDOFF item 6 library scan (odd dump sizes, version 127). REA on the x64 DLL (snapshot
