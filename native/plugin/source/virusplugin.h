@@ -248,6 +248,7 @@ private:
     AudioGate audio_gate_; // open while audio_ is mapped; closed (waiting for readers) before it is unmapped
     bool audio_ok() const { return audio_gate_.is_open(); }
     void close_audio();    // worker: no reader left, then unmap
+    int start_audio();     // worker: the stream and its rate; the broker's answer (1 = streaming)
     void drop_dump();      // worker: the Virus or the broker went away mid-dump
     void lose_broker();    // worker: the broker connection is gone; drop the dump, close, reopen in the next round
     std::chrono::steady_clock::time_point audio_retry_{}; // next audio start attempt (worker thread)

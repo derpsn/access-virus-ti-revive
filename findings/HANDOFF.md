@@ -1,6 +1,10 @@
 # HANDOFF
 
-## START HERE (2026-10-24 ~21:10): **v0.8.33 RELEASED** - site live, release on Linux + win11, Mac package pushed
+## START HERE (2026-10-25): round 0.8.34 on branch `round-0.8.34` (fresh from main d7033d0)
+
+**Decided (user, 2026-10-25):** the REAPER Play-start work (E351) is dropped - small symptom (a start right on a note, pre-roll avoids it) against much timeline complexity next to E337. It stays on the LOCAL branch `round-0.8.34-reaper-timeline` (not pushed: play_started/activated in timelinefollow.h, 19 model tests, review fixes). **Kept: E352** - the audio retry (Virus switched on after the DAW) never took the ring's rate: 48 kHz ring, plug-in counted 44.1, re-anchors twice a second, sync errors at every Play (v0.8.33 has it). DeviceOut::start_audio() now serves the first start and the retries. Built, vtitests + ctest 5/5 (Linux). The same fix was heard on the old branch (user ~07:05, Virus on late: host 482304 / virus 480000, no sync page). NEXT: install this build (Linux ~/.vst3), user REAPER check with the Virus switched on late; then risk.py --round 0.8.34, hil.sh, round checklist.
+
+## (previous START HERE) (2026-10-24 ~21:10): **v0.8.33 RELEASED** - site live, release on Linux + win11, Mac package pushed
 
 **Seen on the Windows PC (user):** LOAD > Personal Libraries > "Manuel Schleis/Manuel Schleis Incubation V2" is
 listed, its bank is EMPTY (no names; "worked already" on other machines). The file is fine: 128 Virus C dumps (267

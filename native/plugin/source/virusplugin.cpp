@@ -198,6 +198,23 @@ void DeviceOut::close_audio()
     audio_.close();
 }
 
+// worker: start the Virus audio stream at the asked rate and take the rate it runs at - the first start and the retries
+// alike (the retry path skipped the rate: a Virus switched on after the DAW streamed at 48 kHz while the plug-in
+// counted 44.1, the timeline re-anchored twice a second, sync errors at every Play; user, REAPER, 2026-10-25, E352)
+int DeviceOut::start_audio()
+{
+#ifdef __APPLE__
+    const int r = 1; // macOS: the plug-in reads the Virus' Core Audio input itself (the broker carries MIDI)
+#else
+    const int r = broker_.audio(true, 3000, (uint32_t)want_rate.load()); // the broker sets it (rate following)
+#endif
+    if (r == 1 && audio_.open(nullptr, want_rate.load())) { // macOS: the Core Audio rate
+        rate = audio_.rate(); // the Virus' current rate (E323; 44100 from an older broker)
+        audio_gate_.open();
+    }
+    return r;
+}
+
 bool DeviceOut::send_rt(const uint8_t *msg, size_t n, int64_t stamp)
 {
     if (blocked_to_virus(msg, n)) { // rule 2 (sendguard.h); counted here, logged off the audio thread
@@ -471,15 +488,7 @@ void DeviceOut::run()
             broker_.set_name("TI Revive Virus Control");
             open_ = broker_.open(err);
             if (open_ && !audio_ok()) { // the owner starts the Virus audio stream (Linux: shm ring)
-#ifdef __APPLE__
-                int r = 1; // macOS: the plug-in reads the Virus' Core Audio input itself (the broker carries MIDI)
-#else
-                int r = broker_.audio(true, 3000, (uint32_t)want_rate.load()); // the broker sets it (rate following)
-#endif
-                if (r == 1 && audio_.open(nullptr, want_rate.load())) { // macOS: the Core Audio rate
-                    rate = audio_.rate(); // the Virus' current rate (E323; 44100 from an older broker)
-                    audio_gate_.open();
-                }
+                const int r = start_audio();
                 fprintf(stderr, "Virus TI native: audio %s (%d)\n", audio_ok() ? "streaming" : "not available", r);
             }
             if (!open_) {
@@ -661,13 +670,7 @@ void DeviceOut::run()
         // quick re-open had no sound): retry every 500 ms while connected without audio
         if (!audio_ok() && present_seen_ == 1 && std::chrono::steady_clock::now() >= audio_retry_) {
             audio_retry_ = std::chrono::steady_clock::now() + std::chrono::milliseconds(500);
-#ifdef __APPLE__
-            int r = 1;
-#else
-            int r = broker_.audio(true, 3000, (uint32_t)want_rate.load());
-#endif
-            if (r == 1 && audio_.open(nullptr, want_rate.load()))
-                audio_gate_.open();
+            start_audio();
             if (audio_ok())
                 fprintf(stderr, "Virus TI native: audio streaming (retry)\n");
         }
