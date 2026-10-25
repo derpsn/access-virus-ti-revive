@@ -3,7 +3,8 @@
 // (ClassInfo, e.g. one in the classic TI Revive Audio Unit's format) and saves the current one, plays notes and
 // renders, and saves the Cocoa view as PNG. --delete-open N closes the unit the way FL Studio deletes a channel with the
 // window open (issue #16, E336): the view outlives the unit, then N seconds of run loop (the broker exits 30 s after its
-// last client), and it prints whether the inner plug-in (plugin.vst3) is still loaded.
+// last client), and it prints whether the inner plug-in (plugin.vst3) is still loaded. AUTEST_PIN=1 keeps the inner plug-in
+// loaded from outside (the 0.8.35 fix, on an older build); AUTEST_POOL=1 prints the pending autorelease pool.
 // Build: clang++ -std=c++17 -fobjc-arc -o autest autest.mm -framework Cocoa -framework AudioToolbox -framework AudioUnit
 // usage: autest <X.component> [--load state.plist] [--save state.plist] [--png view.png] [--seconds N] [--no-notes]
 //               [--delete-open N]
@@ -15,6 +16,7 @@
 #include <cstring>
 #include <dlfcn.h>
 #include <mach-o/dyld.h>
+extern "C" void _objc_autoreleasePoolPrint(void); // libobjc debug output (stderr): what the pool still holds
 #include <string>
 #include <vector>
 
@@ -23,6 +25,7 @@ int main(int argc, char **argv)
 {
     if (argc < 2)
         return fprintf(stderr, "usage: autest <X.component> [--load f] [--save f] [--png f] [--seconds N] [--no-notes]\n"), 1;
+    setvbuf(stdout, nullptr, _IONBF, 0); // every line reaches the log, also when the host crashes
     const char *load = nullptr, *save = nullptr, *png = nullptr;
     int secs = 2, delete_open = -1;
     bool notes = true;
@@ -158,6 +161,11 @@ int main(int argc, char **argv)
                     [[NSRunLoop currentRunLoop] runUntilDate:[NSDate dateWithTimeIntervalSinceNow:0.05]];
             }
             printf("view %s, inner plug-in loaded: %s\n", v ? "open" : "none", inner_loaded() ? "yes" : "no");
+            if (getenv("AUTEST_PIN")) // what the plug-in does itself since 0.8.35 (entry.cpp KeepLoaded), from outside
+                for (uint32_t k = 0; k < _dyld_image_count(); k++)
+                    if (strstr(_dyld_get_image_name(k), "plugin.vst3"))
+                        printf("inner plug-in pinned: %s\n",
+                               dlopen(_dyld_get_image_name(k), RTLD_LAZY | RTLD_NOLOAD | RTLD_NODELETE) ? "yes" : "no");
             [v removeFromSuperview]; // the window closes, the view itself is not released yet
             AudioUnitUninitialize(au);
             AudioComponentInstanceDispose(au); // the last instance: the wrapper unloads the inner plug-in
@@ -166,6 +174,8 @@ int main(int argc, char **argv)
             for (int k = 0; k < delete_open * 10; k++)
                 [[NSRunLoop currentRunLoop] runUntilDate:[NSDate dateWithTimeIntervalSinceNow:0.1]];
             printf("%d s later: no crash, inner plug-in loaded: %s\n", delete_open, inner_loaded() ? "yes" : "no");
+            if (getenv("AUTEST_POOL"))
+                _objc_autoreleasePoolPrint();
             return 0;
         }
         AudioUnitUninitialize(au);

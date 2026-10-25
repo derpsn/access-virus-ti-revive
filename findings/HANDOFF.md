@@ -14,7 +14,11 @@ sits in unloaded code in the reporter's macOS report; fix: entry.cpp KeepLoaded 
 itself). autest --delete-open N added (FL's order: view alive, unit disposed, N s run loop, prints whether
 plugin.vst3 is still loaded). Mac unreachable 2026-10-25 evening -> NEXT on the Mac: build autest, run
 `autest "/Library/Audio/Plug-Ins/Components/TI Revive Virus Control.component" --delete-open 40` with 0.8.34
-(reproduce) and later with the CI build (fix).
+(reproduce) and later with the CI build (fix). DONE 2026-10-25 ~18:15 (E359): reproduced 4/4 with 0.8.34
+(SIGSEGV at the pool pop, object = VSTGUI_NSView whose class VSTGUI disposed in the static destructors run by the
+wrapper's dlclose); with AUTEST_PIN=1 (the fix's technique from outside) 0.8.34 runs clean 3/3. autest on the Mac in
+~/tirevive-autest (build: clang++ -isysroot .../MacOSX26.5.sdk ...; the default 27.0 SDK fails to link there).
+NEXT: the CI build of 0.8.35 with autest --delete-open 40 (no AUTEST_PIN) on the Mac.
 (2) DONE in code (E360): the original's inactive rule found with REA - opacity 95/255 (not our 0.4), inactive text
 by DisabledFont only (a DisabledBack picture no longer makes the text opaque). Test editor_render_inactive_text;
 vtitests 414. Not built: the original's fade between active and inactive. NEXT: user look in REAPER (Delay Clock
