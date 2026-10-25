@@ -514,7 +514,9 @@ def features_section():
         original's VST2 version do not open: TI Revive is VST3 only.</li>
         <li>The LOAD menu has the original's "Revert to" (back to the patch before the last load, edits included) and
         "Recently Used" (the last 10 patches of each part); "Create Empty Library" is in the SAVE menu's Personal
-        Libraries, as in the original (since 0.8.25; until 0.8.28 also in LOAD and the browser).</li>
+        Libraries, as in the original (since 0.8.25; until 0.8.28 also in LOAD and the browser). Since 0.8.35 the LOAD
+        menu also has "Init Patch" (our own addition): the init patch from your Access installer, to start a sound
+        from scratch; "Revert to" brings the previous sound back.</li>
         <li>Browser drag and drop like the original (since 0.8.29): drag one or several patches (Shift = range, Ctrl =
         single entries) from a library onto a RAM slot in the other pane, or drag a part's patch name onto a RAM slot;
         within one RAM bank a drag swaps the patches; Alt+click renames a RAM patch; right-click "Undo last operation"

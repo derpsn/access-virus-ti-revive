@@ -327,6 +327,10 @@ public:
     bool load_patch_remembered(int bank, int program, int part);
     bool load_recent(int part, int index); // a "Recently Used" entry (the list keeps its order)
     bool revert_patch(int part);           // "Revert to": swaps the part's patch with the one before the last load
+    // "Init Patch" in the LOAD menu (TI Revive's own addition, #14): the init patch from the user's Access files into
+    // the part, remembered like a load (so "Revert to" brings the sound back)
+    bool init_patch(int part);
+    bool has_init_patch() const { return init_single_.size() == 524; } // set once in initialize()
     std::string revert_name(int part);     // empty: no "Revert to" entry
     std::vector<std::string> recent_names(int part);
     bool copy_part(int from, int to);                    // a part's patch onto another part (drag and drop)
@@ -777,6 +781,7 @@ private:
     bool state_loaded_ = false;                // setState or the default state was applied
     std::vector<std::vector<uint8_t>> default_; // a new instance's state (from the user's plug-in binary)
     std::vector<uint8_t> init_multi_; // the fixed multi dump as the original sends it at start-up (E321)
+    std::vector<uint8_t> init_single_; // the init patch (upgraded), what a new instance's parts start with
 
     // `stored`: the parts whose values are now their stored patch for the LCD's [value] (E353): all (a project or the
     // default state), one (a patch loaded into it), or none (a rename)

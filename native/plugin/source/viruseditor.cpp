@@ -2002,10 +2002,15 @@ private:
         }
         std::vector<vti::PopupItem> items;
         int part = h.part;
-        // LOAD only, like the original (E220): "Revert to "<name>"" after a load, "Recently Used" > "<n> <name>"
-        // (n = the entry's position in this menu, so 1.. under Revert), then a separator
-        int revert = -1, recent = -1;
+        // LOAD only: "Init Patch" (our own), then like the original (E220) "Revert to "<name>"" after a load,
+        // "Recently Used" > "<n> <name>" (n = the entry's position in this menu), then a separator
+        int revert = -1, recent = -1, init = -1;
         if (!save) {
+            // TI Revive's own addition (#14): start a sound from scratch
+            if (plugin_->has_init_patch()) {
+                init = (int)items.size();
+                items.push_back({"Init Patch"});
+            }
             const std::string rn = plugin_->revert_name(part);
             if (!rn.empty()) {
                 revert = (int)items.size();
@@ -2027,9 +2032,14 @@ private:
         for (size_t m = 0; m < menus.size(); m++)
             items.push_back({menus[m], true, std::move(lib[m])});
         show_popup(std::move(items), -1, 0, where,
-                   [this, part, save, libs, create, revert, recent, devi, libi](const std::vector<int> &path) {
+                   [this, part, save, libs, create, revert, recent, init, devi, libi](const std::vector<int> &path) {
             if (path.empty())
                 return;
+            if (path.size() == 1 && path[0] == init) {
+                plugin_->init_patch(part);
+                invalid();
+                return;
+            }
             if (path == std::vector<int>{libi, create}) {
                 create_library_dialog();
                 return;

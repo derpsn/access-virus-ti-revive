@@ -848,6 +848,7 @@ tresult PLUGIN_API VirusPlugin::initialize(FUnknown *context)
         init_multi_ = multi;
     if (multi.size() == 267 && init.size() == 524) {
         RemoteDevice::upgrade_single(init);
+        init_single_ = init;
         default_.push_back({});
         auto smulti = multi; // the original's state keeps the multi with bytes 25..40 and the checksum zeroed
         std::fill(smulti.begin() + 25, smulti.begin() + 41, 0);
@@ -2695,6 +2696,18 @@ bool VirusPlugin::load_patch_remembered(int bank, int program, int part)
         return false;
     std::lock_guard<std::mutex> lk(history_mu_);
     history_.loaded(part, before, d);
+    return true;
+}
+
+bool VirusPlugin::init_patch(int part)
+{
+    if (init_single_.size() != 524)
+        return false;
+    std::vector<uint8_t> before = part_dump(part);
+    if (!load_dump(init_single_, part)) // the same way as any patch load: the part's edit buffer
+        return false;
+    std::lock_guard<std::mutex> lk(history_mu_);
+    history_.loaded(part, before, init_single_);
     return true;
 }
 
