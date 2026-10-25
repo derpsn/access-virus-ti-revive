@@ -30,10 +30,15 @@ disk I/O under banks_mu_, uninitialised type; accepted: copied-but-unreadable (r
 coordinates unchanged (same as mouse events). Tests library_import, library_import_slots_and_no_folder,
 lcdhover_release_keeps_a_message: vtitests 413/413, ctest 5/5 (Linux). Dev .so ce77ca88 in ~/.vst3 (0.8.34
 release backed up in ~/.vst3-backup/0.8.34-release-24bf7c3c). Test files in the session scratchpad droptest/
-('Drop Test.mid' = Nice Bytes Toxic copy, 'Drop Test Syx.syx' = Electro (Toxic).syx, notes.txt). OPEN: does REAPER
-on Linux pass XDND drops to the embedded plug-in window? Then Windows (Live) and Mac (Live/Logic) by hand.
-README/site: tests 409 -> 413, library bullet (same words in both). risk.py --round 0.8.35: class B (virusplugin.cpp),
-by hand nothing; automated cold/reopen/export on all three (hil.sh, hil-win, hil-mac). NEXT: user decides whether
+('Drop Test.mid' = Nice Bytes Toxic copy, 'Drop Test Syx.syx' = Electro (Toxic).syx, notes.txt). REAPER/Linux
+first: nothing happened -> E358: two VSTGUI X11 bugs (REAPER/SWELL forwards drags as XDND version 3, VSTGUI wanted
+5; VSTGUI kept the drag's entry position, so drops went to the lower pane), fixed in
+native/patches/vstgui-x11-xdnd.patch, applied by native/CMakeLists.txt on Linux only (git status then shows the
+vst3sdk submodule as modified - expected). User test 2026-10-25: 'works!' (pane under the mouse, already-there,
+.syx -> .mid). OPEN: Windows (Live) and Mac (Live/Logic) by hand.
+README/site: tests 409 -> 413, library bullet (same words in both). risk.py --round 0.8.35: now class C on all
+three (native/CMakeLists.txt + native/patches, new rule in risk.json) -> core items all automated (hil cold/reopen/
+export per OS), nothing from core by hand; the drop by hand on Windows and the Mac. NEXT: user decides whether
 to add more to the round (e.g. #14 replies, item 2 after REA); then dev build smoke test by the user, CI test build,
 hil on the three machines, round checklist (L: diag line with a damaged library).
 

@@ -16,6 +16,22 @@ set(SMTG_ENABLE_VSTGUI_SUPPORT ON CACHE BOOL "" FORCE)
 set(SMTG_CREATE_PLUGIN_LINK OFF CACHE BOOL "" FORCE)
 set(SMTG_RUN_VST_VALIDATOR OFF CACHE BOOL "" FORCE)
 set(vst3sdk_SOURCE_DIR ${CMAKE_CURRENT_SOURCE_DIR}/external/vst3sdk)
+# Linux: VSTGUI's drop code ignores REAPER's forwarded drags and keeps the position the drag came in at (E358);
+# patched at configure time, once (an applied patch reverses cleanly). Linux code only, so applied only there.
+if(CMAKE_SYSTEM_NAME STREQUAL "Linux")
+    set(VTI_VSTGUI_PATCH ${CMAKE_CURRENT_SOURCE_DIR}/patches/vstgui-x11-xdnd.patch)
+    set_property(DIRECTORY APPEND PROPERTY CMAKE_CONFIGURE_DEPENDS ${VTI_VSTGUI_PATCH})
+    find_package(Git REQUIRED)
+    execute_process(COMMAND ${GIT_EXECUTABLE} apply --check --reverse ${VTI_VSTGUI_PATCH}
+                    WORKING_DIRECTORY ${vst3sdk_SOURCE_DIR}/vstgui4 RESULT_VARIABLE vti_patched OUTPUT_QUIET ERROR_QUIET)
+    if(NOT vti_patched EQUAL 0)
+        execute_process(COMMAND ${GIT_EXECUTABLE} apply ${VTI_VSTGUI_PATCH}
+                        WORKING_DIRECTORY ${vst3sdk_SOURCE_DIR}/vstgui4 RESULT_VARIABLE vti_patch_failed)
+        if(NOT vti_patch_failed EQUAL 0)
+            message(FATAL_ERROR "VSTGUI patch ${VTI_VSTGUI_PATCH} does not apply (submodule changed?)")
+        endif()
+    endif()
+endif()
 add_subdirectory(external/vst3sdk ${CMAKE_BINARY_DIR}/vst3sdk)
 smtg_enable_vst3_sdk()
 

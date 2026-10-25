@@ -1,0 +1,30 @@
+diff --git a/vstgui/lib/platform/linux/x11dragging.cpp b/vstgui/lib/platform/linux/x11dragging.cpp
+index 92ce97b1..e154927b 100644
+--- a/vstgui/lib/platform/linux/x11dragging.cpp
++++ b/vstgui/lib/platform/linux/x11dragging.cpp
+@@ -107,8 +107,10 @@ void XdndHandler::enter (xcb_client_message_event_t& event, xcb_window_t targetI
+ {
+ 	clearState ();
+ 
++	// TI Revive: REAPER (SWELL) forwards drags to an embedded plug-in window as XDND version 3; the message fields
++	// read here exist since version 3 (4 added XdndProxy, 5 two fields in XdndFinished)
+ 	unsigned protocolVersion = event.data.data32[1] >> 24;
+-	if (protocolVersion < 5)
++	if (protocolVersion < 3)
+ 		return;
+ 
+ 	DndTrace ("[recv] Enter window=%08X, source=%08X",
+@@ -179,11 +181,13 @@ void XdndHandler::position (xcb_client_message_event_t& event)
+ 		}
+ 		break;
+ 	case State::DragEntering:
++		dndPosition = Optional<xcb_client_message_event_t> (event); // TI Revive: the drop goes where the mouse is now
+ 		dragOperation = frame->platformOnDragEnter (getEventData ());
+ 		state = State::DragMoving;
+ 		replyStatus ();
+ 		break;
+ 	case State::DragMoving:
++		dndPosition = Optional<xcb_client_message_event_t> (event); // TI Revive: not the position the drag came in at
+ 		dragOperation = frame->platformOnDragMove (getEventData ());
+ 		replyStatus ();
+ 		break;
