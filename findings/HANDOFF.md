@@ -34,8 +34,8 @@ details + diag.log; volume (SHIFT held) confirmed; dragging a library file did n
 copy/paste and Init. Drafts (not posted): scratchpad issue14-reply.md (Spanish + English) and issue16-reply.md;
 user decides post now with 'link follows' or with the pre-release. User: check whether the Mac has Logic for the
 analog sync (Mac unreachable ~19:00; else Logic Pro's 90-day trial). Init (user: 'implement this feature to make
-the plugin more modern'): E362 'Init Patch' in the LOAD menu, built; needs the user's smoke test in REAPER (LOAD on
-a part -> Init Patch -> '-Init-' sound; Revert to -> back).
+the plugin more modern'): E362 'Init Patch' in the LOAD menu, built; user test in REAPER DONE (dev build 588552af,
+'works': Init sound, Revert to back).
 
 **User's goal:** open tasks that need no full all-OS run. Picked: (1) #14 b file drop from Finder/Explorer, (2) inactive
 text strength, (5) HANDOFF item 6 library scan (odd dump sizes, version 127). REA on the x64 DLL (snapshot
