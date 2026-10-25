@@ -5,6 +5,7 @@
 #include "access/accessfiles.h"
 #include "device/audioin.h"
 #include "editor/editormodel.h"
+#include "editor/lcdhover.h"
 #include "device/automation.h"
 #include "device/broker.h"
 #include "device/keepalive.h"
@@ -248,6 +249,7 @@ private:
     AudioGate audio_gate_; // open while audio_ is mapped; closed (waiting for readers) before it is unmapped
     bool audio_ok() const { return audio_gate_.is_open(); }
     void close_audio();    // worker: no reader left, then unmap
+    int start_audio();     // worker: the stream and its rate; the broker's answer (1 = streaming)
     void drop_dump();      // worker: the Virus or the broker went away mid-dump
     void lose_broker();    // worker: the broker connection is gone; drop the dump, close, reopen in the next round
     std::chrono::steady_clock::time_point audio_retry_{}; // next audio start attempt (worker thread)
@@ -309,6 +311,7 @@ public:
     const RemoteDevice &editor_device() const { return ed_; }
     int ui_value(const std::string &path, int part);              // device, controller or editor-state value
     void ui_set(const std::string &path, int part, int value);    // a change made in the editor
+    void hover(const std::string &path, int part); // the control under the mouse on the LCD ("" = none, E353)
     std::string patch_name(int part);
     std::string bank_patch(int bank, int program); // stored patch name from the bank cache (RAM A..D)
     bool load_patch(int bank, int program, int part); // a stored patch into a part's edit buffer (and the state)
@@ -505,6 +508,7 @@ private:
     std::unique_ptr<Conditions> cond_;
     std::mutex values_mu_;
     std::map<int, std::map<std::string, int>> part_values_; // decoded part dumps + controllers, per part (-1 = global)
+    std::map<int, std::map<std::string, int>> stored_values_; // the same as loaded (patch, project): the LCD's [value]
     std::map<std::string, int> ui_state_;                   // editor-only parameters (VirusControl/SelectedPage ...)
     std::mutex ui_state_mu_; // ui_state_ is used by the UI, worker (meta conditions) and sync threads
     bool ui_state_get(const std::string &path, int &v)
@@ -542,6 +546,8 @@ private:
     bool meta_cond(const Parameter &m, int part);
     void set_editor_value(const std::string &path, int part, int value, bool persist = false);
     std::string lcd_param_, lcd_value_, lcd_part_, lcd_orig_; // the last edited parameter for the LCD
+    LcdHover lcd_hover_; // values_mu_
+    std::string value_text(const Parameter &p, int value) const; // a value as the LCD shows it (value list text)
     SystemInfo sysinfo_{VTI_NATIVE_VERSION, {}, {}}; // PATCH UTILITY > INFO (values_mu_): versions, Virus OS
     // PATCH UTILITY > REMOTE (E193, E196, E199): edited here, kept in our cache file and sent to the Virus like the
     // original's
@@ -754,7 +760,10 @@ private:
     std::vector<std::vector<uint8_t>> default_; // a new instance's state (from the user's plug-in binary)
     std::vector<uint8_t> init_multi_; // the fixed multi dump as the original sends it at start-up (E321)
 
-    void apply_state_to_params();
+    // `stored`: the parts whose values are now their stored patch for the LCD's [value] (E353): all (a project or the
+    // default state), one (a patch loaded into it), or none (a rename)
+    static constexpr int STORED_ALL = -1, STORED_NONE = -2;
+    void apply_state_to_params(int stored = STORED_ALL);
     void panel_message(const std::vector<uint8_t> &msg);
     void send_state();
     void set_part_value(int part, const std::string &path, int value); // keeps the part dump in state_ current

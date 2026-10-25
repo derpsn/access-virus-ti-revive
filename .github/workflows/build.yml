@@ -278,6 +278,18 @@ jobs:
           native plug-in **"TI Revive Virus Control"**: looks and works like the original Virus Control and runs
           natively on Windows, macOS (Apple Silicon and Intel) and Linux - no Rosetta, Wine or yabridge.
 
+          **New in 0.8.34: the LCD shows the control under the mouse, and a Virus switched on late stays in sync.**
+
+          - The LCD shows the control under the mouse, as in the original: its name, its value, the value stored in the
+            patch in brackets, and the part.
+          - A Virus switched on after the DAW no longer causes sync errors at every Play. The plug-in now also takes the
+            Virus' sample rate when it starts the audio later; before, it kept counting 44.1 kHz while the Virus ran at
+            48 kHz.
+
+          Tested on a Virus TI2 Desktop: Linux (REAPER and the automated run), macOS (MacBook Air M3, Ableton Live 12 and
+          the automated run), Windows 11 (VM, Ableton Live 11 and the automated run; the VM's USB timing cannot judge
+          timing).
+
           **New in 0.8.33: no more crackle on Windows, analog outputs in time, and the right Access files.**
 
           - Windows: the crackle that came in stretches (seen on a Windows 11 PC) is gone. The plug-in moved its clock

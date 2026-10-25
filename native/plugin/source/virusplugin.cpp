@@ -198,6 +198,23 @@ void DeviceOut::close_audio()
     audio_.close();
 }
 
+// worker: start the Virus audio stream at the asked rate and take the rate it runs at - the first start and the retries
+// alike (the retry path skipped the rate: a Virus switched on after the DAW streamed at 48 kHz while the plug-in
+// counted 44.1, the timeline re-anchored twice a second, sync errors at every Play; user, REAPER, 2026-10-25, E352)
+int DeviceOut::start_audio()
+{
+#ifdef __APPLE__
+    const int r = 1; // macOS: the plug-in reads the Virus' Core Audio input itself (the broker carries MIDI)
+#else
+    const int r = broker_.audio(true, 3000, (uint32_t)want_rate.load()); // the broker sets it (rate following)
+#endif
+    if (r == 1 && audio_.open(nullptr, want_rate.load())) { // macOS: the Core Audio rate
+        rate = audio_.rate(); // the Virus' current rate (E323; 44100 from an older broker)
+        audio_gate_.open();
+    }
+    return r;
+}
+
 bool DeviceOut::send_rt(const uint8_t *msg, size_t n, int64_t stamp)
 {
     if (blocked_to_virus(msg, n)) { // rule 2 (sendguard.h); counted here, logged off the audio thread
@@ -471,15 +488,7 @@ void DeviceOut::run()
             broker_.set_name("TI Revive Virus Control");
             open_ = broker_.open(err);
             if (open_ && !audio_ok()) { // the owner starts the Virus audio stream (Linux: shm ring)
-#ifdef __APPLE__
-                int r = 1; // macOS: the plug-in reads the Virus' Core Audio input itself (the broker carries MIDI)
-#else
-                int r = broker_.audio(true, 3000, (uint32_t)want_rate.load()); // the broker sets it (rate following)
-#endif
-                if (r == 1 && audio_.open(nullptr, want_rate.load())) { // macOS: the Core Audio rate
-                    rate = audio_.rate(); // the Virus' current rate (E323; 44100 from an older broker)
-                    audio_gate_.open();
-                }
+                const int r = start_audio();
                 fprintf(stderr, "Virus TI native: audio %s (%d)\n", audio_ok() ? "streaming" : "not available", r);
             }
             if (!open_) {
@@ -661,13 +670,7 @@ void DeviceOut::run()
         // quick re-open had no sound): retry every 500 ms while connected without audio
         if (!audio_ok() && present_seen_ == 1 && std::chrono::steady_clock::now() >= audio_retry_) {
             audio_retry_ = std::chrono::steady_clock::now() + std::chrono::milliseconds(500);
-#ifdef __APPLE__
-            int r = 1;
-#else
-            int r = broker_.audio(true, 3000, (uint32_t)want_rate.load());
-#endif
-            if (r == 1 && audio_.open(nullptr, want_rate.load()))
-                audio_gate_.open();
+            start_audio();
             if (audio_ok())
                 fprintf(stderr, "Virus TI native: audio streaming (retry)\n");
         }
@@ -1919,19 +1922,8 @@ void VirusPlugin::ui_set(const std::string &path, int part, int value)
         return;
     }
     if (const Parameter *p = meta_depth_ ? nullptr : dev_.find(path)) { // LCD: the edited parameter (not linked ones)
-        auto text = [&](int val) {
-            std::string v = std::to_string(val);
-            for (const RemoteDevice *d : {&dev_, &ed_}) {
-                auto vl = d->valuelists.find(p->valuelist);
-                if (vl != d->valuelists.end())
-                    if (const Valuelist::Entry *en = vl->second.find(val))
-                        if (!en->text.empty())
-                            v = en->text;
-            }
-            return v;
-        };
-        std::string before = text(ui_value(path, part));
-        set_lcd(p->displayname.empty() ? path : p->displayname, text(value),
+        std::string before = value_text(*p, ui_value(path, part));
+        set_lcd(p->displayname.empty() ? path : p->displayname, value_text(*p, value),
                 p->part == "none" ? std::string() : "Part " + std::to_string(part + 1), before);
     }
     if (const Parameter *p = cond_ ? cond_->find(path) : nullptr)
@@ -2762,7 +2754,7 @@ bool VirusPlugin::load_dump(std::vector<uint8_t> d, int part)
     }
     if (out_)
         out_->send(d);
-    apply_state_to_params(); // parameters + editor values of the new patch
+    apply_state_to_params(part); // parameters + editor values of the new patch, its stored values for the LCD
     return true;
 }
 
@@ -2793,7 +2785,7 @@ bool VirusPlugin::rename_part(int part, const std::string &name)
         return false;
     if (out_)
         out_->send(d);
-    apply_state_to_params();
+    apply_state_to_params(STORED_NONE); // a new name, the same values
     return true;
 }
 
@@ -3246,6 +3238,46 @@ int VirusPlugin::tick_meters(int step)
 }
 
 // the LCD: "[original value]" is the value the parameter had when its editing started (a new parameter on the LCD)
+std::string VirusPlugin::value_text(const Parameter &p, int value) const
+{
+    std::string v = std::to_string(value);
+    for (const RemoteDevice *d : {&dev_, &ed_}) {
+        auto vl = d->valuelists.find(p.valuelist);
+        if (vl != d->valuelists.end())
+            if (const Valuelist::Entry *en = vl->second.find(value))
+                if (!en->text.empty())
+                    v = en->text;
+    }
+    return v;
+}
+
+// like the original's hover handler (E354): name, value, [the value stored in the loaded patch], part - always "Part
+// N", also for global settings (the selected part); off a shown control the LCD clears if hover filled it (E353)
+void VirusPlugin::hover(const std::string &path, int part)
+{
+    const Parameter *p = lcd_hover_shows(path) ? dev_.find(path) : nullptr;
+    LcdFields f;
+    if (p) {
+        const int value = ui_value(path, part);
+        int stored = value; // nothing loaded for it (a controller never in a dump): the value itself
+        {
+            std::lock_guard<std::mutex> lk(values_mu_);
+            auto sp = stored_values_.find(state_part(path, part));
+            if (sp != stored_values_.end())
+                if (auto sv = sp->second.find(path); sv != sp->second.end())
+                    stored = sv->second;
+        }
+        f = {p->displayname.empty() ? path : p->displayname, value_text(*p, value), "[" + value_text(*p, stored) + "]",
+             "Part " + std::to_string(part + 1)};
+    }
+    std::lock_guard<std::mutex> lk(values_mu_);
+    LcdFields lcd{lcd_param_, lcd_value_, lcd_orig_, lcd_part_};
+    if (p ? lcd_hover_.enter(f, lcd) : lcd_hover_.leave(lcd)) {
+        lcd_param_ = lcd.param, lcd_value_ = lcd.value, lcd_orig_ = lcd.orig, lcd_part_ = lcd.part;
+        lcd_dirty_ = true;
+    }
+}
+
 void VirusPlugin::set_lcd(const std::string &param, const std::string &value, const std::string &part,
                           const std::string &before)
 {
@@ -3621,7 +3653,7 @@ void VirusPlugin::load_reported_presets()
         }
 }
 
-void VirusPlugin::apply_state_to_params()
+void VirusPlugin::apply_state_to_params(int stored)
 {
     if (!single_template_)
         return;
@@ -3651,6 +3683,10 @@ void VirusPlugin::apply_state_to_params()
     {
         std::lock_guard<std::mutex> lk(values_mu_);
         part_values_ = parts;
+        if (stored == STORED_ALL)
+            stored_values_ = parts;
+        else if (stored >= 0)
+            stored_values_[stored] = parts[stored];
         for (auto &kv : ed_part_) // link buttons come from the state (default off)
             if (const Parameter *p = ed_.find(kv.first.first); p && p->group == "VirusControl Links")
                 kv.second = p->def;

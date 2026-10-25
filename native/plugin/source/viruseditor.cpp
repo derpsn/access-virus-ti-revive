@@ -1170,7 +1170,7 @@ public:
         bool ok = CView::attached(parent);
         if (auto *f = getFrame()) {
             f->registerKeyboardHook(this);
-            f->registerMouseObserver(this); // hover in help mode: views get moves only while a button is down
+            f->registerMouseObserver(this); // hover (LCD, help mode): views get moves only while a button is down
         }
         return ok;
     }
@@ -1187,11 +1187,14 @@ public:
     void onMouseExited(CView *, CFrame *) override {}
     void onMouseEvent(MouseEvent &event, CFrame *frame) override
     {
-        if (!help_ || event.type != EventType::MouseMove || event.buttonState.isLeft())
+        if (event.type != EventType::MouseMove || event.buttonState.isLeft())
             return;
         (void)frame;
         CPoint p = static_cast<MousePositionEvent &>(event).mousePosition; // already through the frame's zoom
         p.offset(-getViewSize().left, -getViewSize().top);
+        lcd_hover(p);
+        if (!help_)
+            return;
         if (env_debug())
             fprintf(stderr, "help hover %.0f,%.0f\n", p.x, p.y);
         help_hover(p);
@@ -1651,6 +1654,7 @@ private:
     // help mode ("?"): frames around the explained controls, a note for the one under the mouse (or clicked)
     bool help_ = false, help_pinned_ = false;
     Hit help_hit_;
+    Hit lcd_hit_; // the control lcd_hover last told the plug-in about
     void set_help(bool on)
     {
         help_ = on;
@@ -1659,6 +1663,15 @@ private:
         invalid();
     }
     // the note follows the mouse; a pinned (clicked) one stays while the mouse is over no explained control
+    // the LCD shows the control under the mouse like the original (E353); the plug-in only hears of a new one
+    void lcd_hover(const CPoint &p)
+    {
+        const Hit h = renderer_.hit_test((int)p.x, (int)p.y);
+        if (h.element == lcd_hit_.element && h.part == lcd_hit_.part)
+            return;
+        lcd_hit_ = h;
+        plugin_->hover(h.element ? h.element->get("Parameter") : std::string(), h.part); // the timer repaints the LCD
+    }
     void help_hover(const CPoint &p)
     {
         Hit h = renderer_.hit_test((int)p.x, (int)p.y, true); // disabled controls too (with the reason)

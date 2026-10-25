@@ -1,0 +1,102 @@
+{
+ "round": "0.8.34",
+ "core": "core.json",
+ "core_items": [],
+ "lead": "Test build 0.8.34 (CI run 40173908853). New in this round: the bottom LCD shows the control under the mouse like the original (name, value, the value stored in the patch in brackets, part; E353/E354), and a Virus switched on after the DAW no longer gives sync errors at every Play (the plug-in now takes the Virus' sample rate when it starts the audio later, E352). On Linux both were checked in REAPER with dev builds, and hil.sh passed on the installed CI build (work/hil/20261025-090406). Mark each item, add a note where something looks different, then copy the results at the bottom into the chat.",
+ "rules": [
+  "Order: Linux first (the Virus is on this PC), then the Windows VM, then the Mac. Close the DAW before the Virus moves.",
+  "Never power-cycle the Virus while it is attached to the VM; switch it off and on only while it is on Linux."
+ ],
+ "sections": [
+  {
+   "id": "linux",
+   "title": "Linux",
+   "where": "REAPER, Virus on this PC, CI build 0.8.34 (installed with install.sh)",
+   "prep": [
+    "Claude installed the CI build and ran hil.sh: ALL PASS (cold start, reopen twice, export 1.00x, broker killed while playing; max 0.57 ms)."
+   ],
+   "items": [
+    {
+     "id": "L1",
+     "title": "LCD hover on the CI build",
+     "steps": [
+      "REAPER, TI Revive: hover Filter 1 Cutoff, a filter mode switch (LP/HP) and the Saturation menu.",
+      "Turn Cutoff, move away, hover it again; load another patch into the part and hover again.",
+      "Hover a page tab and empty panel space."
+     ],
+     "expect": "Name, value, [stored value], Part N; after the turn the brackets keep the patch's value, after the load they show the new patch's; tabs and empty space leave the LCD blank."
+    },
+    {
+     "id": "L2",
+     "title": "Virus switched on after REAPER",
+     "steps": [
+      "Switch the Virus off, start REAPER with a project that has TI Revive, then switch the Virus on.",
+      "When the plug-in shows the Virus, press Play a few times with notes in the project."
+     ],
+     "expect": "No sync error page; notes in time. Claude checks diag.log: host frames about equal to virus frames per 10 s, anchors only at Play."
+    }
+   ]
+  },
+  {
+   "id": "win",
+   "title": "Windows 11 (VM)",
+   "where": "win11 VM, Ableton Live 11, CI build 0.8.34 (installed silently by Claude: TI Revive 0.8.34, plug-in = the MSI's)",
+   "prep": [
+    "Claude starts the win11 VM; the Virus is attached only where an item says so."
+   ],
+   "items": [
+    {
+     "id": "W1",
+     "title": "hil-win on the new build",
+     "steps": [
+      "Claude attaches the Virus and copies the hil-windows kit into the VM; run hil-win.cmd (about 5 minutes); Claude grades the result folder on Linux."
+     ],
+     "expect": "Cold start, reopen and export pass (drift in the VM is not judged, E334)."
+    },
+    {
+     "id": "W2",
+     "title": "LCD hover in Live 11",
+     "steps": [
+      "Live 11, TI Revive: hover Filter 1 Cutoff, a switch and a menu; turn Cutoff, move away, hover again; hover a page tab and empty panel space."
+     ],
+     "expect": "Same as L1: name, value, [stored value], Part N; the brackets keep the patch's value; tabs and empty space blank."
+    },
+    {
+     "id": "W3",
+     "title": "Virus arrives after Live",
+     "steps": [
+      "With the Virus NOT attached, start Live 11 with TI Revive on a track (the plug-in shows no Virus).",
+      "Tell Claude: the Virus is attached now (the same as switching it on late). When the plug-in shows it, press Play a few times."
+     ],
+     "expect": "No sync error page; notes in time; Claude checks diag.log (host frames about equal to virus frames, anchors only at Play)."
+    }
+   ]
+  },
+  {
+   "id": "mac",
+   "title": "macOS",
+   "where": "MacBook Air M3, Ableton Live 12",
+   "prep": [
+    "Claude pushes the CI package to the Mac (INSTALL-COMMAND.txt and 'Install test build.command' in the unpacked folder); you run the installer, then hil-mac.command. The Mac must be awake for the push."
+   ],
+   "items": [
+    {
+     "id": "M1",
+     "title": "hil-mac on the new build",
+     "steps": [
+      "Run hil-mac.command from the unpacked folder's hil folder (about 5 minutes) and send the result folder."
+     ],
+     "expect": "ALL PASS (cold start, reopen, export)."
+    },
+    {
+     "id": "M2",
+     "title": "LCD hover in Live 12",
+     "steps": [
+      "Live 12, TI Revive: hover Filter 1 Cutoff, a switch and a menu; turn Cutoff, move away, hover again; hover a page tab and empty panel space."
+     ],
+     "expect": "Same as L1: name, value, [stored value], Part N; the brackets keep the patch's value; tabs and empty space blank."
+    }
+   ]
+  }
+ ]
+}

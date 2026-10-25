@@ -32,8 +32,16 @@ done
 [ -x "$host" ] || { echo "no nativehost at $host (cmake --build build-native --target nativehost)"; exit 2; }
 [ -d "$plugin" ] || { echo "no plug-in at $plugin"; exit 2; }
 grep -qs 133e /sys/bus/usb/devices/*/idVendor || { echo "no Virus TI on USB"; exit 2; }
-# the broker serves one owner: a DAW with the plug-in would make this run wait (and the run would take its Virus)
-if pgrep -x -i 'reaper|bitwig-studio|ardour[0-9]*|nativehost' >/dev/null; then
+# the broker serves one owner: a DAW with the plug-in would make this run wait (and the run would take its Virus).
+# Steam's game launcher is called "reaper" too: only processes outside Steam count
+daw_running() {
+    local pid
+    for pid in $(pgrep -x -i 'reaper|bitwig-studio|ardour[0-9]*|nativehost'); do
+        case "$(readlink -f /proc/"$pid"/exe 2>/dev/null)" in */Steam/*) ;; *) return 0 ;; esac
+    done
+    return 1
+}
+if daw_running; then
     echo "a DAW or nativehost is running: close it first"; exit 2
 fi
 mkdir -p "$out"
