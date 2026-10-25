@@ -60,3 +60,10 @@ TEST(lcdhover_skips_the_editors_own_and_internal_parameters)
     CHECK(lcd_hover_shows("Internal MIDI Standard Parameters/Modulation Wheel"));
     CHECK(!lcd_hover_shows(""));
 }
+
+TEST(lcdhover_skips_parameters_without_a_part)
+{
+    // a global setting (COMMON page, PATCH UTILITY): the original's LCD stays blank (E353)
+    CHECK(lcd_hover_shows("Filter 1/Cutoff", "single"));
+    CHECK(!lcd_hover_shows("Global/Master Tune", "none"));
+}

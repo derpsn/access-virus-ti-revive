@@ -3251,11 +3251,13 @@ std::string VirusPlugin::value_text(const Parameter &p, int value) const
     return v;
 }
 
-// like the original's hover handler (E354): name, value, [the value stored in the loaded patch], part - always "Part
-// N", also for parameters without a part (the selected one); off a shown control the LCD clears if hover filled it
+// like the original's hover handler (E354): name, value, [the value stored in the loaded patch], "Part N"; global
+// settings and off a shown control: the LCD clears if hover filled it (E353)
 void VirusPlugin::hover(const std::string &path, int part)
 {
-    const Parameter *p = lcd_hover_shows(path) ? dev_.find(path) : nullptr;
+    const Parameter *p = dev_.find(path);
+    if (p && !lcd_hover_shows(path, p->part))
+        p = nullptr;
     LcdFields f;
     if (p) {
         const int value = ui_value(path, part);
