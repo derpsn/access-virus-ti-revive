@@ -1922,19 +1922,8 @@ void VirusPlugin::ui_set(const std::string &path, int part, int value)
         return;
     }
     if (const Parameter *p = meta_depth_ ? nullptr : dev_.find(path)) { // LCD: the edited parameter (not linked ones)
-        auto text = [&](int val) {
-            std::string v = std::to_string(val);
-            for (const RemoteDevice *d : {&dev_, &ed_}) {
-                auto vl = d->valuelists.find(p->valuelist);
-                if (vl != d->valuelists.end())
-                    if (const Valuelist::Entry *en = vl->second.find(val))
-                        if (!en->text.empty())
-                            v = en->text;
-            }
-            return v;
-        };
-        std::string before = text(ui_value(path, part));
-        set_lcd(p->displayname.empty() ? path : p->displayname, text(value),
+        std::string before = value_text(*p, ui_value(path, part));
+        set_lcd(p->displayname.empty() ? path : p->displayname, value_text(*p, value),
                 p->part == "none" ? std::string() : "Part " + std::to_string(part + 1), before);
     }
     if (const Parameter *p = cond_ ? cond_->find(path) : nullptr)
@@ -2765,7 +2754,7 @@ bool VirusPlugin::load_dump(std::vector<uint8_t> d, int part)
     }
     if (out_)
         out_->send(d);
-    apply_state_to_params(); // parameters + editor values of the new patch
+    apply_state_to_params(part); // parameters + editor values of the new patch, its stored values for the LCD
     return true;
 }
 
@@ -2796,7 +2785,7 @@ bool VirusPlugin::rename_part(int part, const std::string &name)
         return false;
     if (out_)
         out_->send(d);
-    apply_state_to_params();
+    apply_state_to_params(STORED_NONE); // a new name, the same values
     return true;
 }
 
@@ -3249,6 +3238,46 @@ int VirusPlugin::tick_meters(int step)
 }
 
 // the LCD: "[original value]" is the value the parameter had when its editing started (a new parameter on the LCD)
+std::string VirusPlugin::value_text(const Parameter &p, int value) const
+{
+    std::string v = std::to_string(value);
+    for (const RemoteDevice *d : {&dev_, &ed_}) {
+        auto vl = d->valuelists.find(p.valuelist);
+        if (vl != d->valuelists.end())
+            if (const Valuelist::Entry *en = vl->second.find(value))
+                if (!en->text.empty())
+                    v = en->text;
+    }
+    return v;
+}
+
+// like the original's hover handler (E354): name, value, [the value stored in the loaded patch], part - always "Part
+// N", also for parameters without a part (the selected one); off a shown control the LCD clears if hover filled it
+void VirusPlugin::hover(const std::string &path, int part)
+{
+    const Parameter *p = lcd_hover_shows(path) ? dev_.find(path) : nullptr;
+    LcdFields f;
+    if (p) {
+        const int value = ui_value(path, part);
+        int stored = value; // nothing loaded for it (a controller never in a dump): the value itself
+        {
+            std::lock_guard<std::mutex> lk(values_mu_);
+            auto sp = stored_values_.find(state_part(path, part));
+            if (sp != stored_values_.end())
+                if (auto sv = sp->second.find(path); sv != sp->second.end())
+                    stored = sv->second;
+        }
+        f = {p->displayname.empty() ? path : p->displayname, value_text(*p, value), "[" + value_text(*p, stored) + "]",
+             "Part " + std::to_string(part + 1)};
+    }
+    std::lock_guard<std::mutex> lk(values_mu_);
+    LcdFields lcd{lcd_param_, lcd_value_, lcd_orig_, lcd_part_};
+    if (p ? lcd_hover_.enter(f, lcd) : lcd_hover_.leave(lcd)) {
+        lcd_param_ = lcd.param, lcd_value_ = lcd.value, lcd_orig_ = lcd.orig, lcd_part_ = lcd.part;
+        lcd_dirty_ = true;
+    }
+}
+
 void VirusPlugin::set_lcd(const std::string &param, const std::string &value, const std::string &part,
                           const std::string &before)
 {
@@ -3624,7 +3653,7 @@ void VirusPlugin::load_reported_presets()
         }
 }
 
-void VirusPlugin::apply_state_to_params()
+void VirusPlugin::apply_state_to_params(int stored)
 {
     if (!single_template_)
         return;
@@ -3654,6 +3683,10 @@ void VirusPlugin::apply_state_to_params()
     {
         std::lock_guard<std::mutex> lk(values_mu_);
         part_values_ = parts;
+        if (stored == STORED_ALL)
+            stored_values_ = parts;
+        else if (stored >= 0)
+            stored_values_[stored] = parts[stored];
         for (auto &kv : ed_part_) // link buttons come from the state (default off)
             if (const Parameter *p = ed_.find(kv.first.first); p && p->group == "VirusControl Links")
                 kv.second = p->def;

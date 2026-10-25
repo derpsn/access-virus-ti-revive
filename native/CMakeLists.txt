@@ -132,7 +132,7 @@ add_executable(vtitests tests/main.cpp tests/test_usbmidi.cpp tests/test_state.c
                tests/test_stamprule.cpp tests/test_hostclock.cpp tests/test_sendguard.cpp tests/test_cablerule.cpp tests/test_dumppacer.cpp tests/test_startprogress.cpp tests/test_transport.cpp
                tests/test_gapfill.cpp tests/test_audiogate.cpp tests/test_dragsend.cpp tests/test_hostmidi.cpp tests/test_textfield.cpp
                tests/test_bankdrop.cpp tests/test_hostgestures.cpp tests/test_ratesw.cpp tests/test_timelinefollow.cpp
-               tests/test_blockevents.cpp tests/test_outputdelay.cpp)
+               tests/test_blockevents.cpp tests/test_outputdelay.cpp tests/test_lcdhover.cpp)
 target_link_libraries(vtitests PRIVATE vticore)
 add_test(NAME vtitests COMMAND vtitests)
 
