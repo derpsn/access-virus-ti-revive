@@ -522,7 +522,7 @@ def features_section():
         selection", "Sort alphabetically"), and patches keep their positions with gaps like in the original. A RAM
         bank's right-click menu has "Download entire bank from Virus TI" (reads all 128 again, about 2 minutes, progress on the LCD) and
         "Sort alphabetically" (writes only the slots that change; like the original, it cannot be undone).</li>
-        <li>Patch libraries from the original's three places, each its own menu (since 0.8.29): Personal Libraries (your Documents folder), User Libraries and Public Libraries. On the Mac the factory libraries that Access installs in /Library/Application Support appear under Public Libraries. On Linux only Personal Libraries.</li>
+        <li>Patch libraries from the original's three places, each its own menu (since 0.8.29): Personal Libraries (your Documents folder), User Libraries and Public Libraries. On the Mac the factory libraries that Access installs in /Library/Application Support appear under Public Libraries. On Linux only Personal Libraries. To add a library, copy its .mid file into Access Music/Virus TI/Patches in your Documents folder; it shows up under Personal Libraries the next time the plug-in is loaded. Dropping a file from Explorer or Finder onto the plug-in does nothing, as in the original. Damaged patches in a library (dumps of the wrong length) are left out, as in the original; since 0.8.35 the plug-in's log names the library and how many.</li>
         <li>The LCD shows the control under the mouse (since 0.8.34), as in the original: its name, its value, the value stored in the patch in brackets, and the part.</li>
         <li>Presets, soft knobs and the part selected on the Virus itself are followed, as in the original (the part since 0.8.33).</li>
         <li>Knobs you turn on the Virus reach your DAW like the plug-in's own knobs while the plug-in window is open (since 0.8.29, <a href="{GH}/issues/10">issue #10</a>): Ableton Live's Configure mode adds them and automation records them. Tested in Ableton Live 11 (Windows 11, VM), Ableton Live 12 (macOS) and REAPER (Linux).</li>
@@ -716,7 +716,7 @@ def page_changelog_landing(releases):
 # the README's screenshots that the site shows too (copied at build time)
 SHARED_IMAGES = ["control-center.png", "control-center-nerd-mode.png", "plugin-help-mode.png", "plugin-help-inactive.png",
                  "plugin-menus.png"]
-TESTS = 409 # unit tests in native/tests (vtitests), as of 2026-10-25 (round 0.8.34)
+TESTS = 410 # unit tests in native/tests (vtitests), as of 2026-10-25 (round 0.8.35)
 
 # Important information shown at the top of the page, newest first (empty list = no box). The README starts with the
 # same text ("Important" block), keep both identical. Remove an entry when it no longer matters to users.

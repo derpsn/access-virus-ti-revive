@@ -11,6 +11,7 @@ namespace vti {
 struct PatchLibrary {
     std::string name, path;                   // file name without ".mid"
     std::vector<std::vector<uint8_t>> dumps; // 524-byte single dumps (TI format) by position; empty = a gap
+    int skipped = 0; // single dumps left out: not 267/524 bytes (damaged), Virus C without page B, not convertible
 };
 
 // one .mid or .syx file (`lib.name` is left to the caller); false if it cannot be read. Each patch at its program

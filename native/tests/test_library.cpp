@@ -236,3 +236,28 @@ TEST(library_position_is_program_byte)
     CHECK(dup.dumps.size() == 3 && dup.dumps[0] == a && dup.dumps[1] == b && dup.dumps[2] == c);
     fs::remove_all(dir);
 }
+
+// the original's decoder (CPatchLibrarySMFDecoder 0x18006b360, E356) keeps only single dumps of exactly 267 or 524
+// bytes and skips the rest without a word; ours counts what it leaves out (damaged dumps, Virus C without page B,
+// versions it cannot convert) so load_banks can name the library in diag.log
+TEST(library_counts_skipped_dumps)
+{
+    fs::path dir = fs::temp_directory_path() / "vtitests-library-skip";
+    fs::remove_all(dir);
+    fs::create_directories(dir);
+    Dump good = single(0), cut = single(1), virus_c = single(2);
+    cut.erase(cut.begin() + 100, cut.begin() + 164); // a dump 64 bytes short, like "Incubation V3 ... .mid.mid"
+    virus_c.resize(267);
+    virus_c[266] = 0xF7;
+    std::string err;
+    CHECK(cc::write_syx({good, cut, virus_c}, (dir / "mixed.syx").string(), err));
+    PatchLibrary lib;
+    CHECK(load_library_file((dir / "mixed.syx").string(), lib)); // no page B: the Virus C dump cannot be upgraded
+    CHECK(std::count_if(lib.dumps.begin(), lib.dumps.end(), [](const Dump &d) { return !d.empty(); }) == 1);
+    CHECK(lib.skipped == 2);
+    PatchLibrary clean;
+    CHECK(cc::write_syx({good}, (dir / "clean.syx").string(), err));
+    CHECK(load_library_file((dir / "clean.syx").string(), clean) && clean.skipped == 0);
+    CHECK(load_library_file((dir / "mixed.syx").string(), lib) && lib.skipped == 2); // a reload starts from 0
+    fs::remove_all(dir);
+}

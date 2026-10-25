@@ -19,6 +19,7 @@ bool load_library_file(const std::string &path, PatchLibrary &lib, const std::ve
     std::vector<uint8_t> d((std::istreambuf_iterator<char>(f)), std::istreambuf_iterator<char>());
     lib.path = path;
     lib.dumps.clear();
+    lib.skipped = 0;
     std::vector<std::vector<uint8_t>> found; // in file order
     // SysEx single dumps anywhere in the file (SMF sysex events or raw .syx): 00 20 33 01 <dev> 10 ... F7
     for (size_t i = 0; i + 8 < d.size(); i++) {
@@ -29,6 +30,8 @@ bool load_library_file(const std::string &path, PatchLibrary &lib, const std::ve
             break;
         std::vector<uint8_t> m = {0xF0};
         m.insert(m.end(), d.begin() + i, end + 1);
+        // other sizes are skipped like the original's decoder does (E356); a version upgrade_single does not know
+        // (e.g. 127) stays out too: the original would list it, but what such a dump does on the Virus is unknown
         if (m.size() == 524) {
             found.push_back(m);
         } else if (m.size() == 267 && page_b.size() == 256) { // Virus C: page A only -> upgrade like the original
@@ -36,6 +39,10 @@ bool load_library_file(const std::string &path, PatchLibrary &lib, const std::ve
             m[523] = 0xF7;
             if (RemoteDevice::upgrade_single(m, page_b))
                 found.push_back(m);
+            else
+                lib.skipped++;
+        } else {
+            lib.skipped++;
         }
         i = end - d.begin();
     }

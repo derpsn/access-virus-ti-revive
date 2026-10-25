@@ -2315,6 +2315,16 @@ void VirusPlugin::load_banks()
     // the original's three places (E307): on the Mac the factory libraries are in "Public Libraries"
     for (auto &root : library_roots())
         for (auto &lib : load_libraries(root.dir, files_ ? files_->default_page_b() : std::vector<uint8_t>())) {
+            if (lib.skipped > 0) { // the original skips them silently (E356); the name only, no path (rule 5)
+                fprintf(stderr, "Virus TI native: library %s/%s: %d patch(es) skipped (damaged or unknown format)\n",
+                        root.menu.c_str(), lib.name.c_str(), lib.skipped);
+                if (diag_enabled())
+                    if (FILE *f = fopen((own_cache_dir() + "/../diag.log").c_str(), "a")) {
+                        fprintf(f, "%ld Virus TI native: library %s/%s: %d patch(es) skipped (damaged or unknown format)\n",
+                                (long)std::time(nullptr), root.menu.c_str(), lib.name.c_str(), lib.skipped);
+                        fclose(f);
+                    }
+            }
             banks_[LIB_BASE + (int)lib_names_.size()] = lib.dumps;
             lib_names_.push_back(lib.name);
             lib_paths_.push_back(lib.path);

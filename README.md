@@ -280,7 +280,7 @@ same with Access' own driver.
   alphabetically"), and patches keep their positions with gaps like in the original. A RAM bank's right-click menu
   has "Download entire bank from Virus TI" (reads all 128 again, about 2 minutes, progress on the LCD) and "Sort alphabetically" (writes
   only the slots that change; like the original, it cannot be undone).
-- **Library folders like the original's** (since 0.8.29): Patch libraries from the original's three places, each its own menu (since 0.8.29): Personal Libraries (your Documents folder), User Libraries and Public Libraries. On the Mac the factory libraries that Access installs in /Library/Application Support appear under Public Libraries. On Linux only Personal Libraries.
+- **Library folders like the original's** (since 0.8.29): Patch libraries from the original's three places, each its own menu (since 0.8.29): Personal Libraries (your Documents folder), User Libraries and Public Libraries. On the Mac the factory libraries that Access installs in /Library/Application Support appear under Public Libraries. On Linux only Personal Libraries. To add a library, copy its .mid file into Access Music/Virus TI/Patches in your Documents folder; it shows up under Personal Libraries the next time the plug-in is loaded. Dropping a file from Explorer or Finder onto the plug-in does nothing, as in the original. Damaged patches in a library (dumps of the wrong length) are left out, as in the original; since 0.8.35 the plug-in's log names the library and how many.
 - **The LCD shows the control under the mouse** (since 0.8.34), as in the original: its name, its value, the value stored in the patch in brackets, and the part.
 - **Presets, soft knobs and the part selected on the Virus itself** are followed, as in the original (the part since
   0.8.33).
@@ -460,7 +460,7 @@ hardware (TI2 Desktop) - details and raw numbers in [`findings/evidence.md`](fin
 - **Automation rate limit** (250 messages/s, coalesced per parameter): unthrottled parameter floods hung the Virus'
   audio until a power cycle within 4 minutes; with the limit a 4-minute full-load test (16 channels of notes + 32
   automation lanes) passes.
-- Checked with ThreadSanitizer and AddressSanitizer (one race in the broker connection found and fixed); 409 unit
+- Checked with ThreadSanitizer and AddressSanitizer (one race in the broker connection found and fixed); 410 unit
   tests run with every release build on Windows and Linux, plus two end-to-end tests on Linux in a virtual display
   (two editors of a duplicated track; the Control Center's window and close button).
 
