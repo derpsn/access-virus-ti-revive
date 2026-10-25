@@ -80,7 +80,7 @@ public:
     std::vector<const Element *> static_key;          // filled by a layer-1 render: visible conditional statics
     // the visible conditional static elements right now (compare with static_key to know if the cache is valid)
     std::vector<const Element *> static_signature() const;
-    double disabled_alpha = 0.4;
+    double disabled_alpha = 95.0 / 255; // the original's inactive controls without a Disabled picture (E360)
     // the element held down by the mouse (drawn with PressedBack)
     const Element *pressed = nullptr;
 

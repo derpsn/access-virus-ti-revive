@@ -15,6 +15,10 @@ itself). autest --delete-open N added (FL's order: view alive, unit disposed, N 
 plugin.vst3 is still loaded). Mac unreachable 2026-10-25 evening -> NEXT on the Mac: build autest, run
 `autest "/Library/Audio/Plug-Ins/Components/TI Revive Virus Control.component" --delete-open 40` with 0.8.34
 (reproduce) and later with the CI build (fix).
+(2) DONE in code (E360): the original's inactive rule found with REA - opacity 95/255 (not our 0.4), inactive text
+by DisabledFont only (a DisabledBack picture no longer makes the text opaque). Test editor_render_inactive_text;
+vtitests 414. Not built: the original's fade between active and inactive. NEXT: user look in REAPER (Delay Clock
+with Delay off, chorus knobs with Chorus Off), then (3) #14 d Snow parts.
 
 **User's goal:** open tasks that need no full all-OS run. Picked: (1) #14 b file drop from Finder/Explorer, (2) inactive
 text strength, (5) HANDOFF item 6 library scan (odd dump sizes, version 127). REA on the x64 DLL (snapshot

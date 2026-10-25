@@ -520,7 +520,8 @@ void EditorRenderer::draw(Canvas &c, const Element &e, int ox, int oy, int inher
     const Parameter *p = param.empty() ? nullptr : cond_.find(vparam);
     int v = param.empty() ? 0 : values(vparam, pt);
     // inactive controls (the parameter's own condition is false; soft knobs without destination) are translucent
-    double alpha = param.empty() || param_active(param, pt) ? 1.0 : disabled_alpha;
+    const bool inactive = !param.empty() && !param_active(param, pt);
+    double alpha = inactive ? disabled_alpha : 1.0;
     int lo = p ? p->min : 0, hi = p ? p->max : 127;
     if (p)
         v = shown_value(vparam, v);
@@ -582,7 +583,11 @@ void EditorRenderer::draw(Canvas &c, const Element &e, int ox, int oy, int inher
     if (e.type == "PatchBrowser" && bank_patch && !param.empty()) {
         patch_browser(c, e, x, y, values(param, pt), browser_pane(param)); // "Browser N/Selected Bank" (host side)
     }
-    const std::string &font = e.get("ControlFont");
+    // inactive text: the DisabledFont at full opacity, else ControlFont translucent - whatever the background
+    // used (a DisabledBack picture does not make the text opaque; the original's 0x180053480, E360)
+    const bool dfont = inactive && !e.get("DisabledFont").empty() && c.image(e.get("DisabledFont"));
+    const std::string &font = dfont ? e.get("DisabledFont") : e.get("ControlFont");
+    const double text_alpha = inactive && !dfont ? disabled_alpha : 1.0;
     if (font.empty() && e.type == "SearchEdit" && atoi(e.get("FontSize").c_str()) > 0 && !param.empty() &&
         live_text) { // no bitmap font: the system font (REMOTE page "MIDI String Info", E198)
         std::string str = live_text(param);
@@ -612,7 +617,7 @@ void EditorRenderer::draw(Canvas &c, const Element &e, int ox, int oy, int inher
         auto t = layout_.tiles.find(e.get("NormalBack"));
         if (t != layout_.tiles.end())
             tl = t->second.left, tr = t->second.right, tt = t->second.top, tb = t->second.bottom;
-        text(c, font, str, x + tl, y + tt, e.w - tl - tr, e.h - tt - tb, e.get("Align"), alpha);
+        text(c, font, str, x + tl, y + tt, e.w - tl - tr, e.h - tt - tb, e.get("Align"), text_alpha);
     }
     }
     dep_rect_ = {};

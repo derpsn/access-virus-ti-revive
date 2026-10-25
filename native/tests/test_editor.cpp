@@ -101,6 +101,8 @@ static const char *LAYOUT = R"(<?xml version="1.0"?>
    <ADSTREnvelope Parameter="Env/Attack" NormalHandle="handle.png"><ForeColor red="200" green="0" blue="0"/><Size left="95" top="85" width="200" height="40"/></ADSTREnvelope>
    <ArpEdit Parameter="Arpeggiator User Pattern/Step 1 Bitfield"><ForeColor red="0" green="0" blue="200"/><Size left="5" top="130" width="640" height="130"/></ArpEdit>
    <PatchBrowser Parameter="Browser 1/Selected Bank" ControlFont="font.png"><Size left="0" top="265" width="680" height="180"/></PatchBrowser>
+   <Menu Parameter="Osc/Gated" NormalBack="tile.png" DisabledBack="tiled.png" ControlFont="font.png" Align="Middle Left"><Size left="300" top="20" width="30" height="11"/></Menu>
+   <Menu Parameter="Osc/Gated" NormalBack="tile.png" ControlFont="font.png" DisabledFont="fontd.png" Align="Middle Left"><Size left="340" top="20" width="30" height="11"/></Menu>
    <Knob Parameter="Chorus/Delay" NormalBack="knob.png" Enabled="false" Condition="VirusControl/Display/Chorus/Type Is Off"><Size left="650" top="20" width="10" height="10"/></Knob>
   </Container>
   <Container><Size left="650" top="0" width="50" height="50"/>
@@ -201,7 +203,8 @@ struct Rig {
         };
         canvas.imgs = {{"knob.png", {10, 40}}, {"knobp.png", {10, 40}}, {"knobd.png", {10, 40}},
                        {"radio.png", {8, 16}}, {"vu.png", {50, 24}},    {"handle.png", {4, 4}},
-                       {"tile.png", {8, 11}},  {"font.png", {6, 7 * 96}}};
+                       {"tile.png", {8, 11}},  {"font.png", {6, 7 * 96}}, {"tiled.png", {8, 11}},
+                       {"fontd.png", {6, 7 * 96}}};
     }
 };
 
@@ -236,7 +239,7 @@ TEST(editor_render_controls)
     // the inactive knob with a DisabledBack strip uses it at full opacity; without one it is translucent
     CHECK(c.at("knobd.png", 20, 20).size() == 1 && c.at("knobd.png", 20, 20)[0].alpha == 1.0);
     auto gated = c.at("knob.png", 35, 20);
-    CHECK(gated.size() == 1 && gated[0].alpha < 1.0);
+    CHECK(gated.size() == 1 && gated[0].alpha == 95.0 / 255); // the original's opacity (0x180036ee0, E360)
     // soft knob without a destination: translucent
     auto sk = c.at("knob.png", 50, 20);
     CHECK(sk.size() == 1 && sk[0].alpha < 1.0);
@@ -642,6 +645,32 @@ TEST(editor_visible_controls)
     CHECK(shape);
     for (auto &h : all) // the disabled button at 80,20 is not listed
         CHECK(!(h.x == 80 && h.y == 20));
+}
+
+// E360: inactive text follows DisabledFont only, not DisabledBack (the original's 0x180053480): a control with a
+// DisabledBack picture still draws ControlFont at 95/255; with a DisabledFont that font at full opacity
+TEST(editor_render_inactive_text)
+{
+    Rig g;
+    g.r->render(g.canvas);
+    auto &c = g.canvas;
+    CHECK(c.at("tiled.png", 300, 20).size() == 1 && c.at("tiled.png", 300, 20)[0].alpha == 1.0);
+    size_t dim = 0, other = 0;
+    for (auto &b : c.blits)
+        if (b.img == "font.png" && b.dx >= 300 && b.dx < 330 && b.dy >= 20 && b.dy < 31)
+            (b.alpha == 95.0 / 255 ? dim : other)++;
+    CHECK(dim > 0 && other == 0);
+    CHECK(c.at("tile.png", 340, 20).size() == 1 && c.at("tile.png", 340, 20)[0].alpha == 95.0 / 255);
+    size_t full = 0, wrong = 0;
+    for (auto &b : c.blits) {
+        if (b.dx < 340 || b.dx >= 370 || b.dy < 20 || b.dy >= 31)
+            continue;
+        if (b.img == "fontd.png")
+            (b.alpha == 1.0 ? full : wrong)++;
+        else if (b.img == "font.png")
+            wrong++;
+    }
+    CHECK(full > 0 && wrong == 0);
 }
 
 TEST(editor_hit_disabled_for_help)
