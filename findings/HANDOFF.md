@@ -29,6 +29,10 @@ original): VST3 class 'TI Revive Virus Control (Snow)' (kSnowClassId 8A5A1125..)
 vtitests 415, ctest 5/5 (factory_classes checks the Snow class). README Snow bullet (site has no such paragraph).
 Rule 2: the Snow class was NOT activated against our TI2 (it would send the Snow description's start-up). A look at
 the Snow editor: only with the Virus switched off. NEXT: #14 reply (with the user) asking the reporter to test it.
+**Original's timing (E364, REA 2026-10-26):** stamps = device position NOW + offset + fixed lead 3072 (forced at
+every start, = reported latency) -> never late, whatever the host's block timing; a host table only shifts the song
+position/clock. Ours: timeline-based stamps with A = 1024 on Linux/macOS. Test running: VTI_NATIVE_A=3072 via
+launchctl setenv on the Mac (Logic restart) - if the sync errors go, raise A (and/or clamp stamps to now + A).
 **Logic on the Mac (E363, 2026-10-25 ~19:15-21:00):** analog vs USB in sync in Logic (user, all buffers) - the
 reporter's 'analog out of sync' is not reproduced; BUT Logic gives many late notes (sync reports 18-42 per Play vs
 1-2 in Ableton) and the red sync error shows - likely the reporter's Logic sync problem. NEXT: analyse the Logic
