@@ -39,8 +39,14 @@ hil.sh on it (work/hil/20261026-071442, TI2): ALL PASS (max 0.45 ms, jitter <= 0
 item 'timing: lead 3072 frames, safety net on'; the net moved 1 stamp per run, at the end of the run (the stop's
 messages from the worker); Virus sync reports per item 1/1/1/1/5 vs 1/2/1/1/3 with the old timing (24.10.) - the
 start quirk, H6 = forced reconnect. Reported latency now A + block + 640 (e.g. 4224 frames at 512).
-NEXT: user test in REAPER (Linux), then Mac build (CI) for Logic A/B (timing-classic.on in
-~/Library/Application Support/virus-ti-native).
+User REAPER test (07:21, 48 kHz block 256, new timing): no red message; ~1 Virus sync report per Play = REAPER's
+setActive(0/1) at every Play/Stop + re-anchor (anchors 1, err to -4221) - the old start quirk (also in hil with the
+old timing); net moved 1 stamp at the end. Separate item: which message at the restart arrives late.
+Branch round-0.8.35 PUSHED, CI TEST BUILD 0.8.35 run 40279333536 (5c8cbdd): ALL GREEN (first macOS/Windows build
+of KeepLoaded, Snow class, timing). Artifacts ~/Downloads/TI-Revive-0.8.35-test. Mac PUSHED:
+~/Downloads/TI-Revive-0.8.35-mac (pkg 6393864f.. = CI, INSTALL-COMMAND.txt, Install test build.command, hil/).
+NEXT on the Mac: user installs; Logic A/B (timing-classic.on in ~/Library/Application Support/virus-ti-native);
+autest --delete-open 40 (no AUTEST_PIN) on the installed 0.8.35 AU for #16.
 **Original's timing (E364, REA 2026-10-26):** stamps = device position NOW + offset + fixed lead 3072 (forced at
 every start, = reported latency) -> never late, whatever the host's block timing; a host table only shifts the song
 position/clock. Ours: timeline-based stamps with A = 1024 on Linux/macOS. Test running: VTI_NATIVE_A=3072 via
