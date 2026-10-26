@@ -145,6 +145,9 @@ public:
     std::atomic<int> want_rate{44100};
     bool request_rate(int rate, int timeout_ms);
     std::atomic<int64_t> lead{0}; // frames from a timeline position to its sound in the ring (VirusPlugin::lead())
+    // the safety net (stamprule.h StampFloor, 0.8.35): stamps keep at least floor_min frames past the newest frame
+    std::atomic<bool> stamp_floor{true};
+    static constexpr int64_t floor_min = 1024;
     // the newest ring frame that had sound on USB 1 / USB 2 (the ping waits for 1 s of silence, like the original)
     std::atomic<int64_t> last_sound{-1};
     // R5 diagnostics (VTI_NATIVE_STATS, every 10 s): stamp-aligned reads, their smallest distance to the newest frame,
@@ -209,6 +212,9 @@ private:
         int quiet;                    // quiet frames before the scan position
     };
     std::vector<KlogNote> klog_stamps_;
+    StampFloor floor_;          // worker only
+    int64_t floor_logged_ = 0;  // floor_.moved at the last log line
+    std::chrono::steady_clock::time_point floor_log_at_{};
     void klog_check();
     std::chrono::steady_clock::time_point queue_hold_until_{}; // queued messages wait (the Virus busy with a multi)
     char diag_path_[1024] = {};
@@ -645,18 +651,12 @@ private:
     // R5 timing with the sync marker: an event at timeline position t sounds at ring frame t + lead() (S behind the
     // newest frame + A to reach the Virus in time), and process() reads the ring latency_frames() behind that, so the
     // host gets it exactly latency_frames() late in every session (reported as the plug-in latency)
-    // A: time for a stamped event to reach the Virus. Linux 1024 (exact down to 768); Windows needs more (win11 VM:
-    // 2048 had late notes, 3072 exact for 16/16) - close to the original's reported 3840 + block
-#ifdef _WIN32
-    static constexpr int TIMING_A_DEFAULT = 3072;
-#else
-    static constexpr int TIMING_A_DEFAULT = 1024;
-#endif
-    static int timing_a()
-    {
-        static const int a = getenv("VTI_NATIVE_A") ? atoi(getenv("VTI_NATIVE_A")) : TIMING_A_DEFAULT;
-        return a;
-    }
+    // A: time for a stamped event to reach the Virus. Since 0.8.35 3072 everywhere, like the original (E364); before,
+    // Linux/macOS used 1024 (exact down to 768 in REAPER/Ableton), which Logic's uneven blocks overran (E363).
+    // timing-classic.on next to diag.on gives the old A and no safety net, to compare; VTI_NATIVE_A overrides
+    int timing_a_ = 3072; // set in initialize()
+    bool timing_classic_ = false;
+    int timing_a() const { return timing_a_; }
     static int timing_s() { static const int s = getenv("VTI_NATIVE_S") ? atoi(getenv("VTI_NATIVE_S")) : 5000; return s; }
     int64_t lead() const { return timing_s() + timing_a(); }
     // the read position stays block + 640 - |timeline jitter (<= ~400)| behind the newest frame

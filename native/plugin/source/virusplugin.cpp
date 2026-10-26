@@ -732,8 +732,12 @@ void DeviceOut::run()
                 st = audio_.newest_frame();
             int64_t raw = st;
             bool ping = m.size() == 11 && m[6] == 0x73 && m[8] == 0x22;
-            if (int64_t mk = marker.load(); st >= 0 && mk >= 0 && !ping)
-                st = st + lead.load() - mk; // ring frame st + lead on the Virus' stamp clock (0 at the marker)
+            if (int64_t mk = marker.load(); st >= 0 && mk >= 0 && !ping) {
+                int64_t due = st + lead.load(); // the ring frame it sounds at
+                if (stamp_floor.load(std::memory_order_relaxed) && audio_ok()) // never in the past (E364)
+                    due = floor_.apply(due, audio_.newest_frame(), floor_min);
+                st = due - mk; // on the Virus' stamp clock (0 at the marker)
+            }
             if (env_debug())
                 fprintf(stderr, "send %02x stamp %lld newest %lld\n", m[0], (long long)st,
                         (long long)(audio_ok() ? audio_.newest_frame() : -1));
@@ -780,6 +784,12 @@ void DeviceOut::run()
         }
         if (klog_)
             klog_check();
+        if (floor_.moved != floor_logged_ && std::chrono::steady_clock::now() - floor_log_at_ > std::chrono::seconds(2)) {
+            log("Virus TI native: timing safety net moved %lld stamp(s) forward (%lld in total)\n",
+                (long long)(floor_.moved - floor_logged_), (long long)floor_.moved);
+            floor_logged_ = floor_.moved;
+            floor_log_at_ = std::chrono::steady_clock::now();
+        }
         if (pending_send_) {
             pending_send_ = false;
             queued_--;
@@ -890,10 +900,25 @@ tresult PLUGIN_API VirusPlugin::initialize(FUnknown *context)
         parameters.addParameter(STR16("Pitchbend"), STR16("Pitchbend"), 0, 0.5, ParameterInfo::kCanAutomate,
                                 MIDI_MAP_BASE + ch * 0x1000 + 0x81);
     }
+    // the timing (E363, E364): the original's lead of 3072 and the safety net; timing-classic.on = as before 0.8.35
+    {
+        std::error_code tec;
+        timing_classic_ = std::filesystem::exists(own_cache_dir() + "/../timing-classic.on", tec);
+#ifdef _WIN32
+        timing_a_ = timing_lead(timing_classic_, true);
+#else
+        timing_a_ = timing_lead(timing_classic_, false);
+#endif
+        if (const char *a = getenv("VTI_NATIVE_A"))
+            timing_a_ = atoi(a);
+    }
     out_ = std::make_unique<DeviceOut>();
     out_->lead = lead();
+    out_->stamp_floor = !timing_classic_;
     if (diag_enabled())
         out_->set_diag_path(own_cache_dir() + "/../diag.log");
+    out_->log("Virus TI native: timing: lead %d frames, safety net %s%s\n", timing_a_, timing_classic_ ? "off" : "on",
+              timing_classic_ ? " (timing-classic.on)" : "");
     out_->on_panel([this](const std::vector<uint8_t> &m) { panel_message(m); });
     out_->on_idle([this] {
         if (int lay = sc_layout_.load(std::memory_order_relaxed); lay >= 0 && lay != sc_layout_seen_) {

@@ -52,4 +52,32 @@ struct StampRun {
     }
 };
 
+// The lead A (frames from the newest ring frame to a note's sound): the original uses 3072 on every host (E364:
+// forced at every start, = its reported latency). Before 0.8.35 TI Revive used 1024 on Linux/macOS, which Logic's
+// uneven block timing overran (late notes, the sync error, E363); 'classic' keeps that for comparison.
+inline int timing_lead(bool classic, bool windows)
+{
+    return classic && !windows ? 1024 : 3072;
+}
+
+// The safety net (0.8.35): a stamp from the timeline can lie in the past when the host hands over a block late. The
+// original cannot have that (it stamps from the Virus' position now, E364); here a stamp keeps at least min_ahead
+// frames past the newest ring frame, and stamps never go backwards (a stamp behind the DSP's newest one can raise
+// a Sync Information Event, E251) - except for a jump of a second or more (a new timeline after a reconnect).
+struct StampFloor {
+    int64_t last = -1;
+    int64_t moved = 0; // stamps moved forward to keep the reserve (logged)
+    int64_t apply(int64_t due, int64_t newest, int64_t min_ahead)
+    {
+        if (newest >= 0 && due < newest + min_ahead) {
+            due = newest + min_ahead;
+            moved++;
+        }
+        if (due < last && last - due < 48000)
+            due = last;
+        last = due;
+        return due;
+    }
+};
+
 } // namespace vti

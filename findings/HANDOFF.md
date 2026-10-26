@@ -29,6 +29,13 @@ original): VST3 class 'TI Revive Virus Control (Snow)' (kSnowClassId 8A5A1125..)
 vtitests 415, ctest 5/5 (factory_classes checks the Snow class). README Snow bullet (site has no such paragraph).
 Rule 2: the Snow class was NOT activated against our TI2 (it would send the Snow description's start-up). A look at
 the Snow editor: only with the Virus switched off. NEXT: #14 reply (with the user) asking the reporter to test it.
+**Timing fix BUILT (2026-10-26, user: 'implement both, the 3072 lead and the safety net' + an A/B switch):**
+lead A = 3072 everywhere (stamprule.h timing_lead), safety net StampFloor (stamps >= newest + 1024, never backwards
+under 1 s; DeviceOut pack), log 'timing: lead N frames, safety net on/off' at initialize and 'timing safety net
+moved N stamp(s) forward (M in total)' (at most every 2 s). A/B: timing-classic.on next to diag.on = before 0.8.35
+(A 1024 on Linux/macOS, no net), read when a plug-in instance starts (re-insert the plug-in / reopen the project).
+VTI_NATIVE_A still overrides A. vtitests 417, ctest 5/5 (Linux). NOT tested on hardware yet (Virus at the Mac):
+needs a Mac build (CI) for Logic A/B, and hil.sh on Linux (latency +2048 frames there).
 **Original's timing (E364, REA 2026-10-26):** stamps = device position NOW + offset + fixed lead 3072 (forced at
 every start, = reported latency) -> never late, whatever the host's block timing; a host table only shifts the song
 position/clock. Ours: timeline-based stamps with A = 1024 on Linux/macOS. Test running: VTI_NATIVE_A=3072 via
