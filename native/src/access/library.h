@@ -59,4 +59,19 @@ std::vector<LibraryRoot> library_roots();
 // XDG_DOCUMENTS_DIR from the text of user-dirs.dirs ($HOME expanded); empty if missing, relative or the home itself
 std::string xdg_documents_dir(const std::string &home, const std::string &user_dirs);
 
+// The browser's bank arrows: the bank next to `current` in `order` (the bank menu's order - the Virus' banks, then the
+// libraries as the menu lists them), `dir` +1 or -1; the ends stay put; a bank not in the list (a search) goes to the
+// first entry; an empty list keeps `current`
+inline int browser_bank_step(const std::vector<int> &order, int current, int dir)
+{
+    if (order.empty())
+        return current;
+    for (size_t i = 0; i < order.size(); i++)
+        if (order[i] == current) {
+            const long j = (long)i + (dir > 0 ? 1 : -1);
+            return j < 0 || j >= (long)order.size() ? current : order[(size_t)j];
+        }
+    return order.front();
+}
+
 } // namespace vti

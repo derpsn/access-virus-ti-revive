@@ -1474,7 +1474,11 @@ public:
                 return;
             }
             int v = drag_value_ + (e.type == "IncButton" ? 1 : -1);
-            plugin_->ui_set(param, h.part, std::max(lo, std::min(hi, v)));
+            if (param.rfind("Browser ", 0) == 0 && param.find("/Selected Bank") != std::string::npos)
+                v = vti::browser_bank_step(bank_menu_order(), drag_value_, e.type == "IncButton" ? 1 : -1);
+            else
+                v = std::max(lo, std::min(hi, v));
+            plugin_->ui_set(param, h.part, v);
             renderer_.pressed = &e;
             invalid();
             event.consumed = true;
@@ -2096,14 +2100,13 @@ private:
     }
 
     // the browser's bank selector: "<device> > RAM A .. ROM Z" and the library menus (E307)
-    void bank_menu_popup(const Hit &h, const CPoint &where)
+    // the bank menu's libraries: their submenus per library menu (Personal Libraries, ...) and menu's position +
+    // index path -> library. Entries are only appended, so the map's order is the order the menu lists them in
+    std::map<std::vector<int>, int> library_tree(const std::vector<std::string> &menus,
+                                                 std::vector<std::vector<vti::PopupItem>> &lib)
     {
-        std::vector<vti::PopupItem> dev;
-        for (int b = 0; b < plugin_->bank_count(); b++)
-            dev.push_back({VirusPlugin::bank_name(b)});
-        const auto menus = plugin_->library_menus();
-        std::vector<std::vector<vti::PopupItem>> lib(menus.size());
-        auto libs = std::make_shared<std::map<std::vector<int>, int>>(); // menu's position + path -> library
+        std::map<std::vector<int>, int> libs;
+        lib.assign(menus.size(), {});
         std::vector<std::map<std::string, std::vector<int>>> folders(menus.size());
         for (int i = 0; i < plugin_->library_count(); i++) {
             const int m = (int)(std::find(menus.begin(), menus.end(), plugin_->library_root(i)) - menus.begin());
@@ -2111,8 +2114,31 @@ private:
                 continue;
             auto at = vti::popup_add_path(lib[m], plugin_->library_name(i), {""}, folders[m]);
             at.insert(at.begin(), m);
-            (*libs)[at] = i;
+            libs[at] = i;
         }
+        return libs;
+    }
+
+    // the banks in the bank menu's order: the Virus' banks, then the libraries (the arrows step through it, #19)
+    std::vector<int> bank_menu_order()
+    {
+        std::vector<int> order;
+        for (int b = 0; b < plugin_->bank_count(); b++)
+            order.push_back(b);
+        std::vector<std::vector<vti::PopupItem>> lib;
+        for (auto &kv : library_tree(plugin_->library_menus(), lib))
+            order.push_back(VirusPlugin::LIB_BASE + kv.second);
+        return order;
+    }
+
+    void bank_menu_popup(const Hit &h, const CPoint &where)
+    {
+        std::vector<vti::PopupItem> dev;
+        for (int b = 0; b < plugin_->bank_count(); b++)
+            dev.push_back({VirusPlugin::bank_name(b)});
+        const auto menus = plugin_->library_menus();
+        std::vector<std::vector<vti::PopupItem>> lib;
+        auto libs = std::make_shared<std::map<std::vector<int>, int>>(library_tree(menus, lib));
         // the browser's bank menu has no "Create Empty Library" (only SAVE has, E297 (C))
         std::vector<vti::PopupItem> items;
         items.push_back({plugin_->device_name(), true, std::move(dev)});

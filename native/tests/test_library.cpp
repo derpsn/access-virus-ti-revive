@@ -352,3 +352,19 @@ TEST(library_import_slots_and_no_folder)
     CHECK(!none.error.empty() && none.path.empty() && none.error.size() <= 20);
     fs::remove_all(dir);
 }
+
+// #19: the arrows next to the browser's bank menu step through the banks in the menu's order - the Virus' banks,
+// then the libraries as the menu lists them (folders included); before, they added 1 to the bank number and clamped
+// it to the device banks, so from a personal library they jumped back into the factory banks
+TEST(browser_bank_step_follows_the_menu)
+{
+    const std::vector<int> order = {0, 1, 2, 3, 4, 5, 100, 103, 101, 102};
+    CHECK(browser_bank_step(order, 100, 1) == 103);
+    CHECK(browser_bank_step(order, 103, 1) == 101);
+    CHECK(browser_bank_step(order, 101, -1) == 103);
+    CHECK(browser_bank_step(order, 100, -1) == 5);  // from the first library back to the last device bank
+    CHECK(browser_bank_step(order, 102, 1) == 102); // the end: stays, like a clamped value
+    CHECK(browser_bank_step(order, 0, -1) == 0);
+    CHECK(browser_bank_step(order, 77, 1) == 0);     // not in the list (a search): the first entry
+    CHECK(browser_bank_step({}, 3, 1) == 3);
+}
