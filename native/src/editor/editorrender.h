@@ -182,6 +182,16 @@ public:
     // ArpEdit geometry (shared with the editor's mouse handling): step cell left edge and the bars' bottom row
     static void arp_step_geometry(const Element &e, int x, int y, int step, int &cell_x, int &bottom);
     static int arp_step_width(int len); // right border offset from the cell's left edge for a step length
+    // What a click in the ARP step editor grabs (E371, the original's KStepSequencer): the step that is on and whose
+    // area (its cell plus the following steps that are off, `span` cells) holds the point - its length when the point
+    // is within 8 px left of the bar's end or right of it, its velocity when it is above 8 px below the bar top
+    // (both in the corner); step -1 if no step that is on is under the point
+    struct ArpGrab {
+        int step = -1, span = 1;
+        bool length = false, velocity = false;
+    };
+    ArpGrab arp_grab(const Element &e, int x, int y, int part, int px, int py) const;
+    static int arp_cell(const Element &e, int x, int px); // the cell (0..31) under px, for Alt+click
 };
 
 } // namespace vti

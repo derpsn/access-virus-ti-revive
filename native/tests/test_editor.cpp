@@ -971,3 +971,36 @@ TEST(editor_graph_hit_under_a_knob)
     CHECK(at.element && at.element->type == "LP4Response" && at.x == 40 && at.y == 40);
     (void)d;
 }
+
+// #19 point 3 / E371: the ARP step editor grabs like the original's KStepSequencer - only on a step that is on (its
+// area spans the following off steps), length near/right of the bar end, velocity near the bar top, both in the
+// corner, nothing elsewhere; cells are 20 px (the rig's 640 px / 32)
+TEST(editor_arp_grab_zones)
+{
+    Rig g;
+    const std::string s = "Arpeggiator User Pattern/Step ";
+    g.vals[{s + "1 Bitfield", 0}] = 1, g.vals[{s + "1 Velocity", 0}] = 100, g.vals[{s + "1 Length", 0}] = 64;
+    g.vals[{s + "2 Bitfield", 0}] = 0; // off: step 1's area spans cells 1 and 2
+    g.vals[{s + "3 Bitfield", 0}] = 1, g.vals[{s + "3 Velocity", 0}] = 40, g.vals[{s + "3 Length", 0}] = 127;
+    Hit h = g.r->hit_test(10, 200);
+    CHECK(h.element && h.element->type == "ArpEdit");
+    int cx = 0, bottom = 0;
+    EditorRenderer::arp_step_geometry(*h.element, h.x, h.y, 0, cx, bottom);
+    auto a = g.r->arp_grab(*h.element, h.x, h.y, 0, cx + 3, bottom - 100 + 2); // near step 1's bar top
+    CHECK(a.step == 0 && a.velocity && !a.length && a.span == 2);
+    auto bar_end = cx + (int)std::lround(EditorRenderer::arp_step_width(64) * 2.0);
+    a = g.r->arp_grab(*h.element, h.x, h.y, 0, bar_end - 3, bottom - 20); // left of the end, low: length
+    CHECK(a.step == 0 && a.length && !a.velocity);
+    a = g.r->arp_grab(*h.element, h.x, h.y, 0, bar_end + 10, bottom - 98); // right of it, near the top: both
+    CHECK(a.step == 0 && a.length && a.velocity);
+    a = g.r->arp_grab(*h.element, h.x, h.y, 0, cx + 2, bottom - 20); // inside the bar, low and left: nothing
+    CHECK(a.step == 0 && !a.length && !a.velocity);
+    int c3 = 0;
+    EditorRenderer::arp_step_geometry(*h.element, h.x, h.y, 2, c3, bottom);
+    a = g.r->arp_grab(*h.element, h.x, h.y, 0, c3 + 2, bottom - 41); // step 3 (on), at its top
+    CHECK(a.step == 2 && a.velocity);
+    g.vals[{s + "1 Bitfield", 0}] = 0;
+    a = g.r->arp_grab(*h.element, h.x, h.y, 0, cx + 3, bottom - 98); // step 1 off: nothing to grab
+    CHECK(a.step < 0);
+    CHECK(EditorRenderer::arp_cell(*h.element, h.x, cx + 25) == 1); // Alt+click: the cell under the mouse
+}

@@ -35,6 +35,7 @@
 #include "device/sidechain.h"
 #include "model/devicestatus.h"
 #include "model/otherdrivers.h"
+#include "model/arpactions.h"
 #include "model/panelfollow.h"
 #include "model/remotedevice.h"
 #include "model/sysinfo.h"
@@ -337,6 +338,11 @@ public:
     // "Init Patch" in the LOAD menu (TI Revive's own addition, #14): the init patch from the user's Access files into
     // the part, remembered like a load (so "Revert to" brings the sound back)
     bool init_patch(int part);
+    // the ARP page's pattern actions (buttons + context menu, #19, E371): order of ARP_ACTIONS; false if unknown
+    enum ArpAction { ARP_SHIFT_LEFT, ARP_SHIFT_RIGHT, ARP_RANDOM_PATTERN, ARP_RANDOM_VELOCITY, ARP_RANDOM_LENGTH,
+                     ARP_RESET, ARP_FILL_UP, ARP_ACTION_COUNT };
+    static const char *arp_action_name(int a);
+    bool arp_action(int part, int action);
     bool has_init_patch() const { return init_single_.size() == 524; } // set once in initialize()
     // the "No Virus TI can be found" page's hint: another Virus driver installed (macOS, E366); set once in initialize()
     const std::vector<std::string> &other_driver_lines() const { return other_driver_lines_; }

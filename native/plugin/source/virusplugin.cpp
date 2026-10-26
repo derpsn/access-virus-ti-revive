@@ -17,6 +17,7 @@
 #include "pluginterfaces/vst/ivstevents.h"
 #include "pluginterfaces/vst/ivstparameterchanges.h"
 #include <algorithm>
+#include <random>
 #include <chrono>
 #include <cmath>
 #include <cstdio>
@@ -1940,8 +1941,75 @@ std::string VirusPlugin::live_text(const std::string &param)
     return system_info_text(param, sysinfo_);   // the INFO box's versions, "" for anything else
 }
 
+const char *VirusPlugin::arp_action_name(int a)
+{
+    // the original's context menu entries (0x1800684d0, E371)
+    static const char *n[ARP_ACTION_COUNT] = {"Shift Sequence to Left", "Shift Sequence to Right", "Randomize Pattern",
+                                              "Randomize Velocity", "Randomize Note Length", "Reset Pattern",
+                                              "Fill Up Pattern"};
+    return a >= 0 && a < ARP_ACTION_COUNT ? n[a] : "";
+}
+
+bool VirusPlugin::arp_action(int part, int action)
+{
+    if (action < 0 || action >= ARP_ACTION_COUNT || part < 0 || part > 15)
+        return false;
+    auto field = [](int i, const char *what) {
+        return "Arpeggiator User Pattern/Step " + std::to_string(i + 1) + " " + what;
+    };
+    std::vector<ArpStep> before(32);
+    for (int i = 0; i < 32; i++)
+        before[(size_t)i] = {ui_value(field(i, "Bitfield"), part), ui_value(field(i, "Velocity"), part),
+                             ui_value(field(i, "Length"), part)};
+    const int len = std::max(1, std::min(32, ui_value("Arpeggiator/UserPatternLength", part) + 1));
+    static std::mt19937 rng{std::random_device{}()};
+    std::uniform_real_distribution<double> uni(0.0, 1.0);
+    auto rnd = [&] { return uni(rng); };
+    std::vector<ArpStep> s = before;
+    int new_len = len;
+    switch (action) {
+    case ARP_SHIFT_LEFT: arp_shift(s, len, -1); break;
+    case ARP_SHIFT_RIGHT: arp_shift(s, len, +1); break;
+    case ARP_RANDOM_PATTERN: arp_random_pattern(s, len, rnd); break;
+    case ARP_RANDOM_VELOCITY: arp_random_velocity(s, len, rnd); break;
+    case ARP_RANDOM_LENGTH: arp_random_length(s, len, rnd); break;
+    case ARP_RESET: {
+        const auto &c = conditions();
+        arp_reset(s, len, {c.default_value(field(0, "Bitfield")), c.default_value(field(0, "Velocity")),
+                           c.default_value(field(0, "Length"))});
+        break;
+    }
+    case ARP_FILL_UP: new_len = arp_fill_up(s, len); break;
+    }
+    // only what changed goes to the Virus (at most 96 parameters + the length)
+    for (int i = 0; i < 32; i++) {
+        if (s[(size_t)i].on != before[(size_t)i].on)
+            ui_set(field(i, "Bitfield"), part, s[(size_t)i].on);
+        if (s[(size_t)i].velocity != before[(size_t)i].velocity)
+            ui_set(field(i, "Velocity"), part, s[(size_t)i].velocity);
+        if (s[(size_t)i].length != before[(size_t)i].length)
+            ui_set(field(i, "Length"), part, s[(size_t)i].length);
+    }
+    if (new_len != len)
+        ui_set("Arpeggiator/UserPatternLength", part, new_len - 1);
+    if (out_)
+        out_->log("Virus TI native: ARP %s on part %d (pattern length %d)\n", arp_action_name(action), part + 1, len);
+    return true;
+}
+
 void VirusPlugin::ui_set(const std::string &path, int part, int value)
 {
+    // the ARP page's buttons below the user pattern (KickButtons): the action, nothing stored (E371)
+    static const std::pair<const char *, int> arp_buttons[] = {
+        {"VirusControl/ExecuteARPShiftLeft", ARP_SHIFT_LEFT},     {"VirusControl/ExecuteARPShiftRight", ARP_SHIFT_RIGHT},
+        {"VirusControl/ExecuteARPRandomNote", ARP_RANDOM_PATTERN}, {"VirusControl/ExecuteARPRandomVelo", ARP_RANDOM_VELOCITY},
+        {"VirusControl/ExecuteARPRandomLength", ARP_RANDOM_LENGTH}};
+    for (auto &b : arp_buttons)
+        if (path == b.first) {
+            if (value)
+                arp_action(part, b.second);
+            return;
+        }
     if (path == USB_IO_PATH) { // a hardware setting of this computer (original: registry), sent at once
         set_usb_io(value, true);
         if (out_)

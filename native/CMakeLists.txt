@@ -140,7 +140,7 @@ enable_testing()
 add_executable(vtitests tests/main.cpp tests/test_usbmidi.cpp tests/test_state.cpp tests/test_model.cpp
                tests/test_access.cpp tests/test_automation.cpp tests/test_upgrade.cpp tests/test_resampler.cpp tests/test_sidechain.cpp tests/test_helptext.cpp tests/test_devicestatus.cpp $<$<PLATFORM_ID:Linux>:tests/test_resetguard.cpp> tests/test_giveback.cpp tests/test_ccrestore.cpp
                tests/test_library.cpp tests/test_decode.cpp tests/test_ccskin.cpp tests/test_memsync.cpp
-               tests/test_cc.cpp tests/test_broker.cpp tests/test_audioin.cpp tests/test_panelfollow.cpp tests/test_editor.cpp
+               tests/test_cc.cpp tests/test_arpactions.cpp tests/test_broker.cpp tests/test_audioin.cpp tests/test_panelfollow.cpp tests/test_editor.cpp
                tests/test_accessfiles.cpp tests/test_firmware.cpp tests/test_diag.cpp tests/test_virusrate.cpp
                tests/test_protocol.cpp tests/test_upscale.cpp tests/test_ctrlguard.cpp tests/test_pktstat.cpp tests/test_owner.cpp tests/test_sysinfo.cpp tests/test_flashinfo.cpp tests/test_remotetemplates.cpp tests/test_popupmenu.cpp tests/test_workarea.cpp
                tests/test_offlinepace.cpp tests/test_syncalert.cpp tests/test_patchhistory.cpp tests/test_stallwatch.cpp

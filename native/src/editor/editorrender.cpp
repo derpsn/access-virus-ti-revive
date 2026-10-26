@@ -412,6 +412,37 @@ void EditorRenderer::arp_step_geometry(const Element &e, int x, int y, int step,
     bottom = y + e.h - 1;
 }
 
+int EditorRenderer::arp_cell(const Element &e, int x, int px)
+{
+    return std::max(0, std::min(31, (px - x - 1) / std::max(1, e.w / 32)));
+}
+
+EditorRenderer::ArpGrab EditorRenderer::arp_grab(const Element &e, int x, int y, int part, int px, int py) const
+{
+    ArpGrab g;
+    const int cell = std::max(1, e.w / 32);
+    auto on = [&](int i) { return values("Arpeggiator User Pattern/Step " + std::to_string(i + 1) + " Bitfield", part) != 0; };
+    for (int i = 0; i < 32; i++) {
+        if (!on(i))
+            continue;
+        int span = 1;
+        while (i + span < 32 && !on(i + span))
+            span++;
+        int cx, bottom;
+        arp_step_geometry(e, x, y, i, cx, bottom);
+        if (px < cx - 1 || px >= cx - 1 + span * cell)
+            continue;
+        const std::string st = "Arpeggiator User Pattern/Step " + std::to_string(i + 1) + " ";
+        const int vel = std::max(0, std::min(127, values(st + "Velocity", part)));
+        const int r = std::min(span * cell - 1, (int)std::lround(arp_step_width(values(st + "Length", part)) * (double)span));
+        g.step = i, g.span = span;
+        g.length = px >= cx + r - 8;
+        g.velocity = py <= bottom - vel + 8;
+        return g;
+    }
+    return g;
+}
+
 void EditorRenderer::arp_edit(Canvas &c, const Element &e, int x, int y, int part)
 {
     const Rgba border{192, 192, 192, 255};

@@ -301,6 +301,11 @@ jobs:
           - A patch from a bank of the Virus is now selected on the Virus first, like with the original: its display
             shows the location ("RAM-B 4", "ROM-A 0") instead of the old one; library patches show "LIB" (issue #14).
           - The selected entry in the browser is filled blue while its list has the focus, like in the original.
+          - Like in the original (issue #19): the handles in the filter and envelope displays can be dragged (Shift:
+            finer, Ctrl+click: back to the middle); the arpeggiator's user pattern edits length and velocity of one
+            step at a time and Alt+click switches a step on or off; the buttons below it (shift, randomize) and its
+            right-click menu (also Reset and Fill Up Pattern) work; the browser's bank arrows step through the
+            libraries instead of jumping to the factory banks, and are easier to hit.
           - macOS Audio Unit: deleting a channel while the plug-in window is open no longer crashes FL Studio (issue
             #16).
           - Greyed-out controls are drawn like in the original, and the plug-in's log names libraries with damaged
