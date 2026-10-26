@@ -50,8 +50,9 @@ no Logic project attached (rule 1: the plug-in state holds Access patch data; Ap
 described instead (multi-timbral instrument, 4 MIDI parts, part 1 USB 1, part 2 Out 2, a drum kit as 5th).
 Prepared: native VERSION 0.8.35, build.yml 'New in 0.8.35' (tested-on: Linux REAPER + hil, Mac Logic + autest;
 NOT Windows, NOT a Snow), README/site 417 tests. Drafts: work/issue14-reply.md (es + en), work/issue16-reply.md
-(LINK placeholder). NEXT: user approves the notes -> tag v0.8.35-rc1 (separate command) -> release CI -> post
-both replies with the link.
+(LINK placeholder). User approved ('sounds good', 2026-10-26 ~08:03): tag v0.8.35-rc1 (annotated, on bdb49fa) pushed separately,
+release CI run 40283501817 running. NEXT: when green -> check the pre-release (assets, notes, pre-release flag),
+put the link into work/issue14-reply.md + work/issue16-reply.md, post both (user OK given with the plan).
 DONE on the Mac (E365, 2026-10-26 ~07:40-07:55): installed 0.8.35 CI; #16 fixed (autest 2/2 clean, no pin);
 Logic A/B: new timing clean in every run; old timing ALSO clean today (E363 late notes not reproduced: buffers
 2048..128, 150 BPM, part 2 on Out 2) - improvement unproven, by design like the original. Mac left on the new timing
