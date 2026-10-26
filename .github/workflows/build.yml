@@ -298,6 +298,9 @@ jobs:
             (mod wheel, volume, synth parameters sent as controllers) are kept and saved with the project.
           - The part's name field closes again when you confirm it without a change (it stayed white and hid later
             names; issue #18), and on Linux the selected name is marked light blue instead of red.
+          - A patch from a bank of the Virus is now selected on the Virus first, like with the original: its display
+            shows the location ("RAM-B 4", "ROM-A 0") instead of the old one; library patches show "LIB" (issue #14).
+          - The selected entry in the browser is filled blue while its list has the focus, like in the original.
           - macOS Audio Unit: deleting a channel while the plug-in window is open no longer crashes FL Studio (issue
             #16).
           - Greyed-out controls are drawn like in the original, and the plug-in's log names libraries with damaged
