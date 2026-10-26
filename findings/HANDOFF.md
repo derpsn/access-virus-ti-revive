@@ -82,6 +82,9 @@ zones like KStepSequencer, test), editor relative drag on one step + Alt+click t
 (reads 32 steps, sends only changes), ExecuteARP* KickButtons routed in ui_set, right-click menu on 'Arpeggiator User
 Pattern/...' controls. 432 tests, ctest 5/5. Dev build c8284207.. in ~/.vst3, user test pending. NEXT: commit 3+4
 after the check, rc6, #19 reply (no patch-wide randomize in the original).
+**#19 points 3+4 COMMITTED 9e11408** (user: Fill Up 'works' once the pattern length was below 32; log showed
+length 32 first). Release notes for #19, 432 tests in README/site. #19 reply draft work/issue19-reply.md (rc6 link).
+NEXT: on the user's OK tag v0.8.35-rc6 separately, release CI, post #19.
 NEXT for #14 (Snow reporter, 2026-10-26 comment): Snow editor - part 1 level meter empty, the name field empty after
 SAVE/LOAD/Init Patch, preset location (bank/number) not shown; then replies on #18 and #14 shown to the user first.
 **Decided (user, 2026-10-25 evening): WEEKLY releases.** Testing took most of the time for small rounds, so 0.8.35
