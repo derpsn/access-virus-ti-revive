@@ -67,6 +67,14 @@ libraries to the factory banks - FIXED f30ff2d (browser_bank_step over the bank 
 not draggable; (3) ARP user pattern: step bar drags buggy, buttons below the pattern dead; (4) randomize missing.
 A REA subagent analyses the original's handlers for 2-4 (factory 0x180055028/0x180057e0f, KEnvelope/KEnvelopeStage,
 ExecuteARPRandom* 0x180168980..). NEXT: implement 2-4 from that report (TDD), user tests, then rc6 + #19 reply.
+**#19 progress (2026-10-26 late):** point 1 user OK ('the arrows work'); arrow hit zone +4 px above/below for small
+Inc/Dec buttons (051c91b, user: 'hit zone really narrow'). E371 = the subagent's REA report (filter/envelope drags,
+KStepSequencer, ARP actions). Point 2 BUILT, NOT COMMITTED: EditorRenderer::graph_handles/graph_value (geometry pulled
+out of envelope()/filter_response(), inverse; test editor_graph_handles_round_trip, 426 tests) + editor drag
+(relative, Shift 4x finer with re-anchor, Ctrl+click = 64 / resonance 0, handles +-5 px; segment hits not done).
+Dev build eaae5e70.. in ~/.vst3, user test pending. NEXT: commit point 2 after the user's check; point 3 ArpEdit like
+KStepSequencer (span incl. following off steps, length/velocity grab zones, relative, Alt+click toggles a step);
+point 4 ARP actions (Shift L/R, Random note/velo/length, Reset, Fill Up; buttons + context menu); then rc6 + #19 reply.
 NEXT for #14 (Snow reporter, 2026-10-26 comment): Snow editor - part 1 level meter empty, the name field empty after
 SAVE/LOAD/Init Patch, preset location (bank/number) not shown; then replies on #18 and #14 shown to the user first.
 **Decided (user, 2026-10-25 evening): WEEKLY releases.** Testing took most of the time for small rounds, so 0.8.35
