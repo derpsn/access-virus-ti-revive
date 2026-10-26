@@ -60,6 +60,13 @@ do not copy it (TI Revive's edit buffer = the stored patch, so no 'e' is accurat
 **User OK (2026-10-26): 'e' not copied -> E370 (a9b80d7).** rc5 release notes (location on the Virus display,
 filled browser selection), 423 tests in README/site (57ba335). #14 reply draft work/issue14-reply2.md (ES + EN, points
 1-4, rc5 link) shown to the user. NEXT: on the user's OK tag v0.8.35-rc5 separately, release CI, then post #14.
+**v0.8.35-rc5 PUBLISHED (run 40390678963 green, pre-release); #14 reply posted (issuecomment-6426010189). #18 and #17
+closed with comments (user OK). New #19 (#18 reporter, rc4, macOS/Live 12): (1) browser bank arrows jumped from personal
+libraries to the factory banks - FIXED f30ff2d (browser_bank_step over the bank menu's order; test), dev build
+4a245822.. in ~/.vst3, user check pending; (2) filter display: drag changes cutoff but not resonance; envelope handles
+not draggable; (3) ARP user pattern: step bar drags buggy, buttons below the pattern dead; (4) randomize missing.
+A REA subagent analyses the original's handlers for 2-4 (factory 0x180055028/0x180057e0f, KEnvelope/KEnvelopeStage,
+ExecuteARPRandom* 0x180168980..). NEXT: implement 2-4 from that report (TDD), user tests, then rc6 + #19 reply.
 NEXT for #14 (Snow reporter, 2026-10-26 comment): Snow editor - part 1 level meter empty, the name field empty after
 SAVE/LOAD/Init Patch, preset location (bank/number) not shown; then replies on #18 and #14 shown to the user first.
 **Decided (user, 2026-10-25 evening): WEEKLY releases.** Testing took most of the time for small rounds, so 0.8.35
