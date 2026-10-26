@@ -1644,16 +1644,19 @@ public:
                 plugin_->set_remote_text(edit_param_, t);
             edit_param_.clear();
             edit_bank_ = -1;
-            remove_edit(te); // after the current event
-            invalid();
+            invalid(); // the field goes away with the focus (below)
         }
     }
 
-    // ITextEditListener: the search field lost the focus (return, click elsewhere)
+    // ITextEditListener: a text field lost the focus (return, escape, click elsewhere). VSTGUI reports a commit
+    // (valueChanged above) only for a changed text, so the field is removed here: before, a name confirmed unchanged
+    // stayed on the part bar as a white field and hid every later name (issue #18).
     void onTextEditPlatformControlLostFocus(CTextEdit *te) override
     {
         te->unregisterTextEditListener(this);
         editing_search_ = false;
+        edit_param_.clear();
+        edit_bank_ = -1;
         remove_edit(te);
         invalid();
     }
@@ -2209,6 +2212,7 @@ private:
             te->setHoriAlign(kLeftText);
             te->setTextInset(CPoint(1, 0));
         }
+        te->registerTextEditListener(this);
         f->addView(te);
         te->takeFocus();
     }
@@ -2233,6 +2237,7 @@ private:
         te->setFont(makeOwned<CFontDesc>(kSystemFont->getName(), text_field_font(r.getHeight())));
         te->setHoriAlign(kLeftText);
         te->setTextInset(CPoint(1, 0));
+        te->registerTextEditListener(this);
         f->addView(te);
         te->takeFocus();
     }

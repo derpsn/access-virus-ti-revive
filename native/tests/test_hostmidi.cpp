@@ -38,3 +38,20 @@ TEST(hostmidi_clock_tempo_is_sane)
     CHECK(clock_tempo(5000.0) == 999.0); // at most ~5 ticks per 512-sample block
     CHECK(clock_tempo(0.5) == 1.0);
 }
+
+// Issue #18: the mod wheel did nothing in Ableton Live - a VST3 plug-in gets a controller only when it maps it to a
+// parameter (IMidiMapping), and only aftertouch and pitch bend were mapped. Controllers 0..119 now map too; the
+// channel mode messages 120..127 (all notes off, reset, ...) stay unmapped.
+TEST(hostmidi_mapped_controllers)
+{
+    CHECK(mapped_controller(1) && mapped_controller(0) && mapped_controller(119));
+    CHECK(mapped_controller(128) && mapped_controller(129)); // VST3 kAfterTouch, kPitchBend
+    CHECK(!mapped_controller(120) && !mapped_controller(127) && !mapped_controller(130) && !mapped_controller(-1));
+    uint8_t m[3] = {};
+    CHECK(mapped_message(2, 1, 1.0, m) == 3 && m[0] == 0xB2 && m[1] == 1 && m[2] == 127); // mod wheel, channel 3
+    CHECK(mapped_message(0, 64, 0.0, m) == 3 && m[0] == 0xB0 && m[1] == 64 && m[2] == 0);
+    CHECK(mapped_message(15, 128, 0.5, m) == 2 && m[0] == 0xDF && m[1] == 64);              // aftertouch
+    CHECK(mapped_message(0, 129, 0.5, m) == 3 && m[0] == 0xE0 && m[1] == 0 && m[2] == 64);  // pitch bend centre
+    CHECK(mapped_message(0, 121, 1.0, m) == 0);                                            // reset: never
+    CHECK(mapped_message(0, 7, 2.0, m) == 3 && m[2] == 127);                               // data byte < 0x80
+}

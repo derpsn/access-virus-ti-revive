@@ -1,6 +1,12 @@
 # HANDOFF
 
 ## START HERE (2026-10-25, afternoon): round 0.8.35 on branch `round-0.8.35` (from main 6f8b79d) - a small UI/library round
+**#18 (2026-10-26 evening, user 'yes, go ahead', E367):** mod wheel / every CC 0..119 now mapped (VST3
+IMidiMapping) and sent; name field removed on focus loss (Enter without a change left it white). Linux REAPER test
+with the dev build (b85dcb1f.. in ~/.vst3, previous plug-in in ~/.vst3-backup/before-issue18-1749): CC 1 on the wire
+(virusmon), cutoff audible, name field 'works'. vtitests 419/419, ctest 5/5 (gui_duplicate_editors flaky once, again).
+NEXT for #14 (Snow reporter, 2026-10-26 comment): Snow editor - part 1 level meter empty, the name field empty after
+SAVE/LOAD/Init Patch, preset location (bank/number) not shown; then replies on #18 and #14 shown to the user first.
 **Decided (user, 2026-10-25 evening): WEEKLY releases.** Testing took most of the time for small rounds, so 0.8.35
 becomes a bigger round: as many open tasks and features as possible, then one test run and the release.
 **Release notes no longer pile up (2026-10-25):** build.yml's notes carried every 'New in' since 0.8.2 (v0.8.34 body

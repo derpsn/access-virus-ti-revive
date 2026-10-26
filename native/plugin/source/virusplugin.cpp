@@ -89,7 +89,7 @@ static bool env_stats()
 }
 
 static const uint8_t EP_PLUGIN_OUT = 0x06, CABLE_PLUGIN = 2, CABLE_TIME = 5;
-static const ParamID MIDI_MAP_BASE = 0x100000; // + channel * 0x1000 + 0x80 aftertouch / 0x81 pitch bend
+static const ParamID MIDI_MAP_BASE = 0x100000; // + channel * 0x1000 + controller (0..119), 0x80 aftertouch, 0x81 bend
 static std::string own_cache_dir();
 
 // ---- DeviceOut ----------------------------------------------------------------------------------------------------
@@ -900,6 +900,15 @@ tresult PLUGIN_API VirusPlugin::initialize(FUnknown *context)
         parameters.addParameter(STR16("Pitchbend"), STR16("Pitchbend"), 0, 0.5, ParameterInfo::kCanAutomate,
                                 MIDI_MAP_BASE + ch * 0x1000 + 0x81);
     }
+    // the controllers 0..119 of every channel (mod wheel, sustain, ...): only for the host's MIDI mapping, hidden
+    // from its parameter lists (issue #18, hostmidi.h)
+    for (int ch = 0; ch < 16; ch++)
+        for (int cc = 0; cc < 120; cc++) {
+            char name[32];
+            snprintf(name, sizeof name, "CC %d Ch %d", cc, ch + 1);
+            parameters.addParameter(UString128(name), nullptr, 0, 0.0, ParameterInfo::kIsHidden,
+                                    MIDI_MAP_BASE + ch * 0x1000 + cc);
+        }
     // the timing (E363, E364): the original's lead of 3072 and the safety net; timing-classic.on = as before 0.8.35
     {
         std::error_code tec;
@@ -1154,9 +1163,9 @@ tresult PLUGIN_API VirusPlugin::canProcessSampleSize(int32 s) { return s == kSam
 
 tresult PLUGIN_API VirusPlugin::getMidiControllerAssignment(int32 bus, int16 channel, CtrlNumber ctl, ParamID &id)
 {
-    if (bus != 0 || channel < 0 || channel > 15 || (ctl != kAfterTouch && ctl != kPitchBend))
+    if (bus != 0 || channel < 0 || channel > 15 || !mapped_controller(ctl))
         return kResultFalse;
-    id = MIDI_MAP_BASE + channel * 0x1000 + (ctl == kAfterTouch ? 0x80 : 0x81);
+    id = MIDI_MAP_BASE + channel * 0x1000 + ctl; // kAfterTouch = 0x80, kPitchBend = 0x81
     return kResultTrue;
 }
 
@@ -1432,16 +1441,10 @@ tresult PLUGIN_API VirusPlugin::process(ProcessData &data)
             if (!q || q->getPointCount() <= 0 || q->getPoint(q->getPointCount() - 1, offset, v) != kResultOk)
                 continue;
             ParamID id = q->getParameterId();
-            if (id >= MIDI_MAP_BASE) { // channel aftertouch / pitch bend of channel (id - base) / 0x1000
-                uint8_t ch = (uint8_t)(((id - MIDI_MAP_BASE) >> 12) & 15);
-                if ((id & 0xFFF) == 0x80) {
-                    uint8_t m[2] = {(uint8_t)(0xD0 | ch), data7(v)}; // data bytes always < 0x80 (hostmidi.h)
-                    add(at(offset), m, 2);
-                } else {
-                    int pb = bend14(v);
-                    uint8_t m[3] = {(uint8_t)(0xE0 | ch), (uint8_t)(pb & 0x7F), (uint8_t)(pb >> 7)};
-                    add(at(offset), m, 3);
-                }
+            if (id >= MIDI_MAP_BASE) { // a controller, aftertouch or pitch bend of channel (id - base) / 0x1000
+                uint8_t m[3];
+                if (size_t n = mapped_message((int)((id - MIDI_MAP_BASE) >> 12) & 15, (int)(id & 0xFFF), v, m))
+                    add(at(offset), m, n); // data bytes always < 0x80 (hostmidi.h)
                 continue;
             }
             auto it = params_.find(id);
