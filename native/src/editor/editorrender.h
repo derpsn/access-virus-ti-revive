@@ -149,7 +149,7 @@ private:
               const std::string &align, double alpha = 1.0);
     std::vector<std::string> inactive_inputs(const std::string &param, int part) const;
     bool hit(const Element &e, int ox, int oy, int inherited, int px, int py, Hit &out, bool include_disabled = false,
-             const std::string &cond = std::string(), bool menus_only = false) const;
+             const std::string &cond = std::string(), bool menus_only = false, int slack = 0) const;
     void patch_browser(Canvas &c, const Element &e, int x, int y, int bank, int pane);
     void remote_browser(Canvas &c, const Element &e, int x, int y, int selected);
     void envelope(Canvas &c, const Element &e, int x, int y, int part, double alpha);

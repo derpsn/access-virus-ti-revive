@@ -636,7 +636,7 @@ static bool is_menu(const Element &e)
 }
 
 bool EditorRenderer::hit(const Element &e, int ox, int oy, int inherited, int px, int py, Hit &out,
-                         bool include_disabled, const std::string &cond, bool menus_only) const
+                         bool include_disabled, const std::string &cond, bool menus_only, int slack) const
 {
     int pt = own_part(e) >= 0 ? own_part(e) : inherited >= 0 ? inherited : part;
     if (!cond_.eval(e.get("Condition"), values, pt))
@@ -645,6 +645,9 @@ bool EditorRenderer::hit(const Element &e, int ox, int oy, int inherited, int px
     const std::string &c = own.empty() ? cond : own; // the closest condition that shows this element
     int x = ox + e.x, y = oy + e.y;
     bool inside = px >= x && px < x + e.w && py >= y && py < y + e.h;
+    if (slack > 0) // the second pass: only the small arrow buttons, a few px taller
+        inside = (e.type == "IncButton" || e.type == "DecButton") && e.h < 12 && px >= x && px < x + e.w &&
+                 py >= y - slack && py < y + e.h + slack;
     bool disabled = e.get("Enabled") == "false";
     if (inside && !e.get("Parameter").empty() && (!disabled || include_disabled) && (!menus_only || is_menu(e))) {
         out.element = &e; // later (= drawn on top) elements override
@@ -655,7 +658,7 @@ bool EditorRenderer::hit(const Element &e, int ox, int oy, int inherited, int px
         out.inactive = disabled || !param_active(e.get("Parameter"), pt);
     }
     for (auto &ch : e.children)
-        hit(ch, x, y, own_part(e) >= 0 ? own_part(e) : inherited, px, py, out, include_disabled, c, menus_only);
+        hit(ch, x, y, own_part(e) >= 0 ? own_part(e) : inherited, px, py, out, include_disabled, c, menus_only, slack);
     return out.element != nullptr;
 }
 
@@ -722,6 +725,11 @@ Hit EditorRenderer::hit_test(int px, int py, bool include_disabled) const
     Hit h;
     for (auto &e : layout_.elements)
         hit(e, 0, 0, -1, px, py, h, include_disabled);
+    // nothing hit: the small arrow buttons (17 x 9 px, the browser's bank arrows) take a click up to 4 px above or
+    // below them - our own addition, the user found them hard to hit (#19)
+    if (!h.element)
+        for (auto &e : layout_.elements)
+            hit(e, 0, 0, -1, px, py, h, include_disabled, std::string(), false, 4);
     return h;
 }
 

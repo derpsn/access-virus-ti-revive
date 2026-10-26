@@ -875,3 +875,26 @@ TEST(editor_render_browser_drag_highlight)
     CHECK(sel == 5);  // "P3" and "P40": five glyphs in the white font
     CHECK(blue == 2); // one filled box per entry
 }
+
+// #19 (user: "the hit zone for the arrows is really narrow"): the browser's bank arrows are 17 x 9 px (the original's
+// layout). A click that hits no control counts for such a small arrow button within 4 px above or below it (our own
+// addition); an exact hit on another control keeps priority
+TEST(editor_small_arrows_hit_with_slack)
+{
+    static const char *L = R"(<?xml version="1.0"?>
+<Editor><Frame width="200" height="60"><Container><Size left="0" top="0" width="200" height="60"/>
+ <IncButton Parameter="Browser 0/Selected Bank"><Size left="20" top="20" width="17" height="9"/></IncButton>
+ <Button Parameter="VirusControl/Something"><Size left="20" top="31" width="17" height="10"/></Button>
+</Container></Frame></Editor>)";
+    Rig g;
+    EditorLayout lay;
+    std::string err;
+    CHECK(lay.load(Bytes(L, L + strlen(L)), err));
+    EditorRenderer r(lay, *g.cond, g.dev, g.ed);
+    r.values = g.r->values;
+    CHECK(r.hit_test(25, 24).element && r.hit_test(25, 24).element->type == "IncButton"); // inside
+    CHECK(r.hit_test(25, 17).element && r.hit_test(25, 17).element->type == "IncButton"); // 3 px above
+    CHECK(!r.hit_test(25, 15).element);                                                  // 5 px above: nothing
+    CHECK(r.hit_test(25, 32).element && r.hit_test(25, 32).element->type == "Button");    // below: the button wins
+    CHECK(r.hit_test(25, 30).element && r.hit_test(25, 30).element->type == "IncButton"); // 1 px below, free
+}
