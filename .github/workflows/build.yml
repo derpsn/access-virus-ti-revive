@@ -297,7 +297,7 @@ jobs:
             0-119 (before, only pitch bend and aftertouch did; issue #18). Like in the original, the values they set
             (mod wheel, volume, synth parameters sent as controllers) are kept and saved with the project.
           - The part's name field closes again when you confirm it without a change (it stayed white and hid later
-            names; issue #18).
+            names; issue #18), and on Linux the selected name is marked light blue instead of red.
           - macOS Audio Unit: deleting a channel while the plug-in window is open no longer crashes FL Studio (issue
             #16).
           - Greyed-out controls are drawn like in the original, and the plug-in's log names libraries with damaged

@@ -26,6 +26,9 @@ project open: CC 1 with the last value in 'state sent'), then tag v0.8.35-rc2 se
 byte 10 = 80 (= the original VST2's pattern); saved after a stop -> 0, because REAPER itself sends CC 1 = 0 at the stop
 (virusmon). Dev build a22695c8.. in ~/.vst3. NEXT: tag v0.8.35-rc2 (separately), release CI, then post #18 + Reddit
 after the user's OK.
+**rc3 (user: 'works. include it in RC3', 2026-10-26 ~19:00):** name-field selection light blue instead of red on Linux
+(frame focus colour, E367 (3)); user checked in REAPER. rc2 tagged on 52190d0 (run 40372646035), rc3 on the colour fix.
+The #18 reply now points to rc3.
 NEXT for #14 (Snow reporter, 2026-10-26 comment): Snow editor - part 1 level meter empty, the name field empty after
 SAVE/LOAD/Init Patch, preset location (bank/number) not shown; then replies on #18 and #14 shown to the user first.
 **Decided (user, 2026-10-25 evening): WEEKLY releases.** Testing took most of the time for small rounds, so 0.8.35

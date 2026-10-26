@@ -2592,6 +2592,9 @@ bool PLUGIN_API VirusEditor::open(void *parent, const PlatformType &platformType
         return false;
     CRect size(0, 0, plugin_->layout().width, plugin_->layout().height);
     frame = new CFrame(size, this);
+    // VSTGUI's own text field (Linux) marks selected text in the frame's focus colour, red by default: a light blue
+    // like the system selection on Windows and macOS (the black name stays readable); focus frames are not drawn
+    frame->setFocusColor(CColor(179, 215, 255, 255));
 #if SMTG_OS_LINUX
     // VSTGUI on X11 needs the host's run loop (IRunLoop from the plug frame or the host context)
     if (open_frames == 0) {
