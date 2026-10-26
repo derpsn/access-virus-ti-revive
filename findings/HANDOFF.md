@@ -57,6 +57,9 @@ per-part listener parameter values into an edit-buffer dump before it goes out (
 parameter pair after the dump is most likely a host echo, not a deliberate signal (not proven). Proposed to the user:
 do not copy it (TI Revive's edit buffer = the stored patch, so no 'e' is accurate). NEXT: user's decision, then E370
 (the 'e' analysis), #14 reply draft, rc5.
+**User OK (2026-10-26): 'e' not copied -> E370 (a9b80d7).** rc5 release notes (location on the Virus display,
+filled browser selection), 423 tests in README/site (57ba335). #14 reply draft work/issue14-reply2.md (ES + EN, points
+1-4, rc5 link) shown to the user. NEXT: on the user's OK tag v0.8.35-rc5 separately, release CI, then post #14.
 NEXT for #14 (Snow reporter, 2026-10-26 comment): Snow editor - part 1 level meter empty, the name field empty after
 SAVE/LOAD/Init Patch, preset location (bank/number) not shown; then replies on #18 and #14 shown to the user first.
 **Decided (user, 2026-10-25 evening): WEEKLY releases.** Testing took most of the time for small rounds, so 0.8.35
