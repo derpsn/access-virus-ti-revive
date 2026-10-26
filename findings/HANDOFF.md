@@ -48,6 +48,9 @@ an 'e' through an extra parameter pair after the dump - not copied). 422 tests, 
 ~/.vst3. Also noted (user): the original's browser marks the selected entry with a full blue background, ours only with
 a frame - to check. NEXT: browser selection look, then reply #14 (meter = original, name field = #18/rc4, location
 fixed in the next build).
+Committed 203aa5a + 6c5120f (E369 confidence HIGH for point 3), pushed. Not in rc4 - an rc5 after the browser look
+is offered to the user. NEXT: (1) browser selection look (full blue background in the original), (2) #14 reply draft
+shown to the user, (3) rc5 on the user's OK.
 NEXT for #14 (Snow reporter, 2026-10-26 comment): Snow editor - part 1 level meter empty, the name field empty after
 SAVE/LOAD/Init Patch, preset location (bank/number) not shown; then replies on #18 and #14 shown to the user first.
 **Decided (user, 2026-10-25 evening): WEEKLY releases.** Testing took most of the time for small rounds, so 0.8.35
