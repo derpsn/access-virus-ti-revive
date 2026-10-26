@@ -51,6 +51,12 @@ fixed in the next build).
 Committed 203aa5a + 6c5120f (E369 confidence HIGH for point 3), pushed. Not in rc4 - an rc5 after the browser look
 is offered to the user. NEXT: (1) browser selection look (full blue background in the original), (2) #14 reply draft
 shown to the user, (3) rc5 on the user's OK.
+**Browser selection DONE (2785ce0):** the list with the focus fills its selection (E318), user: 'works'; dev build
+e617df91.. in ~/.vst3. **'e' prefix (eRAM-B / eLIB) analysed:** not in the original's load code; 0x1800876b0 writes
+per-part listener parameter values into an edit-buffer dump before it goes out (likely host/automation values) - the
+parameter pair after the dump is most likely a host echo, not a deliberate signal (not proven). Proposed to the user:
+do not copy it (TI Revive's edit buffer = the stored patch, so no 'e' is accurate). NEXT: user's decision, then E370
+(the 'e' analysis), #14 reply draft, rc5.
 NEXT for #14 (Snow reporter, 2026-10-26 comment): Snow editor - part 1 level meter empty, the name field empty after
 SAVE/LOAD/Init Patch, preset location (bank/number) not shown; then replies on #18 and #14 shown to the user first.
 **Decided (user, 2026-10-25 evening): WEEKLY releases.** Testing took most of the time for small rounds, so 0.8.35
