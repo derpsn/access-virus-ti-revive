@@ -20,6 +20,7 @@ import sys
 
 REPO = "derpsn/access-virus-ti-revive"
 GH = "https://github.com/" + REPO
+SITE = "https://derpsn.github.io/access-virus-ti-revive/" # the published address (canonical URLs, sitemap, previews)
 ROOT = os.path.dirname(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 
 # versions whose release text has no "New in" / "What's new in" part: a short summary written by hand
@@ -550,7 +551,7 @@ def features_section():
       move across other entries into an open submenu, for example from RAM A to its patches past RAM B. Arrow keys,
       Return and Esc work; a click elsewhere or switching to another window closes the menu. Since 0.8.25 they also look
       like the original's on Windows 10: menus with one column in Windows' modern look, menus with columns in the older one. Since 0.8.26 they open on the monitor they belong to on Linux, also with several monitors of different sizes.</p></div>
-      <figure class="shot"><img src="plugin-menus.png" width="1020" height="760"
+      <figure class="shot"><img loading="lazy" src="plugin-menus.png" width="1020" height="760"
       alt="The LOAD menu: the device entry, the bank list and RAM A's 128 patches in columns, beyond the plug-in window">
       <figcaption>The LOAD menu reaching beyond the plug-in window (Linux), drawn from your own Access installer. TI Revive
       is not affiliated with Access Music or Kemper.</figcaption></figure>
@@ -563,11 +564,11 @@ def features_section():
       still work. Esc or ? ends it. The notes are written for TI Revive, not taken from the Access manual. A greyed-out
       control says why, for example &ldquo;Inactive now: Chorus Type is Off.&rdquo; or &ldquo;depends on Input Mode,
       Input Atomizer.&rdquo;</p></div>
-      <figure class="shot"><img src="plugin-help-mode.png" width="1360" height="769"
+      <figure class="shot"><img loading="lazy" src="plugin-help-mode.png" width="1360" height="769"
       alt="The plug-in's help mode: a note explains the sub oscillator knob">
       <figcaption>Help mode, drawn from your own Access installer. TI Revive is not affiliated with Access Music or
       Kemper.</figcaption></figure>
-      <figure class="shot"><img src="plugin-help-inactive.png" width="907" height="513"
+      <figure class="shot"><img loading="lazy" src="plugin-help-inactive.png" width="907" height="513"
       alt="A help note on the greyed-out chorus delay knob: Inactive now, Chorus Type is Off">
       <figcaption>Help note on a greyed-out control, drawn from your own Access installer. TI Revive is not affiliated
       with Access Music or Kemper.</figcaption></figure>
@@ -654,7 +655,7 @@ def features_section():
       and converts libraries between <code>.mid</code> and <code>.syx</code>. A restore (since 0.8.30) writes only the
       programs that differ, into the Virus' RAM, and reads each one back; unlike Access' Control Center it never writes
       the Virus' flash.</p></div>
-      <figure class="shot"><img src="control-center.png" width="687" height="463"
+      <figure class="shot"><img loading="lazy" src="control-center.png" width="687" height="463"
       alt="TI Revive Control Center in the look of Access' Virus Control Center">
       <figcaption>The Control Center in the Access look, drawn from your own installer. The Burn To Flash ROM and OS
       Updater pages are only kept for the look: they say that TI Revive does not offer these functions. TI Revive is
@@ -666,7 +667,7 @@ def features_section():
       <p>Shows live what goes between TI Revive and the Virus, decoded: notes, parameter changes by name, dumps, the
       bank sync. It lists which programs use the Virus, shows the plug-in's and the broker's logs, and saves them all
       for a bug report in one file. It only watches; it never sends anything to the Virus.</p></div>
-      <figure class="shot"><img src="control-center-nerd-mode.png" width="860" height="620"
+      <figure class="shot"><img loading="lazy" src="control-center-nerd-mode.png" width="860" height="620"
       alt="Nerd mode: the plug-in plays notes and checks its bank cache, decoded live">
       <figcaption>The plug-in plays notes and checks its bank cache, decoded live.</figcaption></figure>
     </div>
@@ -736,19 +737,48 @@ NOTICES = [
 def notice_section():
     if not NOTICES:
         return ""
-    items = "".join(f"\n      <div><h3>{t}</h3><p>{x}</p></div>" for t, x in NOTICES)
+    items = "".join(f"\n      <div><p class=\"notice-title\">{t}</p><p>{x}</p></div>" for t, x in NOTICES)
     return f"""
 <section class="notice" aria-label="Important information">
   <div class="wrap"><div class="notice-box">
-      <h2>Important</h2>{items}
+      <p class="notice-head">Important</p>{items}
   </div></div>
 </section>"""
 # line coverage of vticore, measured like CI (no Access files, empty home): gcov over the test run
 COVERAGE, COVERAGE_DATE = "94 %", "16 Oct 2026"
 
-# the site: one page plus the changelog archive
-PAGES = [("index", "TI Revive", lambda latest, releases, sums: page_landing(latest, releases, sums)),
-         ("changelog", "TI Revive changelog", lambda latest, releases, sums: page_changelog_landing(releases))]
+# the site: one page plus the changelog archive (file name, title and description for search results and link
+# previews, content)
+PAGES = [("index", "TI Revive: the Access Virus TI on Windows 11, macOS and Linux",
+          "The Access Virus TI on Windows 11, macOS (Apple Silicon and Intel) and Linux without the old drivers: "
+          "a free, open-source plug-in that looks and works like Virus Control.",
+          lambda latest, releases, sums: page_landing(latest, releases, sums)),
+         ("changelog", "TI Revive changelog: every version",
+          "Every version of TI Revive, the free driver and plug-in for the Access Virus TI on Windows 11, macOS and "
+          "Linux, newest first.",
+          lambda latest, releases, sums: page_changelog_landing(releases))]
+
+
+def page_url(slug):
+    return SITE if slug == "index" else SITE + slug + ".html"
+
+
+def structured_data(latest):
+    """what the landing page is about, for search engines (schema.org SoftwareApplication)"""
+    data = {"@context": "https://schema.org", "@type": "SoftwareApplication", "name": "TI Revive",
+            "description": PAGES[0][2], "url": SITE, "applicationCategory": "MultimediaApplication",
+            "operatingSystem": "Windows 11, macOS 14.4 or newer, Linux", "softwareVersion": latest["tag_name"][1:],
+            "datePublished": latest["published_at"][:10], "license": "https://opensource.org/licenses/MIT",
+            "downloadUrl": GH + "/releases/latest", "codeRepository": GH, "image": SITE + "social.png",
+            "offers": {"@type": "Offer", "price": "0", "priceCurrency": "EUR"}}
+    return '\n<script type="application/ld+json">' + json.dumps(data, ensure_ascii=False) + "</script>"
+
+
+def sitemap(latest):
+    day = latest["published_at"][:10] # the pages change with each release
+    urls = "".join(f"\n  <url><loc>{page_url(slug)}</loc><lastmod>{day}</lastmod></url>" for slug, *_ in PAGES)
+    return ('<?xml version="1.0" encoding="UTF-8"?>\n<urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9">'
+            + urls + "\n</urlset>\n")
 
 
 def render(out, releases, sums):
@@ -762,12 +792,17 @@ def render(out, releases, sums):
     for img in SHARED_IMAGES:
         shutil.copy(os.path.join(ROOT, "docs", "images", img), os.path.join(out, img))
     latest = next(r for r in releases if not r.get("prerelease") and not r.get("draft"))
-    for slug, title, fn in PAGES:
-        page = (base.replace("{{title}}", title).replace("{{body}}", fn(latest, releases, sums))
+    for slug, title, desc, fn in PAGES:
+        page = (base.replace("{{title}}", html.escape(title)).replace("{{description}}", html.escape(desc))
+                .replace("{{url}}", page_url(slug)).replace("{{site}}", SITE)
+                .replace("{{head}}", structured_data(latest) if slug == "index" else "")
+                .replace("{{body}}", fn(latest, releases, sums))
                 .replace("{{version}}", latest["tag_name"][1:]).replace("{{date}}", date(latest["published_at"]))
                 .replace("{{repo}}", GH))
         with open(os.path.join(out, slug + ".html"), "w") as f:
             f.write(page)
+    with open(os.path.join(out, "sitemap.xml"), "w") as f:
+        f.write(sitemap(latest))
 
 
 def main():

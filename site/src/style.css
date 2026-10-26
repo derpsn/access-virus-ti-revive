@@ -44,8 +44,8 @@ code { font: 0.86em var(--mono); background: var(--raised); border: 1px solid va
 .notice { padding: clamp(1rem, 3vw, 1.75rem) 0 0; }
 .notice-box { border: 1px solid var(--line); border-left: 4px solid var(--rep); background: var(--surface);
   border-radius: 6px; padding: 1rem 1.25rem; max-width: 60rem; }
-.notice-box h2 { font-size: 1rem; font-weight: 600; margin: 0 0 0.5rem; color: var(--rep); }
-.notice-box h3 { font-size: 1rem; font-weight: 600; margin: 0.25rem 0 0.35rem; }
+.notice-box .notice-head { font-size: 1rem; font-weight: 600; margin: 0 0 0.5rem; color: var(--rep); }
+.notice-box .notice-title { font-size: 1rem; font-weight: 600; margin: 0.25rem 0 0.35rem; }
 .notice-box p { margin: 0; line-height: 1.55; }
 .notice-box div + div { margin-top: 0.9rem; }
 
