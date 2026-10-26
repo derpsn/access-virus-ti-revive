@@ -34,8 +34,13 @@ lead A = 3072 everywhere (stamprule.h timing_lead), safety net StampFloor (stamp
 under 1 s; DeviceOut pack), log 'timing: lead N frames, safety net on/off' at initialize and 'timing safety net
 moved N stamp(s) forward (M in total)' (at most every 2 s). A/B: timing-classic.on next to diag.on = before 0.8.35
 (A 1024 on Linux/macOS, no net), read when a plug-in instance starts (re-insert the plug-in / reopen the project).
-VTI_NATIVE_A still overrides A. vtitests 417, ctest 5/5 (Linux). NOT tested on hardware yet (Virus at the Mac):
-needs a Mac build (CI) for Logic A/B, and hil.sh on Linux (latency +2048 frames there).
+VTI_NATIVE_A still overrides A. vtitests 417, ctest 5/5 (Linux). Dev build c798e6b4 in ~/.vst3 (Linux).
+hil.sh on it (work/hil/20261026-071442, TI2): ALL PASS (max 0.45 ms, jitter <= 0.20 ms, export 1.00x); log per
+item 'timing: lead 3072 frames, safety net on'; the net moved 1 stamp per run, at the end of the run (the stop's
+messages from the worker); Virus sync reports per item 1/1/1/1/5 vs 1/2/1/1/3 with the old timing (24.10.) - the
+start quirk, H6 = forced reconnect. Reported latency now A + block + 640 (e.g. 4224 frames at 512).
+NEXT: user test in REAPER (Linux), then Mac build (CI) for Logic A/B (timing-classic.on in
+~/Library/Application Support/virus-ti-native).
 **Original's timing (E364, REA 2026-10-26):** stamps = device position NOW + offset + fixed lead 3072 (forced at
 every start, = reported latency) -> never late, whatever the host's block timing; a host table only shifts the song
 position/clock. Ours: timeline-based stamps with A = 1024 on Linux/macOS. Test running: VTI_NATIVE_A=3072 via
