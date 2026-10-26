@@ -17,6 +17,11 @@ parameters follow host CCs, not only the Standard Parameters -> follow-up widene
 every change; host_controller_kept + its test removed, 419 tests). NEXT: practical check in win10ref with the original
 (user prepares the VM: Live 11, CC 1 envelope ending at a known value, save; I decode the .als state), then the REAPER
 recall test with our build, then rc2.
+**E368 practical check DONE (win10ref, Live 11, user):** original VST3 state CC 1 = 0 (its VST3 maps only AT/PB,
+so Live never hands it CCs - #18 also happens with the original VST3); original VST2 state ch1 CC 1 = 107 (kept and
+saved). The widened follow-up (99cd092) matches. Reply draft mentions the VST3 limitation. NEXT: user quits Live in
+win10ref -> vm.sh detach, Virus back on Linux, install 99cd092 build in ~/.vst3, REAPER recall test (virusmon at
+project open: CC 1 with the last value in 'state sent'), then tag v0.8.35-rc2 separately + release CI, then post #18.
 NEXT for #14 (Snow reporter, 2026-10-26 comment): Snow editor - part 1 level meter empty, the name field empty after
 SAVE/LOAD/Init Patch, preset location (bank/number) not shown; then replies on #18 and #14 shown to the user first.
 **Decided (user, 2026-10-25 evening): WEEKLY releases.** Testing took most of the time for small rounds, so 0.8.35
