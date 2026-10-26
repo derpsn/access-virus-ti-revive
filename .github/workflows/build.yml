@@ -279,17 +279,27 @@ jobs:
           native plug-in **"TI Revive Virus Control"**: looks and works like the original Virus Control and runs
           natively on Windows, macOS (Apple Silicon and Intel) and Linux - no Rosetta, Wine or yabridge.
 
-          **New in 0.8.34: the LCD shows the control under the mouse, and a Virus switched on late stays in sync.**
+          **New in 0.8.35: libraries by drag and drop, a Snow plug-in, Init Patch, note timing like the original, and
+          a crash fix for FL Studio.**
 
-          - The LCD shows the control under the mouse, as in the original: its name, its value, the value stored in the
-            patch in brackets, and the part.
-          - A Virus switched on after the DAW no longer causes sync errors at every Play. The plug-in now also takes the
-            Virus' sample rate when it starts the audio later; before, it kept counting 44.1 kHz while the Virus ran at
-            48 kHz.
+          - Drag a library's .mid or .syx file from Explorer, Finder or your file manager onto the browser: it is copied
+            into Personal Libraries in your Documents folder and shown at once (our own addition; the original takes no
+            file drops).
+          - A Snow plug-in, "TI Revive Virus Control (Snow)": like the original's own Snow plug-in it shows the Snow's
+            editor with its 4 parts (VST3; not tested on a Snow yet - reports welcome).
+          - "Init Patch" in the LOAD menu: the init patch from your Access installer, to start a sound from scratch;
+            "Revert to" brings the previous sound back (our own addition).
+          - Notes are now sent to the Virus with the same head start as the original (3072 samples), and a note can no
+            longer be scheduled in the past when a DAW hands over its audio unevenly. On macOS and Linux the plug-in
+            therefore reports about 43 ms more latency; your DAW compensates it.
+          - macOS Audio Unit: deleting a channel while the plug-in window is open no longer crashes FL Studio (issue
+            #16).
+          - Greyed-out controls are drawn like in the original, and the plug-in's log names libraries with damaged
+            patches.
 
-          Tested on a Virus TI2 Desktop: Linux (REAPER and the automated run), macOS (MacBook Air M3, Ableton Live 12 and
-          the automated run), Windows 11 (VM, Ableton Live 11 and the automated run; the VM's USB timing cannot judge
-          timing).
+          Tested on a Virus TI2 Desktop: Linux (REAPER and the automated run), macOS (MacBook Air M3, Logic Pro; the
+          FL Studio crash with a test host that deletes the plug-in the same way). Not yet tested on Windows and on a
+          Snow.
 
           Earlier versions: their own release pages, and every version's changes on one page in the
           [changelog](https://derpsn.github.io/access-virus-ti-revive/changelog.html).
