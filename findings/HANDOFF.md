@@ -41,6 +41,13 @@ has none -> same as the original, answer the user; (2) blank name after SAVE/LOA
 libraries 0x20) before a patch load, TI Revive does not. vtirender can draw the Snow editor (VTIRENDER_SNOW=1).
 NEXT: observe the original in win10ref (load a ROM patch from its browser, what the Virus display shows), then
 implement the same bytes in load_patch (TDD) and compare on the TI2.
+**#14 point 3 DONE (2026-10-26 ~20:40):** usbmon capture of the original (captures/orig-load-origin-1951.pcapng):
+Virus-bank patch = Bank Select + Program Change, then the v12 dump with origin bytes ~0.3 s later; library = dump with
+0x20. TI Revive does the same now (E369); the user saw 'RAM-B 4 BadBrain M', 'ROM-A 0', 'LIB Fizzbomb' (the original adds
+an 'e' through an extra parameter pair after the dump - not copied). 422 tests, ctest 5/5, dev build 6af0981a.. in
+~/.vst3. Also noted (user): the original's browser marks the selected entry with a full blue background, ours only with
+a frame - to check. NEXT: browser selection look, then reply #14 (meter = original, name field = #18/rc4, location
+fixed in the next build).
 NEXT for #14 (Snow reporter, 2026-10-26 comment): Snow editor - part 1 level meter empty, the name field empty after
 SAVE/LOAD/Init Patch, preset location (bank/number) not shown; then replies on #18 and #14 shown to the user first.
 **Decided (user, 2026-10-25 evening): WEEKLY releases.** Testing took most of the time for small rounds, so 0.8.35

@@ -25,6 +25,18 @@ public:
     // the parts (bit per part) whose report is PRESET_QUIET old, and forgets them; 0 if none is due
     unsigned presets_due(Clock::time_point now);
 
+    // A patch from a bank of the Virus chosen in the plug-in (browser, LOAD menu, drag): the original sends Bank
+    // Select (MSB 0, LSB = bank: RAM A = 0, ROM A = 4) and a Program Change on the part's channel, so the Virus shows
+    // the location, and sends the patch into the edit buffer like after a report (capture 2026-10-26, E369).
+    // Empty for a part, bank or program out of range.
+    static std::vector<std::vector<uint8_t>> program_select(int part, int bank, int program);
+    // marks `part` like a report, with the chosen bank and patch (the Virus does not report a Program Change from
+    // the host); false if out of range
+    bool preset_chosen(int part, int bank, int patch, Clock::time_point now);
+    // the bank and patch chosen for `part` and not used yet; false if none
+    bool chosen(int part, int &bank, int &patch);
+    void forget_chosen(int part);
+
     // a report that decodes to several parameters (the same controller, told apart by a condition: CC 40 = Filter 1
     // Cutoff with the vocoder off, Vocoder Carrier Center Frequency with it on): only those whose condition holds now
     // (`holds(path, part)`), like the original; if none holds, all (no value is lost). One parameter is always kept.
@@ -62,6 +74,8 @@ private:
     std::mutex mu_;
     unsigned parts_ = 0;
     Clock::time_point due_{};
+    int chosen_bank_[16] = {-1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1};
+    int chosen_patch_[16] = {};
 };
 
 } // namespace vti

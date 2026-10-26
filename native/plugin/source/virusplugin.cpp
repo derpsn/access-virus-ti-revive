@@ -2722,6 +2722,7 @@ bool VirusPlugin::load_patch(int bank, int program, int part)
             return false;
         d = b->second[program];
     }
+    set_patch_origin(d, bank, program, bank < LIB_BASE); // the location the Virus shows (#14, E369)
     return load_dump(d, part);
 }
 
@@ -2740,11 +2741,21 @@ bool VirusPlugin::load_patch_remembered(int bank, int program, int part)
     {
         std::lock_guard<std::mutex> lk(banks_mu_);
         auto b = banks_.find(bank);
-        if (b == banks_.end() || program < 0 || program >= (int)b->second.size())
+        if (b == banks_.end() || program < 0 || program >= (int)b->second.size() || b->second[program].size() != 524)
             return false;
         d = b->second[program];
     }
-    if (!load_patch(bank, program, part))
+    // a patch from a bank of the Virus, like the original (E369): Bank Select + Program Change first, so the Virus
+    // shows the location ("RAM-B 4"), the patch itself 150 ms later the way a preset chosen on the Virus goes in
+    // (load_reported_presets: origin bytes, controller positions); without a Virus, and for libraries, at once
+    std::vector<std::vector<uint8_t>> select;
+    if (bank < LIB_BASE && out_ && out_->connected())
+        select = PanelFollow::program_select(part, bank, program);
+    if (!select.empty()) {
+        for (auto &m : select)
+            out_->send(m);
+        follow_.preset_chosen(part, bank, program, PanelFollow::Clock::now());
+    } else if (!load_patch(bank, program, part))
         return false;
     std::lock_guard<std::mutex> lk(history_mu_);
     history_.loaded(part, before, d);
@@ -2816,8 +2827,11 @@ bool VirusPlugin::load_dump(std::vector<uint8_t> d, int part)
 {
     if (d.size() != 524 || part < 0 || part > 15)
         return false;
+    // addressed to the part's edit buffer first, then upgraded - as an edit-buffer dump it gets the steps up to the
+    // current format (12), like the original (0x180083ae0 re-addresses, then 0x1800a0c00 upgrades, E369); a stored
+    // patch sent at version 9 was converted by the Virus itself, which dropped the location in bytes 11..12
+    d[7] = 0, d[8] = (uint8_t)part;
     RemoteDevice::upgrade_single(d);
-    d[7] = 0, d[8] = (uint8_t)part; // edit buffer of the part
     unsigned a = 0;
     for (int i = 5; i < 265; i++)
         a += d[i];
@@ -3775,7 +3789,12 @@ void VirusPlugin::load_reported_presets()
     const unsigned parts = follow_.presets_due(PanelFollow::Clock::now());
     for (int part = 0; parts && part < 16; part++)
         if (parts & (1u << part)) {
-            int bank = ui_value("Multi Part Parameter/Bank", part), patch = ui_value("Multi Part Parameter/Patch", part);
+            int bank = 0, patch = 0;
+            const bool chosen = follow_.chosen(part, bank, patch); // chosen in the plug-in, else reported by the Virus
+            if (chosen)
+                follow_.forget_chosen(part);
+            else
+                bank = ui_value("Multi Part Parameter/Bank", part), patch = ui_value("Multi Part Parameter/Patch", part);
             // the controllers before the load: only positions the plug-in knows are sent again
             std::vector<std::pair<std::string, int>> ctl;
             {
@@ -3793,8 +3812,8 @@ void VirusPlugin::load_reported_presets()
                         out_->send(m);
             if (ok) {
                 if (out_)
-                    out_->log("Virus TI native: preset chosen on the Virus, part %d bank %d patch %d: loaded from the "
-                              "bank cache\n", part + 1, bank, patch);
+                    out_->log("Virus TI native: preset chosen %s, part %d bank %d patch %d: loaded from the bank "
+                              "cache\n", chosen ? "in the plug-in" : "on the Virus", part + 1, bank, patch);
                 continue;
             }
             // Not in the cache (no firmware.bin for the ROM banks, RAM not synced yet): left alone. Reading the edit
