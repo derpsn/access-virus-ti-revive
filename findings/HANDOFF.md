@@ -35,6 +35,12 @@ portable (steady_clock), rc4 tagged on the fix.
 (issuecomment-6423689426, asks for an Ableton/macOS check). Reddit reply: the user posts it (rc4 link).** NEXT: install
 rc4 on Linux/win11/Mac (test machines latest), then #14 Snow points (level meter, empty name field, preset location),
 Windows VM test, hil-mac, round checklist, final 0.8.35.
+**#14 Snow points (E369, 2026-10-26 evening, user: 'go straight to 2'):** (1) level meter: the original Snow editor
+has none -> same as the original, answer the user; (2) blank name after SAVE/LOAD/Init: most likely the #18 white field
+(rc4), ask for a retest; (3) preset location: the original sets dump bytes 10..12 (0 / bank RAM 1-4 ROM 5.. / index;
+libraries 0x20) before a patch load, TI Revive does not. vtirender can draw the Snow editor (VTIRENDER_SNOW=1).
+NEXT: observe the original in win10ref (load a ROM patch from its browser, what the Virus display shows), then
+implement the same bytes in load_patch (TDD) and compare on the TI2.
 NEXT for #14 (Snow reporter, 2026-10-26 comment): Snow editor - part 1 level meter empty, the name field empty after
 SAVE/LOAD/Init Patch, preset location (bank/number) not shown; then replies on #18 and #14 shown to the user first.
 **Decided (user, 2026-10-25 evening): WEEKLY releases.** Testing took most of the time for small rounds, so 0.8.35
