@@ -4,8 +4,8 @@
 #include "model/devicestatus.h"
 #include "model/otherdrivers.h"
 #include <filesystem>
+#include <chrono>
 #include <fstream>
-#include <unistd.h>
 
 using namespace vti;
 
@@ -57,7 +57,7 @@ TEST(devicestatus_change_for_a_waiting_instance)
 TEST(other_virus_drivers_found_by_name)
 {
     namespace fs = std::filesystem;
-    const fs::path t = fs::temp_directory_path() / ("vti-drivers-" + std::to_string(getpid()));
+    const fs::path t = fs::temp_directory_path() / ("vti-drivers-" + std::to_string(std::chrono::steady_clock::now().time_since_epoch().count()));
     fs::remove_all(t);
     fs::create_directories(t / "midi" / "AURA Plugins Virus TI USB Midi.plugin");
     fs::create_directories(t / "midi" / "Some Other Synth.plugin");

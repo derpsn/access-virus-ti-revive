@@ -28,7 +28,9 @@ byte 10 = 80 (= the original VST2's pattern); saved after a stop -> 0, because R
 after the user's OK.
 **rc3 (user: 'works. include it in RC3', 2026-10-26 ~19:00):** name-field selection light blue instead of red on Linux
 (frame focus colour, E367 (3)); user checked in REAPER. rc2 tagged on 52190d0 (run 40372646035), rc3 on the colour fix.
-The #18 reply now points to rc3.
+The #18 reply now points to rc4: the rc2 run failed in native-windows (MSVC: test_devicestatus.cpp included
+unistd.h for getpid, from the AURA test 193273c) - rc2 and rc3 runs cancelled (tags stay, no releases), test made
+portable (steady_clock), rc4 tagged on the fix.
 NEXT for #14 (Snow reporter, 2026-10-26 comment): Snow editor - part 1 level meter empty, the name field empty after
 SAVE/LOAD/Init Patch, preset location (bank/number) not shown; then replies on #18 and #14 shown to the user first.
 **Decided (user, 2026-10-25 evening): WEEKLY releases.** Testing took most of the time for small rounds, so 0.8.35
