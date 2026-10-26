@@ -1313,6 +1313,12 @@ public:
             snprintf(t, sizeof t, "READING THE VIRUS' BANKS: ABOUT %d MIN LEFT", (eta + 59) / 60);
             renderer_.status_text(canvas_, "FNT_LCD_5x7_Rot.png", t, 480, 290, 381, 12);
         }
+        // "No Virus TI can be found": name another installed Virus driver under the page's text (our own, E366)
+        if (plugin_->ui_value("SystemStatus/Error", -1) == 3) {
+            const auto &lines = plugin_->other_driver_lines();
+            for (size_t i = 0; i < lines.size(); i++) // the page's container is at 520/62, its last line at 250
+                renderer_.status_text(canvas_, "FNT_LCD_5x7_Rot.png", lines[i], 529, 332 + 10 * (int)i, 351, 12);
+        }
         if (help_)
             draw_help(ctx);
         {

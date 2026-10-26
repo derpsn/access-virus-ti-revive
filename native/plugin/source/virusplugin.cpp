@@ -919,6 +919,15 @@ tresult PLUGIN_API VirusPlugin::initialize(FUnknown *context)
         out_->set_diag_path(own_cache_dir() + "/../diag.log");
     out_->log("Virus TI native: timing: lead %d frames, safety net %s%s\n", timing_a_, timing_classic_ ? "off" : "on",
               timing_classic_ ? " (timing-classic.on)" : "");
+#ifdef __APPLE__
+    // other drivers that take the Virus' interfaces (AURA's USB MIDI driver, the old Access drivers: E134, E366)
+    {
+        const auto found = other_virus_drivers("/Library/Audio/MIDI Drivers", "/Library/Audio/Plug-Ins/HAL");
+        other_driver_lines_ = other_driver_hint(found);
+        for (auto &d : found)
+            out_->log("Virus TI native: another Virus driver is installed: %s\n", d.c_str());
+    }
+#endif
     out_->on_panel([this](const std::vector<uint8_t> &m) { panel_message(m); });
     out_->on_idle([this] {
         if (int lay = sc_layout_.load(std::memory_order_relaxed); lay >= 0 && lay != sc_layout_seen_) {

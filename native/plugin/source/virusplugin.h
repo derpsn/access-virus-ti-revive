@@ -34,6 +34,7 @@
 #include "device/resampler.h"
 #include "device/sidechain.h"
 #include "model/devicestatus.h"
+#include "model/otherdrivers.h"
 #include "model/panelfollow.h"
 #include "model/remotedevice.h"
 #include "model/sysinfo.h"
@@ -337,6 +338,8 @@ public:
     // the part, remembered like a load (so "Revert to" brings the sound back)
     bool init_patch(int part);
     bool has_init_patch() const { return init_single_.size() == 524; } // set once in initialize()
+    // the "No Virus TI can be found" page's hint: another Virus driver installed (macOS, E366); set once in initialize()
+    const std::vector<std::string> &other_driver_lines() const { return other_driver_lines_; }
     std::string revert_name(int part);     // empty: no "Revert to" entry
     std::vector<std::string> recent_names(int part);
     bool copy_part(int from, int to);                    // a part's patch onto another part (drag and drop)
@@ -782,6 +785,7 @@ private:
     std::vector<std::vector<uint8_t>> default_; // a new instance's state (from the user's plug-in binary)
     std::vector<uint8_t> init_multi_; // the fixed multi dump as the original sends it at start-up (E321)
     std::vector<uint8_t> init_single_; // the init patch (upgraded), what a new instance's parts start with
+    std::vector<std::string> other_driver_lines_;
 
     // `stored`: the parts whose values are now their stored patch for the LCD's [value] (E353): all (a project or the
     // default state), one (a patch loaded into it), or none (a rename)

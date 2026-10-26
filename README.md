@@ -184,7 +184,9 @@ while the DAW runs.
 computer — the old Access drivers from a full Access install, or third-party ones such as the USB driver of Aura
 Plugins' Virus Editor — take the same interfaces, and TI Revive then shows "Virus TI not connected" (broker log:
 `claim interface 3: LIBUSB_ERROR_ACCESS`). Disable the other driver (macOS: System Settings → General → Login Items
-& Extensions → Driver Extensions, or its uninstaller) and restart.
+& Extensions → Driver Extensions, or its uninstaller) and restart. On macOS AURA's driver is the file `AURA Plugins
+Virus TI USB Midi.plugin` in /Library/Audio/MIDI Drivers: move it out (for example to the desktop) and restart; put it
+back to use AURA again. Since 0.8.35 the plug-in's "No Virus TI can be found" page names such a driver on macOS.
 
 **Connected but silent?** The Virus decides per part where its sound goes (analog outputs or USB 1-3). If another
 editor or driver changed that, the plug-in shows the right setting but the Virus still sends to an analog output:
@@ -472,7 +474,7 @@ hardware (TI2 Desktop) - details and raw numbers in [`findings/evidence.md`](fin
 - **Automation rate limit** (250 messages/s, coalesced per parameter): unthrottled parameter floods hung the Virus'
   audio until a power cycle within 4 minutes; with the limit a 4-minute full-load test (16 channels of notes + 32
   automation lanes) passes.
-- Checked with ThreadSanitizer and AddressSanitizer (one race in the broker connection found and fixed); 417 unit
+- Checked with ThreadSanitizer and AddressSanitizer (one race in the broker connection found and fixed); 418 unit
   tests run with every release build on Windows and Linux, plus two end-to-end tests on Linux in a virtual display
   (two editors of a duplicated track; the Control Center's window and close button).
 

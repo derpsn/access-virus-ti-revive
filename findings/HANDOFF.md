@@ -123,8 +123,11 @@ Sounds.syx' = Electro (Toxic) copy; site built locally, checked in headless Fire
 still due before the release). Test libraries removed from the Patches folder after each test. OPEN: Windows (Live)
 and Mac (Live/Logic) by hand.
 **#17 SOLVED (2026-10-26, E366):** reporter removed AURA's USB MIDI driver plugin -> works with the 3 m cable; user
-replied 10:37. Issue still open (close with the user). Idea for a later round: name a known other Virus driver on
-the 'no device' page.
+replied 10:37. Issue still open (close with the user). AURA hint BUILT (user: 'implement the AURA hint now'):
+model/otherdrivers.h + test, plug-in checks the two macOS folders at start-up (log line), editor draws 2 red lines
+on the no-device page; README 'One driver at a time' + AURA's file name; vtitests 418, ctest 5/5 (gui_duplicate_
+editors failed once, passed on the rerun - flaky). Not in 0.8.35-rc1; NOT tested on a Mac (would need a dummy
+'AURA Plugins Virus TI USB Midi.plugin' folder in /Library/Audio/MIDI Drivers + the Virus unplugged).
 **Issue #17 (2026-10-25, TI Desktop OS 5.1.7, MacBook Pro M2 Max, macOS 26.6.2, Cubase 15, TI Revive 0.8.33):** Virus
 rarely detected; better with a 1 m cable than 2-3 m, port-dependent, CalDigit TS4 dock on another port; the user also
 runs AURA Virus HE (works with the 3 m cable). Screenshots only: System Information shows 'Virus TI' at 12 Mb/s
