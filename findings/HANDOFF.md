@@ -22,6 +22,10 @@ so Live never hands it CCs - #18 also happens with the original VST3); original 
 saved). The widened follow-up (99cd092) matches. Reply draft mentions the VST3 limitation. NEXT: user quits Live in
 win10ref -> vm.sh detach, Virus back on Linux, install 99cd092 build in ~/.vst3, REAPER recall test (virusmon at
 project open: CC 1 with the last value in 'state sent'), then tag v0.8.35-rc2 separately + release CI, then post #18.
+**REAPER recall check DONE (2026-10-26 ~18:51):** saved during playback -> state ch1 CC 1 = 80 + part 1 dump
+byte 10 = 80 (= the original VST2's pattern); saved after a stop -> 0, because REAPER itself sends CC 1 = 0 at the stop
+(virusmon). Dev build a22695c8.. in ~/.vst3. NEXT: tag v0.8.35-rc2 (separately), release CI, then post #18 + Reddit
+after the user's OK.
 NEXT for #14 (Snow reporter, 2026-10-26 comment): Snow editor - part 1 level meter empty, the name field empty after
 SAVE/LOAD/Init Patch, preset location (bank/number) not shown; then replies on #18 and #14 shown to the user first.
 **Decided (user, 2026-10-25 evening): WEEKLY releases.** Testing took most of the time for small rounds, so 0.8.35
