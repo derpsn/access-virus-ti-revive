@@ -1443,8 +1443,14 @@ tresult PLUGIN_API VirusPlugin::process(ProcessData &data)
             ParamID id = q->getParameterId();
             if (id >= MIDI_MAP_BASE) { // a controller, aftertouch or pitch bend of channel (id - base) / 0x1000
                 uint8_t m[3];
-                if (size_t n = mapped_message((int)((id - MIDI_MAP_BASE) >> 12) & 15, (int)(id & 0xFFF), v, m))
+                if (size_t n = mapped_message((int)((id - MIDI_MAP_BASE) >> 12) & 15, (int)(id & 0xFFF), v, m)) {
                     add(at(offset), m, n); // data bytes always < 0x80 (hostmidi.h)
+                    size_t w = pu_w_.load(std::memory_order_relaxed); // a controller's value for the state: below
+                    if ((m[0] & 0xF0) == 0xB0 && w - pu_r_.load(std::memory_order_acquire) < PU_SLOTS) {
+                        pu_[w % PU_SLOTS] = {id, m[2]};
+                        pu_w_.store(w + 1, std::memory_order_release);
+                    }
+                }
                 continue;
             }
             auto it = params_.find(id);
@@ -1820,6 +1826,14 @@ void VirusPlugin::drain_param_updates()
         latest_[u.id] = u.value;
     }
     for (auto &kv : latest_) {
+        if (kv.first >= MIDI_MAP_BASE) { // a controller from the host: the channel keeps mod wheel, volume, ... (#18)
+            const int ch = (int)((kv.first - MIDI_MAP_BASE) >> 12) & 15;
+            const std::vector<uint8_t> m = {(uint8_t)(0xB0 | ch), (uint8_t)(kv.first & 0x7F), (uint8_t)kv.second};
+            for (auto &c : dev_.decode(m))
+                if (PanelFollow::host_controller_kept(c.path))
+                    set_part_value(ch, c.path, c.value);
+            continue;
+        }
         auto it = params_.find(kv.first);
         if (it != params_.end())
             set_part_value(it->second.part, it->second.path, kv.second);

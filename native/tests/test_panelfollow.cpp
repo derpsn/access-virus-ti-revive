@@ -127,3 +127,15 @@ TEST(panel_reports_globals_have_no_part)
     CHECK(r[0].part == -1 && r[0].value == 4); // the new part, not the old one
     CHECK(r[1].part == 2 && r[1].value == 9);  // per-part parameters keep their part
 }
+
+// Issue #18 follow-up: a controller from the host (mod wheel, expression, volume, ...) is kept as the channel's
+// "Internal MIDI Standard Parameters" value, like one reported by the Virus - so the project stores it and the
+// position comes back after a preset change. Other page A controllers are synth parameters of the patch: not these.
+TEST(panelfollow_host_controllers_kept)
+{
+    CHECK(PanelFollow::host_controller_kept("Internal MIDI Standard Parameters/01 Modulation Wheel"));
+    CHECK(PanelFollow::host_controller_kept("Internal MIDI Standard Parameters/07 Volume"));
+    CHECK(!PanelFollow::host_controller_kept("Patch Common/Panorama"));
+    CHECK(!PanelFollow::host_controller_kept("Internal MIDI Standard Parameters"));
+    CHECK(!PanelFollow::host_controller_kept(""));
+}

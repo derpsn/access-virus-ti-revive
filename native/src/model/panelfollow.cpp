@@ -57,4 +57,10 @@ const std::vector<std::string> &PanelFollow::restored_controllers()
     return c;
 }
 
+bool PanelFollow::host_controller_kept(const std::string &path)
+{
+    static const std::string prefix = "Internal MIDI Standard Parameters/";
+    return path.size() > prefix.size() && path.compare(0, prefix.size(), prefix) == 0;
+}
+
 } // namespace vti

@@ -279,27 +279,35 @@ jobs:
           native plug-in **"TI Revive Virus Control"**: looks and works like the original Virus Control and runs
           natively on Windows, macOS (Apple Silicon and Intel) and Linux - no Rosetta, Wine or yabridge.
 
-          **New in 0.8.35: libraries by drag and drop, a Snow plug-in, Init Patch, note timing like the original, and
-          a crash fix for FL Studio.**
+          **New in 0.8.35: libraries by drag and drop, a Snow plug-in, Init Patch, note timing like the original, the
+          mod wheel from your DAW, and a crash fix for FL Studio.**
 
           - Drag a library's .mid or .syx file from Explorer, Finder or your file manager onto the browser: it is copied
             into Personal Libraries in your Documents folder and shown at once (our own addition; the original takes no
             file drops).
           - A Snow plug-in, "TI Revive Virus Control (Snow)": like the original's own Snow plug-in it shows the Snow's
-            editor with its 4 parts (VST3; not tested on a Snow yet - reports welcome).
+            editor with its 4 parts (VST3; a first user report on a Snow: parameters and sound work, the level meter and
+            the patch name in the part bar still have open issues).
           - "Init Patch" in the LOAD menu: the init patch from your Access installer, to start a sound from scratch;
             "Revert to" brings the previous sound back (our own addition).
           - Notes are now sent to the Virus with the same head start as the original (3072 samples), and a note can no
             longer be scheduled in the past when a DAW hands over its audio unevenly. On macOS and Linux the plug-in
             therefore reports about 43 ms more latency; your DAW compensates it.
+          - Controllers from your DAW reach the Virus: the mod wheel, sustain, expression and every other controller
+            0-119 (before, only pitch bend and aftertouch did; issue #18). The mod wheel, breath, foot, volume and
+            expression positions are kept in the project, like the ones the Virus reports.
+          - The part's name field closes again when you confirm it without a change (it stayed white and hid later
+            names; issue #18).
           - macOS Audio Unit: deleting a channel while the plug-in window is open no longer crashes FL Studio (issue
             #16).
           - Greyed-out controls are drawn like in the original, and the plug-in's log names libraries with damaged
-            patches.
+            patches. On macOS, the "No Virus TI can be found" page names another Virus driver when one is installed
+            (AURA's, issue #17).
 
-          Tested on a Virus TI2 Desktop: Linux (REAPER and the automated run), macOS (MacBook Air M3, Logic Pro; the
-          FL Studio crash with a test host that deletes the plug-in the same way). Not yet tested on Windows and on a
-          Snow.
+          Tested on a Virus TI2 Desktop: Linux (REAPER and the automated run; the controllers and the name field in
+          REAPER), macOS (MacBook Air M3, Logic Pro; the FL Studio crash with a test host that deletes the plug-in the
+          same way). Not yet tested on Windows;
+          the controllers not yet in Ableton Live.
 
           Earlier versions: their own release pages, and every version's changes on one page in the
           [changelog](https://derpsn.github.io/access-virus-ti-revive/changelog.html).
