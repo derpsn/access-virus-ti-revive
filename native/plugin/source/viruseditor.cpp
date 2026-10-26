@@ -1344,6 +1344,14 @@ public:
         if (env_debug())
             fprintf(stderr, "mouse down %.0f,%.0f -> %s %s\n", event.mousePosition.x, event.mousePosition.y,
                     h.element ? h.element->type.c_str() : "-", h.element ? h.element->get("Parameter").c_str() : "");
+        // the browser list clicked last has the focus: its selection filled, the other's framed; any other click takes
+        // the focus away, like the original's focus view (E318)
+        const int focus = h.element && h.element->type == "PatchBrowser"
+                              ? EditorRenderer::browser_pane(h.element->get("Parameter")) : -1;
+        if (focus != renderer_.focused_pane) {
+            renderer_.focused_pane = focus;
+            invalid();
+        }
         // right button: a menu under the point takes it, even under another control (the wavetable menu inside the
         // oscillator ring); knobs and buttons ignore it like in the original (VSTGUI: left button only)
         if (event.buttonState.isRight() && !help_) {

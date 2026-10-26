@@ -127,6 +127,7 @@ public:
     // original keeps the selection per pane, not per bank)
     std::map<int, std::pair<int, std::set<int>>> selected;
     std::map<int, std::set<int>> highlighted; // bank -> entries of a drag: its source and the slot under the cursor
+    int focused_pane = -1; // the browser pane clicked last: its selection is filled, the other one framed (E318)
     std::string value_text(const std::string &param, int v) const;
     std::vector<std::pair<int, std::string>> menu_entries(const std::string &param) const; // (value, text), menu order
     // the value a control draws for `v`: clamped to the range like the original (Init: Vocoder Bands 127 -> "32"),

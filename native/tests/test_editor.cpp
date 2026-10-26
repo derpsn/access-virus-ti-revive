@@ -348,6 +348,28 @@ TEST(editor_render_displays)
     CHECK(cx == 5 + 1 + 2 * 20 && bottom == 130 + 130 - 1);
 }
 
+// E318: the original fills a selected entry in the selection blue while its list has the focus (the pane clicked last),
+// else it only frames it (user, 2026-10-26: "the selected has a complete blue background and not only the border")
+TEST(editor_render_browser_focus_fills)
+{
+    Rig g;
+    g.r->bank_patch = [](int bank, int program) { return "B" + std::to_string(bank) + "P" + std::to_string(program); };
+    g.r->selected[1] = {0, {5}}; // the rig's browser is pane 1, showing bank 0
+    auto blue = [](auto &c) {
+        size_t n = 0;
+        for (auto &f : c.fills)
+            n += f.c.r == 65 && f.c.g == 111 && f.c.b == 204;
+        return n;
+    };
+    g.r->focused_pane = 1;
+    g.r->render(g.canvas);
+    CHECK(blue(g.canvas) == 1); // filled, no frame
+    g.canvas.clear();
+    g.r->focused_pane = 0; // the other pane has the focus: framed
+    g.r->render(g.canvas);
+    CHECK(blue(g.canvas) == 0 && g.canvas.lines >= 4);
+}
+
 TEST(editor_render_browser)
 {
     Rig g;

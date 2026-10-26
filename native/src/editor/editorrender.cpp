@@ -147,8 +147,13 @@ void EditorRenderer::patch_browser(Canvas &c, const Element &e, int x, int y, in
             text(c, hfont, bank_patch(bank, p), nx, ny, 60, 9, "Top Left", 1.0);
             continue;
         }
+        if (on && pane == focused_pane) { // the list has the focus: filled, like a drag's entries
+            c.fill(nx - 2, ny, 63, 11, Rgba{65, 111, 204, 255});
+            text(c, hfont.empty() ? font : hfont, bank_patch(bank, p), nx, ny, 60, 9, "Top Left", 1.0);
+            continue;
+        }
         text(c, font, bank_patch(bank, p), nx, ny, 60, 9, "Top Left", match ? 1.0 : 0.3);
-        if (on) { // the original frames each selected entry (1 px, measured colour)
+        if (on) { // without the focus the original frames each selected entry (1 px, measured colour)
             const Rgba fc{65, 111, 204, 255};
             double l = nx - 2.5, t = ny - 0.5, r = nx + 60.5, b = ny + 10.5;
             c.line(l, t, r, t, fc), c.line(r, t, r, b, fc), c.line(r, b, l, b, fc), c.line(l, b, l, t, fc);
