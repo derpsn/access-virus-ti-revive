@@ -31,6 +31,10 @@ after the user's OK.
 The #18 reply now points to rc4: the rc2 run failed in native-windows (MSVC: test_devicestatus.cpp included
 unistd.h for getpid, from the AURA test 193273c) - rc2 and rc3 runs cancelled (tags stay, no releases), test made
 portable (steady_clock), rc4 tagged on the fix.
+**v0.8.35-rc4 PUBLISHED (2026-10-26 ~19:10, run 40373523502 all green, pre-release, 6 assets). #18 reply posted
+(issuecomment-6423689426, asks for an Ableton/macOS check). Reddit reply: the user posts it (rc4 link).** NEXT: install
+rc4 on Linux/win11/Mac (test machines latest), then #14 Snow points (level meter, empty name field, preset location),
+Windows VM test, hil-mac, round checklist, final 0.8.35.
 NEXT for #14 (Snow reporter, 2026-10-26 comment): Snow editor - part 1 level meter empty, the name field empty after
 SAVE/LOAD/Init Patch, preset location (bank/number) not shown; then replies on #18 and #14 shown to the user first.
 **Decided (user, 2026-10-25 evening): WEEKLY releases.** Testing took most of the time for small rounds, so 0.8.35
