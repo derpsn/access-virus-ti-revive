@@ -1341,6 +1341,9 @@ public:
     void onMouseDownEvent(MouseDownEvent &event) override
     {
         Hit h = renderer_.hit_test((int)event.mousePosition.x, (int)event.mousePosition.y);
+        // a handle of a filter / envelope display wins over the control drawn above it (the cutoff knob, #19)
+        if (Hit g = renderer_.graph_hit_test((int)event.mousePosition.x, (int)event.mousePosition.y); g.element && !help_)
+            h = g;
         if (env_debug())
             fprintf(stderr, "mouse down %.0f,%.0f -> %s %s\n", event.mousePosition.x, event.mousePosition.y,
                     h.element ? h.element->type.c_str() : "-", h.element ? h.element->get("Parameter").c_str() : "");
@@ -1416,6 +1419,31 @@ public:
         drag_value_ = plugin_->ui_value(param, h.part);
         if (e.type == "NameEdit" && event.clickCount >= 2) { // rename the part's patch
             edit_name(h);
+            event.consumed = true;
+            return;
+        }
+        // filter / envelope displays: drag a handle like the original's KEnvelope (E371) - relative, the handle stays
+        // under the mouse, Shift = 4x finer; Ctrl+click puts its parameters back to the middle (resonance to 0)
+        if (e.type == "ADSTREnvelope" || (e.type.size() == 11 && e.type.compare(3, 8, "Response") == 0)) {
+            graph_handle_ = -1;
+            auto hs = renderer_.graph_handles(e, h.x, h.y, h.part);
+            double best = 1e9;
+            for (size_t i = 0; i < hs.size(); i++) {
+                const double dx = std::abs(event.mousePosition.x - hs[i].x), dy = std::abs(event.mousePosition.y - hs[i].y);
+                if (dx <= 5 && dy <= 5 && dx + dy < best)
+                    best = dx + dy, graph_handle_ = (int)i;
+            }
+            if (graph_handle_ >= 0) {
+                const auto &gh = hs[(size_t)graph_handle_];
+                if (event.modifiers.has(ModifierKey::Control)) {
+                    for (const std::string *pp : {&gh.xparam, &gh.yparam})
+                        if (!pp->empty())
+                            plugin_->ui_set(*pp, h.part, pp->find("/Resonance") != std::string::npos ? 0 : 64);
+                    graph_handle_ = -1;
+                    invalid();
+                } else
+                    graph_anchor(gh, event.mousePosition, event.modifiers.has(ModifierKey::Shift));
+            }
             event.consumed = true;
             return;
         }
@@ -1533,6 +1561,29 @@ public:
         if (!drag_.element || !event.buttonState.isLeft())
             return;
         const Element &e = *drag_.element;
+        if (graph_handle_ >= 0) { // a filter / envelope handle (mouse down)
+            auto hs = renderer_.graph_handles(e, drag_.x, drag_.y, drag_.part);
+            if ((size_t)graph_handle_ >= hs.size())
+                return;
+            const auto &gh = hs[(size_t)graph_handle_];
+            const bool fine = event.modifiers.has(ModifierKey::Shift);
+            if (fine != graph_fine_) // the modifier changed: go on from here, no jump (like the original)
+                graph_anchor(gh, event.mousePosition, fine);
+            const double f = graph_fine_ ? 4.0 : 1.0;
+            const double tx = graph_hx_ + (event.mousePosition.x - graph_mx_) / f;
+            const double ty = graph_hy_ + (event.mousePosition.y - graph_my_) / f;
+            for (const std::string *pp : {&gh.xparam, &gh.yparam})
+                if (!pp->empty())
+                    drag_set(*pp, drag_.part, renderer_.graph_value(e, drag_.x, drag_.y, drag_.part, *pp, tx, ty));
+            invalidRect(CRect(drag_.x - 4, drag_.y - 4, drag_.x + e.w + 4, drag_.y + e.h + 4));
+            for (auto &other : plugin_->take_changed()) // the knobs of these parameters move along
+                for (auto &rc : shown_rects(other))
+                    invalidRect(CRect(rc[0] - 2, rc[1] - 2, rc[0] + rc[2] + 2, rc[1] + rc[3] + 2));
+            invalidRect(CRect(200, 470, 560, 512));
+            partial_ = true;
+            event.consumed = true;
+            return;
+        }
         if (e.type == "ArpEdit") {
             if (arp_length_drag_ >= 0) { // length from the right edge position (inverse of the width table)
                 int cx, bottom;
@@ -1628,6 +1679,7 @@ public:
             show_selection(dnd_pane_, dnd_bank_);
         }
         renderer_.highlighted.clear();
+        graph_handle_ = -1;
         drag_ = {};
         drag_rects_.clear();
         renderer_.pressed = nullptr;
@@ -1914,6 +1966,14 @@ private:
         }
     }
     int arp_length_drag_ = -1; // ArpEdit: step whose length is dragged
+    // filter / envelope display drag (E371): the grabbed handle, where it and the mouse were at the (re)anchor
+    int graph_handle_ = -1;
+    double graph_hx_ = 0, graph_hy_ = 0, graph_mx_ = 0, graph_my_ = 0;
+    bool graph_fine_ = false;
+    void graph_anchor(const EditorRenderer::GraphHandle &gh, const CPoint &m, bool fine)
+    {
+        graph_hx_ = gh.x, graph_hy_ = gh.y, graph_mx_ = m.x, graph_my_ = m.y, graph_fine_ = fine;
+    }
     DragSend drag_sent_;       // a drag sends a value once, not on every mouse move (dragsend.h)
     void drag_set(const std::string &path, int part, int value)
     {

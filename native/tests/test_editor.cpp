@@ -898,3 +898,76 @@ TEST(editor_small_arrows_hit_with_slack)
     CHECK(r.hit_test(25, 32).element && r.hit_test(25, 32).element->type == "Button");    // below: the button wins
     CHECK(r.hit_test(25, 30).element && r.hit_test(25, 30).element->type == "IncButton"); // 1 px below, free
 }
+
+// #19 / E371: the filter and envelope displays are dragged by their handles like the original's (KEnvelope):
+// filter X = cutoff, Y = resonance (band stop: X only); envelope attack X, decay X + sustain Y, sustain start Y,
+// slope end Y = sustain time, release X. The value for a handle position inverts the drawing (round trip).
+TEST(editor_graph_handles_round_trip)
+{
+    Rig g;
+    g.vals[{"Env/Attack", 0}] = 40, g.vals[{"Env/Decay", 0}] = 70, g.vals[{"Env/Sustain", 0}] = 90;
+    g.vals[{"Env/Sustain Time", 0}] = 80, g.vals[{"Env/Release", 0}] = 50;
+    g.vals[{"Filter 1/Cutoff", 0}] = 60, g.vals[{"Filter 1/Resonance", 0}] = 30;
+    Hit env = g.r->hit_test(100, 100);
+    CHECK(env.element && env.element->type == "ADSTREnvelope");
+    auto hs = g.r->graph_handles(*env.element, env.x, env.y, 0);
+    CHECK(hs.size() == 5);
+    CHECK(hs[0].xparam == "Env/Attack" && hs[0].yparam.empty());
+    CHECK(hs[1].xparam == "Env/Decay" && hs[1].yparam == "Env/Sustain");
+    CHECK(hs[2].xparam.empty() && hs[2].yparam == "Env/Sustain");
+    CHECK(hs[3].xparam.empty() && hs[3].yparam == "Env/Sustain Time");
+    CHECK(hs[4].xparam == "Env/Release" && hs[4].yparam.empty());
+    for (auto &h : hs) {
+        if (!h.xparam.empty())
+            CHECK(std::abs(g.r->graph_value(*env.element, env.x, env.y, 0, h.xparam, h.x, h.y) -
+                           g.vals[{h.xparam, 0}]) <= 1);
+        if (!h.yparam.empty())
+            CHECK(std::abs(g.r->graph_value(*env.element, env.x, env.y, 0, h.yparam, h.x, h.y) -
+                           g.vals[{h.yparam, 0}]) <= 1);
+    }
+    // moving the attack handle 0.47 px per unit to the right: +10 units
+    CHECK(std::abs(g.r->graph_value(*env.element, env.x, env.y, 0, "Env/Attack", hs[0].x + 4.7, hs[0].y) - 50) <= 1);
+    Hit lp = g.r->hit_test(30, 60);
+    CHECK(lp.element && lp.element->type == "LP4Response");
+    auto fh = g.r->graph_handles(*lp.element, lp.x, lp.y, 0);
+    CHECK(fh.size() == 1 && fh[0].xparam == "Filter 1/Cutoff" && fh[0].yparam == "Filter 1/Resonance");
+    CHECK(std::abs(g.r->graph_value(*lp.element, lp.x, lp.y, 0, "Filter 1/Cutoff", fh[0].x, fh[0].y) - 60) <= 1);
+    CHECK(std::abs(g.r->graph_value(*lp.element, lp.x, lp.y, 0, "Filter 1/Resonance", fh[0].x, fh[0].y) - 30) <= 2);
+    Hit bs = g.r->hit_test(300, 60);
+    CHECK(bs.element && bs.element->type == "BS4Response");
+    auto bh = g.r->graph_handles(*bs.element, bs.x, bs.y, 0);
+    CHECK(bh.size() == 1 && bh[0].yparam.empty()); // band stop: cutoff only
+}
+
+// #19: the filter display sits inside the big cutoff knob (MaskedKnob, drawn later, covering it): a click on the
+// display's handle must reach the display, a click elsewhere on the knob stays the knob's
+TEST(editor_graph_hit_under_a_knob)
+{
+    static const char *L = R"(<?xml version="1.0"?>
+<Editor><Frame width="200" height="200"><Container><Size left="0" top="0" width="200" height="200"/>
+ <LP4Response Parameter="Filter 1/Cutoff" NormalHandle="handle.png"><Size left="40" top="40" width="80" height="60"/></LP4Response>
+ <MaskedKnob Parameter="Filter 1/Cutoff" NormalBack="knob.png"><Size left="10" top="10" width="140" height="140"/></MaskedKnob>
+</Container></Frame></Editor>)";
+    Rig g;
+    EditorLayout lay;
+    std::string err;
+    CHECK(lay.load(Bytes(L, L + strlen(L)), err));
+    EditorRenderer r(lay, *g.cond, g.dev, g.ed);
+    g.vals[{"Filter 1/Cutoff", 0}] = 64, g.vals[{"Filter 1/Resonance", 0}] = 0;
+    r.values = g.r->values;
+    Hit plain = r.hit_test(45, 45);
+    CHECK(plain.element && plain.element->type == "MaskedKnob");
+    Hit d = r.hit_test(45, 45); // no handle there
+    CHECK(!r.graph_hit_test(45, 45).element);
+    Hit lp = r.graph_hit_test(0, 0);
+    CHECK(!lp.element);
+    // the handle: find it through the display's own geometry
+    Hit disp;
+    disp.element = &lay.elements[0].children[0];
+    disp.x = 40, disp.y = 40;
+    auto hs = r.graph_handles(*disp.element, 40, 40, 0);
+    CHECK(hs.size() == 1);
+    Hit at = r.graph_hit_test((int)hs[0].x, (int)hs[0].y);
+    CHECK(at.element && at.element->type == "LP4Response" && at.x == 40 && at.y == 40);
+    (void)d;
+}

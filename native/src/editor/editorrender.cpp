@@ -180,17 +180,27 @@ void EditorRenderer::remote_browser(Canvas &c, const Element &e, int x, int y, i
 // the control factory, not yet decompiled): x0 = 4, top = 3, bottom = h - 4 inside the element, 0.47 px per value
 // unit for attack/decay/release, a hold segment of 62 px at sustain 127 .. 94 px at sustain 0, a ~29 px sustain-time
 // segment (flat at 64), gradient fill under the curve, line in ForeColor, 7x7 handles, a marker at the slope end.
-void EditorRenderer::envelope(Canvas &c, const Element &e, int x, int y, int part, double alpha)
+EditorRenderer::EnvGeom EditorRenderer::env_geom(const Element &e, int x, int y, int part) const
 {
     const std::string &first = e.get("Parameter"); // "<Envelope>/Attack"
     std::string g = first.substr(0, first.rfind('/') + 1);
     int A = values(g + "Attack", part), D = values(g + "Decay", part), S = values(g + "Sustain", part);
     int T = values(g + "Sustain Time", part), R = values(g + "Release", part);
-    const double k = 0.47, top = y + 3, bottom = y + e.h - 4, h = bottom - top;
-    double x0 = x + 4, x1 = x0 + A * k, x2 = x1 + 62 * std::pow(D / 127.0, 1.07), x3 = x2 + 62 + (127 - S) * 0.252;
-    double x4 = x3 + 29, x5 = x4 + R * 0.457;
-    double ys = bottom - S / 127.0 * h;
-    double yt = std::max(top, std::min(bottom, ys - (T - 64) / 63.0 * h * 0.5)); // slope: up for T > 64
+    EnvGeom q;
+    const double k = 0.47;
+    q.top = y + 3, q.bottom = y + e.h - 4, q.h = q.bottom - q.top;
+    q.x0 = x + 4, q.x1 = q.x0 + A * k, q.x2 = q.x1 + 62 * std::pow(D / 127.0, 1.07);
+    q.x3 = q.x2 + 62 + (127 - S) * 0.252, q.x4 = q.x3 + 29, q.x5 = q.x4 + R * 0.457;
+    q.ys = q.bottom - S / 127.0 * q.h;
+    q.yt = std::max(q.top, std::min(q.bottom, q.ys - (T - 64) / 63.0 * q.h * 0.5)); // slope: up for T > 64
+    return q;
+}
+
+void EditorRenderer::envelope(Canvas &c, const Element &e, int x, int y, int part, double alpha)
+{
+    const EnvGeom q = env_geom(e, x, y, part);
+    const double top = q.top, bottom = q.bottom, h = q.h, x0 = q.x0, x1 = q.x1, x2 = q.x2, x3 = q.x3, x4 = q.x4,
+                 x5 = q.x5, ys = q.ys, yt = q.yt;
     // curve y for every column x0..x5
     auto curve = [&](double px) {
         if (px <= x1)
@@ -242,14 +252,72 @@ void EditorRenderer::envelope(Canvas &c, const Element &e, int x, int y, int par
 
 // filter response displays (LP4/HP4/BP4/BS4Response): measured on the original - line (0,25,65) at the base level
 // h/2 - 3, handle (NormalHandle) at x = 3 + cutoff/127 * (w - 17), slope 3 px per px; resonance lifts the handle
-void EditorRenderer::filter_response(Canvas &c, const Element &e, int x, int y, int part)
+EditorRenderer::FilterGeom EditorRenderer::filter_geom(const Element &e, int x, int y, int part) const
 {
     const std::string &cut = e.get("Parameter"); // "Filter N/Cutoff"
     std::string res = cut.substr(0, cut.rfind('/') + 1) + "Resonance";
     int cv = values(cut, part), rv = values(res, part);
+    FilterGeom q;
+    q.top = y + 4, q.base = y + e.h / 2 - 3;
+    // the highpass handle sits 5 px right of the lowpass mapping, the bandpass 1 px (measured)
+    q.x_off = e.type == "HP4Response" ? 5 : e.type == "BP4Response" ? 1 : 0;
+    q.hx = x + 7 + cv / 127.0 * (e.w - 21) + q.x_off, q.hy = q.base - rv / 127.0 * (q.base - q.top);
+    return q;
+}
+
+std::vector<EditorRenderer::GraphHandle> EditorRenderer::graph_handles(const Element &e, int x, int y, int part) const
+{
+    const std::string &p = e.get("Parameter");
+    if (p.empty())
+        return {};
+    const std::string g = p.substr(0, p.rfind('/') + 1);
+    if (e.type == "ADSTREnvelope") {
+        const EnvGeom q = env_geom(e, x, y, part);
+        return {{q.x1, q.top, g + "Attack", ""},
+                {q.x2, q.ys, g + "Decay", g + "Sustain"},
+                {q.x3, q.ys, "", g + "Sustain"},
+                {q.x4, q.yt, "", g + "Sustain Time"},
+                {q.x5, q.bottom, g + "Release", ""}};
+    }
+    if (e.type.size() == 11 && e.type.compare(3, 8, "Response") == 0) {
+        const FilterGeom q = filter_geom(e, x, y, part);
+        // the band stop has no vertical handle (E371); the cutoff may be "Offset for FilterLink" as bound
+        return {{q.hx, q.hy, p, e.type == "BS4Response" ? "" : g + "Resonance"}};
+    }
+    return {};
+}
+
+int EditorRenderer::graph_value(const Element &e, int x, int y, int part, const std::string &param, double hx,
+                                double hy) const
+{
+    auto clamp = [](double v) { return (int)std::lround(std::max(0.0, std::min(127.0, v))); };
+    const std::string name = param.substr(param.rfind('/') + 1);
+    if (e.type == "ADSTREnvelope") {
+        const EnvGeom q = env_geom(e, x, y, part);
+        if (name == "Attack")
+            return clamp((hx - q.x0) / 0.47);
+        if (name == "Decay")
+            return clamp(127 * std::pow(std::max(0.0, hx - q.x1) / 62, 1 / 1.07));
+        if (name == "Sustain")
+            return clamp((q.bottom - hy) / q.h * 127);
+        if (name == "Sustain Time")
+            return clamp(64 + (q.ys - hy) / (q.h * 0.5) * 63);
+        if (name == "Release")
+            return clamp((hx - q.x4) / 0.457);
+        return 0;
+    }
+    const FilterGeom q = filter_geom(e, x, y, part);
+    if (name == "Resonance")
+        return clamp((q.base - hy) / (q.base - q.top) * 127);
+    return clamp((hx - x - 7 - q.x_off) / (e.w - 21) * 127);
+}
+
+void EditorRenderer::filter_response(Canvas &c, const Element &e, int x, int y, int part)
+{
+    const FilterGeom q = filter_geom(e, x, y, part);
     const Rgba col{0, 25, 65, 255};
-    double left = x + 3, right = x + e.w - 3, top = y + 4, bottom = y + e.h - 1;
-    double base = y + e.h / 2 - 3, hx = x + 7 + cv / 127.0 * (e.w - 21), hy = base - rv / 127.0 * (base - top);
+    double left = x + 3, right = x + e.w - 3, bottom = y + e.h - 1;
+    double base = q.base, hx = q.hx - q.x_off, hy = q.hy;
     double drop = (bottom - base) / 3;
     // the curve sits 1 px left of and above the handle geometry (measured on the original)
     auto ln = [&](double a, double b, double c2, double d) { c.line(a - 0.5, b - 0.5, c2 - 0.5, d - 0.5, col); };
@@ -645,6 +713,8 @@ bool EditorRenderer::hit(const Element &e, int ox, int oy, int inherited, int px
     const std::string &c = own.empty() ? cond : own; // the closest condition that shows this element
     int x = ox + e.x, y = oy + e.y;
     bool inside = px >= x && px < x + e.w && py >= y && py < y + e.h;
+    if (slack < 0) // graph_hit_test: only the filter / envelope displays
+        inside = inside && (e.type == "ADSTREnvelope" || (e.type.size() == 11 && e.type.compare(3, 8, "Response") == 0));
     if (slack > 0) // the second pass: only the small arrow buttons, a few px taller
         inside = (e.type == "IncButton" || e.type == "DecButton") && e.h < 12 && px >= x && px < x + e.w &&
                  py >= y - slack && py < y + e.h + slack;
@@ -731,6 +801,19 @@ Hit EditorRenderer::hit_test(int px, int py, bool include_disabled) const
         for (auto &e : layout_.elements)
             hit(e, 0, 0, -1, px, py, h, include_disabled, std::string(), false, 4);
     return h;
+}
+
+Hit EditorRenderer::graph_hit_test(int px, int py) const
+{
+    Hit h;
+    for (auto &e : layout_.elements)
+        hit(e, 0, 0, -1, px, py, h, false, std::string(), false, -1);
+    if (!h.element)
+        return h;
+    for (auto &g : graph_handles(*h.element, h.x, h.y, h.part))
+        if (std::abs(px - g.x) <= 5 && std::abs(py - g.y) <= 5)
+            return h;
+    return Hit{};
 }
 
 Hit EditorRenderer::menu_hit_test(int px, int py) const

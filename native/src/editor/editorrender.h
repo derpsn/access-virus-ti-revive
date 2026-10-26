@@ -121,6 +121,18 @@ public:
     std::vector<std::array<int, 4>> param_rects(const std::string &param) const;
     // the browser entry (program 0..127) under a point inside a PatchBrowser hit, or -1
     static int browser_entry(const Hit &h, int x, int y);
+    // The draggable handles of a filter response or ADSTR envelope display (E371): position (editor coordinates, the
+    // drawing's geometry) and the parameters a drag moves horizontally / vertically ("" = none). Empty for others.
+    struct GraphHandle {
+        double x = 0, y = 0;
+        std::string xparam, yparam;
+    };
+    std::vector<GraphHandle> graph_handles(const Element &e, int x, int y, int part) const;
+    // a filter / envelope display whose handle is within 5 px of the point, even under another control (the filter
+    // display lies inside the big cutoff knob); no element if none
+    Hit graph_hit_test(int px, int py) const;
+    // the value of `param` that puts its handle at (hx, hy) - the inverse of the drawing, clamped to 0..127
+    int graph_value(const Element &e, int x, int y, int part, const std::string &param, double hx, double hy) const;
     // the pane of a PatchBrowser's parameter "Browser N/Selected Bank": N (0 upper, 1 lower), 0 for anything else
     static int browser_pane(const std::string &param);
     // pane -> (the bank it showed, its selected programs), framed only while the pane shows that bank (E318: the
@@ -152,6 +164,14 @@ private:
              const std::string &cond = std::string(), bool menus_only = false, int slack = 0) const;
     void patch_browser(Canvas &c, const Element &e, int x, int y, int bank, int pane);
     void remote_browser(Canvas &c, const Element &e, int x, int y, int selected);
+    struct EnvGeom { // the ADSTR display's stage points (envelope())
+        double x0, x1, x2, x3, x4, x5, top, bottom, h, ys, yt;
+    };
+    EnvGeom env_geom(const Element &e, int x, int y, int part) const;
+    struct FilterGeom { // the filter display's handle and levels (filter_response())
+        double hx, hy, base, top, x_off;
+    };
+    FilterGeom filter_geom(const Element &e, int x, int y, int part) const;
     void envelope(Canvas &c, const Element &e, int x, int y, int part, double alpha);
     void filter_response(Canvas &c, const Element &e, int x, int y, int part);
     void osc_classic(Canvas &c, const Element &e, int x, int y, int part);
