@@ -75,6 +75,13 @@ out of envelope()/filter_response(), inverse; test editor_graph_handles_round_tr
 Dev build eaae5e70.. in ~/.vst3, user test pending. NEXT: commit point 2 after the user's check; point 3 ArpEdit like
 KStepSequencer (span incl. following off steps, length/velocity grab zones, relative, Alt+click toggles a step);
 point 4 ARP actions (Shift L/R, Random note/velo/length, Reset, Fill Up; buttons + context menu); then rc6 + #19 reply.
+**Point 2 COMMITTED 8d5067c** (user: 'works. nice'; fix: the cutoff MaskedKnob covers the filter display ->
+graph_hit_test lets a handle win). **Points 3 + 4 BUILT, NOT COMMITTED:** EditorRenderer::arp_grab/arp_cell (grab
+zones like KStepSequencer, test), editor relative drag on one step + Alt+click toggles a step; model/arpactions.h
+(shift, random pattern/velocity/length, reset, fill up; tests/test_arpactions.cpp, CMake list), VirusPlugin::arp_action
+(reads 32 steps, sends only changes), ExecuteARP* KickButtons routed in ui_set, right-click menu on 'Arpeggiator User
+Pattern/...' controls. 432 tests, ctest 5/5. Dev build c8284207.. in ~/.vst3, user test pending. NEXT: commit 3+4
+after the check, rc6, #19 reply (no patch-wide randomize in the original).
 NEXT for #14 (Snow reporter, 2026-10-26 comment): Snow editor - part 1 level meter empty, the name field empty after
 SAVE/LOAD/Init Patch, preset location (bank/number) not shown; then replies on #18 and #14 shown to the user first.
 **Decided (user, 2026-10-25 evening): WEEKLY releases.** Testing took most of the time for small rounds, so 0.8.35
