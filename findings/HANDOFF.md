@@ -5,6 +5,12 @@
 IMidiMapping) and sent; name field removed on focus loss (Enter without a change left it white). Linux REAPER test
 with the dev build (b85dcb1f.. in ~/.vst3, previous plug-in in ~/.vst3-backup/before-issue18-1749): CC 1 on the wire
 (virusmon), cutoff audible, name field 'works'. vtitests 419/419, ctest 5/5 (gui_duplicate_editors flaky once, again).
+**#18 follow-up (user: 'make the follow up and a new RC and write a response', 8690cf8):** host CCs update the
+channel's 'Internal MIDI Standard Parameters' (state + preset re-send); not statically checked whether the original
+updates them from host MIDI (its state keeps them, it re-sends them after a preset change, E152). Dev build 31f4a896..
+in ~/.vst3; recall test with the user pending (CC1 end value -> save -> reopen -> virusmon shows it in 'state sent').
+Release notes for rc2 written (build.yml). Reply draft work/issue18-reply.md. NEXT: recall test, then tag v0.8.35-rc2
+(separately), then post #18 after the user's OK.
 NEXT for #14 (Snow reporter, 2026-10-26 comment): Snow editor - part 1 level meter empty, the name field empty after
 SAVE/LOAD/Init Patch, preset location (bank/number) not shown; then replies on #18 and #14 shown to the user first.
 **Decided (user, 2026-10-25 evening): WEEKLY releases.** Testing took most of the time for small rounds, so 0.8.35
