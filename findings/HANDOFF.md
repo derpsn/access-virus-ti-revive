@@ -152,6 +152,10 @@ rule 1); favicon.svg; SoftwareApplication JSON-LD on the landing page; sitemap.x
 screenshot but the first; the "Important" box uses no headings so the h1 is the page's first heading.
 Tests: scripts/tests/test_site_seo.py (8). Open, the user's part: Google Search Console - add
 https://derpsn.github.io/access-virus-ti-revive/, verify (HTML file or meta tag), submit sitemap.xml.
+Deployed 2026-10-26 (main 04bc44b, site run green, live tags checked with curl). Search Console: the user's
+verification file site/src/googleec62795eb211ed59.html is on main (cdb7992) and live - KEEP it, Google re-checks it.
+NEXT (user): Verify in Search Console, submit sitemap.xml, optionally request indexing. Main merged into
+round-0.8.35 twice (71a3e9b, 6ea94e6); the round's NEXT is unchanged (Windows VM test, hil-mac, checklist, release).
 
 ## START HERE (2026-10-25): round 0.8.34 on branch `round-0.8.34` (fresh from main d7033d0)
 
