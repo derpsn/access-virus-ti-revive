@@ -58,11 +58,6 @@ public:
     // new patch starts with the current mod wheel, breath, ... positions
     static const std::vector<std::string> &restored_controllers();
 
-    // a controller from the host (VST3 MIDI mapping) whose value the plug-in keeps for the channel: the "Internal MIDI
-    // Standard Parameters" (mod wheel, breath, volume, expression, ...), like the ones the Virus reports; other
-    // controllers change synth parameters of the patch
-    static bool host_controller_kept(const std::string &path);
-
 private:
     std::mutex mu_;
     unsigned parts_ = 0;

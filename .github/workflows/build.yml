@@ -294,8 +294,8 @@ jobs:
             longer be scheduled in the past when a DAW hands over its audio unevenly. On macOS and Linux the plug-in
             therefore reports about 43 ms more latency; your DAW compensates it.
           - Controllers from your DAW reach the Virus: the mod wheel, sustain, expression and every other controller
-            0-119 (before, only pitch bend and aftertouch did; issue #18). The mod wheel, breath, foot, volume and
-            expression positions are kept in the project, like the ones the Virus reports.
+            0-119 (before, only pitch bend and aftertouch did; issue #18). Like in the original, the values they set
+            (mod wheel, volume, synth parameters sent as controllers) are kept and saved with the project.
           - The part's name field closes again when you confirm it without a change (it stayed white and hid later
             names; issue #18).
           - macOS Audio Unit: deleting a channel while the plug-in window is open no longer crashes FL Studio (issue

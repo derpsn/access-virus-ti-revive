@@ -11,6 +11,12 @@ updates them from host MIDI (its state keeps them, it re-sends them after a pres
 in ~/.vst3; recall test with the user pending (CC1 end value -> save -> reopen -> virusmon shows it in 'state sent').
 Release notes for rc2 written (build.yml). Reply draft work/issue18-reply.md. NEXT: recall test, then tag v0.8.35-rc2
 (separately), then post #18 after the user's OK.
+**E368 (REA, 2026-10-26):** the original runs every host MIDI event through its device-description decoder
+(processEvents 0x18002ffa0 -> 0x18007aa50 -> CIntermediateMIDIQueue -> 0x180080740 -> 0x180062070), so ALL decoded
+parameters follow host CCs, not only the Standard Parameters -> follow-up widened (drain_param_updates decodes and sets
+every change; host_controller_kept + its test removed, 419 tests). NEXT: practical check in win10ref with the original
+(user prepares the VM: Live 11, CC 1 envelope ending at a known value, save; I decode the .als state), then the REAPER
+recall test with our build, then rc2.
 NEXT for #14 (Snow reporter, 2026-10-26 comment): Snow editor - part 1 level meter empty, the name field empty after
 SAVE/LOAD/Init Patch, preset location (bank/number) not shown; then replies on #18 and #14 shown to the user first.
 **Decided (user, 2026-10-25 evening): WEEKLY releases.** Testing took most of the time for small rounds, so 0.8.35

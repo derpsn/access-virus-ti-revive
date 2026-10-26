@@ -1826,12 +1826,13 @@ void VirusPlugin::drain_param_updates()
         latest_[u.id] = u.value;
     }
     for (auto &kv : latest_) {
-        if (kv.first >= MIDI_MAP_BASE) { // a controller from the host: the channel keeps mod wheel, volume, ... (#18)
+        if (kv.first >= MIDI_MAP_BASE) { // a controller from the host (#18): like the original (E368), every
+            // parameter it carries takes its value - mod wheel, volume, ... and the synth parameters of page A - so
+            // the editor and the project state follow it
             const int ch = (int)((kv.first - MIDI_MAP_BASE) >> 12) & 15;
             const std::vector<uint8_t> m = {(uint8_t)(0xB0 | ch), (uint8_t)(kv.first & 0x7F), (uint8_t)kv.second};
             for (auto &c : dev_.decode(m))
-                if (PanelFollow::host_controller_kept(c.path))
-                    set_part_value(ch, c.path, c.value);
+                set_part_value(ch, c.path, c.value);
             continue;
         }
         auto it = params_.find(kv.first);
