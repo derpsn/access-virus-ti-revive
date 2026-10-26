@@ -85,6 +85,10 @@ after the check, rc6, #19 reply (no patch-wide randomize in the original).
 **#19 points 3+4 COMMITTED 9e11408** (user: Fill Up 'works' once the pattern length was below 32; log showed
 length 32 first). Release notes for #19, 432 tests in README/site. #19 reply draft work/issue19-reply.md (rc6 link).
 NEXT: on the user's OK tag v0.8.35-rc6 separately, release CI, post #19.
+**v0.8.35-rc6 PUBLISHED** (run 40397692349: the mac job got no runner and was cancelled after 15 min, rerun
+--failed -> all green, pre-release, 6 assets). #19 reply posted. NEXT for the round: test machines on rc6 (Linux,
+win11, Mac), Windows VM test, hil-mac, round checklist (risk.py --round 0.8.35), final 0.8.35; #16 waits for the
+reporter; open: segment hits in the graph displays, the original's 'e' (E370) not copied.
 NEXT for #14 (Snow reporter, 2026-10-26 comment): Snow editor - part 1 level meter empty, the name field empty after
 SAVE/LOAD/Init Patch, preset location (bank/number) not shown; then replies on #18 and #14 shown to the user first.
 **Decided (user, 2026-10-25 evening): WEEKLY releases.** Testing took most of the time for small rounds, so 0.8.35
