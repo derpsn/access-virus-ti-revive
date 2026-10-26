@@ -45,7 +45,12 @@ old timing); net moved 1 stamp at the end. Separate item: which message at the r
 Branch round-0.8.35 PUSHED, CI TEST BUILD 0.8.35 run 40279333536 (5c8cbdd): ALL GREEN (first macOS/Windows build
 of KeepLoaded, Snow class, timing). Artifacts ~/Downloads/TI-Revive-0.8.35-test. Mac PUSHED:
 ~/Downloads/TI-Revive-0.8.35-mac (pkg 6393864f.. = CI, INSTALL-COMMAND.txt, Install test build.command, hil/).
-NEXT on the Mac: user installs; Logic A/B (timing-classic.on in ~/Library/Application Support/virus-ti-native);
+DONE on the Mac (E365, 2026-10-26 ~07:40-07:55): installed 0.8.35 CI; #16 fixed (autest 2/2 clean, no pin);
+Logic A/B: new timing clean in every run; old timing ALSO clean today (E363 late notes not reproduced: buffers
+2048..128, 150 BPM, part 2 on Out 2) - improvement unproven, by design like the original. Mac left on the new timing
+(timing-classic.on removed). NEXT: #14 reply (pre-release, Snow plug-in, drop, Init, Logic: diag.log with the mode
+line, how the analog outputs come back into Logic - Apollo input monitoring?), Windows VM test of the round.
+OLD NEXT: user installs; Logic A/B (timing-classic.on in ~/Library/Application Support/virus-ti-native);
 autest --delete-open 40 (no AUTEST_PIN) on the installed 0.8.35 AU for #16.
 **Original's timing (E364, REA 2026-10-26):** stamps = device position NOW + offset + fixed lead 3072 (forced at
 every start, = reported latency) -> never late, whatever the host's block timing; a host table only shifts the song
