@@ -200,6 +200,12 @@ terminal or a browser during the render. Two short freezes in the same tests wer
 measured). This is a bug in REAPER's window layer, not in TI Revive: it happens with REAPER's own ReaSynth as well,
 without TI Revive in the project. Until Cockos fixes it, stay in REAPER until the render window has closed.
 
+**REAPER: a part's volume jumps to the maximum at Stop.** If your MIDI items contain volume controllers (CC 7, as many
+imported MIDI files do at the start), REAPER's *Reset MIDI CC/Pitch to neutral on playback stop* sends CC 7 = 127 when
+you stop, and the Virus turns it into part volume 127; Play brings the item's value back. TI Revive passes every
+controller on, like the original's VST2. To keep the volume, enter `cc7=-1` under *Preferences > Audio > Playback >
+CC reset overrides*, or switch the reset on stop off (the override is tested with REAPER 7.83 on Linux).
+
 **Third USB output (USB 3).** Like the original, the Virus sends a third stereo output over USB only when you choose
 it: in the plug-in, open PATCH UTILITY → Preferences and set "Input and Output Configuration" to "3 Outs / No Input".
 Then a part's output can be "USB3 L+R" (greyed out before), and its sound comes out of the plug-in's **Out 3**. The

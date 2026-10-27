@@ -16,7 +16,10 @@ scratchpad auto/reaper.ini.bak. README 'Good to know' + site details note (same 
 inactive in ours -> not an opacity question. Delay/Clock condition = 'Parameter Visbility/Pages/Classic Delay Clock'
 (Mode 1..5, Type 0, Send >= 1), Reverb/Mode = 'Parameter Active Condition/Reverb/Send is active'; both Menus (Reverb
 Type too). REA subagent running: what the original's vtable+0xC0 'is active' checks, groups, menus.
-(4) Mac export: fixed in 0.8.31 (E316/E317); left: one 2.5 ms note at 44.1/128, jitter 0.26-0.40 ms. 0.8.35's lead
+(2) Cosmetic DONE = E375: nothing to fix - the original (win10ref, user screenshot, Init, FX 2) greys the same
+controls as our renderer, grey levels within measuring error; the old 0.8.21 note was wrong. rc7 PUBLISHED (run
+40564530449 all green, pre-release, 6 assets). win10ref running with the Virus attached (detach after the user quits
+Live). (4) Mac export: fixed in 0.8.31 (E316/E317); left: one 2.5 ms note at 44.1/128, jitter 0.26-0.40 ms. 0.8.35's lead
 3072 likely covers it -> measure on the Mac (exports 44.1/128 + 48/128, timing_analysis.py) together with the Snow AU
 test on one CI test build.
 **2026-10-27 (user: 'do the small fixes first and also the fade one. after the we talk about about the "e" prefix'):**
