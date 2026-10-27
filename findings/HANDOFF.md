@@ -1,6 +1,14 @@
 # HANDOFF
 
 ## START HERE (2026-10-25, afternoon): round 0.8.35 on branch `round-0.8.35` (from main 6f8b79d) - a small UI/library round
+**2026-10-27 evening (user: '1. Snow plug-in as AU, 2. the cosmetic fix, 3. find out what causes the REAPER
+behaviour, 4. the Mac export; before you start make RC7'):** v0.8.35-rc7 tagged on 211ddb5 + pushed, release CI run
+40564530449 (watching). (1) Snow AU BUILT on Linux side, NOT COMMITTED, Mac build untested: factoryorder.h +
+test_factoryorder.cpp (440 tests), entry.cpp hand-written factory (Snow first when plugin.vst3/Contents/Resources/
+snow-first exists), CMake vti_add_au() -> VirusTINative_AU + VirusTINative_AU_Snow ('TI Revive Virus Control
+(Snow).component', subtype VTIs, own Cocoa view class), Info.plist.in placeholders, dev-mac.yml (auval both),
+mac-build-release.sh, postinstall, uninstaller. The Mac has no cmake/checkout -> one CI test build after 2-4, then
+Mac tests together (autest on the Snow component, Logic). Docs (README Snow bullet, architecture.md, notes) pending.
 **2026-10-27 (user: 'do the small fixes first and also the fade one. after the we talk about about the "e" prefix'):**
 #19 confirmed by the reporter on rc6 (close at the 0.8.35 release, user). Reddit mod-wheel question = #18, fixed since
 rc4 (reply draft given to the user). (1) Segment drag BUILT, NOT COMMITTED (E372): graph_segments/graph_grabs/
