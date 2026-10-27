@@ -19,7 +19,11 @@ Type too). REA subagent running: what the original's vtable+0xC0 'is active' che
 (2) Cosmetic DONE = E375: nothing to fix - the original (win10ref, user screenshot, Init, FX 2) greys the same
 controls as our renderer, grey levels within measuring error; the old 0.8.21 note was wrong. rc7 PUBLISHED (run
 40564530449 all green, pre-release, 6 assets). win10ref running with the Virus attached (detach after the user quits
-Live). (4) Mac export: fixed in 0.8.31 (E316/E317); left: one 2.5 ms note at 44.1/128, jitter 0.26-0.40 ms. 0.8.35's lead
+Live). Snow AU COMMITTED 0549a4d (E374; README/notes/architecture, 440 tests), pushed; win10ref off, Virus back on Linux,
+broker socket active. CI TEST BUILD 0.8.35 run 40568526535 (0549a4d) started = first Mac compile of the Snow AU.
+NEXT (Mac session, Virus to the Mac): install the CI pkg (INSTALL-COMMAND.txt + 'Install test build.command'),
+autest on 'TI Revive Virus Control (Snow).component' (Snow class? editor PNG), Logic: both units listed, Snow
+editor, sound; exports 44.1/128 + 48/128 -> timing_analysis.py. (4) Mac export: fixed in 0.8.31 (E316/E317); left: one 2.5 ms note at 44.1/128, jitter 0.26-0.40 ms. 0.8.35's lead
 3072 likely covers it -> measure on the Mac (exports 44.1/128 + 48/128, timing_analysis.py) together with the Snow AU
 test on one CI test build.
 **2026-10-27 (user: 'do the small fixes first and also the fade one. after the we talk about about the "e" prefix'):**
