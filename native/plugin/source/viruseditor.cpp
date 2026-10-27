@@ -1437,17 +1437,16 @@ public:
             event.consumed = true;
             return;
         }
-        // filter / envelope displays: drag a handle like the original's KEnvelope (E371) - relative, the handle stays
-        // under the mouse, Shift = 4x finer; Ctrl+click puts its parameters back to the middle (resonance to 0)
+        // filter / envelope displays: drag a handle or a line segment like the original's KEnvelope (E371, E372) -
+        // relative, the handle stays under the mouse, Shift = 4x finer; Ctrl+click puts the grabbed parameters back
+        // to the middle (resonance to 0)
         if (e.type == "ADSTREnvelope" || (e.type.size() == 11 && e.type.compare(3, 8, "Response") == 0)) {
-            graph_handle_ = -1;
-            auto hs = renderer_.graph_handles(e, h.x, h.y, h.part);
-            double best = 1e9;
-            for (size_t i = 0; i < hs.size(); i++) {
-                const double dx = std::abs(event.mousePosition.x - hs[i].x), dy = std::abs(event.mousePosition.y - hs[i].y);
-                if (dx <= 5 && dy <= 5 && dx + dy < best)
-                    best = dx + dy, graph_handle_ = (int)i;
-            }
+            const auto hs = renderer_.graph_grabs(e, h.x, h.y, h.part);
+            graph_handle_ = renderer_.graph_grab(e, h.x, h.y, h.part, (int)event.mousePosition.x,
+                                                 (int)event.mousePosition.y);
+            if (graph_handle_ >= 0 && hs[(size_t)graph_handle_].xparam.empty() &&
+                hs[(size_t)graph_handle_].yparam.empty())
+                graph_handle_ = -1; // a segment that moves nothing (the filter's fall)
             if (graph_handle_ >= 0) {
                 const auto &gh = hs[(size_t)graph_handle_];
                 if (event.modifiers.has(ModifierKey::Control)) {
@@ -1578,8 +1577,8 @@ public:
         if (!drag_.element || !event.buttonState.isLeft())
             return;
         const Element &e = *drag_.element;
-        if (graph_handle_ >= 0) { // a filter / envelope handle (mouse down)
-            auto hs = renderer_.graph_handles(e, drag_.x, drag_.y, drag_.part);
+        if (graph_handle_ >= 0) { // a filter / envelope handle or segment (mouse down)
+            auto hs = renderer_.graph_grabs(e, drag_.x, drag_.y, drag_.part);
             if ((size_t)graph_handle_ >= hs.size())
                 return;
             const auto &gh = hs[(size_t)graph_handle_];
@@ -1983,7 +1982,8 @@ private:
     }
     EditorRenderer::ArpGrab arp_grab_; // ArpEdit: the grabbed step and what is dragged (E371)
     int arp_len0_ = 0, arp_vel0_ = 0;  // its length and velocity when grabbed
-    // filter / envelope display drag (E371): the grabbed handle, where it and the mouse were at the (re)anchor
+    // filter / envelope display drag (E371, E372): the grab (renderer graph_grabs index), where its handle and the
+    // mouse were at the (re)anchor
     int graph_handle_ = -1;
     double graph_hx_ = 0, graph_hy_ = 0, graph_mx_ = 0, graph_my_ = 0;
     bool graph_fine_ = false;

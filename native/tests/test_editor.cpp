@@ -939,6 +939,59 @@ TEST(editor_graph_handles_round_trip)
     CHECK(bh.size() == 1 && bh[0].yparam.empty()); // band stop: cutoff only
 }
 
+// E372: the line segments of the displays grab too, like the original's KEnvelope: the parameters of the handle at
+// the segment's end (envelope: attack, decay + sustain, sustain, sustain time, release; lowpass: the flat part cutoff
+// only, the rise to the peak cutoff + resonance, the fall nothing); handles first, a click beside the lines nothing
+TEST(editor_graph_segment_grabs)
+{
+    Rig g;
+    g.vals[{"Env/Attack", 0}] = 40, g.vals[{"Env/Decay", 0}] = 70, g.vals[{"Env/Sustain", 0}] = 90;
+    g.vals[{"Env/Sustain Time", 0}] = 80, g.vals[{"Env/Release", 0}] = 50;
+    g.vals[{"Filter 1/Cutoff", 0}] = 60, g.vals[{"Filter 1/Resonance", 0}] = 30;
+    // a click 30 % along the segment (away from the handle at its end): the segment path must answer, not a handle
+    auto grab_mid = [&](const Hit &h, const EditorRenderer::GraphSegment &s) {
+        auto all = g.r->graph_grabs(*h.element, h.x, h.y, 0);
+        const size_t handles = g.r->graph_handles(*h.element, h.x, h.y, 0).size();
+        int i = g.r->graph_grab(*h.element, h.x, h.y, 0, (int)std::lround(s.x0 + 0.3 * (s.x1 - s.x0)),
+                                (int)std::lround(s.y0 + 0.3 * (s.y1 - s.y0)));
+        CHECK(i >= 0 && (size_t)i >= handles && (size_t)i < all.size());
+        return i >= 0 ? all[(size_t)i] : EditorRenderer::GraphHandle{};
+    };
+    Hit env = g.r->hit_test(100, 100);
+    CHECK(env.element && env.element->type == "ADSTREnvelope");
+    auto es = g.r->graph_segments(*env.element, env.x, env.y, 0);
+    CHECK(es.size() == 5);
+    const char *want[5][2] = {{"Env/Attack", ""}, {"Env/Decay", "Env/Sustain"}, {"", "Env/Sustain"},
+                              {"", "Env/Sustain Time"}, {"Env/Release", ""}};
+    for (size_t i = 0; i < es.size() && i < 5; i++) {
+        auto gr = grab_mid(env, es[i]);
+        CHECK(gr.xparam == want[i][0] && gr.yparam == want[i][1]);
+    }
+    // a handle wins over the segments that meet there
+    auto hs = g.r->graph_handles(*env.element, env.x, env.y, 0);
+    CHECK(g.r->graph_grab(*env.element, env.x, env.y, 0, (int)hs[1].x, (int)hs[1].y) == 1);
+    Hit lp = g.r->hit_test(30, 60);
+    auto ls = g.r->graph_segments(*lp.element, lp.x, lp.y, 0);
+    CHECK(ls.size() == 3);
+    auto flat = grab_mid(lp, ls[0]), fall = grab_mid(lp, ls[2]);
+    CHECK(flat.xparam == "Filter 1/Cutoff" && flat.yparam.empty());
+    // the rise is 4 px wide, all of it within the peak handle's 5 px: its grab is the handle's anyway
+    CHECK(ls[1].grab.xparam == "Filter 1/Cutoff" && ls[1].grab.yparam == "Filter 1/Resonance");
+    CHECK(fall.xparam.empty() && fall.yparam.empty()); // a hit, but nothing to drag
+    // a flat segment is 4 px tall (+-2), 4 px off is nothing
+    const int fx = (int)std::lround((ls[0].x0 + ls[0].x1) / 2), fy = (int)std::lround(ls[0].y0);
+    CHECK(g.r->graph_grab(*lp.element, lp.x, lp.y, 0, fx, fy - 2) >= 0);
+    CHECK(g.r->graph_grab(*lp.element, lp.x, lp.y, 0, fx, fy - 4) < 0);
+    Hit bs = g.r->hit_test(300, 60);
+    auto bss = g.r->graph_segments(*bs.element, bs.x, bs.y, 0);
+    CHECK(bss.size() == 4);
+    // (the notch walls here are under 4 px wide and near the handle: their grabs checked directly)
+    CHECK(grab_mid(bs, bss[0]).xparam == "Filter 1/Cutoff" && grab_mid(bs, bss[0]).yparam.empty());
+    CHECK(bss[1].grab.xparam == "Filter 1/Cutoff" && bss[1].grab.yparam.empty());
+    CHECK(bss[2].grab.xparam.empty() && bss[2].grab.yparam.empty());
+    CHECK(grab_mid(bs, bss[3]).xparam.empty());
+}
+
 // #19: the filter display sits inside the big cutoff knob (MaskedKnob, drawn later, covering it): a click on the
 // display's handle must reach the display, a click elsewhere on the knob stays the knob's
 TEST(editor_graph_hit_under_a_knob)
@@ -969,6 +1022,15 @@ TEST(editor_graph_hit_under_a_knob)
     CHECK(hs.size() == 1);
     Hit at = r.graph_hit_test((int)hs[0].x, (int)hs[0].y);
     CHECK(at.element && at.element->type == "LP4Response" && at.x == 40 && at.y == 40);
+    // a segment counts too (E372): the flat part left of the peak
+    auto ss = r.graph_segments(*disp.element, 40, 40, 0);
+    CHECK(!ss.empty());
+    Hit seg = r.graph_hit_test((int)std::lround((ss[0].x0 + ss[0].x1) / 2), (int)std::lround(ss[0].y0));
+    CHECK(seg.element && seg.element->type == "LP4Response");
+    // a segment that drags nothing (the fall after the peak) leaves the click to the knob, as before segments
+    CHECK(ss.size() == 3 && ss[2].grab.xparam.empty() && ss[2].grab.yparam.empty());
+    const double fx = ss[2].x0 + 0.8 * (ss[2].x1 - ss[2].x0), fy = ss[2].y0 + 0.8 * (ss[2].y1 - ss[2].y0);
+    CHECK(!r.graph_hit_test((int)std::lround(fx), (int)std::lround(fy)).element);
     (void)d;
 }
 

@@ -128,7 +128,20 @@ public:
         std::string xparam, yparam;
     };
     std::vector<GraphHandle> graph_handles(const Element &e, int x, int y, int part) const;
-    // a filter / envelope display whose handle is within 5 px of the point, even under another control (the filter
+    // The line segments of such a display (E372): end points and what a click on the segment grabs - the parameters
+    // of the handle at its end, anchored at that handle (empty parameters: a hit that drags nothing, e.g. the
+    // lowpass' fall)
+    struct GraphSegment {
+        double x0 = 0, y0 = 0, x1 = 0, y1 = 0;
+        GraphHandle grab;
+    };
+    std::vector<GraphSegment> graph_segments(const Element &e, int x, int y, int part) const;
+    // the handles, then the segments' grabs: graph_grab's index points into this list
+    std::vector<GraphHandle> graph_grabs(const Element &e, int x, int y, int part) const;
+    // what a click grabs, like the original's KEnvelope: the nearest handle within 5 px, else the last segment whose
+    // box (end points, at least 4 px wide and tall) holds the point; -1 for neither
+    int graph_grab(const Element &e, int x, int y, int part, int px, int py) const;
+    // a filter / envelope display with a handle or segment under the point, even under another control (the filter
     // display lies inside the big cutoff knob); no element if none
     Hit graph_hit_test(int px, int py) const;
     // the value of `param` that puts its handle at (hx, hy) - the inverse of the drawing, clamped to 0..127

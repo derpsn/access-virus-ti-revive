@@ -287,6 +287,79 @@ std::vector<EditorRenderer::GraphHandle> EditorRenderer::graph_handles(const Ele
     return {};
 }
 
+std::vector<EditorRenderer::GraphSegment> EditorRenderer::graph_segments(const Element &e, int x, int y,
+                                                                         int part) const
+{
+    const auto hs = graph_handles(e, x, y, part);
+    if (hs.empty())
+        return {};
+    std::vector<GraphSegment> out;
+    if (e.type == "ADSTREnvelope") { // segment i ends at handle i and grabs its parameters
+        const EnvGeom q = env_geom(e, x, y, part);
+        double px = q.x0, py = q.bottom;
+        for (auto &h : hs) {
+            out.push_back({px, py, h.x, h.y, h});
+            px = h.x, py = h.y;
+        }
+        return out;
+    }
+    // the filters: the points of filter_response() in the handle's coordinates; the segment that rises to the
+    // handle grabs both, the flat ones before it the cutoff, the ones after it nothing (the original's link table)
+    const FilterGeom q = filter_geom(e, x, y, part);
+    const double left = x + 3, right = x + e.w - 3, bottom = y + e.h - 1;
+    const double drop = (bottom - q.base) / 3, hx = q.hx, hy = q.hy;
+    const GraphHandle both = hs[0], cut{hx, hy, hs[0].xparam, ""}, none{hx, hy, "", ""};
+    auto seg = [&](double a, double b, double c, double d, const GraphHandle &g) { out.push_back({a, b, c, d, g}); };
+    if (e.type == "LP4Response") {
+        seg(left, q.base, hx - 4, q.base, cut), seg(hx - 4, q.base, hx, hy, both);
+        seg(hx, hy, std::min(right, hx + drop), bottom, none);
+    } else if (e.type == "HP4Response") {
+        seg(std::max(left, hx - drop), bottom, hx, hy, both), seg(hx, hy, hx + 4, q.base, none);
+        seg(hx + 4, q.base, right, q.base, none);
+    } else if (e.type == "BP4Response") {
+        seg(std::max(left, hx - drop), bottom, hx, hy, both), seg(hx, hy, std::min(right, hx + drop), bottom, none);
+    } else { // band stop: the handle has no vertical parameter, so both = cutoff
+        seg(left, q.base, hx - drop / 2, q.base, cut), seg(hx - drop / 2, q.base, hx, bottom, cut);
+        seg(hx, bottom, hx + drop / 2, q.base, none), seg(hx + drop / 2, q.base, right, q.base, none);
+    }
+    return out;
+}
+
+std::vector<EditorRenderer::GraphHandle> EditorRenderer::graph_grabs(const Element &e, int x, int y, int part) const
+{
+    auto v = graph_handles(e, x, y, part);
+    for (auto &s : graph_segments(e, x, y, part))
+        v.push_back(s.grab);
+    return v;
+}
+
+int EditorRenderer::graph_grab(const Element &e, int x, int y, int part, int px, int py) const
+{
+    const auto hs = graph_handles(e, x, y, part);
+    int found = -1;
+    double best = 1e9;
+    for (size_t i = 0; i < hs.size(); i++) {
+        const double dx = std::abs(px - hs[i].x), dy = std::abs(py - hs[i].y);
+        if (dx <= 5 && dy <= 5 && dx + dy < best)
+            best = dx + dy, found = (int)i;
+    }
+    if (found >= 0)
+        return found;
+    const auto ss = graph_segments(e, x, y, part);
+    for (size_t i = ss.size(); i-- > 0;) { // the later segment wins where boxes overlap (the original's order)
+        const GraphSegment &s = ss[i];
+        double x0 = std::min(s.x0, s.x1), x1 = std::max(s.x0, s.x1);
+        double y0 = std::min(s.y0, s.y1), y1 = std::max(s.y0, s.y1);
+        if (x1 - x0 < 4)
+            x0 -= 2, x1 += 2;
+        if (y1 - y0 < 4)
+            y0 -= 2, y1 += 2;
+        if (px >= x0 && px <= x1 && py >= y0 && py <= y1)
+            return (int)(hs.size() + i);
+    }
+    return -1;
+}
+
 int EditorRenderer::graph_value(const Element &e, int x, int y, int part, const std::string &param, double hx,
                                 double hy) const
 {
@@ -841,10 +914,13 @@ Hit EditorRenderer::graph_hit_test(int px, int py) const
         hit(e, 0, 0, -1, px, py, h, false, std::string(), false, -1);
     if (!h.element)
         return h;
-    for (auto &g : graph_handles(*h.element, h.x, h.y, h.part))
-        if (std::abs(px - g.x) <= 5 && std::abs(py - g.y) <= 5)
-            return h;
-    return Hit{};
+    // a segment that drags nothing (the fall after a filter's peak, its box can be large) leaves the click to the
+    // control below (the cutoff knob); whether the original lets it through there is not known (E372)
+    const int i = graph_grab(*h.element, h.x, h.y, h.part, px, py);
+    if (i < 0)
+        return Hit{};
+    const GraphHandle g = graph_grabs(*h.element, h.x, h.y, h.part)[(size_t)i];
+    return g.xparam.empty() && g.yparam.empty() ? Hit{} : h;
 }
 
 Hit EditorRenderer::menu_hit_test(int px, int py) const
