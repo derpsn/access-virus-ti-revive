@@ -38,6 +38,12 @@ E280; no measurable effect). Volume 127: REAPER resets chased CCs at Stop (CC7 1
 REAPER preference not identified. README + site (Options sentence), release notes (2 bullets), 438 tests, script
 tests 88 OK. Dev build ba517ed5.. in ~/.vst3. NEXT: user checks (segment drag, Options menu in the Control Center,
 REAPER Play by hand), then commit the round's code; the 'e' prefix talk; the round's test steps.
+**User checks OK (2026-10-27):** segment drag, REAPER Play/Stop by hand, the 'e' (appears when a parameter is
+modified -> stays not copied, E370 updated). Options menu: the user found none because I named the STALE
+build-native/bin/Release/TIReviveControlCenter/ (2026-10-15); the current one is build-native/ccapp/TIReviveControlCenter
+- rendered on Xvfb :97 (scratchpad shot/xshot.c, xclick): Options... next to Back, both entries. COMMITTED 7e756bb
+(segment drag) + 250d19f (REAPER fix, options, docs). NEXT: the round's test steps (rc7 for testers?, test machines,
+Windows VM, hil-mac, risk.py checklist, final 0.8.35).
 **#18 (2026-10-26 evening, user 'yes, go ahead', E367):** mod wheel / every CC 0..119 now mapped (VST3
 IMidiMapping) and sent; name field removed on focus loss (Enter without a change left it white). Linux REAPER test
 with the dev build (b85dcb1f.. in ~/.vst3, previous plug-in in ~/.vst3-backup/before-issue18-1749): CC 1 on the wire
