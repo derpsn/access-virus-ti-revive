@@ -25,6 +25,19 @@ Open: the combination REAPER does (setActive 0/1 + F2 + 73 00 23 01 + CC block +
 **Part volume 127 at Stop (user):** REAPER itself sends CC6 0, CC7 127, CC10 64 on ch 1-3 with the note-offs at Stop,
 and CC7 100 (+ pan, bend, RPN) at Play (session 3 log); since rc4 every CC is passed on (#18, E368), so the part
 volume follows. Which REAPER setting sends it: not checked. Dev build 44192299.. in ~/.vst3.
+**SOLVED (user: '1. original as default, new one as option, 2. yes (nativehost Stop/Play), 3. update REAPER'), E373:**
+REAPER updated 7.82 -> 7.83 (portable folder; full backup ~/.local/opt/dl/reaper/backup-7.82-20261027). Automated
+REAPER runs: scratchpad auto/ (with-cc.RPP / no-cc.RPP = copies of multi-syth-test, playstop.lua passed on REAPER's
+command line: 10 x Play 4 s / Stop 2 s then quit; ab.sh NAME runs one and counts reports; note: Steam's process is
+also called 'reaper'). Cause: setActive(0) at every REAPER Play sent CC64+CC123 on all 16 channels (32 msgs) at the
+stamp of the Play block -> report at every Play (20/20; 0/20 without). Fix BUILT, NOT COMMITTED: heldnotes.h (only
+held keys / pedals released at setActive(0)), test_heldnotes.cpp (3 tests, CMake list). With it: 0/20 (only on
+change), 3-4/10 with the original's set at Stop (default, user's choice). Output delays: default = like the original
+again; option 'outdelay-changes' (outdelay-changes.on). Restart set now after the block's events (like the original,
+E280; no measurable effect). Volume 127: REAPER resets chased CCs at Stop (CC7 127) - proven by the no-cc copy; the
+REAPER preference not identified. README + site (Options sentence), release notes (2 bullets), 438 tests, script
+tests 88 OK. Dev build ba517ed5.. in ~/.vst3. NEXT: user checks (segment drag, Options menu in the Control Center,
+REAPER Play by hand), then commit the round's code; the 'e' prefix talk; the round's test steps.
 **#18 (2026-10-26 evening, user 'yes, go ahead', E367):** mod wheel / every CC 0..119 now mapped (VST3
 IMidiMapping) and sent; name field removed on focus loss (Enter without a change left it white). Linux REAPER test
 with the dev build (b85dcb1f.. in ~/.vst3, previous plug-in in ~/.vst3-backup/before-issue18-1749): CC 1 on the wire
