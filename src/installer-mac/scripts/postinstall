@@ -13,7 +13,8 @@ if [ -n "$USER_NAME" ] && [ "$USER_NAME" != root ]; then
     # see two copies of "TI Revive Virus Control")
     rm -rf "/Users/$USER_NAME/Library/Audio/Plug-Ins/VST3/VirusTINative.vst3" \
         "/Users/$USER_NAME/Library/Audio/Plug-Ins/VST3/TI Revive Virus Control.vst3" \
-        "/Users/$USER_NAME/Library/Audio/Plug-Ins/Components/TI Revive Virus Control.component"
+        "/Users/$USER_NAME/Library/Audio/Plug-Ins/Components/TI Revive Virus Control.component" \
+        "/Users/$USER_NAME/Library/Audio/Plug-Ins/Components/TI Revive Virus Control (Snow).component"
     # the Access installer creates Documents/Access Music as root: the Control Center could not write its backups
     # there and the plug-in no libraries (E182). Only what root owns is given to the user.
     DOCS="/Users/$USER_NAME/Documents/Access Music"

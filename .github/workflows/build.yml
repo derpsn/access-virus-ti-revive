@@ -286,8 +286,8 @@ jobs:
             into Personal Libraries in your Documents folder and shown at once (our own addition; the original takes no
             file drops).
           - A Snow plug-in, "TI Revive Virus Control (Snow)": like the original's own Snow plug-in it shows the Snow's
-            editor with its 4 parts (VST3; a first user report on a Snow: parameters and sound work, the level meter and
-            the patch name in the part bar still have open issues).
+            editor with its 4 parts, as VST3 and on macOS also as Audio Unit (the Audio Unit is not tested yet; a first
+            user report on a Snow with the VST3: parameters and sound work).
           - "Init Patch" in the LOAD menu: the init patch from your Access installer, to start a sound from scratch;
             "Revert to" brings the previous sound back (our own addition).
           - Notes are now sent to the Virus with the same head start as the original (3072 samples), and a note can no
