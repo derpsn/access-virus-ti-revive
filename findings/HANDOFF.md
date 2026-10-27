@@ -9,6 +9,16 @@ snow-first exists), CMake vti_add_au() -> VirusTINative_AU + VirusTINative_AU_Sn
 (Snow).component', subtype VTIs, own Cocoa view class), Info.plist.in placeholders, dev-mac.yml (auval both),
 mac-build-release.sh, postinstall, uninstaller. The Mac has no cmake/checkout -> one CI test build after 2-4, then
 Mac tests together (autest on the Snow component, Logic). Docs (README Snow bullet, architecture.md, notes) pending.
+(3) REAPER volume DONE (E373 updated): 'Reset MIDI CC/Pitch to neutral on playback stop' (neutral CC7 = 127);
+automated run with ccresettab=cc7=-1 in reaper.ini: 0/10 CC7 at Stop (10/10 without); reaper.ini restored from
+scratchpad auto/reaper.ini.bak. README 'Good to know' + site details note (same text), NOT COMMITTED yet.
+(2) Cosmetic: the old note (HANDOFF ~l.2036) says Delay Clock and Reverb Mode look ACTIVE in the original with Init,
+inactive in ours -> not an opacity question. Delay/Clock condition = 'Parameter Visbility/Pages/Classic Delay Clock'
+(Mode 1..5, Type 0, Send >= 1), Reverb/Mode = 'Parameter Active Condition/Reverb/Send is active'; both Menus (Reverb
+Type too). REA subagent running: what the original's vtable+0xC0 'is active' checks, groups, menus.
+(4) Mac export: fixed in 0.8.31 (E316/E317); left: one 2.5 ms note at 44.1/128, jitter 0.26-0.40 ms. 0.8.35's lead
+3072 likely covers it -> measure on the Mac (exports 44.1/128 + 48/128, timing_analysis.py) together with the Snow AU
+test on one CI test build.
 **2026-10-27 (user: 'do the small fixes first and also the fade one. after the we talk about about the "e" prefix'):**
 #19 confirmed by the reporter on rc6 (close at the 0.8.35 release, user). Reddit mod-wheel question = #18, fixed since
 rc4 (reply draft given to the user). (1) Segment drag BUILT, NOT COMMITTED (E372): graph_segments/graph_grabs/
