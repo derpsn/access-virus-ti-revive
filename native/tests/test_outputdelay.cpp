@@ -112,3 +112,13 @@ TEST(outputdelay_select_found_by_message_in_both_models)
         }
     }
 }
+
+// E373: at Play/Stop the original sends all 16 again (the default, like the original); each set delays the Virus'
+// next notes (E280), so the Control Center option 'only on change' (outdelay-changes.on) sends only changed parts
+TEST(outputdelay_play_stop_like_the_original_unless_changes_only)
+{
+    CHECK(OutputDelay::resend_all(true, false));   // Play/Stop, default: all 16 like the original
+    CHECK(!OutputDelay::resend_all(true, true));   // Play/Stop, option 'only on change': no set
+    CHECK(!OutputDelay::resend_all(false, false)); // no transport change: only changed parts, either way
+    CHECK(!OutputDelay::resend_all(false, true));
+}

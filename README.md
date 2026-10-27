@@ -332,7 +332,9 @@ plug-in and the Control Center share the Virus (only plug-ins of two programs do
 such a backup and converts libraries between `.mid` and `.syx`. **Nerd mode** (button or *View > Nerd mode*) shows live what goes between
 TI Revive and the Virus (decoded: notes, parameter changes by name, dumps, bank sync), which programs use the Virus,
 the plug-in's and the broker's logs; it switches the plug-in log on and off and saves all logs for a bug report in
-one file. It only watches: it never sends anything to the Virus.
+one file. It only watches: it never sends anything to the Virus. Its *Options...* menu switches a few things for
+comparisons with the original: the output delays only on change instead of at every Play/Stop, and the timing as
+before 0.8.35 (from the next start of the plug-in).
 
 **Restore** (since 0.8.30): *Restore...* (in the Access look: RESTORE) asks for a backup's `RAM B.mid` (or any library), then for the RAM bank to overwrite. Only the programs that differ are written, into the Virus' RAM, the way the plug-in's browser writes them, and each one is read back. Unlike Access' Control Center it never writes the Virus' flash. The same from a terminal: `tirevive-cc restore B "RAM B.mid"`.
 
@@ -348,6 +350,7 @@ tirevive-cc list FILE.mid             # the patch names in a library
 tirevive-cc export FILE.mid OUT.syx   # convert a library (.mid <-> .syx)
 tirevive-cc logs      # plug-in + broker logs in one file for a bug report (home folder and user name removed)
 tirevive-cc debug on  # the plug-in's log (from the next start of the plug-in)
+tirevive-cc option    # the Options of Nerd mode; tirevive-cc option outdelay-changes on|off
 tirevive-cc watch     # Nerd mode in the terminal: the traffic, decoded, while the plug-in plays
 ```
 
@@ -474,7 +477,7 @@ hardware (TI2 Desktop) - details and raw numbers in [`findings/evidence.md`](fin
 - **Automation rate limit** (250 messages/s, coalesced per parameter): unthrottled parameter floods hung the Virus'
   audio until a power cycle within 4 minutes; with the limit a 4-minute full-load test (16 channels of notes + 32
   automation lanes) passes.
-- Checked with ThreadSanitizer and AddressSanitizer (one race in the broker connection found and fixed); 432 unit
+- Checked with ThreadSanitizer and AddressSanitizer (one race in the broker connection found and fixed); 438 unit
   tests run with every release build on Windows and Linux, plus two end-to-end tests on Linux in a virtual display
   (two editors of a duplicated track; the Control Center's window and close button).
 

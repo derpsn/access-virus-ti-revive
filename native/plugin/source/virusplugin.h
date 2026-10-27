@@ -23,6 +23,7 @@
 #include "device/stamprule.h"
 #include "device/offlinepace.h"
 #include "device/blockevents.h"
+#include "device/heldnotes.h"
 #include "device/outputdelay.h"
 #include "device/timelinefollow.h"
 #include "device/presencewatch.h"
@@ -728,6 +729,8 @@ private:
     // analog parts held back by the latency like the original (outputdelay.h, E344); worker thread only
     OutputDelay out_delay_;
     bool od_ready_seen_ = false, od_playing_seen_ = false;
+    bool od_changes_only_ = false; // outdelay-changes.on: not all 16 at every Play/Stop (E373)
+    HeldNotes held_notes_;          // process() records, setActive(false) releases (heldnotes.h)
     std::chrono::steady_clock::time_point od_next_{};
     int part_output(int part);
     void send_output_delays();

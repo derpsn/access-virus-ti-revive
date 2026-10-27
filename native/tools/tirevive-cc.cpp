@@ -11,6 +11,7 @@
 //   tirevive-cc export FILE OUT.syx|OUT.mid   convert a library, no Virus needed
 //   tirevive-cc logs [--out FILE]             plug-in + broker logs in one file for a bug report (anonymized)
 //   tirevive-cc debug on|off                  the plug-in's log (diag.on; takes effect when the plug-in starts)
+//   tirevive-cc option [NAME on|off]          A/B options against the original (nerd mode's Options menu)
 //   tirevive-cc watch [--seconds N]           Nerd mode in the terminal: broker status, log and the traffic, decoded
 //                                             (a read-only observer: works while the plug-in uses the Virus)
 // Firmware/OS update, Burn To Flash, factory reset and renaming the Virus are not supported, on purpose: they write
@@ -44,6 +45,7 @@ static int usage()
                     "       tirevive-cc export FILE.mid|FILE.syx OUT.syx|OUT.mid\n"
                     "       tirevive-cc logs [--out FILE]\n"
                     "       tirevive-cc debug on|off\n"
+                    "       tirevive-cc option [NAME on|off]\n"
                     "       tirevive-cc watch [--seconds N]\n"
                     "Only restore writes to the Virus (RAM, never flash). Close the TI Revive plug-in (or your DAW)\n"
                     "first: the Virus serves one program at a time.\n");
@@ -284,6 +286,26 @@ static int debug(const char *arg)
     return 0;
 }
 
+// without arguments: the options and their state; with NAME on|off: switch one
+static int option(int argc, char **argv)
+{
+    if (argc == 2) {
+        for (auto &o : vti::cc::plugin_options())
+            printf("%-18s %-3s  %s\n", o.name, vti::cc::plugin_option(o.name) ? "on" : "off", o.label);
+        printf("Options take effect when the plug-in starts.\n");
+        return 0;
+    }
+    if (argc != 4 || (strcmp(argv[3], "on") && strcmp(argv[3], "off")))
+        return usage();
+    std::string err;
+    if (!vti::cc::set_plugin_option(argv[2], !strcmp(argv[3], "on"), err)) {
+        fprintf(stderr, "tirevive-cc: %s\n", err.c_str());
+        return 1;
+    }
+    printf("%s %s; takes effect when the plug-in starts.\n", argv[2], argv[3]);
+    return 0;
+}
+
 static int watch(int argc, char **argv)
 {
     int secs = 0;
@@ -354,5 +376,7 @@ int main(int argc, char **argv)
         return logs(argc, argv);
     if (cmd == "debug" && argc == 3)
         return debug(argv[2]);
+    if (cmd == "option")
+        return option(argc, argv);
     return usage();
 }

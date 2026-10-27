@@ -2,8 +2,8 @@
 // a latency later than the Virus plays (the plug-in reports it, the host lines the track up); an analog output plays
 // at once, so a part there sounded early against the USB parts (user, 2026-10-24). Like the original (0x180084970 /
 // 0x1800a9c20): every part whose output is analog gets "delay its audio by the latency" (F0 00 20 33 01 10 6F pp 7F ms
-// F7), USB parts 0; sent for the parts that changed, and for all 16 at Play/Stop and after a new connection
-// (captures/ref-outdelay-1). No allocation; the worker thread uses it.
+// F7), USB parts 0; sent for the parts that changed, for all 16 at Play/Stop (resend_all: unless the option 'only on
+// change') and after a new connection (captures/ref-outdelay-1). No allocation; the worker thread uses it.
 #pragma once
 #include <array>
 #include <cstdint>
@@ -27,6 +27,11 @@ public:
     {
         return {0xF0, 0x00, 0x20, 0x33, 0x01, 0x10, 0x72, (uint8_t)(part & 15), 0x29, 0x00, 0xF7};
     }
+
+    // At Play/Stop the original sends all 16 again, and so does TI Revive by default. Each such set delays the Virus'
+    // next notes (E280: 29-37 ms); the option 'only on change' (outdelay-changes.on, E373) leaves it out - the Virus
+    // keeps its values
+    static bool resend_all(bool transport_changed, bool changes_only) { return transport_changed && !changes_only; }
 
     // the Virus' values are unknown again (a new connection)
     void reset()

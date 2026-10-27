@@ -683,7 +683,9 @@ def features_section():
       <div><h3>Nerd mode</h3>
       <p>Shows live what goes between TI Revive and the Virus, decoded: notes, parameter changes by name, dumps, the
       bank sync. It lists which programs use the Virus, shows the plug-in's and the broker's logs, and saves them all
-      for a bug report in one file. It only watches; it never sends anything to the Virus.</p></div>
+      for a bug report in one file. It only watches; it never sends anything to the Virus. Its Options... menu
+      switches a few things for comparisons with the original: the output delays only on change instead of at every
+      Play/Stop, and the timing as before 0.8.35 (from the next start of the plug-in).</p></div>
       <figure class="shot"><img loading="lazy" src="control-center-nerd-mode.png" width="860" height="620"
       alt="Nerd mode: the plug-in plays notes and checks its bank cache, decoded live">
       <figcaption>The plug-in plays notes and checks its bank cache, decoded live.</figcaption></figure>
@@ -734,7 +736,7 @@ def page_changelog_landing(releases):
 # the README's screenshots that the site shows too (copied at build time)
 SHARED_IMAGES = ["control-center.png", "control-center-nerd-mode.png", "plugin-help-mode.png", "plugin-help-inactive.png",
                  "plugin-menus.png", "plugin-library-drop.png"]
-TESTS = 432 # unit tests in native/tests (vtitests), as of 2026-10-26 (round 0.8.35)
+TESTS = 438 # unit tests in native/tests (vtitests), as of 2026-10-27 (round 0.8.35)
 
 # Important information shown at the top of the page, newest first (empty list = no box). The README starts with the
 # same text ("Important" block), keep both identical. Remove an entry when it no longer matters to users.

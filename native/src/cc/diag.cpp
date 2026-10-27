@@ -20,15 +20,15 @@ std::string plugin_dir()
 
 std::string plugin_log_path() { return (fs::path(plugin_dir()) / "diag.log").string(); }
 
-bool plugin_log_enabled()
+static bool flag(const char *file)
 {
     std::error_code ec;
-    return fs::exists(fs::path(plugin_dir()) / "diag.on", ec);
+    return fs::exists(fs::path(plugin_dir()) / file, ec);
 }
 
-bool set_plugin_log(bool on, std::string &error)
+static bool set_flag(const char *file, bool on, std::string &error)
 {
-    fs::path f = fs::path(plugin_dir()) / "diag.on";
+    fs::path f = fs::path(plugin_dir()) / file;
     std::error_code ec;
     if (on) {
         fs::create_directories(f.parent_path(), ec);
@@ -42,6 +42,43 @@ bool set_plugin_log(bool on, std::string &error)
         return false;
     }
     return true;
+}
+
+bool plugin_log_enabled() { return flag("diag.on"); }
+
+bool set_plugin_log(bool on, std::string &error) { return set_flag("diag.on", on, error); }
+
+const std::vector<PluginOption> &plugin_options()
+{
+    static const std::vector<PluginOption> opts = {
+        {"outdelay-changes", "outdelay-changes.on", "Output delays only on change (not at every Play/Stop)"},
+        {"timing-classic", "timing-classic.on", "Timing as before 0.8.35 (lead 1024, no safety net)"},
+    };
+    return opts;
+}
+
+static const PluginOption *find_option(const std::string &name)
+{
+    for (auto &o : plugin_options())
+        if (name == o.name)
+            return &o;
+    return nullptr;
+}
+
+bool plugin_option(const std::string &name)
+{
+    const PluginOption *o = find_option(name);
+    return o && flag(o->file);
+}
+
+bool set_plugin_option(const std::string &name, bool on, std::string &error)
+{
+    const PluginOption *o = find_option(name);
+    if (!o) {
+        error = "unknown option " + name;
+        return false;
+    }
+    return set_flag(o->file, on, error);
 }
 
 #if defined(_WIN32) || defined(__APPLE__) // Linux: the journal

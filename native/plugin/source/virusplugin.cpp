@@ -739,9 +739,13 @@ void DeviceOut::run()
                     due = floor_.apply(due, audio_.newest_frame(), floor_min);
                 st = due - mk; // on the Virus' stamp clock (0 at the marker)
             }
-            if (env_debug())
-                fprintf(stderr, "send %02x stamp %lld newest %lld\n", m[0], (long long)st,
+            if (env_debug()) {
+                fprintf(stderr, "send %02x stamp %lld newest %lld", m[0], (long long)st,
                         (long long)(audio_ok() ? audio_.newest_frame() : -1));
+                for (size_t i = 1; i < m.size() && i < 12; i++) // which SysEx (parameter, dump) or controller value
+                    fprintf(stderr, " %02x", m[i]);
+                fprintf(stderr, "\n");
+            }
             if (st >= 0 && needs_stamp(m.data(), m.size(), from_process) && (ping || stamps.fresh(st))) {
                 auto t = usbmidi_pack({0xF5, (uint8_t)(st & 0x7F), (uint8_t)((st >> 7) & 0x7F)}, CABLE_TIME);
                 pk_.insert(pk_.end(), t.begin(), t.end());
@@ -914,6 +918,8 @@ tresult PLUGIN_API VirusPlugin::initialize(FUnknown *context)
     {
         std::error_code tec;
         timing_classic_ = std::filesystem::exists(own_cache_dir() + "/../timing-classic.on", tec);
+        // the output delays only on change, not at every Play/Stop (Control Center option, outputdelay.h resend_all)
+        od_changes_only_ = std::filesystem::exists(own_cache_dir() + "/../outdelay-changes.on", tec);
 #ifdef _WIN32
         timing_a_ = timing_lead(timing_classic_, true);
 #else
@@ -929,6 +935,8 @@ tresult PLUGIN_API VirusPlugin::initialize(FUnknown *context)
         out_->set_diag_path(own_cache_dir() + "/../diag.log");
     out_->log("Virus TI native: timing: lead %d frames, safety net %s%s\n", timing_a_, timing_classic_ ? "off" : "on",
               timing_classic_ ? " (timing-classic.on)" : "");
+    if (od_changes_only_)
+        out_->log("Virus TI native: output delays only on change (outdelay-changes.on)\n");
 #ifdef __APPLE__
     // other drivers that take the Virus' interfaces (AURA's USB MIDI driver, the old Access drivers: E134, E366)
     {
@@ -1062,12 +1070,13 @@ tresult PLUGIN_API VirusPlugin::setActive(TBool state)
         out_->start(); // the first activation connects to the Virus (a plug-in scan never gets here)
     if (out_)
         out_->log("Virus TI native: setActive(%d), state loaded %d\n", (int)state, (int)state_loaded_);
-    if (!state && out_ && out_->connected()) { // nothing keeps sounding after the plug-in stops (removed, closed)
-        for (uint8_t ch = 0; ch < 16; ch++) {
-            out_->send({(uint8_t)(0xB0 | ch), 64, 0});  // sustain pedal up
-            out_->send({(uint8_t)(0xB0 | ch), 123, 0}); // all notes off
-        }
-        for (int i = 0; i < 50 && out_->busy(); i++) // ~32 messages, a few ms; at most 250 ms
+    if (!state && out_ && out_->connected()) { // nothing keeps sounding after the plug-in stops (removed, closed):
+        // only what is still held (heldnotes.h, E373 - REAPER deactivates at every Play)
+        uint8_t rel[32][3];
+        const int n = held_notes_.release(rel);
+        for (int i = 0; i < n; i++)
+            out_->send({rel[i][0], rel[i][1], rel[i][2]});
+        for (int i = 0; n > 0 && i < 50 && out_->busy(); i++) // at most 32 messages, a few ms; at most 250 ms
             std::this_thread::sleep_for(std::chrono::milliseconds(5));
     }
     if (state && sync_ && !sync_started_.exchange(true)) {
@@ -1406,18 +1415,18 @@ tresult PLUGIN_API VirusPlugin::process(ProcessData &data)
     }
     // Play and loop restarts (transport.h): like the original, the song position, the +1 clock tick and the per-part
     // reset at the block's time, so the arpeggiator and clock-synced LFOs restart with the bar
+    bool restart = false;
+    uint8_t restart_f2[3] = {};
     if (tl_valid_ && data.processContext && (data.processContext->state & ProcessContext::kProjectTimeMusicValid)) {
         const bool playing = (data.processContext->state & ProcessContext::kPlaying) != 0;
         const double tempo_qn = (data.processContext->state & ProcessContext::kTempoValid) ? data.processContext->tempo
                                                                                           : 120.0;
         const double ppq = data.processContext->projectTimeMusic;
         if (transport_.update(playing, ppq, (double)block_frames / vrate * tempo_qn / 60.0)) {
-            // F2 and the +1 tick; the original's 16 part messages (6F <part> 7F 00) are left out: on the device they
-            // delayed the next note by 29-37 ms, and they only concern parts that use the Atomizer (E280)
-            uint8_t f2[3];
-            transport_f2((int)std::max(0.0, std::floor(ppq * 4.0 + 1e-6)), f2);
-            add(tl_, f2, 3);
-            add(tl_, TRANSPORT_TICK, 11);
+            // F2 and the +1 tick, added after the block's events below; the original's 16 part messages
+            // (6F <part> 7F 00) go out from the worker (send_output_delays, E344)
+            transport_f2((int)std::max(0.0, std::floor(ppq * 4.0 + 1e-6)), restart_f2);
+            restart = true;
         }
     }
     if (tl_valid_) { // MIDI clock at the host tempo (120 BPM without a process context), 24 ticks per quarter
@@ -1446,6 +1455,8 @@ tresult PLUGIN_API VirusPlugin::process(ProcessData &data)
                 uint8_t m[3];
                 if (size_t n = mapped_message((int)((id - MIDI_MAP_BASE) >> 12) & 15, (int)(id & 0xFFF), v, m)) {
                     add(at(offset), m, n); // data bytes always < 0x80 (hostmidi.h)
+                    if ((m[0] & 0xF0) == 0xB0 && m[1] == 64)
+                        held_notes_.sustain(m[0] & 15, m[2]);
                     size_t w = pu_w_.load(std::memory_order_relaxed); // a controller's value for the state: below
                     if ((m[0] & 0xF0) == 0xB0 && w - pu_r_.load(std::memory_order_acquire) < PU_SLOTS) {
                         pu_[w % PU_SLOTS] = {id, m[2]};
@@ -1499,6 +1510,7 @@ tresult PLUGIN_API VirusPlugin::process(ProcessData &data)
                 uint8_t m[3] = {(uint8_t)(0x90 | (e.noteOn.channel & 15)), note7(e.noteOn.pitch),
                                 std::max<uint8_t>(1, data7(e.noteOn.velocity))};
                 add(at(e.sampleOffset), m, 3);
+                held_notes_.note_on(m[0] & 15, m[1]);
                 auto &mt = meter_[e.noteOn.channel & 15]; // MIDI activity meter: the highest velocity, decays in tick_meters
                 if (mt.load(std::memory_order_relaxed) < m[2])
                     mt.store(m[2], std::memory_order_relaxed);
@@ -1506,8 +1518,15 @@ tresult PLUGIN_API VirusPlugin::process(ProcessData &data)
                 uint8_t m[3] = {(uint8_t)(0x80 | (e.noteOff.channel & 15)), note7(e.noteOff.pitch),
                                 data7(e.noteOff.velocity)};
                 add(at(e.sampleOffset), m, 3);
+                held_notes_.note_off(m[0] & 15, m[1]);
             }
         }
+    }
+    // the restart set after the block's controllers and notes at the same stamp, like the original (E280; the order
+    // made no difference to the sync reports at REAPER's Play, E373)
+    if (restart) {
+        add(tl_, restart_f2, 3);
+        add(tl_, TRANSPORT_TICK, 11);
     }
     // to the Virus in time order (clock ticks and events share the timeline); stable: at the same stamp automation
     // stays before the notes, so a note starts with the new values (insertion sort: stable, no allocation on the
@@ -3766,6 +3785,9 @@ void VirusPlugin::panel_message(const std::vector<uint8_t> &msg)
                 std::lock_guard<std::mutex> lk(sync_alert_mu_);
                 sync_alert_.event();
             }
+            if (env_debug() && out_) // when it arrives, next to the 'send' lines (which message was late)
+                fprintf(stderr, "sync report %d from the Virus, newest %lld\n", c.value,
+                        (long long)ring_newest());
             continue;
         }
         if (c.part > 15)
@@ -3828,7 +3850,8 @@ void VirusPlugin::send_output_delays()
         return;
     }
     od_ready_seen_ = true;
-    const bool playing = host_playing_.load(std::memory_order_relaxed), all = playing != od_playing_seen_;
+    const bool playing = host_playing_.load(std::memory_order_relaxed);
+    const bool all = OutputDelay::resend_all(playing != od_playing_seen_, od_changes_only_);
     od_playing_seen_ = playing;
     const auto now = std::chrono::steady_clock::now();
     if (!all && now < od_next_)

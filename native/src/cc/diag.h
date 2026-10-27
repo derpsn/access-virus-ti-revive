@@ -15,6 +15,15 @@ std::string plugin_log_path();
 bool plugin_log_enabled();
 bool set_plugin_log(bool on, std::string &error);
 
+// The options of nerd mode (A/B tests against the original): a flag file each in plugin_dir(), read when a plug-in
+// instance starts. `name` is what tirevive-cc takes, `label` what the Control Center shows.
+struct PluginOption {
+    const char *name, *file, *label;
+};
+const std::vector<PluginOption> &plugin_options();
+bool plugin_option(const std::string &name);                                  // false for an unknown name
+bool set_plugin_option(const std::string &name, bool on, std::string &error); // refuses an unknown name
+
 // Where the broker logs: a file on Windows (%TEMP%\vtibroker.log) and macOS (/tmp/tirevive-vtibroker.log), the user
 // journal on Linux (systemd unit tirevive-broker). For display.
 std::string broker_log_location();

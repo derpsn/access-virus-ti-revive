@@ -52,6 +52,24 @@ TEST(diag_switch_and_paths)
     (void)broker_log_tail(5); // the user journal: read-only, may be empty (CI)
 }
 
+// the Control Center's options (nerd mode): flag files in the plug-in's folder, read when a plug-in instance starts
+TEST(diag_plugin_options)
+{
+    Home h("vtester");
+    const auto &opts = plugin_options();
+    CHECK(opts.size() == 2);
+    CHECK(std::string(opts[0].name) == "outdelay-changes" && std::string(opts[0].file) == "outdelay-changes.on");
+    CHECK(std::string(opts[1].name) == "timing-classic" && std::string(opts[1].file) == "timing-classic.on");
+    CHECK(!plugin_option("outdelay-changes"));
+    std::string err;
+    CHECK(set_plugin_option("outdelay-changes", true, err) && plugin_option("outdelay-changes"));
+    CHECK(fs::exists(h.dir / ".local/share/virus-ti-native/outdelay-changes.on"));
+    CHECK(!plugin_option("timing-classic")); // independent
+    CHECK(set_plugin_option("outdelay-changes", false, err) && !plugin_option("outdelay-changes"));
+    CHECK(!set_plugin_option("no-such-option", true, err) && !err.empty());
+    CHECK(!plugin_option("no-such-option"));
+}
+
 TEST(diag_tail_file)
 {
     Home h("vtester");
