@@ -1,6 +1,16 @@
 # HANDOFF
 
 ## START HERE (2026-10-25, afternoon): round 0.8.35 on branch `round-0.8.35` (from main 6f8b79d) - a small UI/library round
+**2026-10-27 (user: 'do the small fixes first and also the fade one. after that we talk about the "e" prefix'):**
+#19 confirmed by the reporter on rc6 (close at the 0.8.35 release, user). Reddit mod-wheel question = #18, fixed since
+rc4 (reply draft given to the user). (1) Segment drag BUILT, NOT COMMITTED (E372): graph_segments/graph_grabs/
+graph_grab in editorrender, editor drags a line like the original's KEnvelope; test editor_graph_segment_grabs, 433
+tests, ctest 5/5; README/site 433, release note 'handles and lines'. Dev build ff37c343.. in ~/.vst3 (previous in
+~/.vst3-backup/before-segments-1717), user check pending. (2) Fade: E372 (B) - the original has fade code but nothing
+starts it (MEDIUM) -> nothing to build. (3) REAPER restart sync report: NOT reproduced with nativehost on the TI2
+(2 x setActive 0/1 via --rate-at 44100@T, with and without --ahead 200: 0 sync reports, stamps ~3100 frames ahead;
+scratchpad restart1/restart2) -> needs a REAPER session with VTI_NATIVE_DEBUG=1 VTI_NATIVE_STATS=1 (offered to the user).
+NEXT: user checks the segment drag, commit; REAPER restart log; then the 'e' prefix talk; then the round's test steps.
 **#18 (2026-10-26 evening, user 'yes, go ahead', E367):** mod wheel / every CC 0..119 now mapped (VST3
 IMidiMapping) and sent; name field removed on focus loss (Enter without a change left it white). Linux REAPER test
 with the dev build (b85dcb1f.. in ~/.vst3, previous plug-in in ~/.vst3-backup/before-issue18-1749): CC 1 on the wire
