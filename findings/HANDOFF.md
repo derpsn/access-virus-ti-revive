@@ -1,6 +1,37 @@
 # HANDOFF
 
-## START HERE (2026-10-25, afternoon): round 0.8.35 on branch `round-0.8.35` (from main 6f8b79d) - a small UI/library round
+## START HERE (end of day 2026-10-27): round 0.8.35, branch `round-0.8.35` (pushed, c402c5a+), v0.8.35-rc7 published
+
+**State.** All code of the round is committed and pushed; nothing uncommitted except the vst3sdk submodule marker.
+Today (details below, E372-E376): segment drag in the filter/envelope displays (E372); REAPER sync report at every
+Play fixed (heldnotes.h, E373; automated REAPER A/B runs); Control Center nerd mode Options menu + `tirevive-cc option`
+(outdelay-changes, timing-classic; default = like the original); REAPER part volume 127 at Stop = REAPER's 'Reset MIDI
+CC/Pitch on stop' (note in README/site, E373); greyed controls match the original (E375, no change); Snow plug-in as
+Audio Unit (E374, CI: builds, auval passes for both units); voice count idea dropped (E376: the Virus never reports
+it). REAPER updated to 7.83 (backup ~/.local/opt/dl/reaper/backup-7.82-20261027). Dev plug-in ba517ed5.. in ~/.vst3
+(= the REAPER fix build; rc6-era plug-in in ~/.vst3-backup/before-segments-1717). win10ref off, Virus on Linux,
+broker socket active. Current Control Center build: build-native/ccapp/TIReviveControlCenter.
+
+**NEXT (user: no test session on 2026-10-27):**
+1. Full CI test build of the branch (build.yml -f version=0.8.35; the last full run 40568526535 failed only in mac,
+   fixed since, dev-mac 40569442737 green) -> install on Linux/win11/Mac (test machines latest).
+2. Mac session (Virus to the Mac): Snow AU in Logic (both units listed, the Snow class + 4-part editor, sound; autest
+   on the Snow component), exports 44.1/128 + 48/128 -> timing_analysis.py (E316/E317 residual note, lead 3072 now).
+3. Windows: nothing of this round tested on Windows yet (drop, Init, timing, Snow class, ARP/graph, held notes).
+4. risk.py --round 0.8.35, hil.sh, checklist artifact; tirevive-site-check; release 0.8.35; close #19 at the release;
+   tell #14 (Snow AU, rc/release) and #16 with the user.
+
+**Ideas backlog (user, 2026-10-27: 'keep it in our ideas backlog'; nothing started):**
+- Gap to the original: REMOTE page templates (define what the Virus' knobs send as a controller; writes RAM -
+  analysis + hardware test first). Help '?' menu (original: Setup Guide, docs, videos; ours could link README, issues,
+  'Save logs').
+- Own additions: Undo/Redo for editor edits; Compare (edit vs stored patch, the stored values exist for the LCD
+  hover); Panic button (all notes/sustain off, held-notes logic exists); automatic backup of a RAM slot before the
+  browser overwrites it; patch randomizer with amount/sections (bounded send rate, rule 2; asked in #19).
+- Suggested order (mine): Panic + Help menu (quick), then Undo/Redo; REMOTE templates as its own round.
+- Dropped: voice count / limit warning (E376).
+
+## (previous START HERE) (2026-10-25, afternoon): round 0.8.35 on branch `round-0.8.35` (from main 6f8b79d)
 **2026-10-27 evening (user: '1. Snow plug-in as AU, 2. the cosmetic fix, 3. find out what causes the REAPER
 behaviour, 4. the Mac export; before you start make RC7'):** v0.8.35-rc7 tagged on 211ddb5 + pushed, release CI run
 40564530449 (watching). (1) Snow AU BUILT on Linux side, NOT COMMITTED, Mac build untested: factoryorder.h +
