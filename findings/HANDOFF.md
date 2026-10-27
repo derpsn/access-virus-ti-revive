@@ -24,7 +24,7 @@ broker socket active. CI TEST BUILD 0.8.35 run 40568526535 (0549a4d) started = f
 NEXT (Mac session, Virus to the Mac): install the CI pkg (INSTALL-COMMAND.txt + 'Install test build.command'),
 autest on 'TI Revive Virus Control (Snow).component' (Snow class? editor PNG), Logic: both units listed, Snow
 editor, sound; exports 44.1/128 + 48/128 -> timing_analysis.py. CI test build 40568526535: Linux/Windows/MSI green, MAC FAILED (Snow AU post-build script: '(' in the path ->
-no shell quoting) -> fixed 36354e6 (VERBATIM), Mac-only check dev-mac run 40569442737 running (both AUs + auval).
+no shell quoting) -> fixed 36354e6 (VERBATIM); dev-mac run 40569442737 GREEN: both AUs registered, auval SUCCEEDED for VTIr and VTIs, marker present, package built (E374 updated).
 After it is green: a full build.yml test build for the Mac session (user: NO test session today, 2026-10-27).
 NEW user question (2026-10-27 evening): show how many voices play and warn at the limit. Spec (virus.info/virusti/
 specs): 20-90 voices depending on the patch (Snow 10-50), dynamic allocation over two DSPs, no voice/load display
