@@ -30,7 +30,7 @@ NEW user question (2026-10-27 evening): show how many voices play and warn at th
 specs): 20-90 voices depending on the patch (Snow 10-50), dynamic allocation over two DSPs, no voice/load display
 mentioned; remotedevice.xml has no voice/load report (only Multi Part Bits/Voice Steal Priority); E341 said 'the
 Virus does not report its voice use' without a check. Offered: static firmware check (DSP voice counter + any read
-path) or a plain "notes held" counter without a limit warning. User chose the static firmware check: DONE = E376 - the DSP counts voices per part but nothing sends it out (no parameter, no reply, no panel display; dropped notes leave no trace); only new firmware / the private F4 path would reach it (rule 2: no). Decision with the user: drop, or a labelled 'notes held' counter. (4) Mac export: fixed in 0.8.31 (E316/E317); left: one 2.5 ms note at 44.1/128, jitter 0.26-0.40 ms. 0.8.35's lead
+path) or a plain "notes held" counter without a limit warning. User chose the static firmware check: DONE = E376 - the DSP counts voices per part but nothing sends it out (no parameter, no reply, no panel display; dropped notes leave no trace); only new firmware / the private F4 path would reach it (rule 2: no). DECIDED (user, 2026-10-27): voice count idea DROPPED (no 'notes held' counter either). (4) Mac export: fixed in 0.8.31 (E316/E317); left: one 2.5 ms note at 44.1/128, jitter 0.26-0.40 ms. 0.8.35's lead
 3072 likely covers it -> measure on the Mac (exports 44.1/128 + 48/128, timing_analysis.py) together with the Snow AU
 test on one CI test build.
 **2026-10-27 (user: 'do the small fixes first and also the fade one. after the we talk about about the "e" prefix'):**
