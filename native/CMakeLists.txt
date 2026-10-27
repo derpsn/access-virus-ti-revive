@@ -132,10 +132,11 @@ if(APPLE AND VTI_NATIVE_AU)
         add_custom_command(TARGET ${target} POST_BUILD
             COMMAND ${CMAKE_COMMAND} -E rm -rf "${res}/plugin.vst3"
             COMMAND ${CMAKE_COMMAND} -E make_directory "${res}"
-            COMMAND ${CMAKE_COMMAND} -E copy_directory "${VTI_VST3_PACKAGE}" "${res}/plugin.vst3")
+            COMMAND ${CMAKE_COMMAND} -E copy_directory "${VTI_VST3_PACKAGE}" "${res}/plugin.vst3"
+            VERBATIM) # shell quoting for the paths: "(Snow)" broke the Xcode script without it
         if(snow)
             add_custom_command(TARGET ${target} POST_BUILD
-                COMMAND ${CMAKE_COMMAND} -E touch "${res}/plugin.vst3/Contents/Resources/snow-first")
+                COMMAND ${CMAKE_COMMAND} -E touch "${res}/plugin.vst3/Contents/Resources/snow-first" VERBATIM)
         endif()
     endfunction()
     vti_add_au(VirusTINative_AU "TI Revive Virus Control" VTIr io.github.derpsn.tirevive.virus-control.au
