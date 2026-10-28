@@ -31,6 +31,8 @@ NOTE: the Live session (W2-W4, 162 s) had 32 sync reports, rising 3-5 per 10 s w
 (W4), drops 0, no sync page; the 0.8.34 Live session in the same VM had ~5 (hover only). Cause not checked (VM USB?
 edit bursts?); E315: the sync page came at 70-101. Check on the Mac: count reports while dragging graphs.
 klog.on is still set in the VM (R5 diagnostic, harmless). Virus back on Linux, VM off. mac job attempt 4 (19:49 UTC).
+#20 (new, 2026-10-28, test report): TI Polar, Mac mini M4, macOS 26, Logic 12.2, USB hub, 'no issues so far', no
+version/stages. Reply posted (user OK, issuecomment-6479629791): asks version + AU/project recall.
 
 **NEXT (user: no test session on 2026-10-27):**
 1. Full CI test build of the branch (build.yml -f version=0.8.35; the last full run 40568526535 failed only in mac,
