@@ -1,0 +1,125 @@
+{
+ "round": "0.8.35",
+ "core": "core.json",
+ "core_items": [],
+ "lead": "Final test of 0.8.35 (CI test build 40745427793). risk.py: class C on all three systems, so from the core list only the automated runs (hil: cold start, reopen, export). The round's own items: library drag and drop, Init Patch, note timing with the original's head start (3072 samples), controllers from the DAW (#18), the REAPER Play fix, the graph and arpeggiator editing (#19), and the Snow plug-in (on the Mac also as Audio Unit). Linux was checked with dev builds during the round; Windows has seen nothing of this round yet. Mark each item, add a note where something looks different, then copy the results at the bottom into the chat.",
+ "rules": [
+  "Order: Linux first (the Virus is on this PC), then the Windows VM, then the Mac. Close the DAW before the Virus moves.",
+  "Never power-cycle the Virus while it is attached to the VM; switch it off and on only while it is on Linux.",
+  "Use a disposable project. Do not save over stored patches on the Virus."
+ ],
+ "sections": [
+  {
+   "id": "linux",
+   "title": "Linux",
+   "where": "REAPER 7.83, Virus on this PC, CI build 0.8.35 (installed with install.sh)",
+   "prep": [
+    "Claude installs the CI build and runs hil.sh (cold start, reopen, export, broker killed while playing)."
+   ],
+   "items": [
+    {
+     "id": "L1",
+     "title": "REAPER Play/Stop on the CI build",
+     "steps": [
+      "REAPER, a project with TI Revive and a few notes: press Play and Stop about 10 times."
+     ],
+     "expect": "No sync error page; notes in time. Claude counts 'sync report' lines in diag.log (0 or a few at Stop, not one per Play)."
+    },
+    {
+     "id": "L2",
+     "title": "Library by drag and drop",
+     "steps": [
+      "Drag a library .mid or .syx from the file manager onto the plug-in's browser."
+     ],
+     "expect": "It shows under Personal Libraries at once, with names; a patch from it plays and the Virus shows 'LIB'."
+    }
+   ]
+  },
+  {
+   "id": "win",
+   "title": "Windows 11 (VM)",
+   "where": "win11 VM, Ableton Live 11, CI build 0.8.35 (installed silently by Claude)",
+   "prep": [
+    "Claude installs the build in the VM, attaches the Virus and copies the hil-windows kit."
+   ],
+   "items": [
+    {
+     "id": "W1",
+     "title": "hil-win on the new build",
+     "steps": [
+      "Run hil-win.cmd (about 5 minutes); Claude grades the result folder on Linux."
+     ],
+     "expect": "Cold start, reopen and export pass (drift in the VM is not judged, E334)."
+    },
+    {
+     "id": "W2",
+     "title": "Sound, timing and the mod wheel in Live 11",
+     "steps": [
+      "Live 11, TI Revive on a MIDI track: play a clip with short notes, then draw a mod wheel (CC 1) envelope on a patch that uses it.",
+      "Play, Stop, Play again."
+     ],
+     "expect": "Notes in time, no crackle, no sync error page; the mod wheel is audible."
+    },
+    {
+     "id": "W3",
+     "title": "Init Patch, drag and drop, browser",
+     "steps": [
+      "LOAD > Init Patch, then Revert to; drag a library .mid from Explorer onto the browser; step through libraries with the bank arrows."
+     ],
+     "expect": "Init sound, Revert brings the old one back; the library shows at once with names; the arrows step through the libraries."
+    },
+    {
+     "id": "W4",
+     "title": "Graph and arpeggiator editing (#19)",
+     "steps": [
+      "Drag a line and a handle in a filter envelope display (Shift: finer, Ctrl+click: middle).",
+      "ARP page, user pattern: change one step's length and velocity, Alt+click a step, try shift/randomize and the right-click menu."
+     ],
+     "expect": "Works as on Linux: the line moves both ends, one step changes at a time, the menu entries work."
+    }
+   ]
+  },
+  {
+   "id": "mac",
+   "title": "macOS",
+   "where": "MacBook Air M3, Logic Pro and Ableton Live 12",
+   "prep": [
+    "Claude pushes the CI package to the Mac (INSTALL-COMMAND.txt and 'Install test build.command' in the unpacked folder); you run the installer, then hil-mac.command. The Mac must be awake for the push."
+   ],
+   "items": [
+    {
+     "id": "M1",
+     "title": "hil-mac on the new build",
+     "steps": [
+      "Run hil-mac.command from the unpacked folder's hil folder (about 5 minutes) and send the result folder."
+     ],
+     "expect": "ALL PASS (cold start, reopen, export)."
+    },
+    {
+     "id": "M2",
+     "title": "Snow plug-in as Audio Unit in Logic",
+     "steps": [
+      "Logic: open the instrument list; insert 'TI Revive Virus Control (Snow)' on a track (the TI2 stands in for a Snow)."
+     ],
+     "expect": "Both units listed; the Snow one shows the Snow editor with 4 parts, plays sound; the normal unit still shows the TI editor."
+    },
+    {
+     "id": "M3",
+     "title": "Timing exports",
+     "steps": [
+      "Export the timing test loop (short 16th notes, 120 BPM) at 44.1 kHz / buffer 128 and at 48 kHz / buffer 128; send both WAVs."
+     ],
+     "expect": "Claude runs timing_analysis.py: no missing or extra notes, jitter about 0.3 ms or less (E316/E317 left a 2.5 ms note at 44.1/128)."
+    },
+    {
+     "id": "M4",
+     "title": "Mod wheel in Live 12",
+     "steps": [
+      "Live 12, TI Revive (VST3 or AU): draw a mod wheel envelope on a patch that uses it, play it."
+     ],
+     "expect": "The mod wheel is audible (not yet tested in Ableton, #18)."
+    }
+   ]
+  }
+ ]
+}

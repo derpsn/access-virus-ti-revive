@@ -12,6 +12,13 @@ it). REAPER updated to 7.83 (backup ~/.local/opt/dl/reaper/backup-7.82-20261027)
 (= the REAPER fix build; rc6-era plug-in in ~/.vst3-backup/before-segments-1717). win10ref off, Virus on Linux,
 broker socket active. Current Control Center build: build-native/ccapp/TIReviveControlCenter.
 
+**2026-10-28 (user: 'final release today', gets the Mac):** CI TEST BUILD 0.8.35 run 40745427793 (2963d42) started.
+risk.py --round 0.8.35: class C on linux/windows/mac (hil cold/reopen/export, nothing by hand from core). Round
+checklist scripts/checklists/round-0.8.35.json PUBLISHED https://claude.ai/artifact/ULCMWzVCGh111Sgg5qeTGh (db):
+L1 REAPER Play/Stop, L2 drag and drop; W1 hil-win, W2 sound/timing/mod wheel Live 11, W3 Init/drop/browser, W4 graph+ARP;
+M1 hil-mac, M2 Snow AU in Logic, M3 exports 44.1/128 + 48/128, M4 mod wheel Live 12. NEXT: CI green -> install
+Linux + hil.sh, win11 VM, Mac push; then site-check, VERSION 0.8.35, release notes tested-on line, merge, tag.
+
 **NEXT (user: no test session on 2026-10-27):**
 1. Full CI test build of the branch (build.yml -f version=0.8.35; the last full run 40568526535 failed only in mac,
    fixed since, dev-mac 40569442737 green) -> install on Linux/win11/Mac (test machines latest).
