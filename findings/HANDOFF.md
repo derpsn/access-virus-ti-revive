@@ -25,6 +25,12 @@ Artifacts ~/Downloads/TI-Revive-0.8.35-test (old run 40568526535 moved to ...-te
 L1 + L2 PASS (user, REAPER, CI build). diag.log of that session: 9 sync reports in ~93 s with ~16 Play/Stop cycles
 while the bank sync ran (39 s); 7 of 9 'since Play' 0 = while stopped (the original's output-delay set at Stop, E373
 default, 3-4/10 yesterday); none per Play like before the fix. No sync page (user).
+WINDOWS (win11 VM, Live 11): setup.exe /quiet exit 0, TI Revive 0.8.35, plug-in 34cecfeb.. = the MSI's. W1-W4 PASS
+(user). hil-win ALL PASS (work/hil/win-0.8.35/results-20261028-204116; export 1.00x, max 0.99 ms, drift +22..+70 ppm).
+NOTE: the Live session (W2-W4, 162 s) had 32 sync reports, rising 3-5 per 10 s while the user dragged graphs/ARP
+(W4), drops 0, no sync page; the 0.8.34 Live session in the same VM had ~5 (hover only). Cause not checked (VM USB?
+edit bursts?); E315: the sync page came at 70-101. Check on the Mac: count reports while dragging graphs.
+klog.on is still set in the VM (R5 diagnostic, harmless). Virus back on Linux, VM off. mac job attempt 4 (19:49 UTC).
 
 **NEXT (user: no test session on 2026-10-27):**
 1. Full CI test build of the branch (build.yml -f version=0.8.35; the last full run 40568526535 failed only in mac,
