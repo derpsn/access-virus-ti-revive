@@ -22,6 +22,9 @@ CI: Linux/Windows/MSI/hil kits GREEN; mac job NOT RUN 3x (18:28, 18:44, 19:01 UT
 within 15 min, GitHub annotation 'capacity constraints ... macOS arm64 runners', no incident on githubstatus.
 Artifacts ~/Downloads/TI-Revive-0.8.35-test (old run 40568526535 moved to ...-test-40568526535). Linux = CI build
 (install.sh; plug-in 4d0d0635.. = the tarball's). hil.sh ALL PASS (work/hil/20261028-194527; export 1.00x, max 0.78 ms).
+L1 + L2 PASS (user, REAPER, CI build). diag.log of that session: 9 sync reports in ~93 s with ~16 Play/Stop cycles
+while the bank sync ran (39 s); 7 of 9 'since Play' 0 = while stopped (the original's output-delay set at Stop, E373
+default, 3-4/10 yesterday); none per Play like before the fix. No sync page (user).
 
 **NEXT (user: no test session on 2026-10-27):**
 1. Full CI test build of the branch (build.yml -f version=0.8.35; the last full run 40568526535 failed only in mac,
