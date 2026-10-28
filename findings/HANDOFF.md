@@ -18,6 +18,10 @@ checklist scripts/checklists/round-0.8.35.json PUBLISHED https://claude.ai/artif
 L1 REAPER Play/Stop, L2 drag and drop; W1 hil-win, W2 sound/timing/mod wheel Live 11, W3 Init/drop/browser, W4 graph+ARP;
 M1 hil-mac, M2 Snow AU in Logic, M3 exports 44.1/128 + 48/128, M4 mod wheel Live 12. NEXT: CI green -> install
 Linux + hil.sh, win11 VM, Mac push; then site-check, VERSION 0.8.35, release notes tested-on line, merge, tag.
+CI: Linux/Windows/MSI/hil kits GREEN; mac job NOT RUN 3x (18:28, 18:44, 19:01 UTC): no hosted macos-15 runner
+within 15 min, GitHub annotation 'capacity constraints ... macOS arm64 runners', no incident on githubstatus.
+Artifacts ~/Downloads/TI-Revive-0.8.35-test (old run 40568526535 moved to ...-test-40568526535). Linux = CI build
+(install.sh; plug-in 4d0d0635.. = the tarball's). hil.sh ALL PASS (work/hil/20261028-194527; export 1.00x, max 0.78 ms).
 
 **NEXT (user: no test session on 2026-10-27):**
 1. Full CI test build of the branch (build.yml -f version=0.8.35; the last full run 40568526535 failed only in mac,
