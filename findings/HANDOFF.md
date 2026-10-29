@@ -74,6 +74,11 @@ the ideas backlog (Panic + Help menu first) for the next weekly round; merge mai
 Site (user: changelog version font looked 'AI slop'): version numbers, dates and the pre-release tag in the text
 font (system-ui, tabular numbers) instead of monospace; straight to main 93a8fc0, site.yml deployed. Not checked
 visually (no browser on this PC) - the user looks at the live page.
+Download counter (user, 2026-10-29): build.py downloads()/downloads_line() sum GitHub's download_count of the
+installer files (setup.exe, msi, mac zip, linux tarball) of every release incl. pre-releases; line under the download
+buttons; tests scripts/tests/test_site_downloads.py (4). site.yml now also runs daily (cron 17 4 * * *). Main 404c101,
+deployed. Note: build.py/site.yml read releases?per_page=100 (52 releases now) - paginate before 100 releases.
+GitHub disables scheduled runs after 60 days without a commit.
 
 **NEXT (user: no test session on 2026-10-27):**
 1. Full CI test build of the branch (build.yml -f version=0.8.35; the last full run 40568526535 failed only in mac,
