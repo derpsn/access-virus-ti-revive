@@ -47,6 +47,11 @@ expect the 'other rate ... then back' line and clean stats. Old bug (since the r
 CI TEST BUILD with the fix: run 40827916741 (f3f7149) ALL GREEN (first Mac compile of check_rate). Artifacts
 ~/Downloads/TI-Revive-0.8.35-test-f3f7149. Mac PUSHED (pkg 722fc4af..); previous folder ->
 ~/Downloads/TI-Revive-0.8.35-mac-40745427793. Linux/win11 still on the 40745427793 build (Mac-only change).
+MAC CHECKLIST (user): M1-M4 PASS, all on the FIRST build (marks 06:43-06:57, fixed build installed 07:20):
+hil-mac ALL PASS (work/hil/mac-0.8.35/results-20261029-063830; max 0.78 ms, export 1.00x); M3 only ONE export
+(Timing 16ths.wav 06:48, 48 kHz): 256/256, jitter 0.00 ms, drift 0 ppm (work/timing/mac-0.8.35); 44.1/128 not exported.
+Fixed build: one Live session 07:20:49 at 44.1: 441216 / 441344, 0 anchors, 1 sync report - rates matched at the
+start, so the relock path did NOT run (not proven on hardware yet). All 10 checklist items pass.
 
 **NEXT (user: no test session on 2026-10-27):**
 1. Full CI test build of the branch (build.yml -f version=0.8.35; the last full run 40568526535 failed only in mac,
