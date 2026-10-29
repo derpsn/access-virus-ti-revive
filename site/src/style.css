@@ -150,9 +150,9 @@ h2 { font-size: clamp(1.5rem, 2.8vw, 1.9rem); line-height: 1.2; font-weight: 600
 /* what's new */
 .news { display: grid; gap: 0; }
 .rel { display: grid; grid-template-columns: 9rem 1fr; gap: 1.5rem; padding: 1.5rem 0; border-top: 1px solid var(--line); }
-.rel .v { font: 600 1.25rem/1.2 var(--mono); }
+.rel .v { font: 600 1.4rem/1.15 var(--sans); letter-spacing: -0.01em; font-variant-numeric: tabular-nums; }
 .rel .v a { color: var(--text); }
-.rel time { display: block; margin-top: 0.3rem; font: 0.78rem var(--mono); color: var(--soft); }
+.rel time { display: block; margin-top: 0.3rem; font-size: 0.84rem; color: var(--soft); font-variant-numeric: tabular-nums; }
 .rel h3 { margin: 0 0 0.4rem; font-size: 1.02rem; }
 .rel ul { margin: 0; padding-left: 1.1rem; color: var(--soft); font-size: 0.92rem; }
 .rel li + li { margin-top: 0.3rem; }
@@ -209,7 +209,7 @@ h2 { font-size: clamp(1.5rem, 2.8vw, 1.9rem); line-height: 1.2; font-weight: 600
 .log .body { color: var(--soft); font-size: 0.94rem; }
 .log .body p { margin: 0 0 0.7rem; }
 .log .body ul { padding-left: 1.1rem; margin: 0 0 0.7rem; }
-.pre { font: 0.7rem var(--mono); color: var(--rep); margin-left: 0.4rem; }
+.pre { display: block; margin-top: 0.15rem; font-size: 0.8rem; color: var(--rep); }
 
 footer { border-top: 1px solid var(--line); padding: 2.4rem 0 3.5rem; color: var(--soft); font-size: 0.84rem; }
 footer p { margin: 0 0 0.6rem; max-width: 48rem; }
