@@ -33,6 +33,10 @@ edit bursts?); E315: the sync page came at 70-101. Check on the Mac: count repor
 klog.on is still set in the VM (R5 diagnostic, harmless). Virus back on Linux, VM off. mac job attempt 4 (19:49 UTC).
 #20 (new, 2026-10-28, test report): TI Polar, Mac mini M4, macOS 26, Logic 12.2, USB hub, 'no issues so far', no
 version/stages. Reply posted (user OK, issuecomment-6479629791): asks version + AU/project recall.
+**2026-10-29:** mac job GREEN on attempt 8 (user restarted it; runner from 05:31 UTC) -> run 40745427793 all green.
+Mac PUSHED: ~/Downloads/TI-Revive-0.8.35-mac (pkg b6ce1ddf.. = CI, INSTALL-COMMAND.txt, Install test build.command,
+hil/); the 2026-10-26 folder moved to ~/Downloads/TI-Revive-0.8.35-mac-20261026. NEXT: user installs, M1-M4, plus
+a graph drag in the editor so the sync report count can be compared with the VM.
 
 **NEXT (user: no test session on 2026-10-27):**
 1. Full CI test build of the branch (build.yml -f version=0.8.35; the last full run 40568526535 failed only in mac,
