@@ -1,6 +1,7 @@
 # The website (GitHub Pages, https://derpsn.github.io/access-virus-ti-revive/): scripts/site/build.py turns the
 # GitHub releases and site/src into static pages and this workflow publishes them. Runs when a release is published
-# (new version, changelog, checksums), when the site's sources change on main, and by hand.
+# (new version, changelog, checksums), when the site's sources change on main, by hand, and once a day so the
+# download counter (GitHub's counts of the installer files) stays current.
 name: site
 
 on:
@@ -10,6 +11,8 @@ on:
     branches: [main]
     paths: ['site/**', 'scripts/site/**', 'docs/images/**', '.github/workflows/site.yml']
   workflow_dispatch:
+  schedule:
+    - cron: '17 4 * * *' # daily 04:17 UTC (off the full hour, when GitHub's scheduler is busiest)
 
 permissions:
   contents: read

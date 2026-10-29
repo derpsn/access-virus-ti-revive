@@ -148,6 +148,22 @@ def asset(rel, suffix):
     return None
 
 
+# the installers whose downloads the counter adds up (not the usbinfo script or the libusb source)
+INSTALLERS = ("-setup.exe", ".msi", "-mac.zip", "-linux.tar.gz")
+
+
+def downloads(releases):
+    """GitHub's download counts of the installer files of every release, pre-releases included. It counts downloads,
+    not people (updates and repeated downloads count again); the site is rebuilt daily, so it is at most a day old."""
+    return sum(a.get("download_count", 0) for r in releases for a in r.get("assets", [])
+               if a["name"].endswith(INSTALLERS))
+
+
+def downloads_line(releases):
+    n = downloads(releases)
+    return f'<p class="small downloads">Downloaded {n:,} times so far (all versions, counted by GitHub).</p>' if n else ""
+
+
 # ------------------------------------------------------------------------------------------------ the pages
 def highlights(rel, n=3):
     """the first points of a version's summary (its list items, else its first sentences)"""
@@ -317,6 +333,7 @@ def page_landing(latest, releases, sums):
     Older versions are on <a href="{GH}/releases">GitHub</a>.</p>
     <div class="oses">{win}{mac}{lin}
     </div>
+    {downloads_line(releases)}
     <div class="needs">
       <div><b>Synth</b><span>Virus TI and TI2: Desktop, Polar, Keyboard, and the TI Snow</span></div>
       <div><b>DAW</b><span>Any VST3 host; Audio Unit for Logic and GarageBand</span></div>
