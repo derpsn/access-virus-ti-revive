@@ -60,6 +60,9 @@ with Logic Snow AU, Live 12; relock not yet seen on hardware), Snow AU bullet 'c
 tirevive-site-check (round scope): fixed 445 tests, Snow AU tested in Logic, macOS Tested-with + Logic (AU), REAPER
 7.83, new reliability bullet E377 (site + README same text); site built locally, script tests OK, NOT deployed.
 Matrix: Polar gets its own row, macOS 'works for users' (user decision, #18 E367 + #20).
+RELEASE 0.8.35 (user: 'Ship it', 2026-10-29): merged into main 063050a (-F file; parents cdb7992 + c722bc0, tree =
+round tip), main pushed, tag v0.8.35 pushed separately, release CI run 40830887750 started. NEXT: CI green -> check
+the release page, site rebuild (site.yml, user OK), install the release on Linux/win11/Mac, close #19, tell #14/#16.
 
 **NEXT (user: no test session on 2026-10-27):**
 1. Full CI test build of the branch (build.yml -f version=0.8.35; the last full run 40568526535 failed only in mac,
