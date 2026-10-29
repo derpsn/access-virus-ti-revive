@@ -52,6 +52,9 @@ hil-mac ALL PASS (work/hil/mac-0.8.35/results-20261029-063830; max 0.78 ms, expo
 (Timing 16ths.wav 06:48, 48 kHz): 256/256, jitter 0.00 ms, drift 0 ppm (work/timing/mac-0.8.35); 44.1/128 not exported.
 Fixed build: one Live session 07:20:49 at 44.1: 441216 / 441344, 0 anchors, 1 sync report - rates matched at the
 start, so the relock path did NOT run (not proven on hardware yet). All 10 checklist items pass.
+Fixed build again (user): hil-mac ALL PASS (work/hil/mac-0.8.35/results-20261029-072801); power cycle + Live 44.1
+07:34: matched from the start, 0 relock lines -> the stuck state did not come back; relock unproven on hardware
+(E377 updated). NEXT: site-check, VERSION 0.8.35, tested-on line, merge + tag after the user's OK.
 
 **NEXT (user: no test session on 2026-10-27):**
 1. Full CI test build of the branch (build.yml -f version=0.8.35; the last full run 40568526535 failed only in mac,
