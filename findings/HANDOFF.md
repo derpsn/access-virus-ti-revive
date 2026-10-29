@@ -1,6 +1,14 @@
 # HANDOFF
 
-## START HERE (end of day 2026-10-27): round 0.8.35, branch `round-0.8.35` (pushed, c402c5a+), v0.8.35-rc7 published
+## START HERE (2026-10-29): v0.8.35 RELEASED, round closed; next weekly round not started
+
+**For the next round:** branch `round-0.8.36` from main (404c101 = the release + site font + download counter);
+round-0.8.35 is merged into main, nothing open on it. Open from 0.8.35: the user installs the release on the Mac
+(~/Downloads/TI-Revive-0.8.35-release-mac); E377 relock not yet seen on hardware (watch Mac logs for 'other rate');
+the 32 sync reports while dragging graphs in the win11 VM (cause not checked). Scope: the ideas backlog below
+(suggested: Panic + Help menu, then Undo/Redo), picked with the user.
+
+### Round 0.8.35 log (2026-10-27 .. 10-29)
 
 **State.** All code of the round is committed and pushed; nothing uncommitted except the vst3sdk submodule marker.
 Today (details below, E372-E376): segment drag in the filter/envelope displays (E372); REAPER sync report at every
@@ -80,7 +88,7 @@ buttons; tests scripts/tests/test_site_downloads.py (4). site.yml now also runs 
 deployed. Note: build.py/site.yml read releases?per_page=100 (52 releases now) - paginate before 100 releases.
 GitHub disables scheduled runs after 60 days without a commit.
 
-**NEXT (user: no test session on 2026-10-27):**
+**NEXT of 2026-10-27 (all DONE with the 0.8.35 release):**
 1. Full CI test build of the branch (build.yml -f version=0.8.35; the last full run 40568526535 failed only in mac,
    fixed since, dev-mac 40569442737 green) -> install on Linux/win11/Mac (test machines latest).
 2. Mac session (Virus to the Mac): Snow AU in Logic (both units listed, the Snow class + 4-part editor, sound; autest
