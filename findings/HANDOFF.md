@@ -67,7 +67,10 @@ v0.8.35 RELEASED: release CI 40830887750 all green, 'TI Revive 0.8.35' (not pre-
 linux tarball, usbinfo, libusb). Linux = release (install.sh; plug-in b91e3682.. = the tarball's). win11 = release
 (setup.exe /quiet exit 0, TI Revive 0.8.35, plug-in 10ca0407.. = the MSI's; VM off). Mac PUSHED:
 ~/Downloads/TI-Revive-0.8.35-release-mac (pkg 6baa1093.., INSTALL-COMMAND.txt, 'Install release.command') - user installs.
-NEXT: site rebuild (user OK), close #19, replies #14/#16 (drafts to the user).
+Site rebuilt (user OK; site.yml run 40832030718 green; live page shows 0.8.35, 445 unit tests, the Polar row, the
+E377 bullet). Replies posted (user OK): #19 closed (issuecomment-6490085090), #16 (-6490085898, asks for an FL Studio
+check), #14 (-6490086257, Spanish, asks for the Snow AU in Logic). NEXT: user installs the release on the Mac; then
+the ideas backlog (Panic + Help menu first) for the next weekly round; merge main back into the next round branch.
 
 **NEXT (user: no test session on 2026-10-27):**
 1. Full CI test build of the branch (build.yml -f version=0.8.35; the last full run 40568526535 failed only in mac,
