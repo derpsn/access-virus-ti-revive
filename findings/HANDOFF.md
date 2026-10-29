@@ -44,6 +44,9 @@ Audio nominal rate, open() sets only on difference. User chose 'A, fix it now': 
 ctest 5/5 Linux) + AudioIn::check_rate (vti_relock away/back on the Core Audio device) + worker log lines; release
 note bullet. Mac code NOT compiled locally (no Mac toolchain here) -> CI build, then Mac retest: power cycle, Live 44.1,
 expect the 'other rate ... then back' line and clean stats. Old bug (since the rate following), not a regression.
+CI TEST BUILD with the fix: run 40827916741 (f3f7149) ALL GREEN (first Mac compile of check_rate). Artifacts
+~/Downloads/TI-Revive-0.8.35-test-f3f7149. Mac PUSHED (pkg 722fc4af..); previous folder ->
+~/Downloads/TI-Revive-0.8.35-mac-40745427793. Linux/win11 still on the 40745427793 build (Mac-only change).
 
 **NEXT (user: no test session on 2026-10-27):**
 1. Full CI test build of the branch (build.yml -f version=0.8.35; the last full run 40568526535 failed only in mac,
