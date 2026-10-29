@@ -7,9 +7,9 @@
 	<key>CFBundleExecutable</key>
 	<string>${MACOSX_BUNDLE_EXECUTABLE_NAME}</string>
 	<key>CFBundleIdentifier</key>
-	<string>io.github.derpsn.tirevive.virus-control.au</string>
+	<string>@VTI_AU_BUNDLE_ID@</string>
 	<key>CFBundleName</key>
-	<string>TI Revive Virus Control</string>
+	<string>@VTI_AU_NAME@</string>
 	<key>CFBundleInfoDictionaryVersion</key>
 	<string>6.0</string>
 	<key>CFBundlePackageType</key>
@@ -25,15 +25,16 @@
 	<key>AudioComponents</key>
 	<array>
 		<dict>
-			<!-- the codes of the classic TI Revive Audio Unit: its Logic / GarageBand projects open with this one -->
+			<!-- TI: the codes of the classic TI Revive Audio Unit (its Logic / GarageBand projects open with this one);
+			     Snow: its own subtype (E374) -->
 			<key>type</key>
 			<string>aumu</string>
 			<key>subtype</key>
-			<string>VTIr</string>
+			<string>@VTI_AU_SUBTYPE@</string>
 			<key>manufacturer</key>
 			<string>TIRv</string>
 			<key>name</key>
-			<string>TI Revive: TI Revive Virus Control</string>
+			<string>TI Revive: @VTI_AU_NAME@</string>
 			<key>description</key>
 			<string>Access Virus TI Total Integration without the old drivers</string>
 			<key>version</key>

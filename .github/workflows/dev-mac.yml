@@ -14,25 +14,32 @@ jobs:
       - name: Build (universal)
         run: |
           cmake -S native -B build-native -G Xcode -DCMAKE_OSX_ARCHITECTURES="arm64;x86_64" -DCMAKE_OSX_DEPLOYMENT_TARGET=11.0
-          cmake --build build-native --config Release --target VirusTINative VirusTINative_AU -- -quiet
+          cmake --build build-native --config Release --target VirusTINative VirusTINative_AU VirusTINative_AU_Snow -- -quiet
       - name: Check the Audio Unit
         run: |
-          C="build-native/AU/Release/TI Revive Virus Control.component"
-          ls -R "$C" | head -30
-          lipo -info "$C/Contents/MacOS/TI Revive Virus Control"
-          /usr/libexec/PlistBuddy -c "Print :AudioComponents:0" "$C/Contents/Info.plist"
-          codesign --force --deep --sign - "$C"
-          mkdir -p ~/Library/Audio/Plug-Ins/Components && cp -R "$C" ~/Library/Audio/Plug-Ins/Components/
+          mkdir -p ~/Library/Audio/Plug-Ins/Components
+          for n in "TI Revive Virus Control" "TI Revive Virus Control (Snow)"; do # the TI and the Snow unit (E374)
+            C="build-native/AU/Release/$n.component"
+            ls -R "$C" | head -30
+            lipo -info "$C/Contents/MacOS/$n"
+            /usr/libexec/PlistBuddy -c "Print :AudioComponents:0" "$C/Contents/Info.plist"
+            codesign --force --deep --sign - "$C"
+            cp -R "$C" ~/Library/Audio/Plug-Ins/Components/
+          done
+          test -f "build-native/AU/Release/TI Revive Virus Control (Snow).component/Contents/Resources/plugin.vst3/Contents/Resources/snow-first"
           killall -9 AudioComponentRegistrar 2>/dev/null || true
           auval -a | grep -i "TIRv" || true
           auval -v aumu VTIr TIRv || echo "auval failed (the runner has no Access files and no Virus)"
+          auval -v aumu VTIs TIRv || echo "auval (Snow) failed (the runner has no Access files and no Virus)"
       - name: Mac package (as the release builds it)
         run: bash scripts/mac-build-release.sh "$PWD" 0.8.18-dev "$PWD/out"
       - name: Collect
         run: |
-          mkdir dev && cp -R "build-native/AU/Release/TI Revive Virus Control.component" dev/
+          mkdir dev && cp -R "build-native/AU/Release/TI Revive Virus Control.component" \
+              "build-native/AU/Release/TI Revive Virus Control (Snow).component" dev/
           cp -R "build-native/VST3/Release/TI Revive Virus Control.vst3" dev/
-          codesign --force --deep --sign - "dev/TI Revive Virus Control.component" "dev/TI Revive Virus Control.vst3"
+          codesign --force --deep --sign - "dev/TI Revive Virus Control.component" \
+              "dev/TI Revive Virus Control (Snow).component" "dev/TI Revive Virus Control.vst3"
           cp out/TI-Revive-*-mac.zip dev/
       - uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
         with:

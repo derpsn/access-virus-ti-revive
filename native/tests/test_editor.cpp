@@ -101,6 +101,8 @@ static const char *LAYOUT = R"(<?xml version="1.0"?>
    <ADSTREnvelope Parameter="Env/Attack" NormalHandle="handle.png"><ForeColor red="200" green="0" blue="0"/><Size left="95" top="85" width="200" height="40"/></ADSTREnvelope>
    <ArpEdit Parameter="Arpeggiator User Pattern/Step 1 Bitfield"><ForeColor red="0" green="0" blue="200"/><Size left="5" top="130" width="640" height="130"/></ArpEdit>
    <PatchBrowser Parameter="Browser 1/Selected Bank" ControlFont="font.png"><Size left="0" top="265" width="680" height="180"/></PatchBrowser>
+   <Menu Parameter="Osc/Gated" NormalBack="tile.png" DisabledBack="tiled.png" ControlFont="font.png" Align="Middle Left"><Size left="300" top="20" width="30" height="11"/></Menu>
+   <Menu Parameter="Osc/Gated" NormalBack="tile.png" ControlFont="font.png" DisabledFont="fontd.png" Align="Middle Left"><Size left="340" top="20" width="30" height="11"/></Menu>
    <Knob Parameter="Chorus/Delay" NormalBack="knob.png" Enabled="false" Condition="VirusControl/Display/Chorus/Type Is Off"><Size left="650" top="20" width="10" height="10"/></Knob>
   </Container>
   <Container><Size left="650" top="0" width="50" height="50"/>
@@ -201,7 +203,8 @@ struct Rig {
         };
         canvas.imgs = {{"knob.png", {10, 40}}, {"knobp.png", {10, 40}}, {"knobd.png", {10, 40}},
                        {"radio.png", {8, 16}}, {"vu.png", {50, 24}},    {"handle.png", {4, 4}},
-                       {"tile.png", {8, 11}},  {"font.png", {6, 7 * 96}}};
+                       {"tile.png", {8, 11}},  {"font.png", {6, 7 * 96}}, {"tiled.png", {8, 11}},
+                       {"fontd.png", {6, 7 * 96}}};
     }
 };
 
@@ -236,7 +239,7 @@ TEST(editor_render_controls)
     // the inactive knob with a DisabledBack strip uses it at full opacity; without one it is translucent
     CHECK(c.at("knobd.png", 20, 20).size() == 1 && c.at("knobd.png", 20, 20)[0].alpha == 1.0);
     auto gated = c.at("knob.png", 35, 20);
-    CHECK(gated.size() == 1 && gated[0].alpha < 1.0);
+    CHECK(gated.size() == 1 && gated[0].alpha == 95.0 / 255); // the original's opacity (0x180036ee0, E360)
     // soft knob without a destination: translucent
     auto sk = c.at("knob.png", 50, 20);
     CHECK(sk.size() == 1 && sk[0].alpha < 1.0);
@@ -343,6 +346,28 @@ TEST(editor_render_displays)
     int cx = 0, bottom = 0;
     EditorRenderer::arp_step_geometry(g.layout.elements[0].children[23], 5, 130, 2, cx, bottom);
     CHECK(cx == 5 + 1 + 2 * 20 && bottom == 130 + 130 - 1);
+}
+
+// E318: the original fills a selected entry in the selection blue while its list has the focus (the pane clicked last),
+// else it only frames it (user, 2026-10-26: "the selected has a complete blue background and not only the border")
+TEST(editor_render_browser_focus_fills)
+{
+    Rig g;
+    g.r->bank_patch = [](int bank, int program) { return "B" + std::to_string(bank) + "P" + std::to_string(program); };
+    g.r->selected[1] = {0, {5}}; // the rig's browser is pane 1, showing bank 0
+    auto blue = [](auto &c) {
+        size_t n = 0;
+        for (auto &f : c.fills)
+            n += f.c.r == 65 && f.c.g == 111 && f.c.b == 204;
+        return n;
+    };
+    g.r->focused_pane = 1;
+    g.r->render(g.canvas);
+    CHECK(blue(g.canvas) == 1); // filled, no frame
+    g.canvas.clear();
+    g.r->focused_pane = 0; // the other pane has the focus: framed
+    g.r->render(g.canvas);
+    CHECK(blue(g.canvas) == 0 && g.canvas.lines >= 4);
 }
 
 TEST(editor_render_browser)
@@ -644,6 +669,32 @@ TEST(editor_visible_controls)
         CHECK(!(h.x == 80 && h.y == 20));
 }
 
+// E360: inactive text follows DisabledFont only, not DisabledBack (the original's 0x180053480): a control with a
+// DisabledBack picture still draws ControlFont at 95/255; with a DisabledFont that font at full opacity
+TEST(editor_render_inactive_text)
+{
+    Rig g;
+    g.r->render(g.canvas);
+    auto &c = g.canvas;
+    CHECK(c.at("tiled.png", 300, 20).size() == 1 && c.at("tiled.png", 300, 20)[0].alpha == 1.0);
+    size_t dim = 0, other = 0;
+    for (auto &b : c.blits)
+        if (b.img == "font.png" && b.dx >= 300 && b.dx < 330 && b.dy >= 20 && b.dy < 31)
+            (b.alpha == 95.0 / 255 ? dim : other)++;
+    CHECK(dim > 0 && other == 0);
+    CHECK(c.at("tile.png", 340, 20).size() == 1 && c.at("tile.png", 340, 20)[0].alpha == 95.0 / 255);
+    size_t full = 0, wrong = 0;
+    for (auto &b : c.blits) {
+        if (b.dx < 340 || b.dx >= 370 || b.dy < 20 || b.dy >= 31)
+            continue;
+        if (b.img == "fontd.png")
+            (b.alpha == 1.0 ? full : wrong)++;
+        else if (b.img == "font.png")
+            wrong++;
+    }
+    CHECK(full > 0 && wrong == 0);
+}
+
 TEST(editor_hit_disabled_for_help)
 {
     // the help mode also explains disabled controls (the chorus knobs while Chorus Type is Off): the hit test can
@@ -823,4 +874,195 @@ TEST(editor_render_browser_drag_highlight)
         fprintf(stderr, "  highlighted glyphs: %zu\n", sel);
     CHECK(sel == 5);  // "P3" and "P40": five glyphs in the white font
     CHECK(blue == 2); // one filled box per entry
+}
+
+// #19 (user: "the hit zone for the arrows is really narrow"): the browser's bank arrows are 17 x 9 px (the original's
+// layout). A click that hits no control counts for such a small arrow button within 4 px above or below it (our own
+// addition); an exact hit on another control keeps priority
+TEST(editor_small_arrows_hit_with_slack)
+{
+    static const char *L = R"(<?xml version="1.0"?>
+<Editor><Frame width="200" height="60"><Container><Size left="0" top="0" width="200" height="60"/>
+ <IncButton Parameter="Browser 0/Selected Bank"><Size left="20" top="20" width="17" height="9"/></IncButton>
+ <Button Parameter="VirusControl/Something"><Size left="20" top="31" width="17" height="10"/></Button>
+</Container></Frame></Editor>)";
+    Rig g;
+    EditorLayout lay;
+    std::string err;
+    CHECK(lay.load(Bytes(L, L + strlen(L)), err));
+    EditorRenderer r(lay, *g.cond, g.dev, g.ed);
+    r.values = g.r->values;
+    CHECK(r.hit_test(25, 24).element && r.hit_test(25, 24).element->type == "IncButton"); // inside
+    CHECK(r.hit_test(25, 17).element && r.hit_test(25, 17).element->type == "IncButton"); // 3 px above
+    CHECK(!r.hit_test(25, 15).element);                                                  // 5 px above: nothing
+    CHECK(r.hit_test(25, 32).element && r.hit_test(25, 32).element->type == "Button");    // below: the button wins
+    CHECK(r.hit_test(25, 30).element && r.hit_test(25, 30).element->type == "IncButton"); // 1 px below, free
+}
+
+// #19 / E371: the filter and envelope displays are dragged by their handles like the original's (KEnvelope):
+// filter X = cutoff, Y = resonance (band stop: X only); envelope attack X, decay X + sustain Y, sustain start Y,
+// slope end Y = sustain time, release X. The value for a handle position inverts the drawing (round trip).
+TEST(editor_graph_handles_round_trip)
+{
+    Rig g;
+    g.vals[{"Env/Attack", 0}] = 40, g.vals[{"Env/Decay", 0}] = 70, g.vals[{"Env/Sustain", 0}] = 90;
+    g.vals[{"Env/Sustain Time", 0}] = 80, g.vals[{"Env/Release", 0}] = 50;
+    g.vals[{"Filter 1/Cutoff", 0}] = 60, g.vals[{"Filter 1/Resonance", 0}] = 30;
+    Hit env = g.r->hit_test(100, 100);
+    CHECK(env.element && env.element->type == "ADSTREnvelope");
+    auto hs = g.r->graph_handles(*env.element, env.x, env.y, 0);
+    CHECK(hs.size() == 5);
+    CHECK(hs[0].xparam == "Env/Attack" && hs[0].yparam.empty());
+    CHECK(hs[1].xparam == "Env/Decay" && hs[1].yparam == "Env/Sustain");
+    CHECK(hs[2].xparam.empty() && hs[2].yparam == "Env/Sustain");
+    CHECK(hs[3].xparam.empty() && hs[3].yparam == "Env/Sustain Time");
+    CHECK(hs[4].xparam == "Env/Release" && hs[4].yparam.empty());
+    for (auto &h : hs) {
+        if (!h.xparam.empty())
+            CHECK(std::abs(g.r->graph_value(*env.element, env.x, env.y, 0, h.xparam, h.x, h.y) -
+                           g.vals[{h.xparam, 0}]) <= 1);
+        if (!h.yparam.empty())
+            CHECK(std::abs(g.r->graph_value(*env.element, env.x, env.y, 0, h.yparam, h.x, h.y) -
+                           g.vals[{h.yparam, 0}]) <= 1);
+    }
+    // moving the attack handle 0.47 px per unit to the right: +10 units
+    CHECK(std::abs(g.r->graph_value(*env.element, env.x, env.y, 0, "Env/Attack", hs[0].x + 4.7, hs[0].y) - 50) <= 1);
+    Hit lp = g.r->hit_test(30, 60);
+    CHECK(lp.element && lp.element->type == "LP4Response");
+    auto fh = g.r->graph_handles(*lp.element, lp.x, lp.y, 0);
+    CHECK(fh.size() == 1 && fh[0].xparam == "Filter 1/Cutoff" && fh[0].yparam == "Filter 1/Resonance");
+    CHECK(std::abs(g.r->graph_value(*lp.element, lp.x, lp.y, 0, "Filter 1/Cutoff", fh[0].x, fh[0].y) - 60) <= 1);
+    CHECK(std::abs(g.r->graph_value(*lp.element, lp.x, lp.y, 0, "Filter 1/Resonance", fh[0].x, fh[0].y) - 30) <= 2);
+    Hit bs = g.r->hit_test(300, 60);
+    CHECK(bs.element && bs.element->type == "BS4Response");
+    auto bh = g.r->graph_handles(*bs.element, bs.x, bs.y, 0);
+    CHECK(bh.size() == 1 && bh[0].yparam.empty()); // band stop: cutoff only
+}
+
+// E372: the line segments of the displays grab too, like the original's KEnvelope: the parameters of the handle at
+// the segment's end (envelope: attack, decay + sustain, sustain, sustain time, release; lowpass: the flat part cutoff
+// only, the rise to the peak cutoff + resonance, the fall nothing); handles first, a click beside the lines nothing
+TEST(editor_graph_segment_grabs)
+{
+    Rig g;
+    g.vals[{"Env/Attack", 0}] = 40, g.vals[{"Env/Decay", 0}] = 70, g.vals[{"Env/Sustain", 0}] = 90;
+    g.vals[{"Env/Sustain Time", 0}] = 80, g.vals[{"Env/Release", 0}] = 50;
+    g.vals[{"Filter 1/Cutoff", 0}] = 60, g.vals[{"Filter 1/Resonance", 0}] = 30;
+    // a click 30 % along the segment (away from the handle at its end): the segment path must answer, not a handle
+    auto grab_mid = [&](const Hit &h, const EditorRenderer::GraphSegment &s) {
+        auto all = g.r->graph_grabs(*h.element, h.x, h.y, 0);
+        const size_t handles = g.r->graph_handles(*h.element, h.x, h.y, 0).size();
+        int i = g.r->graph_grab(*h.element, h.x, h.y, 0, (int)std::lround(s.x0 + 0.3 * (s.x1 - s.x0)),
+                                (int)std::lround(s.y0 + 0.3 * (s.y1 - s.y0)));
+        CHECK(i >= 0 && (size_t)i >= handles && (size_t)i < all.size());
+        return i >= 0 ? all[(size_t)i] : EditorRenderer::GraphHandle{};
+    };
+    Hit env = g.r->hit_test(100, 100);
+    CHECK(env.element && env.element->type == "ADSTREnvelope");
+    auto es = g.r->graph_segments(*env.element, env.x, env.y, 0);
+    CHECK(es.size() == 5);
+    const char *want[5][2] = {{"Env/Attack", ""}, {"Env/Decay", "Env/Sustain"}, {"", "Env/Sustain"},
+                              {"", "Env/Sustain Time"}, {"Env/Release", ""}};
+    for (size_t i = 0; i < es.size() && i < 5; i++) {
+        auto gr = grab_mid(env, es[i]);
+        CHECK(gr.xparam == want[i][0] && gr.yparam == want[i][1]);
+    }
+    // a handle wins over the segments that meet there
+    auto hs = g.r->graph_handles(*env.element, env.x, env.y, 0);
+    CHECK(g.r->graph_grab(*env.element, env.x, env.y, 0, (int)hs[1].x, (int)hs[1].y) == 1);
+    Hit lp = g.r->hit_test(30, 60);
+    auto ls = g.r->graph_segments(*lp.element, lp.x, lp.y, 0);
+    CHECK(ls.size() == 3);
+    auto flat = grab_mid(lp, ls[0]), fall = grab_mid(lp, ls[2]);
+    CHECK(flat.xparam == "Filter 1/Cutoff" && flat.yparam.empty());
+    // the rise is 4 px wide, all of it within the peak handle's 5 px: its grab is the handle's anyway
+    CHECK(ls[1].grab.xparam == "Filter 1/Cutoff" && ls[1].grab.yparam == "Filter 1/Resonance");
+    CHECK(fall.xparam.empty() && fall.yparam.empty()); // a hit, but nothing to drag
+    // a flat segment is 4 px tall (+-2), 4 px off is nothing
+    const int fx = (int)std::lround((ls[0].x0 + ls[0].x1) / 2), fy = (int)std::lround(ls[0].y0);
+    CHECK(g.r->graph_grab(*lp.element, lp.x, lp.y, 0, fx, fy - 2) >= 0);
+    CHECK(g.r->graph_grab(*lp.element, lp.x, lp.y, 0, fx, fy - 4) < 0);
+    Hit bs = g.r->hit_test(300, 60);
+    auto bss = g.r->graph_segments(*bs.element, bs.x, bs.y, 0);
+    CHECK(bss.size() == 4);
+    // (the notch walls here are under 4 px wide and near the handle: their grabs checked directly)
+    CHECK(grab_mid(bs, bss[0]).xparam == "Filter 1/Cutoff" && grab_mid(bs, bss[0]).yparam.empty());
+    CHECK(bss[1].grab.xparam == "Filter 1/Cutoff" && bss[1].grab.yparam.empty());
+    CHECK(bss[2].grab.xparam.empty() && bss[2].grab.yparam.empty());
+    CHECK(grab_mid(bs, bss[3]).xparam.empty());
+}
+
+// #19: the filter display sits inside the big cutoff knob (MaskedKnob, drawn later, covering it): a click on the
+// display's handle must reach the display, a click elsewhere on the knob stays the knob's
+TEST(editor_graph_hit_under_a_knob)
+{
+    static const char *L = R"(<?xml version="1.0"?>
+<Editor><Frame width="200" height="200"><Container><Size left="0" top="0" width="200" height="200"/>
+ <LP4Response Parameter="Filter 1/Cutoff" NormalHandle="handle.png"><Size left="40" top="40" width="80" height="60"/></LP4Response>
+ <MaskedKnob Parameter="Filter 1/Cutoff" NormalBack="knob.png"><Size left="10" top="10" width="140" height="140"/></MaskedKnob>
+</Container></Frame></Editor>)";
+    Rig g;
+    EditorLayout lay;
+    std::string err;
+    CHECK(lay.load(Bytes(L, L + strlen(L)), err));
+    EditorRenderer r(lay, *g.cond, g.dev, g.ed);
+    g.vals[{"Filter 1/Cutoff", 0}] = 64, g.vals[{"Filter 1/Resonance", 0}] = 0;
+    r.values = g.r->values;
+    Hit plain = r.hit_test(45, 45);
+    CHECK(plain.element && plain.element->type == "MaskedKnob");
+    Hit d = r.hit_test(45, 45); // no handle there
+    CHECK(!r.graph_hit_test(45, 45).element);
+    Hit lp = r.graph_hit_test(0, 0);
+    CHECK(!lp.element);
+    // the handle: find it through the display's own geometry
+    Hit disp;
+    disp.element = &lay.elements[0].children[0];
+    disp.x = 40, disp.y = 40;
+    auto hs = r.graph_handles(*disp.element, 40, 40, 0);
+    CHECK(hs.size() == 1);
+    Hit at = r.graph_hit_test((int)hs[0].x, (int)hs[0].y);
+    CHECK(at.element && at.element->type == "LP4Response" && at.x == 40 && at.y == 40);
+    // a segment counts too (E372): the flat part left of the peak
+    auto ss = r.graph_segments(*disp.element, 40, 40, 0);
+    CHECK(!ss.empty());
+    Hit seg = r.graph_hit_test((int)std::lround((ss[0].x0 + ss[0].x1) / 2), (int)std::lround(ss[0].y0));
+    CHECK(seg.element && seg.element->type == "LP4Response");
+    // a segment that drags nothing (the fall after the peak) leaves the click to the knob, as before segments
+    CHECK(ss.size() == 3 && ss[2].grab.xparam.empty() && ss[2].grab.yparam.empty());
+    const double fx = ss[2].x0 + 0.8 * (ss[2].x1 - ss[2].x0), fy = ss[2].y0 + 0.8 * (ss[2].y1 - ss[2].y0);
+    CHECK(!r.graph_hit_test((int)std::lround(fx), (int)std::lround(fy)).element);
+    (void)d;
+}
+
+// #19 point 3 / E371: the ARP step editor grabs like the original's KStepSequencer - only on a step that is on (its
+// area spans the following off steps), length near/right of the bar end, velocity near the bar top, both in the
+// corner, nothing elsewhere; cells are 20 px (the rig's 640 px / 32)
+TEST(editor_arp_grab_zones)
+{
+    Rig g;
+    const std::string s = "Arpeggiator User Pattern/Step ";
+    g.vals[{s + "1 Bitfield", 0}] = 1, g.vals[{s + "1 Velocity", 0}] = 100, g.vals[{s + "1 Length", 0}] = 64;
+    g.vals[{s + "2 Bitfield", 0}] = 0; // off: step 1's area spans cells 1 and 2
+    g.vals[{s + "3 Bitfield", 0}] = 1, g.vals[{s + "3 Velocity", 0}] = 40, g.vals[{s + "3 Length", 0}] = 127;
+    Hit h = g.r->hit_test(10, 200);
+    CHECK(h.element && h.element->type == "ArpEdit");
+    int cx = 0, bottom = 0;
+    EditorRenderer::arp_step_geometry(*h.element, h.x, h.y, 0, cx, bottom);
+    auto a = g.r->arp_grab(*h.element, h.x, h.y, 0, cx + 3, bottom - 100 + 2); // near step 1's bar top
+    CHECK(a.step == 0 && a.velocity && !a.length && a.span == 2);
+    auto bar_end = cx + (int)std::lround(EditorRenderer::arp_step_width(64) * 2.0);
+    a = g.r->arp_grab(*h.element, h.x, h.y, 0, bar_end - 3, bottom - 20); // left of the end, low: length
+    CHECK(a.step == 0 && a.length && !a.velocity);
+    a = g.r->arp_grab(*h.element, h.x, h.y, 0, bar_end + 10, bottom - 98); // right of it, near the top: both
+    CHECK(a.step == 0 && a.length && a.velocity);
+    a = g.r->arp_grab(*h.element, h.x, h.y, 0, cx + 2, bottom - 20); // inside the bar, low and left: nothing
+    CHECK(a.step == 0 && !a.length && !a.velocity);
+    int c3 = 0;
+    EditorRenderer::arp_step_geometry(*h.element, h.x, h.y, 2, c3, bottom);
+    a = g.r->arp_grab(*h.element, h.x, h.y, 0, c3 + 2, bottom - 41); // step 3 (on), at its top
+    CHECK(a.step == 2 && a.velocity);
+    g.vals[{s + "1 Bitfield", 0}] = 0;
+    a = g.r->arp_grab(*h.element, h.x, h.y, 0, cx + 3, bottom - 98); // step 1 off: nothing to grab
+    CHECK(a.step < 0);
+    CHECK(EditorRenderer::arp_cell(*h.element, h.x, cx + 25) == 1); // Alt+click: the cell under the mouse
 }

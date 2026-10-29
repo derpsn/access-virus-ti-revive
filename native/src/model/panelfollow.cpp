@@ -14,6 +14,7 @@ bool PanelFollow::preset_report(const std::string &path, int part, Clock::time_p
         return false;
     std::lock_guard<std::mutex> lk(mu_);
     parts_ |= 1u << part;
+    chosen_bank_[part] = -1; // the Virus' own choice wins over one made in the plug-in before
     due_ = now + PRESET_QUIET; // one timer for all parts, from the last report (the Virus reports Bank, then Patch)
     return true;
 }
@@ -55,6 +56,45 @@ const std::vector<std::string> &PanelFollow::restored_controllers()
         "Internal MIDI Standard Parameters/16 Controller 16",
     };
     return c;
+}
+
+std::vector<std::vector<uint8_t>> PanelFollow::program_select(int part, int bank, int program)
+{
+    if (part < 0 || part > 15 || bank < 0 || bank > 127 || program < 0 || program > 127)
+        return {};
+    const uint8_t ch = (uint8_t)part;
+    return {{(uint8_t)(0xB0 | ch), 0x00, 0x00}, {(uint8_t)(0xB0 | ch), 0x20, (uint8_t)bank}, {(uint8_t)(0xC0 | ch), (uint8_t)program}};
+}
+
+bool PanelFollow::preset_chosen(int part, int bank, int patch, Clock::time_point now)
+{
+    if (part < 0 || part > 15)
+        return false;
+    std::lock_guard<std::mutex> lk(mu_);
+    chosen_bank_[part] = bank;
+    chosen_patch_[part] = patch;
+    parts_ |= 1u << part;
+    due_ = now + PRESET_QUIET;
+    return true;
+}
+
+bool PanelFollow::chosen(int part, int &bank, int &patch)
+{
+    if (part < 0 || part > 15)
+        return false;
+    std::lock_guard<std::mutex> lk(mu_);
+    if (chosen_bank_[part] < 0)
+        return false;
+    bank = chosen_bank_[part], patch = chosen_patch_[part];
+    return true;
+}
+
+void PanelFollow::forget_chosen(int part)
+{
+    if (part < 0 || part > 15)
+        return;
+    std::lock_guard<std::mutex> lk(mu_);
+    chosen_bank_[part] = -1;
 }
 
 } // namespace vti

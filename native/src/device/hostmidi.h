@@ -9,6 +9,7 @@
 #pragma once
 #include <algorithm>
 #include <cmath>
+#include <cstddef>
 #include <cstdint>
 #include <cstring>
 
@@ -43,6 +44,31 @@ inline double clock_tempo(double bpm)
     if (!usable(bpm) || !(bpm > 0))
         return 120.0;
     return std::max(1.0, std::min(999.0, bpm));
+}
+
+// Controllers the host hands over as parameters (VST3 IMidiMapping; the VST3 numbers: 0..127 controllers, 128
+// channel aftertouch, 129 pitch bend). A VST3 host sends a plug-in no controller it has not mapped - with only
+// aftertouch and pitch bend mapped, the mod wheel never reached the Virus (issue #18). The original, a VST2, got
+// every controller from the host and keeps CC 1..16 per channel in its state (docs/formats.md). The channel mode
+// messages 120..127 (all sound off, reset, all notes off, ...) stay unmapped: the plug-in sends those itself.
+inline bool mapped_controller(int ctl) { return (ctl >= 0 && ctl < 120) || ctl == 128 || ctl == 129; }
+
+// the MIDI message of mapped controller ctl on channel ch (0..15) at value v01; returns its length (0: none)
+inline size_t mapped_message(int ch, int ctl, double v01, uint8_t *m)
+{
+    if (ch < 0 || ch > 15 || !mapped_controller(ctl))
+        return 0;
+    if (ctl == 128) {
+        m[0] = (uint8_t)(0xD0 | ch), m[1] = data7(v01);
+        return 2;
+    }
+    if (ctl == 129) {
+        int pb = bend14(v01);
+        m[0] = (uint8_t)(0xE0 | ch), m[1] = (uint8_t)(pb & 0x7F), m[2] = (uint8_t)(pb >> 7);
+        return 3;
+    }
+    m[0] = (uint8_t)(0xB0 | ch), m[1] = (uint8_t)ctl, m[2] = data7(v01);
+    return 3;
 }
 
 } // namespace vti

@@ -67,3 +67,15 @@ TEST(lcdhover_shows_global_settings)
     CHECK(lcd_hover_shows("Global Master/Tuning"));
     CHECK(lcd_hover_shows("Multi Parameters/Clock Tempo"));
 }
+
+TEST(lcdhover_release_keeps_a_message)
+{
+    // a message written over hover's text (a file drop, E357) gives up hover's claim: leaving the control keeps it
+    LcdHover h;
+    LcdFields lcd;
+    h.enter({"Cutoff", "64", "[64]", "Part 1"}, lcd);
+    lcd = {"Library added", "Bank: 2 patches", "", ""};
+    h.release();
+    CHECK(!h.leave(lcd));
+    CHECK(lcd.param == "Library added");
+}

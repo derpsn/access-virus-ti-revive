@@ -1036,6 +1036,19 @@ void PopupLevelView::onKeyboardEvent(KeyboardEvent &event)
         owner_->key_event(event, false);
 }
 
+// files dragged in from the desktop (Explorer, Finder, a file manager): VSTGUI hands them to the view under the
+// cursor; the canvas decides what they mean (the browser's own drags never get here, they are mouse tracking)
+class FileDropTarget : public IDropTarget, public NonAtomicReferenceCounted {
+public:
+    std::function<DragOperation(DragEventData)> move;
+    std::function<void()> leave;
+    std::function<bool(DragEventData)> drop;
+    DragOperation onDragEnter(DragEventData d) override { return move(d); }
+    DragOperation onDragMove(DragEventData d) override { return move(d); }
+    void onDragLeave(DragEventData) override { leave(); }
+    bool onDrop(DragEventData d) override { return drop(d); }
+};
+
 class EditorCanvasView : public CView, public IControlListener, public TextEditListenerAdapter, public IKeyboardHook,
                         public IMouseObserver {
 public:
@@ -1300,6 +1313,12 @@ public:
             snprintf(t, sizeof t, "READING THE VIRUS' BANKS: ABOUT %d MIN LEFT", (eta + 59) / 60);
             renderer_.status_text(canvas_, "FNT_LCD_5x7_Rot.png", t, 480, 290, 381, 12);
         }
+        // "No Virus TI can be found": name another installed Virus driver under the page's text (our own, E366)
+        if (plugin_->ui_value("SystemStatus/Error", -1) == 3) {
+            const auto &lines = plugin_->other_driver_lines();
+            for (size_t i = 0; i < lines.size(); i++) // the page's container is at 520/62, its last line at 250
+                renderer_.status_text(canvas_, "FNT_LCD_5x7_Rot.png", lines[i], 529, 332 + 10 * (int)i, 351, 12);
+        }
         if (help_)
             draw_help(ctx);
         {
@@ -1322,9 +1341,20 @@ public:
     void onMouseDownEvent(MouseDownEvent &event) override
     {
         Hit h = renderer_.hit_test((int)event.mousePosition.x, (int)event.mousePosition.y);
+        // a handle of a filter / envelope display wins over the control drawn above it (the cutoff knob, #19)
+        if (Hit g = renderer_.graph_hit_test((int)event.mousePosition.x, (int)event.mousePosition.y); g.element && !help_)
+            h = g;
         if (env_debug())
             fprintf(stderr, "mouse down %.0f,%.0f -> %s %s\n", event.mousePosition.x, event.mousePosition.y,
                     h.element ? h.element->type.c_str() : "-", h.element ? h.element->get("Parameter").c_str() : "");
+        // the browser list clicked last has the focus: its selection filled, the other's framed; any other click takes
+        // the focus away, like the original's focus view (E318)
+        const int focus = h.element && h.element->type == "PatchBrowser"
+                              ? EditorRenderer::browser_pane(h.element->get("Parameter")) : -1;
+        if (focus != renderer_.focused_pane) {
+            renderer_.focused_pane = focus;
+            invalid();
+        }
         // right button: a menu under the point takes it, even under another control (the wavetable menu inside the
         // oscillator ring); knobs and buttons ignore it like in the original (VSTGUI: left button only)
         if (event.buttonState.isRight() && !help_) {
@@ -1334,6 +1364,21 @@ public:
                 event.consumed = true;
                 return;
             }
+        }
+        // right-click on the user pattern: the original's pattern menu (0x1800684d0, E371) - shift, randomize, reset,
+        // fill up for the steps up to the pattern length
+        if (event.buttonState.isRight() && !help_ && h.element &&
+            h.element->get("Parameter").rfind("Arpeggiator User Pattern/", 0) == 0) {
+            std::vector<vti::PopupItem> items;
+            for (int a = 0; a < VirusPlugin::ARP_ACTION_COUNT; a++)
+                items.push_back({VirusPlugin::arp_action_name(a), true});
+            const int part = h.part;
+            show_list(std::move(items), -1, 0, event.mousePosition, [this, part](int a) {
+                plugin_->arp_action(part, a);
+                invalid();
+            });
+            event.consumed = true;
+            return;
         }
         // right-click on a browser entry: the original's browser menu (E294 (4))
         if (event.buttonState.isRight() && !help_ && h.element && h.element->type == "PatchBrowser") {
@@ -1392,19 +1437,45 @@ public:
             event.consumed = true;
             return;
         }
-        if (e.type == "ArpEdit") { // user pattern: drag a bar's right edge = length, else click/drag = velocity
-            arp_length_drag_ = -1;
-            int step = std::max(0, std::min(31, (int)(event.mousePosition.x - h.x - 1) / 20));
-            std::string st = "Arpeggiator User Pattern/Step " + std::to_string(step + 1) + " ";
-            if (plugin_->ui_value(st + "Bitfield", h.part)) {
-                int cx, bottom;
-                EditorRenderer::arp_step_geometry(e, h.x, h.y, step, cx, bottom);
-                int r = EditorRenderer::arp_step_width(plugin_->ui_value(st + "Length", h.part));
-                if (std::abs(event.mousePosition.x - (cx + r)) <= 2)
-                    arp_length_drag_ = step;
+        // filter / envelope displays: drag a handle or a line segment like the original's KEnvelope (E371, E372) -
+        // relative, the handle stays under the mouse, Shift = 4x finer; Ctrl+click puts the grabbed parameters back
+        // to the middle (resonance to 0)
+        if (e.type == "ADSTREnvelope" || (e.type.size() == 11 && e.type.compare(3, 8, "Response") == 0)) {
+            const auto hs = renderer_.graph_grabs(e, h.x, h.y, h.part);
+            graph_handle_ = renderer_.graph_grab(e, h.x, h.y, h.part, (int)event.mousePosition.x,
+                                                 (int)event.mousePosition.y);
+            if (graph_handle_ >= 0 && hs[(size_t)graph_handle_].xparam.empty() &&
+                hs[(size_t)graph_handle_].yparam.empty())
+                graph_handle_ = -1; // a segment that moves nothing (the filter's fall)
+            if (graph_handle_ >= 0) {
+                const auto &gh = hs[(size_t)graph_handle_];
+                if (event.modifiers.has(ModifierKey::Control)) {
+                    for (const std::string *pp : {&gh.xparam, &gh.yparam})
+                        if (!pp->empty())
+                            plugin_->ui_set(*pp, h.part, pp->find("/Resonance") != std::string::npos ? 0 : 64);
+                    graph_handle_ = -1;
+                    invalid();
+                } else
+                    graph_anchor(gh, event.mousePosition, event.modifiers.has(ModifierKey::Shift));
             }
-            if (arp_length_drag_ < 0)
-                arp_set_velocity(h, event.mousePosition);
+            event.consumed = true;
+            return;
+        }
+        if (e.type == "ArpEdit") { // user pattern, like the original's KStepSequencer (E371)
+            arp_grab_ = {};
+            const int px = (int)event.mousePosition.x, py = (int)event.mousePosition.y;
+            if (event.modifiers.has(ModifierKey::Alt)) { // Alt+click switches the step under the mouse on or off
+                const std::string bf = "Arpeggiator User Pattern/Step " +
+                                       std::to_string(EditorRenderer::arp_cell(e, h.x, px) + 1) + " Bitfield";
+                plugin_->ui_set(bf, h.part, plugin_->ui_value(bf, h.part) ? 0 : 1);
+                invalid();
+            } else if (auto g = renderer_.arp_grab(e, h.x, h.y, h.part, px, py); g.step >= 0 && (g.length || g.velocity)) {
+                // length near / right of the bar end, velocity near its top; relative, on this step only
+                arp_grab_ = g;
+                const std::string st = "Arpeggiator User Pattern/Step " + std::to_string(g.step + 1) + " ";
+                arp_len0_ = plugin_->ui_value(st + "Length", h.part);
+                arp_vel0_ = plugin_->ui_value(st + "Velocity", h.part);
+            }
             event.consumed = true;
             return;
         }
@@ -1447,7 +1518,11 @@ public:
                 return;
             }
             int v = drag_value_ + (e.type == "IncButton" ? 1 : -1);
-            plugin_->ui_set(param, h.part, std::max(lo, std::min(hi, v)));
+            if (param.rfind("Browser ", 0) == 0 && param.find("/Selected Bank") != std::string::npos)
+                v = vti::browser_bank_step(bank_menu_order(), drag_value_, e.type == "IncButton" ? 1 : -1);
+            else
+                v = std::max(lo, std::min(hi, v));
+            plugin_->ui_set(param, h.part, v);
             renderer_.pressed = &e;
             invalid();
             event.consumed = true;
@@ -1502,19 +1577,40 @@ public:
         if (!drag_.element || !event.buttonState.isLeft())
             return;
         const Element &e = *drag_.element;
+        if (graph_handle_ >= 0) { // a filter / envelope handle or segment (mouse down)
+            auto hs = renderer_.graph_grabs(e, drag_.x, drag_.y, drag_.part);
+            if ((size_t)graph_handle_ >= hs.size())
+                return;
+            const auto &gh = hs[(size_t)graph_handle_];
+            const bool fine = event.modifiers.has(ModifierKey::Shift);
+            if (fine != graph_fine_) // the modifier changed: go on from here, no jump (like the original)
+                graph_anchor(gh, event.mousePosition, fine);
+            const double f = graph_fine_ ? 4.0 : 1.0;
+            const double tx = graph_hx_ + (event.mousePosition.x - graph_mx_) / f;
+            const double ty = graph_hy_ + (event.mousePosition.y - graph_my_) / f;
+            for (const std::string *pp : {&gh.xparam, &gh.yparam})
+                if (!pp->empty())
+                    drag_set(*pp, drag_.part, renderer_.graph_value(e, drag_.x, drag_.y, drag_.part, *pp, tx, ty));
+            invalidRect(CRect(drag_.x - 4, drag_.y - 4, drag_.x + e.w + 4, drag_.y + e.h + 4));
+            for (auto &other : plugin_->take_changed()) // the knobs of these parameters move along
+                for (auto &rc : shown_rects(other))
+                    invalidRect(CRect(rc[0] - 2, rc[1] - 2, rc[0] + rc[2] + 2, rc[1] + rc[3] + 2));
+            invalidRect(CRect(200, 470, 560, 512));
+            partial_ = true;
+            event.consumed = true;
+            return;
+        }
         if (e.type == "ArpEdit") {
-            if (arp_length_drag_ >= 0) { // length from the right edge position (inverse of the width table)
-                int cx, bottom;
-                EditorRenderer::arp_step_geometry(e, drag_.x, drag_.y, arp_length_drag_, cx, bottom);
-                int want = (int)event.mousePosition.x - cx, best = 0;
-                for (int len = 0; len <= 127; len++)
-                    if (std::abs(EditorRenderer::arp_step_width(len) - want) <
-                        std::abs(EditorRenderer::arp_step_width(best) - want))
-                        best = len;
-                drag_set("Arpeggiator User Pattern/Step " + std::to_string(arp_length_drag_ + 1) + " Length",
-                         drag_.part, best);
-            } else
-                arp_set_velocity(drag_, event.mousePosition);
+            if (arp_grab_.step < 0)
+                return;
+            const std::string st = "Arpeggiator User Pattern/Step " + std::to_string(arp_grab_.step + 1) + " ";
+            auto clamp = [](double v) { return (int)std::lround(std::max(0.0, std::min(127.0, v))); };
+            if (arp_grab_.length) // the step's whole area (its span) is the full length, like the original
+                drag_set(st + "Length", drag_.part,
+                         clamp(arp_len0_ + (event.mousePosition.x - drag_x_) * 127.0 /
+                                               std::max(1, arp_grab_.span * (e.w / 32))));
+            if (arp_grab_.velocity) // the bar's height is the velocity in px
+                drag_set(st + "Velocity", drag_.part, clamp(arp_vel0_ - (event.mousePosition.y - drag_y_)));
             invalid();
             event.consumed = true;
             return;
@@ -1597,6 +1693,8 @@ public:
             show_selection(dnd_pane_, dnd_bank_);
         }
         renderer_.highlighted.clear();
+        graph_handle_ = -1;
+        arp_grab_ = {};
         drag_ = {};
         drag_rects_.clear();
         renderer_.pressed = nullptr;
@@ -1625,16 +1723,19 @@ public:
                 plugin_->set_remote_text(edit_param_, t);
             edit_param_.clear();
             edit_bank_ = -1;
-            remove_edit(te); // after the current event
-            invalid();
+            invalid(); // the field goes away with the focus (below)
         }
     }
 
-    // ITextEditListener: the search field lost the focus (return, click elsewhere)
+    // ITextEditListener: a text field lost the focus (return, escape, click elsewhere). VSTGUI reports a commit
+    // (valueChanged above) only for a changed text, so the field is removed here: before, a name confirmed unchanged
+    // stayed on the part bar as a white field and hid every later name (issue #18).
     void onTextEditPlatformControlLostFocus(CTextEdit *te) override
     {
         te->unregisterTextEditListener(this);
         editing_search_ = false;
+        edit_param_.clear();
+        edit_bank_ = -1;
         remove_edit(te);
         invalid();
     }
@@ -1650,7 +1751,97 @@ public:
     }
     std::vector<CTextEdit *> remove_later_;
 
+    // a library file dropped on the browser becomes a personal library (TI Revive's own addition, E357)
+    SharedPointer<IDropTarget> getDropTarget() override
+    {
+        auto t = makeOwned<FileDropTarget>();
+        t->move = [this](DragEventData d) { return file_drag(d); };
+        t->leave = [this]() { file_drag_end(); };
+        t->drop = [this](DragEventData d) { return file_drop(d); };
+        return t;
+    }
+
 private:
+    // the .mid/.midi/.syx paths in a drag from outside (anything else is ignored)
+    static std::vector<std::string> dropped_libraries(IDataPackage *p)
+    {
+        std::vector<std::string> out;
+        for (uint32_t i = 0; p && i < p->getCount(); i++) {
+            const void *buf = nullptr;
+            IDataPackage::Type type = IDataPackage::kError;
+            const uint32_t n = p->getData(i, buf, type);
+            if (type != IDataPackage::kFilePath || !buf || n == 0)
+                continue;
+            std::string path((const char *)buf, n);
+            while (!path.empty() && path.back() == '\0')
+                path.pop_back();
+#ifdef _WIN32
+            // VSTGUI gives UTF-8; the plug-in's paths are narrow (ANSI code page) like library_dir(): converted, a
+            // name the code page cannot hold is kept and fails with "Cannot read" instead of opening something else
+            try {
+                path = std::filesystem::u8path(path).string();
+            } catch (...) {
+            }
+#endif
+            if (importable_library(path))
+                out.push_back(path);
+        }
+        return out;
+    }
+    const Element *browser_at(const CPoint &p)
+    {
+        Hit t = renderer_.hit_test((int)p.x, (int)p.y);
+        return t.element && t.element->type == "PatchBrowser" ? t.element : nullptr;
+    }
+    // over a browser with a library file: the copy cursor and a hint in the LCD (a drop takes the whole file, so no
+    // slot is highlighted); anywhere else, or other files: no drop
+    DragOperation file_drag(const DragEventData &d)
+    {
+        const bool ok = browser_at(d.pos) && !dropped_libraries(d.drag).empty();
+        plugin_->lcd_hint(ok, "Drop to add a library", "(Personal Libraries)"); // off: the LCD as it was
+        return ok ? DragOperation::Copy : DragOperation::None;
+    }
+    void file_drag_end() { plugin_->lcd_hint(false); }
+    bool file_drop(const DragEventData &d)
+    {
+        plugin_->lcd_hint(false);
+        const Element *browser = browser_at(d.pos);
+        const auto files = dropped_libraries(d.drag);
+        if (!browser || files.empty())
+            return false;
+        int shown = -1, added = 0, there = 0, failed = 0;
+        LibraryImport one;
+        for (auto &f : files) {
+            int lib = -1;
+            one = plugin_->import_library_file(f, lib);
+            if (lib < 0)
+                failed++;
+            else {
+                shown = lib;
+                (one.existed ? there : added)++;
+            }
+        }
+        if (shown >= 0) // the pane it was dropped on shows the (last) library
+            plugin_->ui_set(browser->get("Parameter"), -1, VirusPlugin::LIB_BASE + shown);
+        // the LCD's second line holds 20 characters, the first a few more: the library's name goes below
+        if (files.size() == 1 && failed)
+            plugin_->lcd_message("Library not added", one.error);
+        else if (files.size() == 1) {
+            std::string what = one.existed ? "Library already there" : "Library added";
+            if (!one.existed && one.skipped) // damaged patches left out (E356)
+                what = "Added (" + std::to_string(one.skipped) + " damaged)";
+            plugin_->lcd_message(what, one.name);
+        } else {
+            std::string more;
+            if (there)
+                more = std::to_string(there) + (failed ? " there" : " already there");
+            if (failed)
+                more += (more.empty() ? "" : ", ") + std::to_string(failed) + " not added";
+            plugin_->lcd_message(std::to_string(added) + " libraries added", more);
+        }
+        invalid();
+        return shown >= 0;
+    }
     // help mode ("?"): frames around the explained controls, a note for the one under the mouse (or clicked)
     bool help_ = false, help_pinned_ = false;
     Hit help_hit_;
@@ -1789,22 +1980,22 @@ private:
             ctx->drawString(lines[i].c_str(), CRect(x + pad, ly, x + w - pad, ly + lh), kLeftText);
         }
     }
-    int arp_length_drag_ = -1; // ArpEdit: step whose length is dragged
+    EditorRenderer::ArpGrab arp_grab_; // ArpEdit: the grabbed step and what is dragged (E371)
+    int arp_len0_ = 0, arp_vel0_ = 0;  // its length and velocity when grabbed
+    // filter / envelope display drag (E371, E372): the grab (renderer graph_grabs index), where its handle and the
+    // mouse were at the (re)anchor
+    int graph_handle_ = -1;
+    double graph_hx_ = 0, graph_hy_ = 0, graph_mx_ = 0, graph_my_ = 0;
+    bool graph_fine_ = false;
+    void graph_anchor(const EditorRenderer::GraphHandle &gh, const CPoint &m, bool fine)
+    {
+        graph_hx_ = gh.x, graph_hy_ = gh.y, graph_mx_ = m.x, graph_my_ = m.y, graph_fine_ = fine;
+    }
     DragSend drag_sent_;       // a drag sends a value once, not on every mouse move (dragsend.h)
     void drag_set(const std::string &path, int part, int value)
     {
         if (drag_sent_.changed(path, part, value))
             plugin_->ui_set(path, part, value);
-    }
-    // ArpEdit: the step under the mouse gets the velocity of the mouse height (bars grow from the bottom row)
-    void arp_set_velocity(const Hit &h, const CPoint &p)
-    {
-        int step = std::max(0, std::min(31, (int)(p.x - h.x - 1) / 20));
-        int cx, bottom;
-        EditorRenderer::arp_step_geometry(*h.element, h.x, h.y, step, cx, bottom);
-        int vel = std::max(0, std::min(127, bottom - (int)p.y));
-        drag_set("Arpeggiator User Pattern/Step " + std::to_string(step + 1) + " Velocity", h.part, vel);
-        invalid();
     }
     int edit_part_ = 0;
     std::string edit_param_; // edit_name: the REMOTE page field being edited, empty for a patch name
@@ -1899,10 +2090,15 @@ private:
         }
         std::vector<vti::PopupItem> items;
         int part = h.part;
-        // LOAD only, like the original (E220): "Revert to "<name>"" after a load, "Recently Used" > "<n> <name>"
-        // (n = the entry's position in this menu, so 1.. under Revert), then a separator
-        int revert = -1, recent = -1;
+        // LOAD only: "Init Patch" (our own), then like the original (E220) "Revert to "<name>"" after a load,
+        // "Recently Used" > "<n> <name>" (n = the entry's position in this menu), then a separator
+        int revert = -1, recent = -1, init = -1;
         if (!save) {
+            // TI Revive's own addition (#14): start a sound from scratch
+            if (plugin_->has_init_patch()) {
+                init = (int)items.size();
+                items.push_back({"Init Patch"});
+            }
             const std::string rn = plugin_->revert_name(part);
             if (!rn.empty()) {
                 revert = (int)items.size();
@@ -1924,9 +2120,14 @@ private:
         for (size_t m = 0; m < menus.size(); m++)
             items.push_back({menus[m], true, std::move(lib[m])});
         show_popup(std::move(items), -1, 0, where,
-                   [this, part, save, libs, create, revert, recent, devi, libi](const std::vector<int> &path) {
+                   [this, part, save, libs, create, revert, recent, init, devi, libi](const std::vector<int> &path) {
             if (path.empty())
                 return;
+            if (path.size() == 1 && path[0] == init) {
+                plugin_->init_patch(part);
+                invalid();
+                return;
+            }
             if (path == std::vector<int>{libi, create}) {
                 create_library_dialog();
                 return;
@@ -1966,14 +2167,13 @@ private:
     }
 
     // the browser's bank selector: "<device> > RAM A .. ROM Z" and the library menus (E307)
-    void bank_menu_popup(const Hit &h, const CPoint &where)
+    // the bank menu's libraries: their submenus per library menu (Personal Libraries, ...) and menu's position +
+    // index path -> library. Entries are only appended, so the map's order is the order the menu lists them in
+    std::map<std::vector<int>, int> library_tree(const std::vector<std::string> &menus,
+                                                 std::vector<std::vector<vti::PopupItem>> &lib)
     {
-        std::vector<vti::PopupItem> dev;
-        for (int b = 0; b < plugin_->bank_count(); b++)
-            dev.push_back({VirusPlugin::bank_name(b)});
-        const auto menus = plugin_->library_menus();
-        std::vector<std::vector<vti::PopupItem>> lib(menus.size());
-        auto libs = std::make_shared<std::map<std::vector<int>, int>>(); // menu's position + path -> library
+        std::map<std::vector<int>, int> libs;
+        lib.assign(menus.size(), {});
         std::vector<std::map<std::string, std::vector<int>>> folders(menus.size());
         for (int i = 0; i < plugin_->library_count(); i++) {
             const int m = (int)(std::find(menus.begin(), menus.end(), plugin_->library_root(i)) - menus.begin());
@@ -1981,8 +2181,31 @@ private:
                 continue;
             auto at = vti::popup_add_path(lib[m], plugin_->library_name(i), {""}, folders[m]);
             at.insert(at.begin(), m);
-            (*libs)[at] = i;
+            libs[at] = i;
         }
+        return libs;
+    }
+
+    // the banks in the bank menu's order: the Virus' banks, then the libraries (the arrows step through it, #19)
+    std::vector<int> bank_menu_order()
+    {
+        std::vector<int> order;
+        for (int b = 0; b < plugin_->bank_count(); b++)
+            order.push_back(b);
+        std::vector<std::vector<vti::PopupItem>> lib;
+        for (auto &kv : library_tree(plugin_->library_menus(), lib))
+            order.push_back(VirusPlugin::LIB_BASE + kv.second);
+        return order;
+    }
+
+    void bank_menu_popup(const Hit &h, const CPoint &where)
+    {
+        std::vector<vti::PopupItem> dev;
+        for (int b = 0; b < plugin_->bank_count(); b++)
+            dev.push_back({VirusPlugin::bank_name(b)});
+        const auto menus = plugin_->library_menus();
+        std::vector<std::vector<vti::PopupItem>> lib;
+        auto libs = std::make_shared<std::map<std::vector<int>, int>>(library_tree(menus, lib));
         // the browser's bank menu has no "Create Empty Library" (only SAVE has, E297 (C))
         std::vector<vti::PopupItem> items;
         items.push_back({plugin_->device_name(), true, std::move(dev)});
@@ -2090,6 +2313,7 @@ private:
             te->setHoriAlign(kLeftText);
             te->setTextInset(CPoint(1, 0));
         }
+        te->registerTextEditListener(this);
         f->addView(te);
         te->takeFocus();
     }
@@ -2114,6 +2338,7 @@ private:
         te->setFont(makeOwned<CFontDesc>(kSystemFont->getName(), text_field_font(r.getHeight())));
         te->setHoriAlign(kLeftText);
         te->setTextInset(CPoint(1, 0));
+        te->registerTextEditListener(this);
         f->addView(te);
         te->takeFocus();
     }
@@ -2468,6 +2693,9 @@ bool PLUGIN_API VirusEditor::open(void *parent, const PlatformType &platformType
         return false;
     CRect size(0, 0, plugin_->layout().width, plugin_->layout().height);
     frame = new CFrame(size, this);
+    // VSTGUI's own text field (Linux) marks selected text in the frame's focus colour, red by default: a light blue
+    // like the system selection on Windows and macOS (the black name stays readable); focus frames are not drawn
+    frame->setFocusColor(CColor(179, 215, 255, 255));
 #if SMTG_OS_LINUX
     // VSTGUI on X11 needs the host's run loop (IRunLoop from the plug frame or the host context)
     if (open_frames == 0) {

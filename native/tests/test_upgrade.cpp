@@ -76,3 +76,21 @@ TEST(upgrade_single_golden)
     CHECK(all == 0xc708b30d1ca844f9ull);
     CHECK(changed == 1952);
 }
+
+// #14: the Virus shows a part's patch location from single-dump bytes 10..12 (E156). Like the original before a patch
+// load (0x180083ae0, E369): a patch from a bank of the Virus carries 0, the bank (RAM A..D = 1..4, ROM A.. = 5..: our
+// bank 0.. + 1) and its index - the display then reads "RAM-B 4"; any other source sets byte 10 = 0x20 ("eLIB").
+TEST(patch_origin_bytes)
+{
+    std::vector<uint8_t> d(524, 0);
+    d[10] = 7, d[11] = 8, d[12] = 9;
+    set_patch_origin(d, 1, 4, true); // RAM B, the 5th entry
+    CHECK(d[10] == 0 && d[11] == 2 && d[12] == 4);
+    set_patch_origin(d, 4, 127, true); // ROM A, the last entry
+    CHECK(d[10] == 0 && d[11] == 5 && d[12] == 127);
+    set_patch_origin(d, 100, 3, false); // a library: only the marker
+    CHECK(d[10] == 0x20 && d[11] == 5 && d[12] == 127);
+    std::vector<uint8_t> shortd(10, 0);
+    set_patch_origin(shortd, 1, 4, true); // not a single dump: left alone
+    CHECK(shortd == std::vector<uint8_t>(10, 0));
+}

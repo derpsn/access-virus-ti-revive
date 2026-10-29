@@ -72,3 +72,25 @@ TEST(stamprule_one_stamp_per_value_within_a_write)
     StampRun next;          // every USB write starts fresh (the DSP got other traffic in between)
     CHECK(next.fresh(100));
 }
+
+// Round 0.8.35 (E363, E364): late notes in Logic. The original stamps every note from the Virus' position now plus a
+// fixed lead of 3072 frames, so a late or bursty host block cannot make a note late. TI Revive stamps from its
+// timeline; the safety net keeps each stamp at least min_ahead frames past the newest ring frame, and in order.
+TEST(stamp_floor_keeps_the_reserve)
+{
+    StampFloor f;
+    CHECK(f.apply(10000, 8000, 1024) == 10000 && f.moved == 0); // 2000 ahead: unchanged
+    CHECK(f.apply(10500, 10000, 1024) == 11024 && f.moved == 1); // only 500 ahead: moved to newest + 1024
+    CHECK(f.apply(11000, 9000, 1024) == 11024 && f.moved == 1);  // reserve kept, but behind the moved one: in order
+    CHECK(f.apply(12000, 10000, 1024) == 12000);                // ahead again: unchanged
+    CHECK(f.apply(9000, -1, 1024) == 12000);                    // no newest frame known: only the order rule
+    CHECK(f.apply(11500, 10000, 1024) == 12000);                // under a second behind: still in order
+    CHECK(f.apply(200000, 150000, 1024) == 200000);
+    CHECK(f.apply(500, 100, 1024) == 1124 && f.moved == 2);     // a new timeline far behind (reconnect): accepted
+}
+
+TEST(stamp_lead_by_mode)
+{
+    CHECK(timing_lead(false, false) == 3072 && timing_lead(false, true) == 3072); // like the original, everywhere
+    CHECK(timing_lead(true, false) == 1024 && timing_lead(true, true) == 3072);   // classic: as before 0.8.35
+}

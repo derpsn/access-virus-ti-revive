@@ -38,11 +38,13 @@ codesign --force --sign - "$BUILD/mac/vtibroker"
 echo "== plug-in TI Revive Virus Control: VST3 + Audio Unit (arm64 + x86_64)"
 cmake -S "$REPO/native" -B "$BUILD/native" -G Xcode -DCMAKE_OSX_ARCHITECTURES="arm64;x86_64" \
     -DCMAKE_OSX_DEPLOYMENT_TARGET=11.0 ${SDKROOT:+-DCMAKE_OSX_SYSROOT="$SDKROOT"} >/dev/null
-cmake --build "$BUILD/native" --config Release --target VirusTINative VirusTINative_AU tirevive-cc TIReviveControlCenter -- -quiet
+cmake --build "$BUILD/native" --config Release --target VirusTINative VirusTINative_AU VirusTINative_AU_Snow tirevive-cc TIReviveControlCenter -- -quiet
 VST3="$BUILD/native/VST3/Release/TI Revive Virus Control.vst3"
 AU="$BUILD/native/AU/Release/TI Revive Virus Control.component"
+AU_SNOW="$BUILD/native/AU/Release/TI Revive Virus Control (Snow).component" # the Snow unit (E374)
 codesign --force --deep --sign - "$VST3"
 codesign --force --deep --sign - "$AU"
+codesign --force --deep --sign - "$AU_SNOW"
 CC_BIN="$BUILD/native/bin/Release/tirevive-cc" # the Control Center command line (read-only)
 codesign --force --sign - "$CC_BIN"
 CCAPP="$BUILD/native/ccapp/TI Revive Control Center.app" # the Control Center app
@@ -54,7 +56,7 @@ SUP="$ROOT/Library/Application Support"
 mkdir -p "$ROOT/Library/Audio/Plug-Ins/VST3" "$ROOT/Library/Audio/Plug-Ins/Components" "$SUP/TI Revive" "$ROOT/Applications"
 # 0.8.0: only the native plug-in (VST3 + Audio Unit, the codes / class ids of the classic bridge, which it replaces)
 cp -R "$VST3" "$ROOT/Library/Audio/Plug-Ins/VST3/"
-cp -R "$AU" "$ROOT/Library/Audio/Plug-Ins/Components/"
+cp -R "$AU" "$AU_SNOW" "$ROOT/Library/Audio/Plug-Ins/Components/"
 cp "$BUILD/mac/vtibroker" "$SUP/TI Revive/vtibroker"
 cp "$CC_BIN" "$SUP/TI Revive/tirevive-cc"
 cp -R "$CCAPP" "$ROOT/Applications/"

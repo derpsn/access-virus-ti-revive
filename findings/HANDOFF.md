@@ -1,5 +1,392 @@
 # HANDOFF
 
+## START HERE (end of day 2026-10-27): round 0.8.35, branch `round-0.8.35` (pushed, c402c5a+), v0.8.35-rc7 published
+
+**State.** All code of the round is committed and pushed; nothing uncommitted except the vst3sdk submodule marker.
+Today (details below, E372-E376): segment drag in the filter/envelope displays (E372); REAPER sync report at every
+Play fixed (heldnotes.h, E373; automated REAPER A/B runs); Control Center nerd mode Options menu + `tirevive-cc option`
+(outdelay-changes, timing-classic; default = like the original); REAPER part volume 127 at Stop = REAPER's 'Reset MIDI
+CC/Pitch on stop' (note in README/site, E373); greyed controls match the original (E375, no change); Snow plug-in as
+Audio Unit (E374, CI: builds, auval passes for both units); voice count idea dropped (E376: the Virus never reports
+it). REAPER updated to 7.83 (backup ~/.local/opt/dl/reaper/backup-7.82-20261027). Dev plug-in ba517ed5.. in ~/.vst3
+(= the REAPER fix build; rc6-era plug-in in ~/.vst3-backup/before-segments-1717). win10ref off, Virus on Linux,
+broker socket active. Current Control Center build: build-native/ccapp/TIReviveControlCenter.
+
+**2026-10-28 (user: 'final release today', gets the Mac):** CI TEST BUILD 0.8.35 run 40745427793 (2963d42) started.
+risk.py --round 0.8.35: class C on linux/windows/mac (hil cold/reopen/export, nothing by hand from core). Round
+checklist scripts/checklists/round-0.8.35.json PUBLISHED https://claude.ai/artifact/ULCMWzVCGh111Sgg5qeTGh (db):
+L1 REAPER Play/Stop, L2 drag and drop; W1 hil-win, W2 sound/timing/mod wheel Live 11, W3 Init/drop/browser, W4 graph+ARP;
+M1 hil-mac, M2 Snow AU in Logic, M3 exports 44.1/128 + 48/128, M4 mod wheel Live 12. NEXT: CI green -> install
+Linux + hil.sh, win11 VM, Mac push; then site-check, VERSION 0.8.35, release notes tested-on line, merge, tag.
+CI: Linux/Windows/MSI/hil kits GREEN; mac job NOT RUN 3x (18:28, 18:44, 19:01 UTC): no hosted macos-15 runner
+within 15 min, GitHub annotation 'capacity constraints ... macOS arm64 runners', no incident on githubstatus.
+Artifacts ~/Downloads/TI-Revive-0.8.35-test (old run 40568526535 moved to ...-test-40568526535). Linux = CI build
+(install.sh; plug-in 4d0d0635.. = the tarball's). hil.sh ALL PASS (work/hil/20261028-194527; export 1.00x, max 0.78 ms).
+L1 + L2 PASS (user, REAPER, CI build). diag.log of that session: 9 sync reports in ~93 s with ~16 Play/Stop cycles
+while the bank sync ran (39 s); 7 of 9 'since Play' 0 = while stopped (the original's output-delay set at Stop, E373
+default, 3-4/10 yesterday); none per Play like before the fix. No sync page (user).
+WINDOWS (win11 VM, Live 11): setup.exe /quiet exit 0, TI Revive 0.8.35, plug-in 34cecfeb.. = the MSI's. W1-W4 PASS
+(user). hil-win ALL PASS (work/hil/win-0.8.35/results-20261028-204116; export 1.00x, max 0.99 ms, drift +22..+70 ppm).
+NOTE: the Live session (W2-W4, 162 s) had 32 sync reports, rising 3-5 per 10 s while the user dragged graphs/ARP
+(W4), drops 0, no sync page; the 0.8.34 Live session in the same VM had ~5 (hover only). Cause not checked (VM USB?
+edit bursts?); E315: the sync page came at 70-101. Check on the Mac: count reports while dragging graphs.
+klog.on is still set in the VM (R5 diagnostic, harmless). Virus back on Linux, VM off. mac job attempt 4 (19:49 UTC).
+#20 (new, 2026-10-28, test report): TI Polar, Mac mini M4, macOS 26, Logic 12.2, USB hub, 'no issues so far', no
+version/stages. Reply posted (user OK, issuecomment-6479629791): asks version + AU/project recall.
+**2026-10-29:** mac job GREEN on attempt 8 (user restarted it; runner from 05:31 UTC) -> run 40745427793 all green.
+Mac PUSHED: ~/Downloads/TI-Revive-0.8.35-mac (pkg b6ce1ddf.. = CI, INSTALL-COMMAND.txt, Install test build.command,
+hil/); the 2026-10-26 folder moved to ~/Downloads/TI-Revive-0.8.35-mac-20261026. NEXT: user installs, M1-M4, plus
+a graph drag in the editor so the sync report count can be compared with the VM.
+**Mac sync errors (2026-10-29, E377):** Logic (Snow AU, 48k) clean; then Live 12: endless sync reports (>3000), the
+Virus delivering the OTHER rate than Core Audio's nominal (48 nominal / 44.1 delivered; after a Live restart at 44.1:
+44.1 / 48; after a power cycle again 44.1 / 48); a rate change in Live (48, back to 44.1) fixed it. Cause: stale Core
+Audio nominal rate, open() sets only on difference. User chose 'A, fix it now': ratemeter.h (TDD, 5 tests, 445 total,
+ctest 5/5 Linux) + AudioIn::check_rate (vti_relock away/back on the Core Audio device) + worker log lines; release
+note bullet. Mac code NOT compiled locally (no Mac toolchain here) -> CI build, then Mac retest: power cycle, Live 44.1,
+expect the 'other rate ... then back' line and clean stats. Old bug (since the rate following), not a regression.
+CI TEST BUILD with the fix: run 40827916741 (f3f7149) ALL GREEN (first Mac compile of check_rate). Artifacts
+~/Downloads/TI-Revive-0.8.35-test-f3f7149. Mac PUSHED (pkg 722fc4af..); previous folder ->
+~/Downloads/TI-Revive-0.8.35-mac-40745427793. Linux/win11 still on the 40745427793 build (Mac-only change).
+MAC CHECKLIST (user): M1-M4 PASS, all on the FIRST build (marks 06:43-06:57, fixed build installed 07:20):
+hil-mac ALL PASS (work/hil/mac-0.8.35/results-20261029-063830; max 0.78 ms, export 1.00x); M3 only ONE export
+(Timing 16ths.wav 06:48, 48 kHz): 256/256, jitter 0.00 ms, drift 0 ppm (work/timing/mac-0.8.35); 44.1/128 not exported.
+Fixed build: one Live session 07:20:49 at 44.1: 441216 / 441344, 0 anchors, 1 sync report - rates matched at the
+start, so the relock path did NOT run (not proven on hardware yet). All 10 checklist items pass.
+Fixed build again (user): hil-mac ALL PASS (work/hil/mac-0.8.35/results-20261029-072801); power cycle + Live 44.1
+07:34: matched from the start, 0 relock lines -> the stuck state did not come back; relock unproven on hardware
+(E377 updated). NEXT: site-check, VERSION 0.8.35, tested-on line, merge + tag after the user's OK.
+Release prep (2026-10-29): VERSION already 0.8.35 (bdb49fa). Release notes: tested-on line (Linux/Win11 VM/Mac
+with Logic Snow AU, Live 12; relock not yet seen on hardware), Snow AU bullet 'checked in Logic Pro on a TI2'.
+tirevive-site-check (round scope): fixed 445 tests, Snow AU tested in Logic, macOS Tested-with + Logic (AU), REAPER
+7.83, new reliability bullet E377 (site + README same text); site built locally, script tests OK, NOT deployed.
+Matrix: Polar gets its own row, macOS 'works for users' (user decision, #18 E367 + #20).
+
+**NEXT (user: no test session on 2026-10-27):**
+1. Full CI test build of the branch (build.yml -f version=0.8.35; the last full run 40568526535 failed only in mac,
+   fixed since, dev-mac 40569442737 green) -> install on Linux/win11/Mac (test machines latest).
+2. Mac session (Virus to the Mac): Snow AU in Logic (both units listed, the Snow class + 4-part editor, sound; autest
+   on the Snow component), exports 44.1/128 + 48/128 -> timing_analysis.py (E316/E317 residual note, lead 3072 now).
+3. Windows: nothing of this round tested on Windows yet (drop, Init, timing, Snow class, ARP/graph, held notes).
+4. risk.py --round 0.8.35, hil.sh, checklist artifact; tirevive-site-check; release 0.8.35; close #19 at the release;
+   tell #14 (Snow AU, rc/release) and #16 with the user.
+
+**Ideas backlog (user, 2026-10-27: 'keep it in our ideas backlog'; nothing started):**
+- Gap to the original: REMOTE page templates (define what the Virus' knobs send as a controller; writes RAM -
+  analysis + hardware test first). Help '?' menu (original: Setup Guide, docs, videos; ours could link README, issues,
+  'Save logs').
+- Own additions: Undo/Redo for editor edits; Compare (edit vs stored patch, the stored values exist for the LCD
+  hover); Panic button (all notes/sustain off, held-notes logic exists); automatic backup of a RAM slot before the
+  browser overwrites it; patch randomizer with amount/sections (bounded send rate, rule 2; asked in #19).
+- Suggested order (mine): Panic + Help menu (quick), then Undo/Redo; REMOTE templates as its own round.
+- Dropped: voice count / limit warning (E376).
+
+## (previous START HERE) (2026-10-25, afternoon): round 0.8.35 on branch `round-0.8.35` (from main 6f8b79d)
+**2026-10-27 evening (user: '1. Snow plug-in as AU, 2. the cosmetic fix, 3. find out what causes the REAPER
+behaviour, 4. the Mac export; before you start make RC7'):** v0.8.35-rc7 tagged on 211ddb5 + pushed, release CI run
+40564530449 (watching). (1) Snow AU BUILT on Linux side, NOT COMMITTED, Mac build untested: factoryorder.h +
+test_factoryorder.cpp (440 tests), entry.cpp hand-written factory (Snow first when plugin.vst3/Contents/Resources/
+snow-first exists), CMake vti_add_au() -> VirusTINative_AU + VirusTINative_AU_Snow ('TI Revive Virus Control
+(Snow).component', subtype VTIs, own Cocoa view class), Info.plist.in placeholders, dev-mac.yml (auval both),
+mac-build-release.sh, postinstall, uninstaller. The Mac has no cmake/checkout -> one CI test build after 2-4, then
+Mac tests together (autest on the Snow component, Logic). Docs (README Snow bullet, architecture.md, notes) pending.
+(3) REAPER volume DONE (E373 updated): 'Reset MIDI CC/Pitch to neutral on playback stop' (neutral CC7 = 127);
+automated run with ccresettab=cc7=-1 in reaper.ini: 0/10 CC7 at Stop (10/10 without); reaper.ini restored from
+scratchpad auto/reaper.ini.bak. README 'Good to know' + site details note (same text), NOT COMMITTED yet.
+(2) Cosmetic: the old note (HANDOFF ~l.2036) says Delay Clock and Reverb Mode look ACTIVE in the original with Init,
+inactive in ours -> not an opacity question. Delay/Clock condition = 'Parameter Visbility/Pages/Classic Delay Clock'
+(Mode 1..5, Type 0, Send >= 1), Reverb/Mode = 'Parameter Active Condition/Reverb/Send is active'; both Menus (Reverb
+Type too). REA subagent running: what the original's vtable+0xC0 'is active' checks, groups, menus.
+(2) Cosmetic DONE = E375: nothing to fix - the original (win10ref, user screenshot, Init, FX 2) greys the same
+controls as our renderer, grey levels within measuring error; the old 0.8.21 note was wrong. rc7 PUBLISHED (run
+40564530449 all green, pre-release, 6 assets). win10ref running with the Virus attached (detach after the user quits
+Live). Snow AU COMMITTED 0549a4d (E374; README/notes/architecture, 440 tests), pushed; win10ref off, Virus back on Linux,
+broker socket active. CI TEST BUILD 0.8.35 run 40568526535 (0549a4d) started = first Mac compile of the Snow AU.
+NEXT (Mac session, Virus to the Mac): install the CI pkg (INSTALL-COMMAND.txt + 'Install test build.command'),
+autest on 'TI Revive Virus Control (Snow).component' (Snow class? editor PNG), Logic: both units listed, Snow
+editor, sound; exports 44.1/128 + 48/128 -> timing_analysis.py. CI test build 40568526535: Linux/Windows/MSI green, MAC FAILED (Snow AU post-build script: '(' in the path ->
+no shell quoting) -> fixed 36354e6 (VERBATIM); dev-mac run 40569442737 GREEN: both AUs registered, auval SUCCEEDED for VTIr and VTIs, marker present, package built (E374 updated).
+After it is green: a full build.yml test build for the Mac session (user: NO test session today, 2026-10-27).
+NEW user question (2026-10-27 evening): show how many voices play and warn at the limit. Spec (virus.info/virusti/
+specs): 20-90 voices depending on the patch (Snow 10-50), dynamic allocation over two DSPs, no voice/load display
+mentioned; remotedevice.xml has no voice/load report (only Multi Part Bits/Voice Steal Priority); E341 said 'the
+Virus does not report its voice use' without a check. Offered: static firmware check (DSP voice counter + any read
+path) or a plain "notes held" counter without a limit warning. User chose the static firmware check: DONE = E376 - the DSP counts voices per part but nothing sends it out (no parameter, no reply, no panel display; dropped notes leave no trace); only new firmware / the private F4 path would reach it (rule 2: no). DECIDED (user, 2026-10-27): voice count idea DROPPED (no 'notes held' counter either). (4) Mac export: fixed in 0.8.31 (E316/E317); left: one 2.5 ms note at 44.1/128, jitter 0.26-0.40 ms. 0.8.35's lead
+3072 likely covers it -> measure on the Mac (exports 44.1/128 + 48/128, timing_analysis.py) together with the Snow AU
+test on one CI test build.
+**2026-10-27 (user: 'do the small fixes first and also the fade one. after the we talk about about the "e" prefix'):**
+#19 confirmed by the reporter on rc6 (close at the 0.8.35 release, user). Reddit mod-wheel question = #18, fixed since
+rc4 (reply draft given to the user). (1) Segment drag BUILT, NOT COMMITTED (E372): graph_segments/graph_grabs/
+graph_grab in editorrender, editor drags a line like the original's KEnvelope; test editor_graph_segment_grabs, 433
+tests, ctest 5/5; README/site 433, release note 'handles and lines'. cpp-review: no CRITICAL/HIGH; fixed: a segment that drags nothing no longer takes a click from the cutoff knob, test proves the segment path. Dev build 68ef72a9.. in ~/.vst3 (previous in
+~/.vst3-backup/before-segments-1717), user check pending. (2) Fade: E372 (B) - the original has fade code but nothing
+starts it (MEDIUM) -> nothing to build. (3) REAPER restart sync report: NOT reproduced with nativehost on the TI2
+(2 x setActive 0/1 via --rate-at 44100@T, with and without --ahead 200: 0 sync reports, stamps ~3100 frames ahead;
+scratchpad restart1/restart2) -> needs a REAPER session with VTI_NATIVE_DEBUG=1 VTI_NATIVE_STATS=1 (offered to the user).
+NEXT: user checks the segment drag, commit; REAPER restart log; then the 'e' prefix talk; then the round's test steps.
+**REAPER restart sync reports (2026-10-27 evening, 3 REAPER sessions, logs scratchpad reaper1-3):** ~1 report per
+Play (14-16 per session). NOT late stamps: every send >= ~2100 frames ahead of the newest ring frame; reports arrive
+90-100 ms after the first note-ons after Play. (a) Output delays (16 x 6F pp 7F at Play/Stop, E344): 15/16 reports
+followed a set in session 2, so (user: 'try the recommended first' + an options menu) BUILT, NOT COMMITTED: default =
+only changes + after a reconnect (OutputDelay::resend_all), Control Center nerd mode 'Options...' menu + `tirevive-cc
+option [NAME on|off]` (diag.h plugin_options: outdelay-original.on, timing-classic.on), tests diag_plugin_options,
+outputdelay_play_stop_only_like_the_original (435). Session 3 with it: still 10 reports -> the sets were NOT the cause
+(coincided with Play). (b) nativehost on the TI2: loop restarts with F2 (--transport 5 --loop 2): 0 reports; REAPER's
+Play CC block (CC10 64, CC7 100, bend centre, RPN 0 = 12 on ch 1-3) via --param-at 20 ms before notes: 0 reports.
+Open: the combination REAPER does (setActive 0/1 + F2 + 73 00 23 01 + CC block + processing ahead). Debug logs added
+(VTI_NATIVE_DEBUG): 'sync report N from the Virus, newest F' and data bytes on every 'send' line.
+**Part volume 127 at Stop (user):** REAPER itself sends CC6 0, CC7 127, CC10 64 on ch 1-3 with the note-offs at Stop,
+and CC7 100 (+ pan, bend, RPN) at Play (session 3 log); since rc4 every CC is passed on (#18, E368), so the part
+volume follows. Which REAPER setting sends it: not checked. Dev build 44192299.. in ~/.vst3.
+**SOLVED (user: '1. original as default, new one as option, 2. yes (nativehost Stop/Play), 3. update REAPER'), E373:**
+REAPER updated 7.82 -> 7.83 (portable folder; full backup ~/.local/opt/dl/reaper/backup-7.82-20261027). Automated
+REAPER runs: scratchpad auto/ (with-cc.RPP / no-cc.RPP = copies of multi-syth-test, playstop.lua passed on REAPER's
+command line: 10 x Play 4 s / Stop 2 s then quit; ab.sh NAME runs one and counts reports; note: Steam's process is
+also called 'reaper'). Cause: setActive(0) at every REAPER Play sent CC64+CC123 on all 16 channels (32 msgs) at the
+stamp of the Play block -> report at every Play (20/20; 0/20 without). Fix BUILT, NOT COMMITTED: heldnotes.h (only
+held keys / pedals released at setActive(0)), test_heldnotes.cpp (3 tests, CMake list). With it: 0/20 (only on
+change), 3-4/10 with the original's set at Stop (default, user's choice). Output delays: default = like the original
+again; option 'outdelay-changes' (outdelay-changes.on). Restart set now after the block's events (like the original,
+E280; no measurable effect). Volume 127: REAPER resets chased CCs at Stop (CC7 127) - proven by the no-cc copy; the
+REAPER preference not identified. README + site (Options sentence), release notes (2 bullets), 438 tests, script
+tests 88 OK. Dev build ba517ed5.. in ~/.vst3. NEXT: user checks (segment drag, Options menu in the Control Center,
+REAPER Play by hand), then commit the round's code; the 'e' prefix talk; the round's test steps.
+**User checks OK (2026-10-27):** segment drag, REAPER Play/Stop by hand, the 'e' (appears when a parameter is
+modified -> stays not copied, E370 updated). Options menu: the user found none because I named the STALE
+build-native/bin/Release/TIReviveControlCenter/ (2026-10-15); the current one is build-native/ccapp/TIReviveControlCenter
+- rendered on Xvfb :97 (scratchpad shot/xshot.c, xclick): Options... next to Back, both entries. COMMITTED 7e756bb
+(segment drag) + 250d19f (REAPER fix, options, docs). NEXT: the round's test steps (rc7 for testers?, test machines,
+Windows VM, hil-mac, risk.py checklist, final 0.8.35).
+**#18 (2026-10-26 evening, user 'yes, go ahead', E367):** mod wheel / every CC 0..119 now mapped (VST3
+IMidiMapping) and sent; name field removed on focus loss (Enter without a change left it white). Linux REAPER test
+with the dev build (b85dcb1f.. in ~/.vst3, previous plug-in in ~/.vst3-backup/before-issue18-1749): CC 1 on the wire
+(virusmon), cutoff audible, name field 'works'. vtitests 419/419, ctest 5/5 (gui_duplicate_editors flaky once, again).
+**#18 follow-up (user: 'make the follow up and a new RC and write a response', 8690cf8):** host CCs update the
+channel's 'Internal MIDI Standard Parameters' (state + preset re-send); not statically checked whether the original
+updates them from host MIDI (its state keeps them, it re-sends them after a preset change, E152). Dev build 31f4a896..
+in ~/.vst3; recall test with the user pending (CC1 end value -> save -> reopen -> virusmon shows it in 'state sent').
+Release notes for rc2 written (build.yml). Reply draft work/issue18-reply.md. NEXT: recall test, then tag v0.8.35-rc2
+(separately), then post #18 after the user's OK.
+**E368 (REA, 2026-10-26):** the original runs every host MIDI event through its device-description decoder
+(processEvents 0x18002ffa0 -> 0x18007aa50 -> CIntermediateMIDIQueue -> 0x180080740 -> 0x180062070), so ALL decoded
+parameters follow host CCs, not only the Standard Parameters -> follow-up widened (drain_param_updates decodes and sets
+every change; host_controller_kept + its test removed, 419 tests). NEXT: practical check in win10ref with the original
+(user prepares the VM: Live 11, CC 1 envelope ending at a known value, save; I decode the .als state), then the REAPER
+recall test with our build, then rc2.
+**E368 practical check DONE (win10ref, Live 11, user):** original VST3 state CC 1 = 0 (its VST3 maps only AT/PB,
+so Live never hands it CCs - #18 also happens with the original VST3); original VST2 state ch1 CC 1 = 107 (kept and
+saved). The widened follow-up (99cd092) matches. Reply draft mentions the VST3 limitation. NEXT: user quits Live in
+win10ref -> vm.sh detach, Virus back on Linux, install 99cd092 build in ~/.vst3, REAPER recall test (virusmon at
+project open: CC 1 with the last value in 'state sent'), then tag v0.8.35-rc2 separately + release CI, then post #18.
+**REAPER recall check DONE (2026-10-26 ~18:51):** saved during playback -> state ch1 CC 1 = 80 + part 1 dump
+byte 10 = 80 (= the original VST2's pattern); saved after a stop -> 0, because REAPER itself sends CC 1 = 0 at the stop
+(virusmon). Dev build a22695c8.. in ~/.vst3. NEXT: tag v0.8.35-rc2 (separately), release CI, then post #18 + Reddit
+after the user's OK.
+**rc3 (user: 'works. include it in RC3', 2026-10-26 ~19:00):** name-field selection light blue instead of red on Linux
+(frame focus colour, E367 (3)); user checked in REAPER. rc2 tagged on 52190d0 (run 40372646035), rc3 on the colour fix.
+The #18 reply now points to rc4: the rc2 run failed in native-windows (MSVC: test_devicestatus.cpp included
+unistd.h for getpid, from the AURA test 193273c) - rc2 and rc3 runs cancelled (tags stay, no releases), test made
+portable (steady_clock), rc4 tagged on the fix.
+**v0.8.35-rc4 PUBLISHED (2026-10-26 ~19:10, run 40373523502 all green, pre-release, 6 assets). #18 reply posted
+(issuecomment-6423689426, asks for an Ableton/macOS check). Reddit reply: the user posts it (rc4 link).** NEXT: install
+rc4 on Linux/win11/Mac (test machines latest), then #14 Snow points (level meter, empty name field, preset location),
+Windows VM test, hil-mac, round checklist, final 0.8.35.
+**#14 Snow points (E369, 2026-10-26 evening, user: 'go straight to 2'):** (1) level meter: the original Snow editor
+has none -> same as the original, answer the user; (2) blank name after SAVE/LOAD/Init: most likely the #18 white field
+(rc4), ask for a retest; (3) preset location: the original sets dump bytes 10..12 (0 / bank RAM 1-4 ROM 5.. / index;
+libraries 0x20) before a patch load, TI Revive does not. vtirender can draw the Snow editor (VTIRENDER_SNOW=1).
+NEXT: observe the original in win10ref (load a ROM patch from its browser, what the Virus display shows), then
+implement the same bytes in load_patch (TDD) and compare on the TI2.
+**#14 point 3 DONE (2026-10-26 ~20:40):** usbmon capture of the original (captures/orig-load-origin-1951.pcapng):
+Virus-bank patch = Bank Select + Program Change, then the v12 dump with origin bytes ~0.3 s later; library = dump with
+0x20. TI Revive does the same now (E369); the user saw 'RAM-B 4 BadBrain M', 'ROM-A 0', 'LIB Fizzbomb' (the original adds
+an 'e' through an extra parameter pair after the dump - not copied). 422 tests, ctest 5/5, dev build 6af0981a.. in
+~/.vst3. Also noted (user): the original's browser marks the selected entry with a full blue background, ours only with
+a frame - to check. NEXT: browser selection look, then reply #14 (meter = original, name field = #18/rc4, location
+fixed in the next build).
+Committed 203aa5a + 6c5120f (E369 confidence HIGH for point 3), pushed. Not in rc4 - an rc5 after the browser look
+is offered to the user. NEXT: (1) browser selection look (full blue background in the original), (2) #14 reply draft
+shown to the user, (3) rc5 on the user's OK.
+**Browser selection DONE (2785ce0):** the list with the focus fills its selection (E318), user: 'works'; dev build
+e617df91.. in ~/.vst3. **'e' prefix (eRAM-B / eLIB) analysed:** not in the original's load code; 0x1800876b0 writes
+per-part listener parameter values into an edit-buffer dump before it goes out (likely host/automation values) - the
+parameter pair after the dump is most likely a host echo, not a deliberate signal (not proven). Proposed to the user:
+do not copy it (TI Revive's edit buffer = the stored patch, so no 'e' is accurate). NEXT: user's decision, then E370
+(the 'e' analysis), #14 reply draft, rc5.
+**User OK (2026-10-26): 'e' not copied -> E370 (a9b80d7).** rc5 release notes (location on the Virus display,
+filled browser selection), 423 tests in README/site (57ba335). #14 reply draft work/issue14-reply2.md (ES + EN, points
+1-4, rc5 link) shown to the user. NEXT: on the user's OK tag v0.8.35-rc5 separately, release CI, then post #14.
+**v0.8.35-rc5 PUBLISHED (run 40390678963 green, pre-release); #14 reply posted (issuecomment-6426010189). #18 and #17
+closed with comments (user OK). New #19 (#18 reporter, rc4, macOS/Live 12): (1) browser bank arrows jumped from personal
+libraries to the factory banks - FIXED f30ff2d (browser_bank_step over the bank menu's order; test), dev build
+4a245822.. in ~/.vst3, user check pending; (2) filter display: drag changes cutoff but not resonance; envelope handles
+not draggable; (3) ARP user pattern: step bar drags buggy, buttons below the pattern dead; (4) randomize missing.
+A REA subagent analyses the original's handlers for 2-4 (factory 0x180055028/0x180057e0f, KEnvelope/KEnvelopeStage,
+ExecuteARPRandom* 0x180168980..). NEXT: implement 2-4 from that report (TDD), user tests, then rc6 + #19 reply.
+**#19 progress (2026-10-26 late):** point 1 user OK ('the arrows work'); arrow hit zone +4 px above/below for small
+Inc/Dec buttons (051c91b, user: 'hit zone really narrow'). E371 = the subagent's REA report (filter/envelope drags,
+KStepSequencer, ARP actions). Point 2 BUILT, NOT COMMITTED: EditorRenderer::graph_handles/graph_value (geometry pulled
+out of envelope()/filter_response(), inverse; test editor_graph_handles_round_trip, 426 tests) + editor drag
+(relative, Shift 4x finer with re-anchor, Ctrl+click = 64 / resonance 0, handles +-5 px; segment hits not done).
+Dev build eaae5e70.. in ~/.vst3, user test pending. NEXT: commit point 2 after the user's check; point 3 ArpEdit like
+KStepSequencer (span incl. following off steps, length/velocity grab zones, relative, Alt+click toggles a step);
+point 4 ARP actions (Shift L/R, Random note/velo/length, Reset, Fill Up; buttons + context menu); then rc6 + #19 reply.
+**Point 2 COMMITTED 8d5067c** (user: 'works. nice'; fix: the cutoff MaskedKnob covers the filter display ->
+graph_hit_test lets a handle win). **Points 3 + 4 BUILT, NOT COMMITTED:** EditorRenderer::arp_grab/arp_cell (grab
+zones like KStepSequencer, test), editor relative drag on one step + Alt+click toggles a step; model/arpactions.h
+(shift, random pattern/velocity/length, reset, fill up; tests/test_arpactions.cpp, CMake list), VirusPlugin::arp_action
+(reads 32 steps, sends only changes), ExecuteARP* KickButtons routed in ui_set, right-click menu on 'Arpeggiator User
+Pattern/...' controls. 432 tests, ctest 5/5. Dev build c8284207.. in ~/.vst3, user test pending. NEXT: commit 3+4
+after the check, rc6, #19 reply (no patch-wide randomize in the original).
+**#19 points 3+4 COMMITTED 9e11408** (user: Fill Up 'works' once the pattern length was below 32; log showed
+length 32 first). Release notes for #19, 432 tests in README/site. #19 reply draft work/issue19-reply.md (rc6 link).
+NEXT: on the user's OK tag v0.8.35-rc6 separately, release CI, post #19.
+**v0.8.35-rc6 PUBLISHED** (run 40397692349: the mac job got no runner and was cancelled after 15 min, rerun
+--failed -> all green, pre-release, 6 assets). #19 reply posted. NEXT for the round: test machines on rc6 (Linux,
+win11, Mac), Windows VM test, hil-mac, round checklist (risk.py --round 0.8.35), final 0.8.35; #16 waits for the
+reporter; open: segment hits in the graph displays, the original's 'e' (E370) not copied.
+NEXT for #14 (Snow reporter, 2026-10-26 comment): Snow editor - part 1 level meter empty, the name field empty after
+SAVE/LOAD/Init Patch, preset location (bank/number) not shown; then replies on #18 and #14 shown to the user first.
+**Decided (user, 2026-10-25 evening): WEEKLY releases.** Testing took most of the time for small rounds, so 0.8.35
+becomes a bigger round: as many open tasks and features as possible, then one test run and the release.
+**Release notes no longer pile up (2026-10-25):** build.yml's notes carried every 'New in' since 0.8.2 (v0.8.34 body
+26 KB, all repeated in every release). Now: header, this version's 'New in', the tested-on line, a pointer to the
+earlier releases + the site's changelog, the notice. At release prep REPLACE the 'New in' part (do not add on top).
+Site: summary() stops at 'Earlier versions: ' / 'Not affiliated with ' (scripts/tests/test_site_changelog.py, 2
+tests; script tests 80/80). Old releases keep their texts (the site already cut them, 0cc5b58).
+**Round 0.8.35 plan (user 'sounds good. Lets go', 2026-10-25):** 1) #16 AU crash (E336/E359), 2) item 2 inactive text
+(REA), 3) #14 d: Snow parts (REA). (1) STARTED: E359 - a thread of ours (waitpid for the broker the plug-in started)
+sits in unloaded code in the reporter's macOS report; fix: entry.cpp KeepLoaded (macOS: dlopen RTLD_NODELETE on
+itself). autest --delete-open N added (FL's order: view alive, unit disposed, N s run loop, prints whether
+plugin.vst3 is still loaded). Mac unreachable 2026-10-25 evening -> NEXT on the Mac: build autest, run
+`autest "/Library/Audio/Plug-Ins/Components/TI Revive Virus Control.component" --delete-open 40` with 0.8.34
+(reproduce) and later with the CI build (fix). DONE 2026-10-25 ~18:15 (E359): reproduced 4/4 with 0.8.34
+(SIGSEGV at the pool pop, object = VSTGUI_NSView whose class VSTGUI disposed in the static destructors run by the
+wrapper's dlclose); with AUTEST_PIN=1 (the fix's technique from outside) 0.8.34 runs clean 3/3. autest on the Mac in
+~/tirevive-autest (build: clang++ -isysroot .../MacOSX26.5.sdk ...; the default 27.0 SDK fails to link there).
+NEXT: the CI build of 0.8.35 with autest --delete-open 40 (no AUTEST_PIN) on the Mac.
+(2) DONE in code (E360): the original's inactive rule found with REA - opacity 95/255 (not our 0.4), inactive text
+by DisabledFont only (a DisabledBack picture no longer makes the text opaque). Test editor_render_inactive_text;
+vtitests 414. Not built: the original's fade between active and inactive. Visible with the Access skin: only
+0.4 -> 0.373 (no element has text AND a DisabledBack); the Delay Clock 105/149 difference stays unexplained. No user
+check needed beyond the round checklist. (3) DONE in code (E361, user chose 'separate Snow plug-in' like the
+original): VST3 class 'TI Revive Virus Control (Snow)' (kSnowClassId 8A5A1125..) with the Snow's files (editorPR.xml:
+4 parts, no REMOTE page; remotedevicePR.xml, automationPR.xml). Not as AU (SDK wrapper takes the first class).
+vtitests 415, ctest 5/5 (factory_classes checks the Snow class). README Snow bullet (site has no such paragraph).
+Rule 2: the Snow class was NOT activated against our TI2 (it would send the Snow description's start-up). A look at
+the Snow editor: only with the Virus switched off. NEXT: #14 reply (with the user) asking the reporter to test it.
+**Timing fix BUILT (2026-10-26, user: 'implement both, the 3072 lead and the safety net' + an A/B switch):**
+lead A = 3072 everywhere (stamprule.h timing_lead), safety net StampFloor (stamps >= newest + 1024, never backwards
+under 1 s; DeviceOut pack), log 'timing: lead N frames, safety net on/off' at initialize and 'timing safety net
+moved N stamp(s) forward (M in total)' (at most every 2 s). A/B: timing-classic.on next to diag.on = before 0.8.35
+(A 1024 on Linux/macOS, no net), read when a plug-in instance starts (re-insert the plug-in / reopen the project).
+VTI_NATIVE_A still overrides A. vtitests 417, ctest 5/5 (Linux). Dev build c798e6b4 in ~/.vst3 (Linux).
+hil.sh on it (work/hil/20261026-071442, TI2): ALL PASS (max 0.45 ms, jitter <= 0.20 ms, export 1.00x); log per
+item 'timing: lead 3072 frames, safety net on'; the net moved 1 stamp per run, at the end of the run (the stop's
+messages from the worker); Virus sync reports per item 1/1/1/1/5 vs 1/2/1/1/3 with the old timing (24.10.) - the
+start quirk, H6 = forced reconnect. Reported latency now A + block + 640 (e.g. 4224 frames at 512).
+User REAPER test (07:21, 48 kHz block 256, new timing): no red message; ~1 Virus sync report per Play = REAPER's
+setActive(0/1) at every Play/Stop + re-anchor (anchors 1, err to -4221) - the old start quirk (also in hil with the
+old timing); net moved 1 stamp at the end. Separate item: which message at the restart arrives late.
+Branch round-0.8.35 PUSHED, CI TEST BUILD 0.8.35 run 40279333536 (5c8cbdd): ALL GREEN (first macOS/Windows build
+of KeepLoaded, Snow class, timing). Artifacts ~/Downloads/TI-Revive-0.8.35-test. Mac PUSHED:
+~/Downloads/TI-Revive-0.8.35-mac (pkg 6393864f.. = CI, INSTALL-COMMAND.txt, Install test build.command, hil/).
+**RC plan (user, 2026-10-26):** new timing = default (already); pre-release v0.8.35-rc1 for the #14/#16 replies;
+no Logic project attached (rule 1: the plug-in state holds Access patch data; Apple Loops; paths) - the setup is
+described instead (multi-timbral instrument, 4 MIDI parts, part 1 USB 1, part 2 Out 2, a drum kit as 5th).
+Prepared: native VERSION 0.8.35, build.yml 'New in 0.8.35' (tested-on: Linux REAPER + hil, Mac Logic + autest;
+NOT Windows, NOT a Snow), README/site 417 tests. Drafts: work/issue14-reply.md (es + en), work/issue16-reply.md
+(LINK placeholder). User approved ('sounds good', 2026-10-26 ~08:03): tag v0.8.35-rc1 (annotated, on bdb49fa) pushed separately,
+release CI run 40283501817 ALL GREEN; pre-release https://github.com/derpsn/access-virus-ti-revive/releases/tag/v0.8.35-rc1
+(pre-release flag, 6 assets, tester note + New in 0.8.35). Replies POSTED: #14 issuecomment-6410323810 (es + en),
+#16 issuecomment-6410324094. WAITING for the two reporters (Snow plug-in, Logic diag.log / Apollo path; FL Studio).
+NEXT for the round: Windows VM test of 0.8.35 (drop, Init, timing), hil-mac, the round checklist, then the final
+0.8.35 (main merge + tag) - weekly cadence.
+DONE on the Mac (E365, 2026-10-26 ~07:40-07:55): installed 0.8.35 CI; #16 fixed (autest 2/2 clean, no pin);
+Logic A/B: new timing clean in every run; old timing ALSO clean today (E363 late notes not reproduced: buffers
+2048..128, 150 BPM, part 2 on Out 2) - improvement unproven, by design like the original. Mac left on the new timing
+(timing-classic.on removed). NEXT: #14 reply (pre-release, Snow plug-in, drop, Init, Logic: diag.log with the mode
+line, how the analog outputs come back into Logic - Apollo input monitoring?), Windows VM test of the round.
+OLD NEXT: user installs; Logic A/B (timing-classic.on in ~/Library/Application Support/virus-ti-native);
+autest --delete-open 40 (no AUTEST_PIN) on the installed 0.8.35 AU for #16.
+**Original's timing (E364, REA 2026-10-26):** stamps = device position NOW + offset + fixed lead 3072 (forced at
+every start, = reported latency) -> never late, whatever the host's block timing; a host table only shifts the song
+position/clock. Ours: timeline-based stamps with A = 1024 on Linux/macOS. Test running: VTI_NATIVE_A=3072 via
+launchctl setenv on the Mac (Logic restart) - if the sync errors go, raise A (and/or clamp stamps to now + A).
+**Logic on the Mac (E363, 2026-10-25 ~19:15-21:00):** analog vs USB in sync in Logic (user, all buffers) - the
+reporter's 'analog out of sync' is not reproduced; BUT Logic gives many late notes (sync reports 18-42 per Play vs
+1-2 in Ableton) and the red sync error shows - likely the reporter's Logic sync problem. NEXT: analyse the Logic
+diag logs (scratchpad logic/diag4.log: block sizes, read margin, timeline steps, stamps) against an Ableton session,
+find why notes reach the Virus late under Logic; rewrite the #14 draft point 4 accordingly (reproduced, sync errors).
+Logic Pro (trial) installed on the Mac; diag.on + klog.on set there.
+#14 new comment (2026-10-25 17:14): Logic - analog-output parts out of time (USB fine; Live fine) -> new, needs
+details + diag.log; volume (SHIFT held) confirmed; dragging a library file did nothing (= our 0.8.35 drop); missed
+copy/paste and Init. Drafts (not posted): scratchpad issue14-reply.md (Spanish + English) and issue16-reply.md;
+user decides post now with 'link follows' or with the pre-release. User: check whether the Mac has Logic for the
+analog sync (Mac unreachable ~19:00; else Logic Pro's 90-day trial). Init (user: 'implement this feature to make
+the plugin more modern'): E362 'Init Patch' in the LOAD menu, built; user test in REAPER DONE (dev build 588552af,
+'works': Init sound, Revert to back).
+
+**User's goal:** open tasks that need no full all-OS run. Picked: (1) #14 b file drop from Finder/Explorer, (2) inactive
+text strength, (5) HANDOFF item 6 library scan (odd dump sizes, version 127). REA on the x64 DLL (snapshot
+work/rea/virus-control-5.1.7-x64.ghidra12.snapshot, session closed):
+- (1) **E355: the original does NOT accept file drops** (KPatchTable drag-move 0x180049b50 / drop 0x180049e60 take only
+  text items = its own entries). Not built (would be our own addition); README + site library bullet: add a library by
+  copying the .mid into Documents/Access Music/Virus TI/Patches, a file drop does nothing as in the original. Mac
+  build not checked.
+- (5) **E356: the original's decoder (CPatchLibrarySMFDecoder 0x18006b360) keeps only 267/524-byte dumps**, skips the
+  rest silently, no version check. The odd sizes are damaged files (Incubation V3 .mid.mid: 158/202-byte SMF events),
+  so our 31 of 128 = the original. Version 127 (Howard Scarr, 1 patch) stays out on purpose (rule 2). BUILT (TDD):
+  PatchLibrary::skipped, load_banks writes 'library <menu>/<name>: N patch(es) skipped (damaged or unknown format)'
+  to stderr + diag.log (name only, no path). Test library_counts_skipped_dumps (in test_library.cpp, so no CMake
+  change). vtitests 410/410, ctest 5/5 (Linux). nativehost (dev build, Linux, TI2 on, 1 s) on the user's libraries:
+  Cosmosis 5, Incubation V3 97, Howard Scarr 1, Toxic 1, Interactive 1 = the scan.
+- (2) **NOT built:** DisabledFont/DisabledFore exist in the skin, but DisabledFont sits only on always-disabled LCD
+  /version text with the same font; the Delay Clock difference (orig 105 vs ours 149, Reverb 186-205 vs 161) goes
+  both ways, so it is not a plain alpha. Our disabled_alpha 0.4 (editorrender.h) has no source. Needs the original's
+  inactive draw rule found with REA (or a win10ref pixel comparison) first - stays open.
+**Library file drop (user: 'Lets do this', 2026-10-25, E357) - our own addition:** a .mid/.midi/.syx dragged from
+the desktop onto a browser pane is imported into Personal Libraries (import_library in access/library: .mid copied,
+.syx <= 128 -> .mid, free name 'X 2', same patches in the same slots = only shown, no patches = not copied, no
+folder = refused), listed at once, the pane switches to it, LCD hint while dragging (lcd_hint saves/restores the
+LCD) and the result after (lcd_message releases the hover). No drop onto RAM (rule 2). cpp-reviewer: fixed UTF-8
+paths on Windows (u8path, not compiled with MSVC yet), slot-blind same_patches, empty library_dir, LCD vs hover,
+disk I/O under banks_mu_, uninitialised type; accepted: copied-but-unreadable (re-read fails) not listed;
+coordinates unchanged (same as mouse events). Tests library_import, library_import_slots_and_no_folder,
+lcdhover_release_keeps_a_message: vtitests 413/413, ctest 5/5 (Linux). Dev .so ce77ca88 in ~/.vst3 (0.8.34
+release backed up in ~/.vst3-backup/0.8.34-release-24bf7c3c). Test files in the session scratchpad droptest/
+('Drop Test.mid' = Nice Bytes Toxic copy, 'Drop Test Syx.syx' = Electro (Toxic).syx, notes.txt). REAPER/Linux
+first: nothing happened -> E358: two VSTGUI X11 bugs (REAPER/SWELL forwards drags as XDND version 3, VSTGUI wanted
+5; VSTGUI kept the drag's entry position, so drops went to the lower pane), fixed in
+native/patches/vstgui-x11-xdnd.patch, applied by native/CMakeLists.txt on Linux only (git status then shows the
+vst3sdk submodule as modified - expected). User test 2026-10-25: 'works!' (pane under the mouse, already-there,
+.syx -> .mid). LCD texts were cut at 20 characters on line 2 ('to Personal Librarie', 'My Sounds: 128 patch')
+-> shortened (hint 'Drop to add a library' / '(Personal Libraries)', result 'Library added' + name, 'Added (N
+damaged)', short import errors <= 20, failed import logged with the file name); vtitests 413/413. Website + README
+(user, 2026-10-25): new feature 'Libraries by drag and drop' (same words in both) with screenshot
+docs/images/plugin-library-drop.png (captured from REAPER's plug-in window with XGetImage, frame after a drop of 'My
+Sounds.syx' = Electro (Toxic) copy; site built locally, checked in headless Firefox, NOT deployed; tirevive-site-check
+still due before the release). Test libraries removed from the Patches folder after each test. OPEN: Windows (Live)
+and Mac (Live/Logic) by hand.
+**#17 SOLVED (2026-10-26, E366):** reporter removed AURA's USB MIDI driver plugin -> works with the 3 m cable; user
+replied 10:37. Issue still open (close with the user). AURA hint BUILT (user: 'implement the AURA hint now'):
+model/otherdrivers.h + test, plug-in checks the two macOS folders at start-up (log line), editor draws 2 red lines
+on the no-device page; README 'One driver at a time' + AURA's file name; vtitests 418, ctest 5/5 (gui_duplicate_
+editors failed once, passed on the rerun - flaky). Not in 0.8.35-rc1; NOT tested on a Mac (would need a dummy
+'AURA Plugins Virus TI USB Midi.plugin' folder in /Library/Audio/MIDI Drivers + the Virus unplugged).
+**Issue #17 (2026-10-25, TI Desktop OS 5.1.7, MacBook Pro M2 Max, macOS 26.6.2, Cubase 15, TI Revive 0.8.33):** Virus
+rarely detected; better with a 1 m cable than 2-3 m, port-dependent, CalDigit TS4 dock on another port; the user also
+runs AURA Virus HE (works with the 3 m cable). Screenshots only: System Information shows 'Virus TI' at 12 Mb/s
+(normal: full-speed device) on its own built-in bus. Suspect: AURA's USB MIDI driver racing TI Revive for the
+interfaces (E134) - hypothesis, no log yet. Reply posted with the user (issuecomment-6399775473): asked for
+/tmp/tirevive-vtibroker.log, ls of MIDI Drivers/HAL, ioreg Exclusive owner; test with AURA's driver plugin moved out
++ restart; update to 0.8.34. WAITING for their logs.
+README/site: tests 409 -> 413, library bullet (same words in both). risk.py --round 0.8.35: now class C on all
+three (native/CMakeLists.txt + native/patches, new rule in risk.json) -> core items all automated (hil cold/reopen/
+export per OS), nothing from core by hand; the drop by hand on Windows and the Mac. NEXT: user decides whether
+to add more to the round (e.g. #14 replies, item 2 after REA); then dev build smoke test by the user, CI test build,
+hil on the three machines, round checklist (L: diag line with a damaged library).
+
+## (previous START HERE) (2026-10-25): round 0.8.34 on branch `round-0.8.34` (fresh from main d7033d0)
 ## Site SEO (2026-10-26), straight to main outside round 0.8.35 (user: "bring this faster to the main and deploy it")
 
 Branch `site-seo` from main, merged to main; site.yml deploys on the push. Live round work stays on `round-0.8.35`
@@ -10,6 +397,10 @@ rule 1); favicon.svg; SoftwareApplication JSON-LD on the landing page; sitemap.x
 screenshot but the first; the "Important" box uses no headings so the h1 is the page's first heading.
 Tests: scripts/tests/test_site_seo.py (8). Open, the user's part: Google Search Console - add
 https://derpsn.github.io/access-virus-ti-revive/, verify (HTML file or meta tag), submit sitemap.xml.
+Deployed 2026-10-26 (main 04bc44b, site run green, live tags checked with curl). Search Console: the user's
+verification file site/src/googleec62795eb211ed59.html is on main (cdb7992) and live - KEEP it, Google re-checks it.
+NEXT (user): Verify in Search Console, submit sitemap.xml, optionally request indexing. Main merged into
+round-0.8.35 twice (71a3e9b, 6ea94e6); the round's NEXT is unchanged (Windows VM test, hil-mac, checklist, release).
 
 ## START HERE (2026-10-25): round 0.8.34 on branch `round-0.8.34` (fresh from main d7033d0)
 

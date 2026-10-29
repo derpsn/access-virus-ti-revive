@@ -9,6 +9,7 @@
 #include "vstgui/lib/cfileselector.h"
 #include "vstgui/lib/cframe.h"
 #include "vstgui/lib/controls/cbuttons.h"
+#include "vstgui/lib/controls/coptionmenu.h"
 #include "vstgui/lib/controls/ctextlabel.h"
 #include "vstgui/lib/controls/icontrollistener.h"
 #include "vstgui/lib/cvstguitimer.h"
@@ -28,7 +29,7 @@ namespace {
 
 const CColor kBack(30, 30, 30), kText(220, 220, 220), kDim(150, 150, 150), kAccent(240, 170, 60), kGreen(10, 110, 30);
 constexpr CCoord W = kNerdWidth, H = kNerdHeight, M = 16, kLine = 15;
-enum Tag { kBack_ = 1, kLiveTab, kPluginTab, kBrokerTab, kPause, kClock, kPluginLog, kSave };
+enum Tag { kBack_ = 1, kLiveTab, kPluginTab, kBrokerTab, kPause, kClock, kPluginLog, kSave, kOptions };
 enum Page { kLive, kPluginPage, kBrokerPage };
 
 // The live view: a read-only observer connection to the broker (protocol 4) while the "Live" tab is shown. The
@@ -200,6 +201,7 @@ public:
             break;
         }
         case kSave: save(); break;
+        case kOptions: options_menu(c); return;
         }
         refresh(true);
     }
@@ -228,6 +230,30 @@ private:
         addView(l);
         return l;
     }
+    // A/B switches against the original (diag.h plugin_options): a checked entry = its flag file exists; a click
+    // flips it. Like the log switch, the plug-in reads them when an instance starts
+    void options_menu(CControl *from)
+    {
+        auto *menu = new COptionMenu();
+        for (auto &o : vti::cc::plugin_options())
+            menu->addEntry(o.label)->setChecked(vti::cc::plugin_option(o.name));
+        CPoint where(from->getViewSize().left, from->getViewSize().bottom);
+        menu->popup(getFrame(), where, [this](COptionMenu *m) {
+            const int i = m->getLastResult();
+            const auto &opts = vti::cc::plugin_options();
+            if (i < 0 || i >= (int)opts.size())
+                return;
+            std::string err;
+            const bool on = !vti::cc::plugin_option(opts[(size_t)i].name);
+            if (!vti::cc::set_plugin_option(opts[(size_t)i].name, on, err))
+                message_ = err;
+            else
+                message_ = std::string(opts[(size_t)i].label) + (on ? ": on" : ": off") +
+                           " - from the next start of the plug-in (reload it or restart the DAW).";
+            refresh(true);
+        });
+        menu->forget();
+    }
     CTextButton *button(CCoord x, CCoord y, CCoord w, int tag, const char *title)
     {
         auto *b = new CTextButton(CRect(x, y, x + w, y + 26), this, tag, title);
@@ -240,7 +266,8 @@ private:
         auto title = makeOwned<CFontDesc>(*kSystemFont);
         title->setSize(16);
         title->setStyle(kBoldFace);
-        label(CRect(M, 10, W - M - 100, 34), kText, title)->setText("Nerd mode: what TI Revive is doing");
+        label(CRect(M, 10, W - M - 200, 34), kText, title)->setText("Nerd mode: what TI Revive is doing");
+        button(W - M - 190, 10, 90, kOptions, "Options...");
         button(W - M - 90, 10, 90, kBack_, "Back");
         tabs_[0] = button(M, 44, 80, kLiveTab, "Live");
         tabs_[1] = button(M + 86, 44, 100, kPluginTab, "Plug-in log");

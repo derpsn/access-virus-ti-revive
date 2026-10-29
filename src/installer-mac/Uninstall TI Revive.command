@@ -8,6 +8,7 @@ sudo rm -f /Library/LaunchAgents/io.github.derpsn.tirevive.vtibroker.plist
 sudo pkill -x vtibroker 2>/dev/null
 sudo pkill -x vtihelper 2>/dev/null
 sudo rm -rf "/Library/Audio/Plug-Ins/VST3/TI Revive Virus Control.vst3" "/Library/Audio/Plug-Ins/Components/TI Revive Virus Control.component" \
+    "/Library/Audio/Plug-Ins/Components/TI Revive Virus Control (Snow).component" \
     "$HOME/Library/Audio/Plug-Ins/VST3/VirusTINative.vst3"
 sudo rm -rf "/Library/Audio/Plug-Ins/VST3/Virus TI (TI Revive).vst3" \
     "/Library/Audio/Plug-Ins/Components/Virus TI (TI Revive).component" "/Library/Application Support/TI Revive" \

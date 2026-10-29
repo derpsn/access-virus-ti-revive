@@ -1,6 +1,6 @@
 # virus-ti-native - native rewrite of the Access Virus TI plug-in (docs/plan.md)
 cmake_minimum_required(VERSION 3.25)
-project(virus-ti-native VERSION 0.8.34 LANGUAGES C CXX) # = the TI Revive release it ships with
+project(virus-ti-native VERSION 0.8.35 LANGUAGES C CXX) # = the TI Revive release it ships with
 set(CMAKE_CXX_STANDARD 17)
 set(CMAKE_CXX_STANDARD_REQUIRED ON)
 # Windows: static C/C++ runtime, so the plug-in and the ASIO driver run without the VC++ redistributable
@@ -16,6 +16,22 @@ set(SMTG_ENABLE_VSTGUI_SUPPORT ON CACHE BOOL "" FORCE)
 set(SMTG_CREATE_PLUGIN_LINK OFF CACHE BOOL "" FORCE)
 set(SMTG_RUN_VST_VALIDATOR OFF CACHE BOOL "" FORCE)
 set(vst3sdk_SOURCE_DIR ${CMAKE_CURRENT_SOURCE_DIR}/external/vst3sdk)
+# Linux: VSTGUI's drop code ignores REAPER's forwarded drags and keeps the position the drag came in at (E358);
+# patched at configure time, once (an applied patch reverses cleanly). Linux code only, so applied only there.
+if(CMAKE_SYSTEM_NAME STREQUAL "Linux")
+    set(VTI_VSTGUI_PATCH ${CMAKE_CURRENT_SOURCE_DIR}/patches/vstgui-x11-xdnd.patch)
+    set_property(DIRECTORY APPEND PROPERTY CMAKE_CONFIGURE_DEPENDS ${VTI_VSTGUI_PATCH})
+    find_package(Git REQUIRED)
+    execute_process(COMMAND ${GIT_EXECUTABLE} apply --check --reverse ${VTI_VSTGUI_PATCH}
+                    WORKING_DIRECTORY ${vst3sdk_SOURCE_DIR}/vstgui4 RESULT_VARIABLE vti_patched OUTPUT_QUIET ERROR_QUIET)
+    if(NOT vti_patched EQUAL 0)
+        execute_process(COMMAND ${GIT_EXECUTABLE} apply ${VTI_VSTGUI_PATCH}
+                        WORKING_DIRECTORY ${vst3sdk_SOURCE_DIR}/vstgui4 RESULT_VARIABLE vti_patch_failed)
+        if(NOT vti_patch_failed EQUAL 0)
+            message(FATAL_ERROR "VSTGUI patch ${VTI_VSTGUI_PATCH} does not apply (submodule changed?)")
+        endif()
+    endif()
+endif()
 add_subdirectory(external/vst3sdk ${CMAKE_BINARY_DIR}/vst3sdk)
 smtg_enable_vst3_sdk()
 
@@ -87,28 +103,46 @@ if(APPLE AND VTI_NATIVE_AU)
         smtg_create_public_sdk_hosting_target()
     endif()
     set(VTI_AU_SDK ${vst3sdk_SOURCE_DIR}/public.sdk/source/vst/auwrapper)
-    add_library(VirusTINative_AU MODULE au/tirevive_au.mm ${VTI_AU_SDK}/aucocoaview.mm ${VTI_AU_SDK}/NSDataIBStream.mm)
-    target_compile_definitions(VirusTINative_AU PRIVATE SMTG_AUWRAPPER_USES_AUSDK CA_USE_AUDIO_PLUGIN_ONLY=0
-                               SMTG_AUCocoaUIBase_CLASS_NAME=TIReviveVirusControlAUCocoaView)
-    target_compile_options(VirusTINative_AU PRIVATE -Wno-deprecated-declarations)
-    target_include_directories(VirusTINative_AU PRIVATE ${vst3sdk_SOURCE_DIR})
-    target_link_libraries(VirusTINative_AU PRIVATE vti_ausdk sdk_hosting "-framework AudioUnit" "-framework CoreMIDI"
-                          "-framework AudioToolbox" "-framework CoreFoundation" "-framework Cocoa" "-framework CoreAudio")
     # version as the classic Audio Unit encoded it: major << 16 | minor << 8 | patch
     math(EXPR VTI_AU_VERSION "(${PROJECT_VERSION_MAJOR} << 16) | (${PROJECT_VERSION_MINOR} << 8) | ${PROJECT_VERSION_PATCH}")
-    configure_file(au/Info.plist.in ${CMAKE_CURRENT_BINARY_DIR}/au-Info.plist @ONLY)
-    set_target_properties(VirusTINative_AU PROPERTIES CXX_STANDARD 23
-        BUNDLE TRUE BUNDLE_EXTENSION component OUTPUT_NAME "TI Revive Virus Control"
-        MACOSX_BUNDLE_INFO_PLIST ${CMAKE_CURRENT_BINARY_DIR}/au-Info.plist
-        LIBRARY_OUTPUT_DIRECTORY ${CMAKE_BINARY_DIR}/AU)
-    add_dependencies(VirusTINative_AU VirusTINative)
-    # the component carries the VST3 plug-in it wraps (a copy, not a link: the bundle is installed on its own)
     get_target_property(VTI_VST3_PACKAGE VirusTINative SMTG_PLUGIN_PACKAGE_PATH)
-    add_custom_command(TARGET VirusTINative_AU POST_BUILD
-        COMMAND ${CMAKE_COMMAND} -E rm -rf "$<TARGET_BUNDLE_DIR:VirusTINative_AU>/Contents/Resources/plugin.vst3"
-        COMMAND ${CMAKE_COMMAND} -E make_directory "$<TARGET_BUNDLE_DIR:VirusTINative_AU>/Contents/Resources"
-        COMMAND ${CMAKE_COMMAND} -E copy_directory "${VTI_VST3_PACKAGE}"
-                "$<TARGET_BUNDLE_DIR:VirusTINative_AU>/Contents/Resources/plugin.vst3")
+    # vti_add_au(TARGET NAME SUBTYPE BUNDLE_ID VIEW_CLASS SNOW): one component around a copy of the VST3 plug-in. The
+    # Snow one (E374) gets its own subtype and Cocoa view class (both components can be loaded in one process) and a
+    # marker in its copy of the plug-in, which then lists the Snow class first (the wrapper takes the first class)
+    function(vti_add_au target name subtype bundle_id view_class snow)
+        add_library(${target} MODULE au/tirevive_au.mm ${VTI_AU_SDK}/aucocoaview.mm ${VTI_AU_SDK}/NSDataIBStream.mm)
+        target_compile_definitions(${target} PRIVATE SMTG_AUWRAPPER_USES_AUSDK CA_USE_AUDIO_PLUGIN_ONLY=0
+                                   SMTG_AUCocoaUIBase_CLASS_NAME=${view_class})
+        target_compile_options(${target} PRIVATE -Wno-deprecated-declarations)
+        target_include_directories(${target} PRIVATE ${vst3sdk_SOURCE_DIR})
+        target_link_libraries(${target} PRIVATE vti_ausdk sdk_hosting "-framework AudioUnit" "-framework CoreMIDI"
+                              "-framework AudioToolbox" "-framework CoreFoundation" "-framework Cocoa"
+                              "-framework CoreAudio")
+        set(VTI_AU_NAME ${name})
+        set(VTI_AU_SUBTYPE ${subtype})
+        set(VTI_AU_BUNDLE_ID ${bundle_id})
+        configure_file(au/Info.plist.in ${CMAKE_CURRENT_BINARY_DIR}/${target}-Info.plist @ONLY)
+        set_target_properties(${target} PROPERTIES CXX_STANDARD 23
+            BUNDLE TRUE BUNDLE_EXTENSION component OUTPUT_NAME "${name}"
+            MACOSX_BUNDLE_INFO_PLIST ${CMAKE_CURRENT_BINARY_DIR}/${target}-Info.plist
+            LIBRARY_OUTPUT_DIRECTORY ${CMAKE_BINARY_DIR}/AU)
+        add_dependencies(${target} VirusTINative)
+        # the component carries the VST3 plug-in it wraps (a copy, not a link: the bundle is installed on its own)
+        set(res "$<TARGET_BUNDLE_DIR:${target}>/Contents/Resources")
+        add_custom_command(TARGET ${target} POST_BUILD
+            COMMAND ${CMAKE_COMMAND} -E rm -rf "${res}/plugin.vst3"
+            COMMAND ${CMAKE_COMMAND} -E make_directory "${res}"
+            COMMAND ${CMAKE_COMMAND} -E copy_directory "${VTI_VST3_PACKAGE}" "${res}/plugin.vst3"
+            VERBATIM) # shell quoting for the paths: "(Snow)" broke the Xcode script without it
+        if(snow)
+            add_custom_command(TARGET ${target} POST_BUILD
+                COMMAND ${CMAKE_COMMAND} -E touch "${res}/plugin.vst3/Contents/Resources/snow-first" VERBATIM)
+        endif()
+    endfunction()
+    vti_add_au(VirusTINative_AU "TI Revive Virus Control" VTIr io.github.derpsn.tirevive.virus-control.au
+               TIReviveVirusControlAUCocoaView OFF)
+    vti_add_au(VirusTINative_AU_Snow "TI Revive Virus Control (Snow)" VTIs io.github.derpsn.tirevive.virus-control-snow.au
+               TIReviveVirusControlSnowAUCocoaView ON)
 endif()
 
 # Windows: the Virus as an ASIO sound card (asio/asiodriver.cpp), register with regsvr32
@@ -124,7 +158,7 @@ enable_testing()
 add_executable(vtitests tests/main.cpp tests/test_usbmidi.cpp tests/test_state.cpp tests/test_model.cpp
                tests/test_access.cpp tests/test_automation.cpp tests/test_upgrade.cpp tests/test_resampler.cpp tests/test_sidechain.cpp tests/test_helptext.cpp tests/test_devicestatus.cpp $<$<PLATFORM_ID:Linux>:tests/test_resetguard.cpp> tests/test_giveback.cpp tests/test_ccrestore.cpp
                tests/test_library.cpp tests/test_decode.cpp tests/test_ccskin.cpp tests/test_memsync.cpp
-               tests/test_cc.cpp tests/test_broker.cpp tests/test_audioin.cpp tests/test_panelfollow.cpp tests/test_editor.cpp
+               tests/test_cc.cpp tests/test_arpactions.cpp tests/test_broker.cpp tests/test_audioin.cpp tests/test_panelfollow.cpp tests/test_editor.cpp
                tests/test_accessfiles.cpp tests/test_firmware.cpp tests/test_diag.cpp tests/test_virusrate.cpp
                tests/test_protocol.cpp tests/test_upscale.cpp tests/test_ctrlguard.cpp tests/test_pktstat.cpp tests/test_owner.cpp tests/test_sysinfo.cpp tests/test_flashinfo.cpp tests/test_remotetemplates.cpp tests/test_popupmenu.cpp tests/test_workarea.cpp
                tests/test_offlinepace.cpp tests/test_syncalert.cpp tests/test_patchhistory.cpp tests/test_stallwatch.cpp
@@ -132,7 +166,8 @@ add_executable(vtitests tests/main.cpp tests/test_usbmidi.cpp tests/test_state.c
                tests/test_stamprule.cpp tests/test_hostclock.cpp tests/test_sendguard.cpp tests/test_cablerule.cpp tests/test_dumppacer.cpp tests/test_startprogress.cpp tests/test_transport.cpp
                tests/test_gapfill.cpp tests/test_audiogate.cpp tests/test_dragsend.cpp tests/test_hostmidi.cpp tests/test_textfield.cpp
                tests/test_bankdrop.cpp tests/test_hostgestures.cpp tests/test_ratesw.cpp tests/test_timelinefollow.cpp
-               tests/test_blockevents.cpp tests/test_outputdelay.cpp tests/test_lcdhover.cpp)
+               tests/test_blockevents.cpp tests/test_outputdelay.cpp tests/test_lcdhover.cpp
+               tests/test_heldnotes.cpp tests/test_factoryorder.cpp tests/test_ratemeter.cpp)
 target_link_libraries(vtitests PRIVATE vticore)
 add_test(NAME vtitests COMMAND vtitests)
 
@@ -170,7 +205,8 @@ endif()
 add_test(NAME factory_classes
          COMMAND ${CMAKE_COMMAND} -DTOOL=$<TARGET_FILE:moduleinfotool> -DBUNDLE=$<TARGET_FILE_DIR:VirusTINative>/../..
                  -DOUT=${CMAKE_CURRENT_BINARY_DIR}/factory_classes.json -DOWN=${VTI_CID_OWN}
-                 -DORIGINAL=D9909FB45F730543AC5397BE8958CD31 -P ${CMAKE_CURRENT_SOURCE_DIR}/tests/factory_classes.cmake)
+                 -DORIGINAL=D9909FB45F730543AC5397BE8958CD31 -DSNOW=8A5A112538534D61B902C28802DBCE2C
+                 -P ${CMAKE_CURRENT_SOURCE_DIR}/tests/factory_classes.cmake)
 
 # end-to-end checks in a virtual X display (Linux; skipped without xvfb-run): two editors of a duplicated track (E183),
 # the Control Center's window size and close button (E185)

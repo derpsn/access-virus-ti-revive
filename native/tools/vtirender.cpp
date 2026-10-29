@@ -136,8 +136,11 @@ int main(int argc, char **argv)
     auto files = AccessFiles::open("", err);
     RemoteDevice dev, ed;
     EditorLayout layout;
-    if (!files || !dev.load(files->get("remotedevice.xml"), err) || !ed.load(files->get("editordevice.xml"), err) ||
-        !layout.load(files->get("editor.xml"), err)) {
+    // VTIRENDER_SNOW: the Snow's own editor and device description (accessfiles.h device_files)
+    const DeviceFiles df = files ? files->files_for(getenv("VTIRENDER_SNOW") ? DeviceType::Snow : DeviceType::TI)
+                                 : device_files(DeviceType::TI);
+    if (!files || !dev.load(files->get(df.remotedevice), err) || !ed.load(files->get(df.editordevice), err) ||
+        !layout.load(files->get(df.editor), err)) {
         fprintf(stderr, "vtirender: %s\n", err.c_str());
         return 1;
     }

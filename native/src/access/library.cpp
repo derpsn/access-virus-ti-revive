@@ -19,6 +19,7 @@ bool load_library_file(const std::string &path, PatchLibrary &lib, const std::ve
     std::vector<uint8_t> d((std::istreambuf_iterator<char>(f)), std::istreambuf_iterator<char>());
     lib.path = path;
     lib.dumps.clear();
+    lib.skipped = 0;
     std::vector<std::vector<uint8_t>> found; // in file order
     // SysEx single dumps anywhere in the file (SMF sysex events or raw .syx): 00 20 33 01 <dev> 10 ... F7
     for (size_t i = 0; i + 8 < d.size(); i++) {
@@ -29,6 +30,8 @@ bool load_library_file(const std::string &path, PatchLibrary &lib, const std::ve
             break;
         std::vector<uint8_t> m = {0xF0};
         m.insert(m.end(), d.begin() + i, end + 1);
+        // other sizes are skipped like the original's decoder does (E356); a version upgrade_single does not know
+        // (e.g. 127) stays out too: the original would list it, but what such a dump does on the Virus is unknown
         if (m.size() == 524) {
             found.push_back(m);
         } else if (m.size() == 267 && page_b.size() == 256) { // Virus C: page A only -> upgrade like the original
@@ -36,6 +39,10 @@ bool load_library_file(const std::string &path, PatchLibrary &lib, const std::ve
             m[523] = 0xF7;
             if (RemoteDevice::upgrade_single(m, page_b))
                 found.push_back(m);
+            else
+                lib.skipped++;
+        } else {
+            lib.skipped++;
         }
         i = end - d.begin();
     }
@@ -86,6 +93,113 @@ std::vector<PatchLibrary> load_libraries(const std::string &dir, const std::vect
     }
     std::sort(out.begin(), out.end(), [](const PatchLibrary &a, const PatchLibrary &b) { return a.name < b.name; });
     return out;
+}
+
+namespace {
+std::string lower_ext(const fs::path &p)
+{
+    std::string ext = p.extension().string();
+    for (auto &ch : ext)
+        ch = (char)tolower(ch);
+    return ext;
+}
+
+// the same patches in the same slots (the slot layout is the user's); the bank/program bytes and the checksums may
+// differ (save_library sets them)
+bool same_patches(const PatchLibrary &a, const PatchLibrary &b)
+{
+    static const std::vector<uint8_t> gap;
+    const size_t n = std::max(a.dumps.size(), b.dumps.size());
+    for (size_t i = 0; i < n; i++) {
+        const auto &x = i < a.dumps.size() ? a.dumps[i] : gap, &y = i < b.dumps.size() ? b.dumps[i] : gap;
+        if (x.size() != y.size())
+            return false;
+        for (size_t k = 0; k < x.size(); k++)
+            if (k != 7 && k != 8 && k != 265 && k != 522 && x[k] != y[k])
+                return false;
+    }
+    return true;
+}
+} // namespace
+
+bool importable_library(const std::string &path)
+{
+    const fs::path p(path);
+    const std::string ext = lower_ext(p);
+    return !p.stem().empty() && (ext == ".mid" || ext == ".midi" || ext == ".syx");
+}
+
+// errors are short: the plug-in shows them on the LCD's second line (20 characters)
+LibraryImport import_library(const std::string &src, const std::string &dir, const std::vector<uint8_t> &page_b)
+{
+    LibraryImport r;
+    const fs::path from(src);
+    if (dir.empty()) { // no documents folder known: a relative path would land in the host's working folder
+        r.error = "No library folder";
+        return r;
+    }
+    PatchLibrary lib;
+    if (!importable_library(src) || !load_library_file(src, lib, page_b)) {
+        r.error = "Cannot read file";
+        return r;
+    }
+    r.skipped = lib.skipped;
+    r.patches = (int)std::count_if(lib.dumps.begin(), lib.dumps.end(), [](const std::vector<uint8_t> &d) { return !d.empty(); });
+    if (r.patches == 0) {
+        r.error = "No Virus patches";
+        return r;
+    }
+    std::error_code ec;
+    // already in the folder (a drop from Personal Libraries itself): listed under its own name
+    const fs::path base = fs::weakly_canonical(dir, ec), canon = fs::weakly_canonical(from, ec);
+    const fs::path rel = canon.lexically_relative(base);
+    if (!rel.empty() && *rel.begin() != "..") {
+        r.existed = true;
+        r.path = src;
+        r.name = (rel.parent_path() / rel.stem()).generic_string();
+        return r;
+    }
+    // a .syx becomes a .mid unless it holds more than one bank (save_library writes 128 positions)
+    const bool as_mid = lower_ext(from) != ".syx" || lib.dumps.size() <= 128;
+    const std::string ext = as_mid ? ".mid" : ".syx", stem = from.stem().string();
+    for (int n = 1; n < 1000; n++) {
+        const std::string name = n == 1 ? stem : stem + " " + std::to_string(n);
+        const fs::path mid = fs::path(dir) / (name + ".mid"), syx = fs::path(dir) / (name + ".syx");
+        bool taken = false;
+        for (const fs::path &p : {mid, syx}) { // both would be listed as `name`
+            if (!fs::exists(p, ec))
+                continue;
+            taken = true;
+            PatchLibrary there;
+            if (load_library_file(p.string(), there, page_b) && same_patches(there, lib)) {
+                r.existed = true;
+                r.path = p.string();
+                r.name = name;
+                return r;
+            }
+        }
+        if (taken)
+            continue;
+        const fs::path to = ext == ".mid" ? mid : syx;
+        fs::create_directories(dir, ec);
+        std::string err;
+        if (as_mid && lower_ext(from) == ".syx") {
+            PatchLibrary out = lib;
+            out.path = to.string();
+            if (!save_library(out, err)) {
+                r.error = "Cannot write file";
+                return r;
+            }
+        } else if (!fs::copy_file(from, to, ec)) {
+            r.error = "Cannot copy file";
+            return r;
+        }
+        r.path = to.string();
+        r.name = name;
+        return r;
+    }
+    r.error = "No free file name";
+    return r;
 }
 
 std::string library_file_name(const std::string &chosen)

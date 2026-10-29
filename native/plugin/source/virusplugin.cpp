@@ -12,11 +12,13 @@
 #include "base/source/fstreamer.h"
 #include "device/usbmidi.h"
 #include "model/state.h"
+#include "ratesw.h"
 #include "pluginterfaces/base/ibstream.h"
 #include "pluginterfaces/base/ustring.h"
 #include "pluginterfaces/vst/ivstevents.h"
 #include "pluginterfaces/vst/ivstparameterchanges.h"
 #include <algorithm>
+#include <random>
 #include <chrono>
 #include <cmath>
 #include <cstdio>
@@ -44,6 +46,8 @@ const FUID kVirusTIClassId(0xB49F90D9, 0x735F4305, 0xAC5397BE, 0x8958CD31 ^ 0x5A
 // As a FUID (the words hosts store, e.g. Live's Uid Fields): D9909FB4 5F730543 ...; the wrapper's id above was made
 // from the raw bytes (B4 9F 90 D9 ..., E221) and stays: projects saved with it exist
 const FUID kOriginalClassId(0xD9909FB4, 0x5F730543, 0xAC5397BE, 0x8958CD31);
+// the Snow plug-in (round 0.8.35): its own id on every platform, nothing older to replace
+const FUID kSnowClassId(0x8A5A1125, 0x38534D61, 0xB902C288, 0x02DBCE2C);
 
 static bool env_debug()
 {
@@ -87,7 +91,7 @@ static bool env_stats()
 }
 
 static const uint8_t EP_PLUGIN_OUT = 0x06, CABLE_PLUGIN = 2, CABLE_TIME = 5;
-static const ParamID MIDI_MAP_BASE = 0x100000; // + channel * 0x1000 + 0x80 aftertouch / 0x81 pitch bend
+static const ParamID MIDI_MAP_BASE = 0x100000; // + channel * 0x1000 + controller (0..119), 0x80 aftertouch, 0x81 bend
 static std::string own_cache_dir();
 
 // ---- DeviceOut ----------------------------------------------------------------------------------------------------
@@ -611,6 +615,21 @@ void DeviceOut::run()
             if (resume_) // after a Windows sleep the Virus answered sync pings but played no notes until this (E210)
                 resume_();
         }
+#ifdef __APPLE__
+        // the Virus streams at the other rate than Core Audio says (E377: after a power cycle or another program): away
+        // and back, as a rate change in the DAW does; the ring's new rate gives a new timeline below (rate_changed)
+        if (uint32_t to = 0; audio_ok()) {
+            const int step = audio_.check_rate(
+                (uint32_t)std::chrono::duration_cast<std::chrono::milliseconds>(
+                    std::chrono::steady_clock::now().time_since_epoch()).count(), to);
+            if (step == VTI_RELOCK_AWAY)
+                log("Virus TI native: the Virus streams at the other rate than Core Audio says - %u Hz, then back\n", to);
+            else if (step == VTI_RELOCK_BACK)
+                log("Virus TI native: back to %u Hz on the Core Audio device\n", to);
+            else if (step == VTI_RELOCK_GIVE_UP)
+                log("Virus TI native: the Virus still streams at the other rate - switch it off and on\n");
+        }
+#endif
         // setActive asked for another Virus rate (request_rate, design-rate.md step 5): Linux/Windows through the
         // broker (it switches in the driver's order, debounced, the owner only), macOS on the Core Audio device
         bool req_handled = false;
@@ -730,11 +749,19 @@ void DeviceOut::run()
                 st = audio_.newest_frame();
             int64_t raw = st;
             bool ping = m.size() == 11 && m[6] == 0x73 && m[8] == 0x22;
-            if (int64_t mk = marker.load(); st >= 0 && mk >= 0 && !ping)
-                st = st + lead.load() - mk; // ring frame st + lead on the Virus' stamp clock (0 at the marker)
-            if (env_debug())
-                fprintf(stderr, "send %02x stamp %lld newest %lld\n", m[0], (long long)st,
+            if (int64_t mk = marker.load(); st >= 0 && mk >= 0 && !ping) {
+                int64_t due = st + lead.load(); // the ring frame it sounds at
+                if (stamp_floor.load(std::memory_order_relaxed) && audio_ok()) // never in the past (E364)
+                    due = floor_.apply(due, audio_.newest_frame(), floor_min);
+                st = due - mk; // on the Virus' stamp clock (0 at the marker)
+            }
+            if (env_debug()) {
+                fprintf(stderr, "send %02x stamp %lld newest %lld", m[0], (long long)st,
                         (long long)(audio_ok() ? audio_.newest_frame() : -1));
+                for (size_t i = 1; i < m.size() && i < 12; i++) // which SysEx (parameter, dump) or controller value
+                    fprintf(stderr, " %02x", m[i]);
+                fprintf(stderr, "\n");
+            }
             if (st >= 0 && needs_stamp(m.data(), m.size(), from_process) && (ping || stamps.fresh(st))) {
                 auto t = usbmidi_pack({0xF5, (uint8_t)(st & 0x7F), (uint8_t)((st >> 7) & 0x7F)}, CABLE_TIME);
                 pk_.insert(pk_.end(), t.begin(), t.end());
@@ -778,6 +805,12 @@ void DeviceOut::run()
         }
         if (klog_)
             klog_check();
+        if (floor_.moved != floor_logged_ && std::chrono::steady_clock::now() - floor_log_at_ > std::chrono::seconds(2)) {
+            log("Virus TI native: timing safety net moved %lld stamp(s) forward (%lld in total)\n",
+                (long long)(floor_.moved - floor_logged_), (long long)floor_.moved);
+            floor_logged_ = floor_.moved;
+            floor_log_at_ = std::chrono::steady_clock::now();
+        }
         if (pending_send_) {
             pending_send_ = false;
             queued_--;
@@ -806,7 +839,11 @@ tresult PLUGIN_API VirusPlugin::initialize(FUnknown *context)
     files_ = AccessFiles::open("", err);
     auto &files = files_;
     std::vector<AutomationEntry> autom;
-    if (!files || !dev_.load(files->get("remotedevice.xml"), err) || !load_automation(files->get("automation.xml"), autom, err)) {
+    // the device type's files: the Snow plug-in the Snow's editor (4 parts), description and automation list (E361)
+    const DeviceFiles df = files ? files->files_for(type_) : device_files(type_);
+    if (type_ == DeviceType::Snow)
+        fprintf(stderr, "Virus TI native: Snow plug-in, %s (%d parts)\n", df.editor, df.parts);
+    if (!files || !dev_.load(files->get(df.remotedevice), err) || !load_automation(files->get(df.automation), autom, err)) {
         // without the user's Access installation there is nothing to show; the host still gets a valid instance
         fprintf(stderr, "Virus TI native: %s\n", err.c_str());
         if (diag_enabled()) // no device worker (and so no log) without the files: the reason, e.g. a 32-bit DLL (E345)
@@ -821,7 +858,7 @@ tresult PLUGIN_API VirusPlugin::initialize(FUnknown *context)
     ui_state_["VirusControl/RecallProgress"] = 127;
     load_banks();
     load_remote_templates();
-    if (ed_.load(files->get("editordevice.xml"), err) && layout_.load(files->get("editor.xml"), err))
+    if (ed_.load(files->get(df.editordevice), err) && layout_.load(files->get(df.editor), err))
         cond_ = std::make_unique<Conditions>(dev_, ed_);
     else
         fprintf(stderr, "Virus TI native: no editor (%s)\n", err.c_str());
@@ -842,6 +879,7 @@ tresult PLUGIN_API VirusPlugin::initialize(FUnknown *context)
         init_multi_ = multi;
     if (multi.size() == 267 && init.size() == 524) {
         RemoteDevice::upgrade_single(init);
+        init_single_ = init;
         default_.push_back({});
         auto smulti = multi; // the original's state keeps the multi with bytes 25..40 and the checksum zeroed
         std::fill(smulti.begin() + 25, smulti.begin() + 41, 0);
@@ -883,10 +921,47 @@ tresult PLUGIN_API VirusPlugin::initialize(FUnknown *context)
         parameters.addParameter(STR16("Pitchbend"), STR16("Pitchbend"), 0, 0.5, ParameterInfo::kCanAutomate,
                                 MIDI_MAP_BASE + ch * 0x1000 + 0x81);
     }
+    // the controllers 0..119 of every channel (mod wheel, sustain, ...): only for the host's MIDI mapping, hidden
+    // from its parameter lists (issue #18, hostmidi.h)
+    for (int ch = 0; ch < 16; ch++)
+        for (int cc = 0; cc < 120; cc++) {
+            char name[32];
+            snprintf(name, sizeof name, "CC %d Ch %d", cc, ch + 1);
+            parameters.addParameter(UString128(name), nullptr, 0, 0.0, ParameterInfo::kIsHidden,
+                                    MIDI_MAP_BASE + ch * 0x1000 + cc);
+        }
+    // the timing (E363, E364): the original's lead of 3072 and the safety net; timing-classic.on = as before 0.8.35
+    {
+        std::error_code tec;
+        timing_classic_ = std::filesystem::exists(own_cache_dir() + "/../timing-classic.on", tec);
+        // the output delays only on change, not at every Play/Stop (Control Center option, outputdelay.h resend_all)
+        od_changes_only_ = std::filesystem::exists(own_cache_dir() + "/../outdelay-changes.on", tec);
+#ifdef _WIN32
+        timing_a_ = timing_lead(timing_classic_, true);
+#else
+        timing_a_ = timing_lead(timing_classic_, false);
+#endif
+        if (const char *a = getenv("VTI_NATIVE_A"))
+            timing_a_ = atoi(a);
+    }
     out_ = std::make_unique<DeviceOut>();
     out_->lead = lead();
+    out_->stamp_floor = !timing_classic_;
     if (diag_enabled())
         out_->set_diag_path(own_cache_dir() + "/../diag.log");
+    out_->log("Virus TI native: timing: lead %d frames, safety net %s%s\n", timing_a_, timing_classic_ ? "off" : "on",
+              timing_classic_ ? " (timing-classic.on)" : "");
+    if (od_changes_only_)
+        out_->log("Virus TI native: output delays only on change (outdelay-changes.on)\n");
+#ifdef __APPLE__
+    // other drivers that take the Virus' interfaces (AURA's USB MIDI driver, the old Access drivers: E134, E366)
+    {
+        const auto found = other_virus_drivers("/Library/Audio/MIDI Drivers", "/Library/Audio/Plug-Ins/HAL");
+        other_driver_lines_ = other_driver_hint(found);
+        for (auto &d : found)
+            out_->log("Virus TI native: another Virus driver is installed: %s\n", d.c_str());
+    }
+#endif
     out_->on_panel([this](const std::vector<uint8_t> &m) { panel_message(m); });
     out_->on_idle([this] {
         if (int lay = sc_layout_.load(std::memory_order_relaxed); lay >= 0 && lay != sc_layout_seen_) {
@@ -1011,12 +1086,13 @@ tresult PLUGIN_API VirusPlugin::setActive(TBool state)
         out_->start(); // the first activation connects to the Virus (a plug-in scan never gets here)
     if (out_)
         out_->log("Virus TI native: setActive(%d), state loaded %d\n", (int)state, (int)state_loaded_);
-    if (!state && out_ && out_->connected()) { // nothing keeps sounding after the plug-in stops (removed, closed)
-        for (uint8_t ch = 0; ch < 16; ch++) {
-            out_->send({(uint8_t)(0xB0 | ch), 64, 0});  // sustain pedal up
-            out_->send({(uint8_t)(0xB0 | ch), 123, 0}); // all notes off
-        }
-        for (int i = 0; i < 50 && out_->busy(); i++) // ~32 messages, a few ms; at most 250 ms
+    if (!state && out_ && out_->connected()) { // nothing keeps sounding after the plug-in stops (removed, closed):
+        // only what is still held (heldnotes.h, E373 - REAPER deactivates at every Play)
+        uint8_t rel[32][3];
+        const int n = held_notes_.release(rel);
+        for (int i = 0; i < n; i++)
+            out_->send({rel[i][0], rel[i][1], rel[i][2]});
+        for (int i = 0; n > 0 && i < 50 && out_->busy(); i++) // at most 32 messages, a few ms; at most 250 ms
             std::this_thread::sleep_for(std::chrono::milliseconds(5));
     }
     if (state && sync_ && !sync_started_.exchange(true)) {
@@ -1113,9 +1189,9 @@ tresult PLUGIN_API VirusPlugin::canProcessSampleSize(int32 s) { return s == kSam
 
 tresult PLUGIN_API VirusPlugin::getMidiControllerAssignment(int32 bus, int16 channel, CtrlNumber ctl, ParamID &id)
 {
-    if (bus != 0 || channel < 0 || channel > 15 || (ctl != kAfterTouch && ctl != kPitchBend))
+    if (bus != 0 || channel < 0 || channel > 15 || !mapped_controller(ctl))
         return kResultFalse;
-    id = MIDI_MAP_BASE + channel * 0x1000 + (ctl == kAfterTouch ? 0x80 : 0x81);
+    id = MIDI_MAP_BASE + channel * 0x1000 + ctl; // kAfterTouch = 0x80, kPitchBend = 0x81
     return kResultTrue;
 }
 
@@ -1355,18 +1431,18 @@ tresult PLUGIN_API VirusPlugin::process(ProcessData &data)
     }
     // Play and loop restarts (transport.h): like the original, the song position, the +1 clock tick and the per-part
     // reset at the block's time, so the arpeggiator and clock-synced LFOs restart with the bar
+    bool restart = false;
+    uint8_t restart_f2[3] = {};
     if (tl_valid_ && data.processContext && (data.processContext->state & ProcessContext::kProjectTimeMusicValid)) {
         const bool playing = (data.processContext->state & ProcessContext::kPlaying) != 0;
         const double tempo_qn = (data.processContext->state & ProcessContext::kTempoValid) ? data.processContext->tempo
                                                                                           : 120.0;
         const double ppq = data.processContext->projectTimeMusic;
         if (transport_.update(playing, ppq, (double)block_frames / vrate * tempo_qn / 60.0)) {
-            // F2 and the +1 tick; the original's 16 part messages (6F <part> 7F 00) are left out: on the device they
-            // delayed the next note by 29-37 ms, and they only concern parts that use the Atomizer (E280)
-            uint8_t f2[3];
-            transport_f2((int)std::max(0.0, std::floor(ppq * 4.0 + 1e-6)), f2);
-            add(tl_, f2, 3);
-            add(tl_, TRANSPORT_TICK, 11);
+            // F2 and the +1 tick, added after the block's events below; the original's 16 part messages
+            // (6F <part> 7F 00) go out from the worker (send_output_delays, E344)
+            transport_f2((int)std::max(0.0, std::floor(ppq * 4.0 + 1e-6)), restart_f2);
+            restart = true;
         }
     }
     if (tl_valid_) { // MIDI clock at the host tempo (120 BPM without a process context), 24 ticks per quarter
@@ -1391,15 +1467,17 @@ tresult PLUGIN_API VirusPlugin::process(ProcessData &data)
             if (!q || q->getPointCount() <= 0 || q->getPoint(q->getPointCount() - 1, offset, v) != kResultOk)
                 continue;
             ParamID id = q->getParameterId();
-            if (id >= MIDI_MAP_BASE) { // channel aftertouch / pitch bend of channel (id - base) / 0x1000
-                uint8_t ch = (uint8_t)(((id - MIDI_MAP_BASE) >> 12) & 15);
-                if ((id & 0xFFF) == 0x80) {
-                    uint8_t m[2] = {(uint8_t)(0xD0 | ch), data7(v)}; // data bytes always < 0x80 (hostmidi.h)
-                    add(at(offset), m, 2);
-                } else {
-                    int pb = bend14(v);
-                    uint8_t m[3] = {(uint8_t)(0xE0 | ch), (uint8_t)(pb & 0x7F), (uint8_t)(pb >> 7)};
-                    add(at(offset), m, 3);
+            if (id >= MIDI_MAP_BASE) { // a controller, aftertouch or pitch bend of channel (id - base) / 0x1000
+                uint8_t m[3];
+                if (size_t n = mapped_message((int)((id - MIDI_MAP_BASE) >> 12) & 15, (int)(id & 0xFFF), v, m)) {
+                    add(at(offset), m, n); // data bytes always < 0x80 (hostmidi.h)
+                    if ((m[0] & 0xF0) == 0xB0 && m[1] == 64)
+                        held_notes_.sustain(m[0] & 15, m[2]);
+                    size_t w = pu_w_.load(std::memory_order_relaxed); // a controller's value for the state: below
+                    if ((m[0] & 0xF0) == 0xB0 && w - pu_r_.load(std::memory_order_acquire) < PU_SLOTS) {
+                        pu_[w % PU_SLOTS] = {id, m[2]};
+                        pu_w_.store(w + 1, std::memory_order_release);
+                    }
                 }
                 continue;
             }
@@ -1448,6 +1526,7 @@ tresult PLUGIN_API VirusPlugin::process(ProcessData &data)
                 uint8_t m[3] = {(uint8_t)(0x90 | (e.noteOn.channel & 15)), note7(e.noteOn.pitch),
                                 std::max<uint8_t>(1, data7(e.noteOn.velocity))};
                 add(at(e.sampleOffset), m, 3);
+                held_notes_.note_on(m[0] & 15, m[1]);
                 auto &mt = meter_[e.noteOn.channel & 15]; // MIDI activity meter: the highest velocity, decays in tick_meters
                 if (mt.load(std::memory_order_relaxed) < m[2])
                     mt.store(m[2], std::memory_order_relaxed);
@@ -1455,8 +1534,15 @@ tresult PLUGIN_API VirusPlugin::process(ProcessData &data)
                 uint8_t m[3] = {(uint8_t)(0x80 | (e.noteOff.channel & 15)), note7(e.noteOff.pitch),
                                 data7(e.noteOff.velocity)};
                 add(at(e.sampleOffset), m, 3);
+                held_notes_.note_off(m[0] & 15, m[1]);
             }
         }
+    }
+    // the restart set after the block's controllers and notes at the same stamp, like the original (E280; the order
+    // made no difference to the sync reports at REAPER's Play, E373)
+    if (restart) {
+        add(tl_, restart_f2, 3);
+        add(tl_, TRANSPORT_TICK, 11);
     }
     // to the Virus in time order (clock ticks and events share the timeline); stable: at the same stamp automation
     // stays before the notes, so a note starts with the new values (insertion sort: stable, no allocation on the
@@ -1776,6 +1862,15 @@ void VirusPlugin::drain_param_updates()
         latest_[u.id] = u.value;
     }
     for (auto &kv : latest_) {
+        if (kv.first >= MIDI_MAP_BASE) { // a controller from the host (#18): like the original (E368), every
+            // parameter it carries takes its value - mod wheel, volume, ... and the synth parameters of page A - so
+            // the editor and the project state follow it
+            const int ch = (int)((kv.first - MIDI_MAP_BASE) >> 12) & 15;
+            const std::vector<uint8_t> m = {(uint8_t)(0xB0 | ch), (uint8_t)(kv.first & 0x7F), (uint8_t)kv.second};
+            for (auto &c : dev_.decode(m))
+                set_part_value(ch, c.path, c.value);
+            continue;
+        }
         auto it = params_.find(kv.first);
         if (it != params_.end())
             set_part_value(it->second.part, it->second.path, kv.second);
@@ -1881,8 +1976,75 @@ std::string VirusPlugin::live_text(const std::string &param)
     return system_info_text(param, sysinfo_);   // the INFO box's versions, "" for anything else
 }
 
+const char *VirusPlugin::arp_action_name(int a)
+{
+    // the original's context menu entries (0x1800684d0, E371)
+    static const char *n[ARP_ACTION_COUNT] = {"Shift Sequence to Left", "Shift Sequence to Right", "Randomize Pattern",
+                                              "Randomize Velocity", "Randomize Note Length", "Reset Pattern",
+                                              "Fill Up Pattern"};
+    return a >= 0 && a < ARP_ACTION_COUNT ? n[a] : "";
+}
+
+bool VirusPlugin::arp_action(int part, int action)
+{
+    if (action < 0 || action >= ARP_ACTION_COUNT || part < 0 || part > 15)
+        return false;
+    auto field = [](int i, const char *what) {
+        return "Arpeggiator User Pattern/Step " + std::to_string(i + 1) + " " + what;
+    };
+    std::vector<ArpStep> before(32);
+    for (int i = 0; i < 32; i++)
+        before[(size_t)i] = {ui_value(field(i, "Bitfield"), part), ui_value(field(i, "Velocity"), part),
+                             ui_value(field(i, "Length"), part)};
+    const int len = std::max(1, std::min(32, ui_value("Arpeggiator/UserPatternLength", part) + 1));
+    static std::mt19937 rng{std::random_device{}()};
+    std::uniform_real_distribution<double> uni(0.0, 1.0);
+    auto rnd = [&] { return uni(rng); };
+    std::vector<ArpStep> s = before;
+    int new_len = len;
+    switch (action) {
+    case ARP_SHIFT_LEFT: arp_shift(s, len, -1); break;
+    case ARP_SHIFT_RIGHT: arp_shift(s, len, +1); break;
+    case ARP_RANDOM_PATTERN: arp_random_pattern(s, len, rnd); break;
+    case ARP_RANDOM_VELOCITY: arp_random_velocity(s, len, rnd); break;
+    case ARP_RANDOM_LENGTH: arp_random_length(s, len, rnd); break;
+    case ARP_RESET: {
+        const auto &c = conditions();
+        arp_reset(s, len, {c.default_value(field(0, "Bitfield")), c.default_value(field(0, "Velocity")),
+                           c.default_value(field(0, "Length"))});
+        break;
+    }
+    case ARP_FILL_UP: new_len = arp_fill_up(s, len); break;
+    }
+    // only what changed goes to the Virus (at most 96 parameters + the length)
+    for (int i = 0; i < 32; i++) {
+        if (s[(size_t)i].on != before[(size_t)i].on)
+            ui_set(field(i, "Bitfield"), part, s[(size_t)i].on);
+        if (s[(size_t)i].velocity != before[(size_t)i].velocity)
+            ui_set(field(i, "Velocity"), part, s[(size_t)i].velocity);
+        if (s[(size_t)i].length != before[(size_t)i].length)
+            ui_set(field(i, "Length"), part, s[(size_t)i].length);
+    }
+    if (new_len != len)
+        ui_set("Arpeggiator/UserPatternLength", part, new_len - 1);
+    if (out_)
+        out_->log("Virus TI native: ARP %s on part %d (pattern length %d)\n", arp_action_name(action), part + 1, len);
+    return true;
+}
+
 void VirusPlugin::ui_set(const std::string &path, int part, int value)
 {
+    // the ARP page's buttons below the user pattern (KickButtons): the action, nothing stored (E371)
+    static const std::pair<const char *, int> arp_buttons[] = {
+        {"VirusControl/ExecuteARPShiftLeft", ARP_SHIFT_LEFT},     {"VirusControl/ExecuteARPShiftRight", ARP_SHIFT_RIGHT},
+        {"VirusControl/ExecuteARPRandomNote", ARP_RANDOM_PATTERN}, {"VirusControl/ExecuteARPRandomVelo", ARP_RANDOM_VELOCITY},
+        {"VirusControl/ExecuteARPRandomLength", ARP_RANDOM_LENGTH}};
+    for (auto &b : arp_buttons)
+        if (path == b.first) {
+            if (value)
+                arp_action(part, b.second);
+            return;
+        }
     if (path == USB_IO_PATH) { // a hardware setting of this computer (original: registry), sent at once
         set_usb_io(value, true);
         if (out_)
@@ -2315,6 +2477,16 @@ void VirusPlugin::load_banks()
     // the original's three places (E307): on the Mac the factory libraries are in "Public Libraries"
     for (auto &root : library_roots())
         for (auto &lib : load_libraries(root.dir, files_ ? files_->default_page_b() : std::vector<uint8_t>())) {
+            if (lib.skipped > 0) { // the original skips them silently (E356); the name only, no path (rule 5)
+                fprintf(stderr, "Virus TI native: library %s/%s: %d patch(es) skipped (damaged or unknown format)\n",
+                        root.menu.c_str(), lib.name.c_str(), lib.skipped);
+                if (diag_enabled())
+                    if (FILE *f = fopen((own_cache_dir() + "/../diag.log").c_str(), "a")) {
+                        fprintf(f, "%ld Virus TI native: library %s/%s: %d patch(es) skipped (damaged or unknown format)\n",
+                                (long)std::time(nullptr), root.menu.c_str(), lib.name.c_str(), lib.skipped);
+                        fclose(f);
+                    }
+            }
             banks_[LIB_BASE + (int)lib_names_.size()] = lib.dumps;
             lib_names_.push_back(lib.name);
             lib_paths_.push_back(lib.path);
@@ -2653,6 +2825,7 @@ bool VirusPlugin::load_patch(int bank, int program, int part)
             return false;
         d = b->second[program];
     }
+    set_patch_origin(d, bank, program, bank < LIB_BASE); // the location the Virus shows (#14, E369)
     return load_dump(d, part);
 }
 
@@ -2671,14 +2844,36 @@ bool VirusPlugin::load_patch_remembered(int bank, int program, int part)
     {
         std::lock_guard<std::mutex> lk(banks_mu_);
         auto b = banks_.find(bank);
-        if (b == banks_.end() || program < 0 || program >= (int)b->second.size())
+        if (b == banks_.end() || program < 0 || program >= (int)b->second.size() || b->second[program].size() != 524)
             return false;
         d = b->second[program];
     }
-    if (!load_patch(bank, program, part))
+    // a patch from a bank of the Virus, like the original (E369): Bank Select + Program Change first, so the Virus
+    // shows the location ("RAM-B 4"), the patch itself 150 ms later the way a preset chosen on the Virus goes in
+    // (load_reported_presets: origin bytes, controller positions); without a Virus, and for libraries, at once
+    std::vector<std::vector<uint8_t>> select;
+    if (bank < LIB_BASE && out_ && out_->connected())
+        select = PanelFollow::program_select(part, bank, program);
+    if (!select.empty()) {
+        for (auto &m : select)
+            out_->send(m);
+        follow_.preset_chosen(part, bank, program, PanelFollow::Clock::now());
+    } else if (!load_patch(bank, program, part))
         return false;
     std::lock_guard<std::mutex> lk(history_mu_);
     history_.loaded(part, before, d);
+    return true;
+}
+
+bool VirusPlugin::init_patch(int part)
+{
+    if (init_single_.size() != 524)
+        return false;
+    std::vector<uint8_t> before = part_dump(part);
+    if (!load_dump(init_single_, part)) // the same way as any patch load: the part's edit buffer
+        return false;
+    std::lock_guard<std::mutex> lk(history_mu_);
+    history_.loaded(part, before, init_single_);
     return true;
 }
 
@@ -2735,8 +2930,11 @@ bool VirusPlugin::load_dump(std::vector<uint8_t> d, int part)
 {
     if (d.size() != 524 || part < 0 || part > 15)
         return false;
+    // addressed to the part's edit buffer first, then upgraded - as an edit-buffer dump it gets the steps up to the
+    // current format (12), like the original (0x180083ae0 re-addresses, then 0x1800a0c00 upgrades, E369); a stored
+    // patch sent at version 9 was converted by the Virus itself, which dropped the location in bytes 11..12
+    d[7] = 0, d[8] = (uint8_t)part;
     RemoteDevice::upgrade_single(d);
-    d[7] = 0, d[8] = (uint8_t)part; // edit buffer of the part
     unsigned a = 0;
     for (int i = 5; i < 265; i++)
         a += d[i];
@@ -3187,6 +3385,79 @@ bool VirusPlugin::create_library(const std::string &chosen)
     return true;
 }
 
+LibraryImport VirusPlugin::import_library_file(const std::string &src, int &library)
+{
+    library = -1;
+    LibraryImport r = import_library(src, library_dir(), files_ ? files_->default_page_b() : std::vector<uint8_t>());
+    PatchLibrary lib;
+    if (r.path.empty() || !load_library_file(r.path, lib, files_ ? files_->default_page_b() : std::vector<uint8_t>())) {
+        if (r.error.empty())
+            r.error = "Cannot read file";
+        // the file name only, no path (rule 5); the LCD has only room for the reason
+        fprintf(stderr, "Virus TI native: dropped file %s not added: %s\n",
+                std::filesystem::path(src).filename().string().c_str(), r.error.c_str());
+        return r;
+    }
+    // already listed (a drop of a library that is there)? The same file whatever the separators (Windows): the file
+    // system is asked outside banks_mu_, the strings first. The list only grows, so an index stays valid
+    std::vector<std::string> paths;
+    {
+        std::lock_guard<std::mutex> lk(banks_mu_);
+        paths = lib_paths_;
+    }
+    int listed = -1;
+    for (size_t i = 0; i < paths.size() && listed < 0; i++)
+        if (paths[i] == r.path)
+            listed = (int)i;
+    for (size_t i = 0; i < paths.size() && listed < 0; i++) {
+        std::error_code ec;
+        if (std::filesystem::equivalent(paths[i], r.path, ec))
+            listed = (int)i;
+    }
+    {
+        std::lock_guard<std::mutex> lk(banks_mu_);
+        if (listed >= 0) {
+            library = listed;
+        } else {
+            library = (int)lib_names_.size();
+            lib_names_.push_back(r.name);
+            lib_paths_.push_back(r.path);
+            lib_roots_.push_back("Personal Libraries");
+        }
+        banks_[LIB_BASE + library] = lib.dumps;
+    }
+    // the name only, no path (rule 5)
+    fprintf(stderr, "Virus TI native: library %s %s: %d patch(es), %d skipped\n", r.name.c_str(),
+            r.existed ? "already there" : "added from a dropped file", r.patches, r.skipped);
+    ui_dirty_ = true;
+    return r;
+}
+
+void VirusPlugin::lcd_message(const std::string &line1, const std::string &line2)
+{
+    std::lock_guard<std::mutex> lk(values_mu_);
+    lcd_param_ = line1, lcd_value_ = line2, lcd_part_.clear(), lcd_orig_.clear();
+    lcd_hover_.release(); // moving off a control must not clear it
+    lcd_hint_on_ = false; // a drop's result replaces the hint for good
+    lcd_dirty_ = true;
+}
+
+void VirusPlugin::lcd_hint(bool on, const std::string &line1, const std::string &line2)
+{
+    std::lock_guard<std::mutex> lk(values_mu_);
+    if (on == lcd_hint_on_)
+        return;
+    if (on) { // what the LCD showed comes back when the drag leaves
+        lcd_saved_ = {lcd_param_, lcd_value_, lcd_orig_, lcd_part_};
+        lcd_param_ = line1, lcd_value_ = line2, lcd_part_.clear(), lcd_orig_.clear();
+    } else {
+        lcd_param_ = lcd_saved_.param, lcd_value_ = lcd_saved_.value, lcd_orig_ = lcd_saved_.orig;
+        lcd_part_ = lcd_saved_.part;
+    }
+    lcd_hint_on_ = on;
+    lcd_dirty_ = true;
+}
+
 bool VirusPlugin::store_to_library(int part, int library, int slot)
 {
     std::vector<uint8_t> d;
@@ -3530,6 +3801,9 @@ void VirusPlugin::panel_message(const std::vector<uint8_t> &msg)
                 std::lock_guard<std::mutex> lk(sync_alert_mu_);
                 sync_alert_.event();
             }
+            if (env_debug() && out_) // when it arrives, next to the 'send' lines (which message was late)
+                fprintf(stderr, "sync report %d from the Virus, newest %lld\n", c.value,
+                        (long long)ring_newest());
             continue;
         }
         if (c.part > 15)
@@ -3592,7 +3866,8 @@ void VirusPlugin::send_output_delays()
         return;
     }
     od_ready_seen_ = true;
-    const bool playing = host_playing_.load(std::memory_order_relaxed), all = playing != od_playing_seen_;
+    const bool playing = host_playing_.load(std::memory_order_relaxed);
+    const bool all = OutputDelay::resend_all(playing != od_playing_seen_, od_changes_only_);
     od_playing_seen_ = playing;
     const auto now = std::chrono::steady_clock::now();
     if (!all && now < od_next_)
@@ -3621,7 +3896,12 @@ void VirusPlugin::load_reported_presets()
     const unsigned parts = follow_.presets_due(PanelFollow::Clock::now());
     for (int part = 0; parts && part < 16; part++)
         if (parts & (1u << part)) {
-            int bank = ui_value("Multi Part Parameter/Bank", part), patch = ui_value("Multi Part Parameter/Patch", part);
+            int bank = 0, patch = 0;
+            const bool chosen = follow_.chosen(part, bank, patch); // chosen in the plug-in, else reported by the Virus
+            if (chosen)
+                follow_.forget_chosen(part);
+            else
+                bank = ui_value("Multi Part Parameter/Bank", part), patch = ui_value("Multi Part Parameter/Patch", part);
             // the controllers before the load: only positions the plug-in knows are sent again
             std::vector<std::pair<std::string, int>> ctl;
             {
@@ -3639,8 +3919,8 @@ void VirusPlugin::load_reported_presets()
                         out_->send(m);
             if (ok) {
                 if (out_)
-                    out_->log("Virus TI native: preset chosen on the Virus, part %d bank %d patch %d: loaded from the "
-                              "bank cache\n", part + 1, bank, patch);
+                    out_->log("Virus TI native: preset chosen %s, part %d bank %d patch %d: loaded from the bank "
+                              "cache\n", chosen ? "in the plug-in" : "on the Virus", part + 1, bank, patch);
                 continue;
             }
             // Not in the cache (no firmware.bin for the ROM banks, RAM not synced yet): left alone. Reading the edit

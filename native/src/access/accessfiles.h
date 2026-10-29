@@ -12,6 +12,15 @@
 
 namespace vti {
 
+// The original's device types (E361, table at 0x1801c52f0): each has its own files; the plug-in entry decides which
+// one an instance uses (the Access installer's Snow plug-in loads the same DLL as the Snow), not the connected Virus.
+enum class DeviceType { TI, Snow };
+struct DeviceFiles {
+    const char *remotedevice, *editordevice, *editor, *automation;
+    int parts; // part rows of that editor
+};
+DeviceFiles device_files(DeviceType type);
+
 // one entry of the REMOTE page's knob template list: its menu path ("/" = submenu) and MIDI string ("B0 05 FF")
 struct KnobTemplate {
     std::string name, midi;
@@ -31,6 +40,8 @@ public:
     // File by its Access name, case-insensitive ("editor.xml", "BG_Page_Browser.png"); empty if missing.
     const std::vector<uint8_t> &get(const std::string &name) const;
     std::vector<std::string> names() const; // all names (lower case)
+    // the files of a device type that this installation has: a type whose own files are missing gets the TI's
+    DeviceFiles files_for(DeviceType type) const;
     const std::string &source() const { return source_; } // the DLL or bundle that was read
     // The init single patch embedded in the plug-in binary (a 524-byte single dump named " -Init-", stored with an
     // older format version; RemoteDevice::upgrade_single brings it up to date). Empty if not found.

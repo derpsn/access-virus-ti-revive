@@ -127,3 +127,32 @@ TEST(panel_reports_globals_have_no_part)
     CHECK(r[0].part == -1 && r[0].value == 4); // the new part, not the old one
     CHECK(r[1].part == 2 && r[1].value == 9);  // per-part parameters keep their part
 }
+
+
+// #14: a patch from a bank of the Virus chosen in the browser - like the original (capture 2026-10-26, E369): Bank
+// Select MSB 0, LSB = the bank (RAM A = 0 .. ROM from 4), Program Change on the part's channel; the Virus shows the
+// location, and the patch goes into the edit buffer the way a preset chosen on the Virus does (150 ms later)
+TEST(panelfollow_program_select)
+{
+    auto m = PanelFollow::program_select(2, 1, 4); // part 3, RAM B, the 5th patch
+    CHECK(m.size() == 3);
+    CHECK((m[0] == std::vector<uint8_t>{0xB2, 0x00, 0x00}));
+    CHECK((m[1] == std::vector<uint8_t>{0xB2, 0x20, 0x01}));
+    CHECK((m[2] == std::vector<uint8_t>{0xC2, 0x04}));
+    CHECK(PanelFollow::program_select(16, 1, 4).empty() && PanelFollow::program_select(0, -1, 4).empty() &&
+          PanelFollow::program_select(0, 1, 128).empty());
+}
+
+TEST(panelfollow_preset_chosen_loads_later)
+{
+    PanelFollow f;
+    auto t0 = PanelFollow::Clock::now();
+    CHECK(f.preset_chosen(0, 1, 4, t0));
+    CHECK(f.presets_due(t0) == 0); // not before the quiet time
+    int bank = -1, patch = -1;
+    CHECK(f.chosen(0, bank, patch) && bank == 1 && patch == 4);
+    CHECK(f.presets_due(t0 + PanelFollow::PRESET_QUIET) == 1u);
+    f.forget_chosen(0);
+    CHECK(!f.chosen(0, bank, patch)); // a later report of the Virus uses its own values again
+    CHECK(!f.preset_chosen(16, 1, 4, t0));
+}

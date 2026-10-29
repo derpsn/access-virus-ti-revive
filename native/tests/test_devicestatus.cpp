@@ -2,6 +2,10 @@
 // pages): which page the editor shows for a missing Virus, a Virus held by another program, and a connected Virus
 #include "check.h"
 #include "model/devicestatus.h"
+#include "model/otherdrivers.h"
+#include <filesystem>
+#include <chrono>
+#include <fstream>
 
 using namespace vti;
 
@@ -46,4 +50,29 @@ TEST(devicestatus_change_for_a_waiting_instance)
     CHECK(c.update(1, false));   // taken over: the normal page
     CHECK(c.update(0, false));   // switched off: "No Virus TI can be found"
     CHECK(!c.update(0, false));
+}
+
+// E134, E366: another driver for the Virus (AURA's USB MIDI driver, the old Access drivers) takes the interfaces and
+// TI Revive finds no Virus. The "No Virus TI can be found" page names it (macOS folders, given here)
+TEST(other_virus_drivers_found_by_name)
+{
+    namespace fs = std::filesystem;
+    const fs::path t = fs::temp_directory_path() / ("vti-drivers-" + std::to_string(std::chrono::steady_clock::now().time_since_epoch().count()));
+    fs::remove_all(t);
+    fs::create_directories(t / "midi" / "AURA Plugins Virus TI USB Midi.plugin");
+    fs::create_directories(t / "midi" / "Some Other Synth.plugin");
+    fs::create_directories(t / "hal");
+    std::vector<std::string> found = other_virus_drivers((t / "midi").string(), (t / "hal").string());
+    CHECK(found.size() == 1 && found[0] == "AURA Plugins");
+    fs::create_directories(t / "midi" / "Virus TI MIDI Driver.plugin");
+    fs::create_directories(t / "hal" / "de.access-music.virus_ti.plugin");
+    found = other_virus_drivers((t / "midi").string(), (t / "hal").string());
+    CHECK(found.size() == 2 && found[0] == "AURA Plugins" && found[1] == "Access"); // Access once
+    CHECK(other_virus_drivers((t / "missing").string(), "").empty());
+    // the page's two lines (at most 58 characters each, the width of the page's text)
+    auto lines = other_driver_hint({"AURA Plugins"});
+    CHECK(lines.size() == 2 && lines[0].find("AURA Plugins") != std::string::npos);
+    CHECK(lines[0].size() <= 58 && lines[1].size() <= 58);
+    CHECK(other_driver_hint({}).empty());
+    fs::remove_all(t);
 }

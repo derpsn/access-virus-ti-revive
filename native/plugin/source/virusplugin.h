@@ -3,6 +3,7 @@
 // through the TI Revive broker. Audio and editor follow in later steps.
 #pragma once
 #include "access/accessfiles.h"
+#include "access/library.h"
 #include "device/audioin.h"
 #include "editor/editormodel.h"
 #include "editor/lcdhover.h"
@@ -22,6 +23,7 @@
 #include "device/stamprule.h"
 #include "device/offlinepace.h"
 #include "device/blockevents.h"
+#include "device/heldnotes.h"
 #include "device/outputdelay.h"
 #include "device/timelinefollow.h"
 #include "device/presencewatch.h"
@@ -33,6 +35,8 @@
 #include "device/resampler.h"
 #include "device/sidechain.h"
 #include "model/devicestatus.h"
+#include "model/otherdrivers.h"
+#include "model/arpactions.h"
 #include "model/panelfollow.h"
 #include "model/remotedevice.h"
 #include "model/sysinfo.h"
@@ -60,6 +64,7 @@ namespace vti {
 // the original; VTI_NATIVE_DROPIN=ON builds with the original id (loads projects saved with the original).
 extern const Steinberg::FUID kVirusTIClassId;
 extern const Steinberg::FUID kOriginalClassId; // the Access plug-in's id: a second class for its projects (E221)
+extern const Steinberg::FUID kSnowClassId;     // the Snow plug-in: the Snow's 4-part editor and files (E361)
 
 // Messages to the Virus, sent by a worker thread (socket writes do not belong in process()).
 class DeviceOut {
@@ -143,6 +148,9 @@ public:
     std::atomic<int> want_rate{44100};
     bool request_rate(int rate, int timeout_ms);
     std::atomic<int64_t> lead{0}; // frames from a timeline position to its sound in the ring (VirusPlugin::lead())
+    // the safety net (stamprule.h StampFloor, 0.8.35): stamps keep at least floor_min frames past the newest frame
+    std::atomic<bool> stamp_floor{true};
+    static constexpr int64_t floor_min = 1024;
     // the newest ring frame that had sound on USB 1 / USB 2 (the ping waits for 1 s of silence, like the original)
     std::atomic<int64_t> last_sound{-1};
     // R5 diagnostics (VTI_NATIVE_STATS, every 10 s): stamp-aligned reads, their smallest distance to the newest frame,
@@ -207,6 +215,9 @@ private:
         int quiet;                    // quiet frames before the scan position
     };
     std::vector<KlogNote> klog_stamps_;
+    StampFloor floor_;          // worker only
+    int64_t floor_logged_ = 0;  // floor_.moved at the last log line
+    std::chrono::steady_clock::time_point floor_log_at_{};
     void klog_check();
     std::chrono::steady_clock::time_point queue_hold_until_{}; // queued messages wait (the Virus busy with a multi)
     char diag_path_[1024] = {};
@@ -267,7 +278,13 @@ private:
 
 class VirusPlugin : public Steinberg::Vst::SingleComponentEffect, public Steinberg::Vst::IMidiMapping {
 public:
+    // like the original, the plug-in decides the device type: the Snow plug-in uses the Snow's editor and files
+    explicit VirusPlugin(DeviceType type = DeviceType::TI) : type_(type) {}
     static Steinberg::FUnknown *create(void *) { return (Steinberg::Vst::IAudioProcessor *)new VirusPlugin; }
+    static Steinberg::FUnknown *create_snow(void *)
+    {
+        return (Steinberg::Vst::IAudioProcessor *)new VirusPlugin(DeviceType::Snow);
+    }
 
     Steinberg::tresult PLUGIN_API initialize(Steinberg::FUnknown *context) override;
     Steinberg::tresult PLUGIN_API terminate() override;
@@ -319,6 +336,17 @@ public:
     bool load_patch_remembered(int bank, int program, int part);
     bool load_recent(int part, int index); // a "Recently Used" entry (the list keeps its order)
     bool revert_patch(int part);           // "Revert to": swaps the part's patch with the one before the last load
+    // "Init Patch" in the LOAD menu (TI Revive's own addition, #14): the init patch from the user's Access files into
+    // the part, remembered like a load (so "Revert to" brings the sound back)
+    bool init_patch(int part);
+    // the ARP page's pattern actions (buttons + context menu, #19, E371): order of ARP_ACTIONS; false if unknown
+    enum ArpAction { ARP_SHIFT_LEFT, ARP_SHIFT_RIGHT, ARP_RANDOM_PATTERN, ARP_RANDOM_VELOCITY, ARP_RANDOM_LENGTH,
+                     ARP_RESET, ARP_FILL_UP, ARP_ACTION_COUNT };
+    static const char *arp_action_name(int a);
+    bool arp_action(int part, int action);
+    bool has_init_patch() const { return init_single_.size() == 524; } // set once in initialize()
+    // the "No Virus TI can be found" page's hint: another Virus driver installed (macOS, E366); set once in initialize()
+    const std::vector<std::string> &other_driver_lines() const { return other_driver_lines_; }
     std::string revert_name(int part);     // empty: no "Revert to" entry
     std::vector<std::string> recent_names(int part);
     bool copy_part(int from, int to);                    // a part's patch onto another part (drag and drop)
@@ -350,6 +378,13 @@ public:
     // the original's "Create Empty Library" (E217): an empty library file at the path chosen in the save dialog
     // (".mid" added like the original), listed at once
     bool create_library(const std::string &chosen);
+    // a library file dropped on the browser (TI Revive's own addition, E357): copied into Personal Libraries
+    // (import_library) and listed at once; `library` = its index (-1 when nothing was imported)
+    LibraryImport import_library_file(const std::string &src, int &library);
+    // a short note in the LCD (two lines, no part, no [stored value]) - e.g. what a file drop did
+    void lcd_message(const std::string &line1, const std::string &line2);
+    // a hint while a file is dragged over the browser: on saves the LCD, off restores it (unless a message came)
+    void lcd_hint(bool on, const std::string &line1 = {}, const std::string &line2 = {});
     // does a stored patch have category `cat` (filter menu index, 0 = any) and contain `q` in its name?
     bool patch_matches(int bank, int program, int cat, const std::string &q);
     static constexpr int SEARCH_BANK = 1000;             // "Search Results" (search://): the current page
@@ -502,6 +537,7 @@ private:
     AutomationQueue automation_{AUTOMATION_RATE};
     RemoteDevice dev_, ed_;
     std::unique_ptr<AccessFiles> files_;
+    const DeviceType type_; // TI or Snow plug-in (E361)
     EditorLayout layout_;
     std::vector<float> osc_waves_;
     bool osc_waves_read_ = false;
@@ -547,6 +583,8 @@ private:
     void set_editor_value(const std::string &path, int part, int value, bool persist = false);
     std::string lcd_param_, lcd_value_, lcd_part_, lcd_orig_; // the last edited parameter for the LCD
     LcdHover lcd_hover_; // values_mu_
+    bool lcd_hint_on_ = false; // values_mu_: lcd_hint's text is shown, lcd_saved_ holds what it covered
+    LcdFields lcd_saved_;
     std::string value_text(const Parameter &p, int value) const; // a value as the LCD shows it (value list text)
     SystemInfo sysinfo_{VTI_NATIVE_VERSION, {}, {}}; // PATCH UTILITY > INFO (values_mu_): versions, Virus OS
     // PATCH UTILITY > REMOTE (E193, E196, E199): edited here, kept in our cache file and sent to the Virus like the
@@ -623,18 +661,12 @@ private:
     // R5 timing with the sync marker: an event at timeline position t sounds at ring frame t + lead() (S behind the
     // newest frame + A to reach the Virus in time), and process() reads the ring latency_frames() behind that, so the
     // host gets it exactly latency_frames() late in every session (reported as the plug-in latency)
-    // A: time for a stamped event to reach the Virus. Linux 1024 (exact down to 768); Windows needs more (win11 VM:
-    // 2048 had late notes, 3072 exact for 16/16) - close to the original's reported 3840 + block
-#ifdef _WIN32
-    static constexpr int TIMING_A_DEFAULT = 3072;
-#else
-    static constexpr int TIMING_A_DEFAULT = 1024;
-#endif
-    static int timing_a()
-    {
-        static const int a = getenv("VTI_NATIVE_A") ? atoi(getenv("VTI_NATIVE_A")) : TIMING_A_DEFAULT;
-        return a;
-    }
+    // A: time for a stamped event to reach the Virus. Since 0.8.35 3072 everywhere, like the original (E364); before,
+    // Linux/macOS used 1024 (exact down to 768 in REAPER/Ableton), which Logic's uneven blocks overran (E363).
+    // timing-classic.on next to diag.on gives the old A and no safety net, to compare; VTI_NATIVE_A overrides
+    int timing_a_ = 3072; // set in initialize()
+    bool timing_classic_ = false;
+    int timing_a() const { return timing_a_; }
     static int timing_s() { static const int s = getenv("VTI_NATIVE_S") ? atoi(getenv("VTI_NATIVE_S")) : 5000; return s; }
     int64_t lead() const { return timing_s() + timing_a(); }
     // the read position stays block + 640 - |timeline jitter (<= ~400)| behind the newest frame
@@ -697,6 +729,8 @@ private:
     // analog parts held back by the latency like the original (outputdelay.h, E344); worker thread only
     OutputDelay out_delay_;
     bool od_ready_seen_ = false, od_playing_seen_ = false;
+    bool od_changes_only_ = false; // outdelay-changes.on: not all 16 at every Play/Stop (E373)
+    HeldNotes held_notes_;          // process() records, setActive(false) releases (heldnotes.h)
     std::chrono::steady_clock::time_point od_next_{};
     int part_output(int part);
     void send_output_delays();
@@ -759,6 +793,8 @@ private:
     bool state_loaded_ = false;                // setState or the default state was applied
     std::vector<std::vector<uint8_t>> default_; // a new instance's state (from the user's plug-in binary)
     std::vector<uint8_t> init_multi_; // the fixed multi dump as the original sends it at start-up (E321)
+    std::vector<uint8_t> init_single_; // the init patch (upgraded), what a new instance's parts start with
+    std::vector<std::string> other_driver_lines_;
 
     // `stored`: the parts whose values are now their stored patch for the LCD's [value] (E353): all (a project or the
     // default state), one (a patch loaded into it), or none (a rename)

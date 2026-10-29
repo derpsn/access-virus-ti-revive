@@ -92,9 +92,10 @@ def summary(rel):
     if tag in CHANGELOG_EXTRA:
         return CHANGELOG_EXTRA[tag]
     body = body.replace("\r", "")
-    # later release texts repeat the older versions' "New in" parts below their own: stop at the next one
+    # later release texts repeat the older versions' "New in" parts below their own: stop at the next one; since
+    # 0.8.35 a text holds only its own version, followed by the pointer to earlier versions and the notice
     m = re.search(r"^\*\*New in [^*]*\*\*.*?(?=^\*\*New in |^\*\*Since |^\*\*Windows |^\*\*macOS |^\*\*Linux |"
-                  r"^\*\*Coming |\Z)",
+                  r"^\*\*Coming |^Earlier versions: |^Not affiliated with |\Z)",
                   body, re.M | re.S)
     if m:
         return re.sub(r"^\*\*New in [^*]*\*\*\s*", "", m.group(0).strip(), count=1)
@@ -355,7 +356,9 @@ def page_landing(latest, releases, sums):
         <tr><th>TI2 Desktop</th><td class="st ok">tested</td><td class="st ok">tested</td><td class="st ok">tested</td></tr>
         <tr><th>TI Snow</th><td class="st no">no report yet</td><td class="st rep">works for users</td>
           <td class="st no">no report yet</td></tr>
-        <tr><th>Desktop (TI1), Polar, Keyboard</th><td class="st no">no report yet</td><td class="st no">no report yet</td>
+        <tr><th>Polar</th><td class="st no">no report yet</td><td class="st rep">works for users</td>
+          <td class="st no">no report yet</td></tr>
+        <tr><th>Desktop (TI1), Keyboard</th><td class="st no">no report yet</td><td class="st no">no report yet</td>
           <td class="st no">no report yet</td></tr>
       </tbody>
     </table>
@@ -428,6 +431,12 @@ def page_landing(latest, releases, sums):
       Two short freezes in the same tests were probably the same bug (not measured). This is a bug in REAPER's
       window layer, not in TI Revive: it happens with REAPER's own ReaSynth as well, without TI Revive in the
       project. Until Cockos fixes it, stay in REAPER until the render window has closed.</p></details>
+      <details><summary>REAPER: a part's volume jumps to the maximum at Stop</summary>
+      <p>If your MIDI items contain volume controllers (CC 7, as many imported MIDI files do at the start), REAPER's
+      Reset MIDI CC/Pitch to neutral on playback stop sends CC 7 = 127 when you stop, and the Virus turns it into part
+      volume 127; Play brings the item's value back. TI Revive passes every controller on, like the original's VST2.
+      To keep the volume, enter <code>cc7=-1</code> under Preferences &gt; Audio &gt; Playback &gt; CC reset
+      overrides, or switch the reset on stop off (the override is tested with REAPER 7.83 on Linux).</p></details>
       <details><summary>&ldquo;A sync error occurred. Press Stop and Play to clear.&rdquo;</summary>
       <p>Like the original, the editor shows this when the Virus reports several notes in a row that arrived too late
       for their time stamp while your DAW plays. Stop and Play clears it. If it comes back, use a USB port the Virus does
@@ -514,7 +523,9 @@ def features_section():
         original's VST2 version do not open: TI Revive is VST3 only.</li>
         <li>The LOAD menu has the original's "Revert to" (back to the patch before the last load, edits included) and
         "Recently Used" (the last 10 patches of each part); "Create Empty Library" is in the SAVE menu's Personal
-        Libraries, as in the original (since 0.8.25; until 0.8.28 also in LOAD and the browser).</li>
+        Libraries, as in the original (since 0.8.25; until 0.8.28 also in LOAD and the browser). Since 0.8.35 the LOAD
+        menu also has "Init Patch" (our own addition): the init patch from your Access installer, to start a sound
+        from scratch; "Revert to" brings the previous sound back.</li>
         <li>Browser drag and drop like the original (since 0.8.29): drag one or several patches (Shift = range, Ctrl =
         single entries) from a library onto a RAM slot in the other pane, or drag a part's patch name onto a RAM slot;
         within one RAM bank a drag swaps the patches; Alt+click renames a RAM patch; right-click "Undo last operation"
@@ -523,7 +534,7 @@ def features_section():
         selection", "Sort alphabetically"), and patches keep their positions with gaps like in the original. A RAM
         bank's right-click menu has "Download entire bank from Virus TI" (reads all 128 again, about 2 minutes, progress on the LCD) and
         "Sort alphabetically" (writes only the slots that change; like the original, it cannot be undone).</li>
-        <li>Patch libraries from the original's three places, each its own menu (since 0.8.29): Personal Libraries (your Documents folder), User Libraries and Public Libraries. On the Mac the factory libraries that Access installs in /Library/Application Support appear under Public Libraries. On Linux only Personal Libraries.</li>
+        <li>Patch libraries from the original's three places, each its own menu (since 0.8.29): Personal Libraries (your Documents folder), User Libraries and Public Libraries. On the Mac the factory libraries that Access installs in /Library/Application Support appear under Public Libraries. On Linux only Personal Libraries. To add a library, drop its .mid or .syx file from Explorer, Finder or your file manager onto the browser (since 0.8.35, our own addition: the original takes no file drops). It is copied into Access Music/Virus TI/Patches in your Documents folder, never over an existing file, and the browser shows it at once; a .syx is saved as a .mid so the original finds it too. Copying the file into that folder yourself works as well; it shows up the next time the plug-in is loaded. Damaged patches in a library (dumps of the wrong length) are left out, as in the original; since 0.8.35 the plug-in's log names the library and how many.</li>
         <li>The LCD shows the control under the mouse (since 0.8.34), as in the original: its name, its value, the value stored in the patch in brackets, and the part.</li>
         <li>Presets, soft knobs and the part selected on the Virus itself are followed, as in the original (the part since 0.8.33).</li>
         <li>Knobs you turn on the Virus reach your DAW like the plug-in's own knobs while the plug-in window is open (since 0.8.29, <a href="{GH}/issues/10">issue #10</a>): Ableton Live's Configure mode adds them and automation records them. Tested in Ableton Live 11 (Windows 11, VM), Ableton Live 12 (macOS) and REAPER (Linux).</li>
@@ -554,6 +565,20 @@ def features_section():
       <figure class="shot"><img loading="lazy" src="plugin-menus.png" width="1020" height="760"
       alt="The LOAD menu: the device entry, the bank list and RAM A's 128 patches in columns, beyond the plug-in window">
       <figcaption>The LOAD menu reaching beyond the plug-in window (Linux), drawn from your own Access installer. TI Revive
+      is not affiliated with Access Music or Kemper.</figcaption></figure>
+    </div>
+
+    <div class="feature">
+      <div><h3>Libraries by drag and drop</h3>
+      <p>Drag a library's .mid or .syx file from Explorer, Finder or your file manager onto one of the two browser
+      panes (since 0.8.35, our own addition: the original takes no file drops). While you drag, the LCD says
+      &ldquo;Drop to add a library&rdquo;. The file is copied into Personal Libraries (Access Music/Virus TI/Patches
+      in your Documents folder), never over an existing file, and the pane you dropped it on shows it at once; a
+      .syx is saved as a .mid so the original finds it too. Dropping the same library again only shows it. Tested on
+      Linux (REAPER); not tested on Windows and macOS yet.</p></div>
+      <figure class="shot"><img loading="lazy" src="plugin-library-drop.png" width="907" height="513"
+      alt="The browser after a drop: the upper pane shows the new library My Sounds, the LCD says Library added">
+      <figcaption>A library dropped onto the upper browser pane (Linux), drawn from your own Access installer. TI Revive
       is not affiliated with Access Music or Kemper.</figcaption></figure>
     </div>
 
@@ -635,6 +660,7 @@ def features_section():
         <li>Choosing a patch for one part no longer stops the other parts for a moment. Since 0.8.27 the plug-in sends the patch like the original: in small pieces on its own USB-MIDI cable, with the other parts' notes in between.</li>
         <li>At every Play and loop restart the plug-in sends the song position like the original (since 0.8.27), so the arpeggiator and clock-synced LFOs restart on the beat.</li>
         <li>A Virus switched on after the DAW no longer causes sync errors at every Play. Since 0.8.34 the plug-in also takes the Virus' sample rate when it starts the audio later; before, it kept counting 44.1 kHz while the Virus ran at 48 kHz.</li>
+        <li>On macOS, a Virus that streams at another sample rate than macOS reports (seen after a power cycle and after another DAW had used it) no longer causes sync errors without end. Since 0.8.35 the plug-in measures the rate the audio really arrives at and then switches the Virus over and back, as a sample rate change in the DAW does. That recovery has not been seen on a real Virus yet: on the fixed build the problem did not come back.</li>
         <li>At host sample rates other than 44.1 kHz the first notes after Play and after a render no longer come late and catch up over several seconds (since 0.8.27).</li>
         <li>The Virus drops the message right after a multi dump. The plug-in pauses after one, so new projects reset
         the synth reliably.</li>
@@ -666,7 +692,9 @@ def features_section():
       <div><h3>Nerd mode</h3>
       <p>Shows live what goes between TI Revive and the Virus, decoded: notes, parameter changes by name, dumps, the
       bank sync. It lists which programs use the Virus, shows the plug-in's and the broker's logs, and saves them all
-      for a bug report in one file. It only watches; it never sends anything to the Virus.</p></div>
+      for a bug report in one file. It only watches; it never sends anything to the Virus. Its Options... menu
+      switches a few things for comparisons with the original: the output delays only on change instead of at every
+      Play/Stop, and the timing as before 0.8.35 (from the next start of the plug-in).</p></div>
       <figure class="shot"><img loading="lazy" src="control-center-nerd-mode.png" width="860" height="620"
       alt="Nerd mode: the plug-in plays notes and checks its bank cache, decoded live">
       <figcaption>The plug-in plays notes and checks its bank cache, decoded live.</figcaption></figure>
@@ -716,8 +744,8 @@ def page_changelog_landing(releases):
 
 # the README's screenshots that the site shows too (copied at build time)
 SHARED_IMAGES = ["control-center.png", "control-center-nerd-mode.png", "plugin-help-mode.png", "plugin-help-inactive.png",
-                 "plugin-menus.png"]
-TESTS = 409 # unit tests in native/tests (vtitests), as of 2026-10-25 (round 0.8.34)
+                 "plugin-menus.png", "plugin-library-drop.png"]
+TESTS = 445 # unit tests in native/tests (vtitests), as of 2026-10-29 (release 0.8.35)
 
 # Important information shown at the top of the page, newest first (empty list = no box). The README starts with the
 # same text ("Important" block), keep both identical. Remove an entry when it no longer matters to users.

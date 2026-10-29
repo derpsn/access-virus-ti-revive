@@ -82,8 +82,8 @@
    "class": "C", "platforms": ["linux"], "core": ["cold", "reopen"]},
   {"why": "Windows diagnostics script shipped with the release",
    "paths": ["scripts/tirevive-usbinfo.ps1"], "class": "B", "platforms": ["windows"], "core": []},
-  {"why": "build files, release CI, the VST3 SDK: every package",
-   "paths": ["native/external/*", "native/CMakeLists.txt", "native/plugin/CMakeLists.txt", ".github/workflows/build.yml",
+  {"why": "build files, release CI, the VST3 SDK and our patches to it: every package",
+   "paths": ["native/external/*", "native/patches/*", "native/CMakeLists.txt", "native/plugin/CMakeLists.txt", ".github/workflows/build.yml",
              ".github/actions/*", ".github/apt/*"],
    "class": "C", "platforms": ["linux", "windows", "mac"], "core": ["cold"]}
  ]

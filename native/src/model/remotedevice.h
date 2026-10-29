@@ -171,4 +171,21 @@ private:
     std::map<std::pair<std::string, int>, std::vector<std::string>> by_ctl_; // (message id, controller) -> paths
 };
 
+// The patch's origin in single-dump bytes 10..12 (Patchmanagement/Flags, Original Bank, Original Patch, E156), which
+// the Virus shows as the part's location: set like the original before a patch load (0x180083ae0, E369) - from a bank
+// of the Virus (our bank 0.. = RAM A.., ROM A from 4) 0, bank + 1, index ("RAM-B 4"); from anywhere else the flag 0x20
+// ("eLIB"). The checksums are the caller's (load_dump computes them after).
+inline void set_patch_origin(std::vector<uint8_t> &dump, int bank, int program, bool from_virus)
+{
+    if (dump.size() != 524)
+        return;
+    if (!from_virus) {
+        dump[10] = 0x20;
+        return;
+    }
+    dump[10] = 0;
+    dump[11] = (uint8_t)((bank + 1) & 0x7F);
+    dump[12] = (uint8_t)(program & 0x7F);
+}
+
 } // namespace vti

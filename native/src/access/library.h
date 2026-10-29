@@ -11,6 +11,7 @@ namespace vti {
 struct PatchLibrary {
     std::string name, path;                   // file name without ".mid"
     std::vector<std::vector<uint8_t>> dumps; // 524-byte single dumps (TI format) by position; empty = a gap
+    int skipped = 0; // single dumps left out: not 267/524 bytes (damaged), Virus C without page B, not convertible
 };
 
 // one .mid or .syx file (`lib.name` is left to the caller); false if it cannot be read. Each patch at its program
@@ -24,6 +25,19 @@ bool save_library(const PatchLibrary &lib, std::string &error);
 // the original's "Create Empty Library" (E217): the name chosen in its save dialog ends in ".mid" (".midi" loses the
 // "i", any other name gets ".mid"; case-sensitive like the original)
 std::string library_file_name(const std::string &chosen);
+// a library file dropped on the browser (TI Revive's own addition, E357; the original refuses file drops, E355)
+struct LibraryImport {
+    std::string path, name;  // the library in `dir` and its name; empty when nothing was imported
+    std::string error;       // why nothing was imported (no Virus patches, cannot read or write)
+    int patches = 0, skipped = 0; // patches in it, damaged ones left out (load_library_file)
+    bool existed = false;    // the same patches are already in `dir` (or the file is in it): nothing copied
+};
+// .mid, .midi or .syx, any case: what import_library takes
+bool importable_library(const std::string &path);
+// copies `src` into `dir` (the Personal Libraries folder): a .mid/.midi byte for byte, a .syx of up to 128 patches as
+// the original's .mid (it reads no .syx), a larger .syx as it is; a free name ("Bank", "Bank 2", ...) - never
+// overwrites; a file without Virus patches is not copied
+LibraryImport import_library(const std::string &src, const std::string &dir, const std::vector<uint8_t> &page_b = {});
 // writes the original's empty library file to `path` (SMF type 0, one track with only its end, division 480),
 // replacing an existing file
 bool write_empty_library(const std::string &path, std::string &error);
@@ -44,5 +58,20 @@ std::vector<LibraryRoot> library_roots_for(const std::string &personal, const st
 std::vector<LibraryRoot> library_roots();
 // XDG_DOCUMENTS_DIR from the text of user-dirs.dirs ($HOME expanded); empty if missing, relative or the home itself
 std::string xdg_documents_dir(const std::string &home, const std::string &user_dirs);
+
+// The browser's bank arrows: the bank next to `current` in `order` (the bank menu's order - the Virus' banks, then the
+// libraries as the menu lists them), `dir` +1 or -1; the ends stay put; a bank not in the list (a search) goes to the
+// first entry; an empty list keeps `current`
+inline int browser_bank_step(const std::vector<int> &order, int current, int dir)
+{
+    if (order.empty())
+        return current;
+    for (size_t i = 0; i < order.size(); i++)
+        if (order[i] == current) {
+            const long j = (long)i + (dir > 0 ? 1 : -1);
+            return j < 0 || j >= (long)order.size() ? current : order[(size_t)j];
+        }
+    return order.front();
+}
 
 } // namespace vti
