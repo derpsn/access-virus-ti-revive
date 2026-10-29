@@ -658,6 +658,7 @@ def features_section():
         <li>Choosing a patch for one part no longer stops the other parts for a moment. Since 0.8.27 the plug-in sends the patch like the original: in small pieces on its own USB-MIDI cable, with the other parts' notes in between.</li>
         <li>At every Play and loop restart the plug-in sends the song position like the original (since 0.8.27), so the arpeggiator and clock-synced LFOs restart on the beat.</li>
         <li>A Virus switched on after the DAW no longer causes sync errors at every Play. Since 0.8.34 the plug-in also takes the Virus' sample rate when it starts the audio later; before, it kept counting 44.1 kHz while the Virus ran at 48 kHz.</li>
+        <li>On macOS, a Virus that streams at another sample rate than macOS reports (seen after a power cycle and after another DAW had used it) no longer causes sync errors without end. Since 0.8.35 the plug-in measures the rate the audio really arrives at and then switches the Virus over and back, as a sample rate change in the DAW does. That recovery has not been seen on a real Virus yet: on the fixed build the problem did not come back.</li>
         <li>At host sample rates other than 44.1 kHz the first notes after Play and after a render no longer come late and catch up over several seconds (since 0.8.27).</li>
         <li>The Virus drops the message right after a multi dump. The plug-in pauses after one, so new projects reset
         the synth reliably.</li>
@@ -742,7 +743,7 @@ def page_changelog_landing(releases):
 # the README's screenshots that the site shows too (copied at build time)
 SHARED_IMAGES = ["control-center.png", "control-center-nerd-mode.png", "plugin-help-mode.png", "plugin-help-inactive.png",
                  "plugin-menus.png", "plugin-library-drop.png"]
-TESTS = 440 # unit tests in native/tests (vtitests), as of 2026-10-27 (round 0.8.35)
+TESTS = 445 # unit tests in native/tests (vtitests), as of 2026-10-29 (release 0.8.35)
 
 # Important information shown at the top of the page, newest first (empty list = no box). The README starts with the
 # same text ("Important" block), keep both identical. Remove an entry when it no longer matters to users.

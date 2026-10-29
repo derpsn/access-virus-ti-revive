@@ -63,7 +63,7 @@ contains no Access material. No kernel code of its own is installed.
 | **System** | Windows 11 x64 (also Windows 10) | macOS 14.4 or newer (the plug-in itself: Apple Silicon and Intel) | x86_64, Ubuntu 22.04 / Debian 12 or newer, systemd |
 | **You need** | your own Access "Virus TI Software Suite" 64-bit `.msi` (only unpacked, not installed) | your own Access "Virus TI Software Suite" `.pkg` (only unpacked, not installed) | your own Access 64-bit `.msi` (only unpacked: msitools or Wine) |
 | **In your DAW** | VST3 **"TI Revive Virus Control"**; ASIO device **"TI Revive Virus Audio"** (the Virus as sound card) | **"TI Revive Virus Control"** as VST3 and Audio Unit (Logic, GarageBand) | VST3 **"TI Revive Virus Control"** |
-| **Tested with** | Ableton Live 11 (Windows 11 PC and VM) | Ableton Live 12 on a MacBook Air M3 (VST3), GarageBand (AU) | REAPER 7.82 on Ubuntu 26.04 |
+| **Tested with** | Ableton Live 11 (Windows 11 PC and VM) | Ableton Live 12 on a MacBook Air M3 (VST3), GarageBand and Logic Pro (AU) | REAPER 7.83 on Ubuntu 26.04 |
 
 - **Timing:** notes land sample-accurately on the grid (measured jitter 0.01 to 0.33 ms, std. dev.); the plug-in
   reports its latency so the DAW compensates it. The Virus follows the project's sample rate like with the
@@ -77,7 +77,7 @@ contains no Access material. No kernel code of its own is installed.
   sound, both USB outputs, parameters; with 0.8.20 also USB 3 and the soft knobs); not tested by us - we have no
   Snow. Since 0.8.35 there is also a Snow plug-in, "TI Revive Virus Control (Snow)": like the original's own Snow
   plug-in it shows the Snow's editor with its 4 parts and uses the Snow's files from your Access installer, as VST3
-  and on macOS also as Audio Unit for Logic Pro and GarageBand (the Audio Unit is new and not tested yet). A first
+  and on macOS also as Audio Unit for Logic Pro and GarageBand (the Audio Unit checked in Logic Pro on a TI2). A first
   user report on a Snow (VST3, macOS): parameters and sound work; like the original's Snow editor it has no level
   meter. The regular plug-in keeps working with the Snow as before, and existing projects stay on it. Please tell us in a
   [GitHub issue](https://github.com/derpsn/access-virus-ti-revive/issues) what works and what not.
@@ -387,7 +387,7 @@ the Virus' flash and can brick it. Details: [native/docs/controlcenter.md](nativ
   connected, switch the Virus off and on once.
 - **VST3 and Audio Unit**: VST3 hosts (Ableton Live, Cubase, Bitwig, REAPER, ...) and Logic Pro / GarageBand (*AU
   Instruments → TI Revive → TI Revive Virus Control*; in GarageBand under *Smart Controls → Plug-ins*) use the same
-  native plug-in. Tested: Ableton Live 12 (VST3), GarageBand (AU); other hosts should work — reports welcome. Each
+  native plug-in. Tested: Ableton Live 12 (VST3), GarageBand and Logic Pro (AU); other hosts should work — reports welcome. Each
   DAW needs its own microphone permission.
 - Access' **Virus Control Center** (32-bit) does not run on current macOS; for backups use `tirevive-cc` (above).
 - The Virus' audio comes from macOS' own USB audio driver (the "Virus TI" audio device, 44.1 or 48 kHz like the project); unplugging and
@@ -484,7 +484,7 @@ hardware (TI2 Desktop) - details and raw numbers in [`findings/evidence.md`](fin
 - **Automation rate limit** (250 messages/s, coalesced per parameter): unthrottled parameter floods hung the Virus'
   audio until a power cycle within 4 minutes; with the limit a 4-minute full-load test (16 channels of notes + 32
   automation lanes) passes.
-- Checked with ThreadSanitizer and AddressSanitizer (one race in the broker connection found and fixed); 440 unit
+- Checked with ThreadSanitizer and AddressSanitizer (one race in the broker connection found and fixed); 445 unit
   tests run with every release build on Windows and Linux, plus two end-to-end tests on Linux in a virtual display
   (two editors of a duplicated track; the Control Center's window and close button).
 
@@ -502,6 +502,7 @@ hardware (TI2 Desktop) - details and raw numbers in [`findings/evidence.md`](fin
 - Choosing a patch for one part no longer stops the other parts for a moment. Since 0.8.27 the plug-in sends the patch like the original: in small pieces on its own USB-MIDI cable, with the other parts' notes in between. (E268-E271)
 - At every Play and loop restart the plug-in sends the song position like the original (since 0.8.27), so the arpeggiator and clock-synced LFOs restart on the beat. (E275)
 - A Virus switched on after the DAW no longer causes sync errors at every Play. Since 0.8.34 the plug-in also takes the Virus' sample rate when it starts the audio later; before, it kept counting 44.1 kHz while the Virus ran at 48 kHz. (E352)
+- On macOS, a Virus that streams at another sample rate than macOS reports (seen after a power cycle and after another DAW had used it) no longer causes sync errors without end. Since 0.8.35 the plug-in measures the rate the audio really arrives at and then switches the Virus over and back, as a sample rate change in the DAW does. That recovery has not been seen on a real Virus yet: on the fixed build the problem did not come back. (E377)
 - At host sample rates other than 44.1 kHz the first notes after Play and after a render no longer come late and catch up over several seconds (since 0.8.27). (E279, E280)
 - The Virus releases every sounding note about a second after the last Active Sensing message it received. Since 0.8.26 the plug-in sends one every 300 ms, like the original; before, it sent one at the start only. (E237)
 - The Virus keeps time-stamped MIDI in a small buffer without an overflow check. Since 0.8.26 the plug-in keeps its time-stamped MIDI well under that buffer's limit; normal playing and automation never come near it. (E238)

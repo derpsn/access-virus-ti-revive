@@ -286,8 +286,8 @@ jobs:
             into Personal Libraries in your Documents folder and shown at once (our own addition; the original takes no
             file drops).
           - A Snow plug-in, "TI Revive Virus Control (Snow)": like the original's own Snow plug-in it shows the Snow's
-            editor with its 4 parts, as VST3 and on macOS also as Audio Unit (the Audio Unit is not tested yet; a first
-            user report on a Snow with the VST3: parameters and sound work).
+            editor with its 4 parts, as VST3 and on macOS also as Audio Unit (the Audio Unit checked in Logic Pro on a
+            TI2; a first user report on a Snow with the VST3: parameters and sound work).
           - "Init Patch" in the LOAD menu: the init patch from your Access installer, to start a sound from scratch;
             "Revert to" brings the previous sound back (our own addition).
           - Notes are now sent to the Virus with the same head start as the original (3072 samples), and a note can no
@@ -320,10 +320,12 @@ jobs:
             patches. On macOS, the "No Virus TI can be found" page names another Virus driver when one is installed
             (AURA's, issue #17).
 
-          Tested on a Virus TI2 Desktop: Linux (REAPER and the automated run; the controllers and the name field in
-          REAPER), macOS (MacBook Air M3, Logic Pro; the FL Studio crash with a test host that deletes the plug-in the
-          same way). Not yet tested on Windows;
-          the controllers not yet in Ableton Live.
+          Tested on a Virus TI2 Desktop: Linux (REAPER and the automated run), Windows 11 (Ableton Live 11 in a VM and
+          the automated run), macOS (MacBook Air M3, Logic Pro with the Snow Audio Unit, Ableton Live 12 and the
+          automated run; the FL Studio crash with a test host that deletes the plug-in the same way). The macOS sample
+          rate recovery is built and runs without side effects, but the stuck state did not come back on the fixed
+          build, so the recovery itself is not yet tested. The Snow plug-ins ran on the TI2; on a Snow, only the VST3
+          has a user report.
 
           Earlier versions: their own release pages, and every version's changes on one page in the
           [changelog](https://derpsn.github.io/access-virus-ti-revive/changelog.html).

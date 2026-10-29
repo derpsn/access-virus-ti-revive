@@ -55,6 +55,11 @@ start, so the relock path did NOT run (not proven on hardware yet). All 10 check
 Fixed build again (user): hil-mac ALL PASS (work/hil/mac-0.8.35/results-20261029-072801); power cycle + Live 44.1
 07:34: matched from the start, 0 relock lines -> the stuck state did not come back; relock unproven on hardware
 (E377 updated). NEXT: site-check, VERSION 0.8.35, tested-on line, merge + tag after the user's OK.
+Release prep (2026-10-29): VERSION already 0.8.35 (bdb49fa). Release notes: tested-on line (Linux/Win11 VM/Mac
+with Logic Snow AU, Live 12; relock not yet seen on hardware), Snow AU bullet 'checked in Logic Pro on a TI2'.
+tirevive-site-check (round scope): fixed 445 tests, Snow AU tested in Logic, macOS Tested-with + Logic (AU), REAPER
+7.83, new reliability bullet E377 (site + README same text); site built locally, script tests OK, NOT deployed.
+Open question to the user: matrix Polar/macOS 'no report yet' vs #18/#20 user reports.
 
 **NEXT (user: no test session on 2026-10-27):**
 1. Full CI test build of the branch (build.yml -f version=0.8.35; the last full run 40568526535 failed only in mac,
