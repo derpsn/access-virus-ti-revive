@@ -63,6 +63,11 @@ Matrix: Polar gets its own row, macOS 'works for users' (user decision, #18 E367
 RELEASE 0.8.35 (user: 'Ship it', 2026-10-29): merged into main 063050a (-F file; parents cdb7992 + c722bc0, tree =
 round tip), main pushed, tag v0.8.35 pushed separately, release CI run 40830887750 started. NEXT: CI green -> check
 the release page, site rebuild (site.yml, user OK), install the release on Linux/win11/Mac, close #19, tell #14/#16.
+v0.8.35 RELEASED: release CI 40830887750 all green, 'TI Revive 0.8.35' (not pre-release; msi, setup.exe, mac zip,
+linux tarball, usbinfo, libusb). Linux = release (install.sh; plug-in b91e3682.. = the tarball's). win11 = release
+(setup.exe /quiet exit 0, TI Revive 0.8.35, plug-in 10ca0407.. = the MSI's; VM off). Mac PUSHED:
+~/Downloads/TI-Revive-0.8.35-release-mac (pkg 6baa1093.., INSTALL-COMMAND.txt, 'Install release.command') - user installs.
+NEXT: site rebuild (user OK), close #19, replies #14/#16 (drafts to the user).
 
 **NEXT (user: no test session on 2026-10-27):**
 1. Full CI test build of the branch (build.yml -f version=0.8.35; the last full run 40568526535 failed only in mac,
