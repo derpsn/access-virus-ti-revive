@@ -311,6 +311,9 @@ jobs:
           - REAPER: no more sync errors from the Virus at every Play. REAPER switches the plug-in off and on at each
             Play, and the plug-in sent "all notes off" to all 16 parts then, right before the first notes; now only
             notes and pedals that are still held are released.
+          - macOS: no more endless sync errors when the Virus runs at another sample rate than macOS reports (seen
+            after a power cycle and after another DAW used it; a sample rate change in the DAW fixed it). The plug-in
+            now measures the rate the audio really arrives at and switches the Virus over and back once.
           - Control Center, Nerd mode: an Options... menu (and "tirevive-cc option") to compare with the original:
             the output delays only on change instead of at every Play/Stop, and the timing as before 0.8.35.
           - Greyed-out controls are drawn like in the original, and the plug-in's log names libraries with damaged

@@ -12,6 +12,7 @@
 #include "base/source/fstreamer.h"
 #include "device/usbmidi.h"
 #include "model/state.h"
+#include "ratesw.h"
 #include "pluginterfaces/base/ibstream.h"
 #include "pluginterfaces/base/ustring.h"
 #include "pluginterfaces/vst/ivstevents.h"
@@ -614,6 +615,21 @@ void DeviceOut::run()
             if (resume_) // after a Windows sleep the Virus answered sync pings but played no notes until this (E210)
                 resume_();
         }
+#ifdef __APPLE__
+        // the Virus streams at the other rate than Core Audio says (E377: after a power cycle or another program): away
+        // and back, as a rate change in the DAW does; the ring's new rate gives a new timeline below (rate_changed)
+        if (uint32_t to = 0; audio_ok()) {
+            const int step = audio_.check_rate(
+                (uint32_t)std::chrono::duration_cast<std::chrono::milliseconds>(
+                    std::chrono::steady_clock::now().time_since_epoch()).count(), to);
+            if (step == VTI_RELOCK_AWAY)
+                log("Virus TI native: the Virus streams at the other rate than Core Audio says - %u Hz, then back\n", to);
+            else if (step == VTI_RELOCK_BACK)
+                log("Virus TI native: back to %u Hz on the Core Audio device\n", to);
+            else if (step == VTI_RELOCK_GIVE_UP)
+                log("Virus TI native: the Virus still streams at the other rate - switch it off and on\n");
+        }
+#endif
         // setActive asked for another Virus rate (request_rate, design-rate.md step 5): Linux/Windows through the
         // broker (it switches in the driver's order, debounced, the owner only), macOS on the Core Audio device
         bool req_handled = false;

@@ -25,6 +25,7 @@ extern "C" {
 #ifdef __APPLE__
 #include <CoreAudio/CoreAudio.h>
 #include "gapfill.h"
+#include "ratemeter.h"
 #include "ratesw.h"
 #include <chrono>
 #include <map>
@@ -63,6 +64,8 @@ struct MacAudio {
     bool playing = false; // the output towards the Virus runs (IOProc thread)
     GapFill gaps;         // skipped IO cycles become silence, so ring frames stay the Virus' frames (E243)
     vti_rate_guard guard{}; // at most one rate switch per second (ratesw.h, rule 2; E112: flips can hang the Virus)
+    vti::RateMeter meter;   // the rate the frames really arrive at (E377)
+    vti_relock relock{};    // away and back when that is the other rate, three tries per stream
     uintptr_t id = 0;       // key in g_macs (the rate listener's user data)
 };
 
@@ -128,6 +131,20 @@ static OSStatus rate_listener(AudioObjectID, UInt32, const AudioObjectPropertyAd
     if (it != g_macs.end())
         ring_rate(it->second);
     return noErr;
+}
+
+// one switch of our own: our IOProc stops first (no audio while the device changes clock), then the rate, read back,
+// then it runs again (request_rate, check_rate)
+static void switch_rate(MacAudio *m, uint32_t want)
+{
+    AudioDeviceStop(m->dev, m->proc);
+    if (!set_nominal_rate(m, want))
+        fprintf(stderr, "audioin: the Virus did not take %u Hz (now %.0f)\n", want, nominal_rate(m->dev));
+    {
+        std::lock_guard<std::mutex> g(g_mac_mx);
+        ring_rate(m);
+    }
+    AudioDeviceStart(m->dev, m->proc);
 }
 
 static std::string cf_string(AudioObjectID id, AudioObjectPropertySelector sel)
@@ -393,19 +410,29 @@ int AudioIn::request_rate(int rate)
     const uint32_t want = vti_rate_valid((uint32_t)rate);
     if (!m || m->ring->rate == want || !vti_rate_may_switch(&m->guard, now_ms()))
         return this->rate();
-    // our IOProc stops first (no audio while the device changes clock), then the rate, read back, then it runs again
-    AudioDeviceStop(m->dev, m->proc);
-    if (!set_nominal_rate(m, want))
-        fprintf(stderr, "audioin: the Virus did not take %u Hz (now %.0f)\n", want, nominal_rate(m->dev));
-    {
-        std::lock_guard<std::mutex> g(g_mac_mx);
-        ring_rate(m);
-    }
-    AudioDeviceStart(m->dev, m->proc);
+    switch_rate(m, want);
 #else
     (void)rate;
 #endif
     return this->rate();
+}
+
+int AudioIn::check_rate(uint32_t now, uint32_t &to)
+{
+    to = 0;
+#ifdef __APPLE__
+    auto *m = (MacAudio *)mac_;
+    if (!m)
+        return VTI_RELOCK_NONE;
+    const bool lost = m->meter.other_rate(newest_frame(), now, (int)m->ring->rate);
+    const int step = vti_relock_step(&m->relock, lost, m->ring->rate, now, &to);
+    if (step == VTI_RELOCK_AWAY || step == VTI_RELOCK_BACK)
+        switch_rate(m, to); // a real switch: the same rate again would change nothing (E331)
+    return step;
+#else
+    (void)now;
+    return 0; // VTI_RELOCK_NONE: the broker relocks the stream itself
+#endif
 }
 
 bool AudioIn::rate_changed(int &rate)

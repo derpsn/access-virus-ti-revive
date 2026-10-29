@@ -37,6 +37,11 @@ public:
     // owns it (Broker::audio). Returns the rate in force afterwards. Blocks up to ~1 s on macOS (the device changes
     // its clock): never from the audio thread - the plug-in's resume / setActive only.
     int request_rate(int rate);
+    // macOS: the Virus streams at the other rate than Core Audio reports (E377, ratemeter.h) -> switch away and, one
+    // second later, back (vti_relock_step). Call from the worker on every pass; returns VTI_RELOCK_* (ratesw.h: 0 =
+    // nothing done) and in `to` the rate switched to. Blocks up to ~1 s on a switch. Linux/Windows: 0 (the broker
+    // recovers it itself)
+    int check_rate(uint32_t now_ms, uint32_t &to);
     // the highest absolute sample per raw channel (VTI_AUDIO_IN_CH, device order) over the newest `frames` frames:
     // diagnostics (which channels carry sound, e.g. the third USB output); false if not streaming
     bool raw_peaks(int frames, int peak[6]) const;

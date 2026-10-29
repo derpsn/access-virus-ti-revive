@@ -37,6 +37,13 @@ version/stages. Reply posted (user OK, issuecomment-6479629791): asks version + 
 Mac PUSHED: ~/Downloads/TI-Revive-0.8.35-mac (pkg b6ce1ddf.. = CI, INSTALL-COMMAND.txt, Install test build.command,
 hil/); the 2026-10-26 folder moved to ~/Downloads/TI-Revive-0.8.35-mac-20261026. NEXT: user installs, M1-M4, plus
 a graph drag in the editor so the sync report count can be compared with the VM.
+**Mac sync errors (2026-10-29, E377):** Logic (Snow AU, 48k) clean; then Live 12: endless sync reports (>3000), the
+Virus delivering the OTHER rate than Core Audio's nominal (48 nominal / 44.1 delivered; after a Live restart at 44.1:
+44.1 / 48; after a power cycle again 44.1 / 48); a rate change in Live (48, back to 44.1) fixed it. Cause: stale Core
+Audio nominal rate, open() sets only on difference. User chose 'A, fix it now': ratemeter.h (TDD, 5 tests, 445 total,
+ctest 5/5 Linux) + AudioIn::check_rate (vti_relock away/back on the Core Audio device) + worker log lines; release
+note bullet. Mac code NOT compiled locally (no Mac toolchain here) -> CI build, then Mac retest: power cycle, Live 44.1,
+expect the 'other rate ... then back' line and clean stats. Old bug (since the rate following), not a regression.
 
 **NEXT (user: no test session on 2026-10-27):**
 1. Full CI test build of the branch (build.yml -f version=0.8.35; the last full run 40568526535 failed only in mac,
