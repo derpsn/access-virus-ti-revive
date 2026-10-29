@@ -116,6 +116,7 @@ h2 { font-size: clamp(1.5rem, 2.8vw, 1.9rem); line-height: 1.2; font-weight: 600
 .os ol { padding-left: 1.2rem; margin: 0.8rem 0 0; font-size: 0.9rem; }
 .os li + li { margin-top: 0.5rem; }
 .sum { display: block; margin-top: 0.8rem; font: 0.66rem/1.4 var(--mono); color: var(--soft); word-break: break-all; }
+.downloads { margin: 1.2rem 0 0; }
 .needs { margin-top: 2.4rem; display: grid; grid-template-columns: repeat(2, 1fr); gap: 0.4rem 2.5rem; }
 .needs div { display: grid; grid-template-columns: 7.5rem 1fr; gap: 1rem; padding: 0.9rem 0;
   border-top: 1px solid var(--line); font-size: 0.92rem; }
