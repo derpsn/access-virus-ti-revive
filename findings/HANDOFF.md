@@ -59,7 +59,7 @@ Release prep (2026-10-29): VERSION already 0.8.35 (bdb49fa). Release notes: test
 with Logic Snow AU, Live 12; relock not yet seen on hardware), Snow AU bullet 'checked in Logic Pro on a TI2'.
 tirevive-site-check (round scope): fixed 445 tests, Snow AU tested in Logic, macOS Tested-with + Logic (AU), REAPER
 7.83, new reliability bullet E377 (site + README same text); site built locally, script tests OK, NOT deployed.
-Open question to the user: matrix Polar/macOS 'no report yet' vs #18/#20 user reports.
+Matrix: Polar gets its own row, macOS 'works for users' (user decision, #18 E367 + #20).
 
 **NEXT (user: no test session on 2026-10-27):**
 1. Full CI test build of the branch (build.yml -f version=0.8.35; the last full run 40568526535 failed only in mac,
