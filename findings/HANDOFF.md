@@ -71,6 +71,9 @@ Site rebuilt (user OK; site.yml run 40832030718 green; live page shows 0.8.35, 4
 E377 bullet). Replies posted (user OK): #19 closed (issuecomment-6490085090), #16 (-6490085898, asks for an FL Studio
 check), #14 (-6490086257, Spanish, asks for the Snow AU in Logic). NEXT: user installs the release on the Mac; then
 the ideas backlog (Panic + Help menu first) for the next weekly round; merge main back into the next round branch.
+Site (user: changelog version font looked 'AI slop'): version numbers, dates and the pre-release tag in the text
+font (system-ui, tabular numbers) instead of monospace; straight to main 93a8fc0, site.yml deployed. Not checked
+visually (no browser on this PC) - the user looks at the live page.
 
 **NEXT (user: no test session on 2026-10-27):**
 1. Full CI test build of the branch (build.yml -f version=0.8.35; the last full run 40568526535 failed only in mac,
