@@ -41,7 +41,17 @@ no 'all parts locked' when the condition is missing), merge refuses dumps of dif
 left: flags 0x20 also for bank patches (= the original's capture), pre-existing load_dump ordering between UI and
 sender thread, browser menu now always opens (only 'Unlock all parts' on ROM banks). 453 unit tests, ctest 5/5,
 Linux build only. DEV PLUG-IN INSTALLED in ~/.vst3 (37e46e27 = build-native incl. the review fixes); the 0.8.35 install b91e3682 backed up in
-~/.vst3-backup/0.8.35-installed-b91e3682. NOT tested on hardware yet. NEXT: review findings, user smoke test in
+~/.vst3-backup/0.8.35-installed-b91e3682. **User smoke test (REAPER, TI2 Desktop, dev 37e46e27): works** - 66 merge
+lines in diag.log (393/62/37/29 kept), unlocked load without merge; 'sound changes with all locked' = Transpose
+(and Key Mode) are in no section (45 single-dump fields outside all sections; RAM banks: ~half the patches
+transposed) - same definitions as the original. NOT evidenced: a program change on the Virus with a lock (no
+'preset chosen on the Virus' line in the session; asked the user to repeat). RC PREP d6a20dc: VERSION 0.8.36,
+build.yml 'New in 0.8.36' (tested-on: Linux REAPER only), README paragraph + 453 tests, site TESTS 453.
+**MISTAKE 2026-10-30 ~18:50:** `git push -u origin round-0.8.36` with push.default=upstream (upstream origin/main)
+FAST-FORWARDED origin/main 404c101 -> d6a20dc (all round commits; nothing lost, no force). round-0.8.36 now pushed
+explicitly (same d6a20dc, upstream fixed). Site run 41101816792 (push to main) queued; cancel was blocked by auto
+mode - user decides. Options given: leave main + RC soon (recommended) / revert commit on main / force push (rule 6,
+user only). CI test build NOT started yet (waits for the user). Memory feedback-push-new-branch written. NEXT: review findings, user smoke test in
 REAPER (double-click, menus, presets, cutoff kept on a browser load and on a program change on the Virus,
 unlocked = patch value), then evidence/README/site texts.
 
