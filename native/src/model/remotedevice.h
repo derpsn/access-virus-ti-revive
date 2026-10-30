@@ -32,6 +32,10 @@ struct Parameter {
     // meta parameters (editordevice.xml meta="true"): link other parameters (filter link, FX switches, LFO clocks)
     bool meta = false, retrigger = false, catch_always = true;
     std::vector<MetaClient> clients;
+    // editordevice.xml type="section" (section locks, E378): the parameters a lock keeps (<Child>, in file order);
+    // type="reflector": the value is its condition's result
+    std::string type;
+    std::vector<std::string> children;
 };
 
 struct Valuelist {

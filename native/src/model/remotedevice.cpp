@@ -78,6 +78,9 @@ bool RemoteDevice::load(const std::vector<uint8_t> &xml, std::string &error)
                     mc.maps.push_back({num(m, "clientval", 0), num(m, "metaval", 0)});
                 q.clients.push_back(mc);
             }
+            q.type = p.attribute("type").value();
+            for (auto c : p.children("Child"))
+                q.children.push_back(c.child_value());
             index_[q.path] = parameters.size();
             parameters.push_back(q);
         }

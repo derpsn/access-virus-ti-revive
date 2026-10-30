@@ -6,6 +6,7 @@
 #include "check.h"
 #include "editor/editorrender.h"
 #include "model/remotedevice.h"
+#include "model/sectionlock.h"
 #include <algorithm>
 #include <cstdlib>
 #include <cstring>
@@ -413,4 +414,38 @@ TEST(library_save_load_round_trip)
             CHECK(libs[0].dumps[i].size() == 524 && libs[0].dumps[i][9] == lib.dumps[i][9]);
     }
     fs::remove_all(dir);
+}
+
+// section locking on the user's editordevice.xml (E378): 39 sections (the skin shows 38), the presets match the lists
+// the original's menu locks (0x180084c90: OSC 8, Filter 6, LFO 6, Matrix 6, Arpeggiator 2, FX 11 sections), every
+// child is a parameter of the device, and the only children outside the single dump are the editor's LFO clock
+// dividers (meta parameters derived from LFO n/Clock, which the same sections keep)
+TEST(access_section_locks)
+{
+    AccessFiles *a = files();
+    RemoteDevice ed;
+    std::string err;
+    CHECK(ed.load(a->get("editordevice.xml"), err));
+    const auto secs = SectionLock::sections(ed);
+    CHECK(secs.size() == 39);
+    const size_t want[] = {8, 6, 6, 6, 2, 11};
+    std::set<std::string> in_presets;
+    for (int p = 0; p < SectionLock::PRESET_COUNT; p++) {
+        auto s = SectionLock::preset_sections(ed, p);
+        CHECK(s.size() == want[p]);
+        in_presets.insert(s.begin(), s.end());
+    }
+    CHECK(in_presets.size() == 39); // every section is in exactly one preset page
+    const MidiMessage *t = dev().message("VirusTI_Singledump");
+    CHECK(t);
+    int outside = 0;
+    for (auto &sec : secs)
+        for (auto &c : ed.find(sec)->children) {
+            CHECK(dev().find(c) || ed.find(c));
+            if (t && !t->field_bytes.count(c)) {
+                outside++;
+                CHECK(c.find(" Clock/Divider") != std::string::npos && ed.find(c) && ed.find(c)->meta);
+            }
+        }
+    CHECK(outside == 3);
 }
