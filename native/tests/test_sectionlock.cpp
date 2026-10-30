@@ -196,3 +196,19 @@ TEST(sectionlock_merge_nothing_locked)
     CHECK(!SectionLock::merge(dev(), *m, shorter, in, {"Filt/Cutoff"})); // a current dump of the wrong size
     CHECK(in == orig);
 }
+
+TEST(sectionlock_menu_values)
+{
+    // the header and padlock menus act on one part (E378): lock / unlock all sections, and a preset = every section
+    // unlocked, then the page's sections locked (it replaces the part's locks)
+    using V = std::vector<std::pair<std::string, int>>;
+    CHECK(SectionLock::all_values(ed(), 1) ==
+          V({{"Locks/Oscillator", 1}, {"Locks/Filter", 1}, {"Locks/FX A", 1}, {"Locks/FX B", 1}}));
+    CHECK(SectionLock::all_values(ed(), 0) ==
+          V({{"Locks/Oscillator", 0}, {"Locks/Filter", 0}, {"Locks/FX A", 0}, {"Locks/FX B", 0}}));
+    CHECK(SectionLock::preset_values(ed(), SectionLock::LOCK_FILTER) ==
+          V({{"Locks/Oscillator", 0}, {"Locks/Filter", 1}, {"Locks/FX A", 0}, {"Locks/FX B", 0}}));
+    CHECK(SectionLock::preset_values(ed(), SectionLock::LOCK_FX) ==
+          V({{"Locks/Oscillator", 0}, {"Locks/Filter", 0}, {"Locks/FX A", 1}, {"Locks/FX B", 1}}));
+    CHECK(SectionLock::preset_values(ed(), 42).empty()); // unknown preset: nothing changes
+}

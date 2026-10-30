@@ -858,8 +858,10 @@ tresult PLUGIN_API VirusPlugin::initialize(FUnknown *context)
     ui_state_["VirusControl/RecallProgress"] = 127;
     load_banks();
     load_remote_templates();
-    if (ed_.load(files->get(df.editordevice), err) && layout_.load(files->get(df.editor), err))
+    if (ed_.load(files->get(df.editordevice), err) && layout_.load(files->get(df.editor), err)) {
         cond_ = std::make_unique<Conditions>(dev_, ed_);
+        lock_sections_ = SectionLock::sections(ed_);
+    }
     else
         fprintf(stderr, "Virus TI native: no editor (%s)\n", err.c_str());
     // a new instance's state like the original's: empty record, the fixed multi, 16 parts = the init patch,
@@ -1911,7 +1913,12 @@ int VirusPlugin::ui_value(const std::string &path, int part)
         std::lock_guard<std::mutex> lk(remote_mu_);
         return remote_.channel_enabled(sel < 0 ? 0 : sel) ? 1 : 0;
     }
+    if (path == "VirusControl/Global Section Lock Indicator")
+        return any_part_locked() ? 1 : 0;
     const Parameter *param = cond_ ? cond_->find(path) : nullptr;
+    if (param && param->type == "reflector") // the part strip's lock indicator = its condition (Locks/Part Lockings)
+        return cond_->eval(param->condition, [this](const std::string &p, int pt) { return ui_value(p, pt); },
+                           part < 0 ? 0 : part) ? 1 : 0;
     if (param && param->part == "none")
         part = -1; // global parameters (Panel Part, globals) are not per part
     if (param && !dev_.find(path) && param->part == "all") { // per-part editor values and meta parameters
@@ -2877,6 +2884,43 @@ bool VirusPlugin::init_patch(int part)
     return true;
 }
 
+std::vector<std::string> VirusPlugin::locked_children(int part)
+{
+    return SectionLock::locked_children(ed_, [this, part](const std::string &s) { return ui_value(s, part) == 1; });
+}
+
+void VirusPlugin::set_locks(int part, const std::vector<std::pair<std::string, int>> &values)
+{
+    if (part < 0 || part > 15)
+        return;
+    for (auto &kv : values)
+        set_editor_value(kv.first, part, kv.second);
+    ui_dirty_ = true;
+}
+
+void VirusPlugin::unlock_all_parts()
+{
+    const auto off = SectionLock::all_values(ed_, 0);
+    for (int p = 0; p < 16; p++)
+        set_locks(p, off);
+}
+
+bool VirusPlugin::part_locked(int part)
+{
+    for (auto &s : lock_sections_)
+        if (ui_value(s, part) == 1)
+            return true;
+    return false;
+}
+
+bool VirusPlugin::any_part_locked()
+{
+    for (int p = 0; p < 16; p++)
+        if (part_locked(p))
+            return true;
+    return false;
+}
+
 bool VirusPlugin::load_recent(int part, int index)
 {
     std::vector<uint8_t> d, current = part_dump(part);
@@ -2942,16 +2986,25 @@ bool VirusPlugin::load_dump(std::vector<uint8_t> d, int part)
     for (int i = 265; i < 522; i++)
         a += d[i];
     d[522] = a & 0x7F;
+    // locked sections keep the part's current values, like the original (E378): merged into this one dump
+    const auto keep = locked_children(part);
+    bool merged = false;
     {
         std::lock_guard<std::mutex> lk(state_mu_);
         if (state_.empty())
             state_ = default_;
         for (auto &r : state_)
-            if (is_part_dump(r, part))
+            if (is_part_dump(r, part)) {
+                if (!keep.empty() && single_template_)
+                    merged = SectionLock::merge(dev_, *single_template_, r, d, keep);
                 r = d;
+            }
     }
     if (out_)
         out_->send(d);
+    if (merged && out_)
+        out_->log("Virus TI native: part %d patch loaded with its locked sections kept (%zu parameters)\n", part + 1,
+                  keep.size());
     apply_state_to_params(part); // parameters + editor values of the new patch, its stored values for the LCD
     return true;
 }
@@ -4038,6 +4091,7 @@ tresult PLUGIN_API VirusPlugin::setState(IBStream *state)
         state_ = std::move(recs);
     }
     state_loaded_ = true;
+    unlock_all_parts(); // a project brings no locks: the original clears them at every project load (E378)
     apply_state_to_params();
     send_state();
     return kResultOk;

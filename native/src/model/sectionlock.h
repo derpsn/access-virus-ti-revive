@@ -58,6 +58,27 @@ struct SectionLock {
         return out;
     }
 
+    // "Lock all Sections" (1) / "Unlock all Sections" (0) for one part: every section with that value
+    static std::vector<std::pair<std::string, int>> all_values(const RemoteDevice &ed, int v)
+    {
+        std::vector<std::pair<std::string, int>> out;
+        for (auto &s : sections(ed))
+            out.push_back({s, v});
+        return out;
+    }
+
+    // a preset replaces the part's locks (E378: the original unlocks all, then locks the page's sections)
+    static std::vector<std::pair<std::string, int>> preset_values(const RemoteDevice &ed, int p)
+    {
+        if (p < 0 || p >= PRESET_COUNT)
+            return {};
+        const auto on = preset_sections(ed, p);
+        auto out = all_values(ed, 0);
+        for (auto &kv : out)
+            kv.second = std::find(on.begin(), on.end(), kv.first) != on.end() ? 1 : 0;
+        return out;
+    }
+
     // the parameters the locked sections keep (each once, in section order)
     static std::vector<std::string> locked_children(const RemoteDevice &ed,
                                                     const std::function<bool(const std::string &)> &locked)

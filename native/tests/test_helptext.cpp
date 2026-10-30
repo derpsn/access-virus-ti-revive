@@ -12,7 +12,10 @@ TEST(help_shared_texts)
     CHECK(help_for("Arpeggiator User Pattern/Step 32 Velocity", a) && !a.text.empty());
     CHECK(help_for("Internal MIDI Standard Parameters/07 Volume", a) && a.title == "Part volume and activity");
     CHECK(help_for("Multi Part Parameter/Output Select Control3", a) && a.text.find("USB 3") != std::string::npos);
-    CHECK(help_for("Locks/Matrix Slot 4", a) && a.text.find("Not supported") != std::string::npos);
+    // section locking works since round 0.8.36 (E378): the note tells how to use it
+    CHECK(help_for("Locks/Matrix Slot 4", a) && a.text.find("Not supported") == std::string::npos &&
+          a.text.find("Double-click") != std::string::npos);
+    CHECK(help_for("LockView/Part Lock Indicator", a) && a.text.find("Not supported") == std::string::npos);
 }
 
 TEST(help_own_text_wins)

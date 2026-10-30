@@ -41,6 +41,7 @@
 #include "model/remotedevice.h"
 #include "model/sysinfo.h"
 #include "model/remotetemplates.h"
+#include "model/sectionlock.h"
 #include "pluginterfaces/vst/ivstmidicontrollers.h"
 #include "public.sdk/source/vst/vstsinglecomponenteffect.h"
 #include <array>
@@ -339,6 +340,12 @@ public:
     // "Init Patch" in the LOAD menu (TI Revive's own addition, #14): the init patch from the user's Access files into
     // the part, remembered like a load (so "Revert to" brings the sound back)
     bool init_patch(int part);
+    // section locking (E378, #21): the locks are the editor values Locks/<section> per part (ui_set from a header
+    // double-click), session only; a patch arriving for a part keeps its locked sections (load_dump merges them)
+    void set_locks(int part, const std::vector<std::pair<std::string, int>> &values); // menu: one part
+    void unlock_all_parts();
+    bool part_locked(int part);  // any section of the part (the part strip's indicator)
+    bool any_part_locked();      // the padlock next to "?" (Global Section Lock Indicator)
     // the ARP page's pattern actions (buttons + context menu, #19, E371): order of ARP_ACTIONS; false if unknown
     enum ArpAction { ARP_SHIFT_LEFT, ARP_SHIFT_RIGHT, ARP_RANDOM_PATTERN, ARP_RANDOM_VELOCITY, ARP_RANDOM_LENGTH,
                      ARP_RESET, ARP_FILL_UP, ARP_ACTION_COUNT };
@@ -581,6 +588,8 @@ private:
     void meta_init();
     bool meta_cond(const Parameter &m, int part);
     void set_editor_value(const std::string &path, int part, int value, bool persist = false);
+    std::vector<std::string> lock_sections_; // editordevice.xml's sections (initialize)
+    std::vector<std::string> locked_children(int part); // the parameters part's locked sections keep
     std::string lcd_param_, lcd_value_, lcd_part_, lcd_orig_; // the last edited parameter for the LCD
     LcdHover lcd_hover_; // values_mu_
     bool lcd_hint_on_ = false; // values_mu_: lcd_hint's text is shown, lcd_saved_ holds what it covered

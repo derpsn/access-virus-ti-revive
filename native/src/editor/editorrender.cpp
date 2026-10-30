@@ -728,8 +728,8 @@ void EditorRenderer::draw(Canvas &c, const Element &e, int ox, int oy, int inher
                 index = frame_of(v, lo, hi, frames);
             else if (e.type == "RadioButton") // 2-frame strips: 0 = off, 1 = selected
                 index = frames >= 2 && v == atoi(e.get("OnValue").c_str()) ? 1 : 0;
-            else if (e.type == "Button" || e.type == "KickButton")
-                index = frames >= 2 && v ? 1 : 0;
+            else if (e.type == "Button" || e.type == "KickButton" || e.type == "DblClkButton") // section headers:
+                index = frames >= 2 && v ? 1 : 0; // frame 1 = locked (red, E378)
             const std::string &nm = use_disabled ? e.get("DisabledBack")
                                     : (&e == pressed && c.image(e.get("PressedBack"))) ? e.get("PressedBack")
                                                                                        : e.get("NormalBack");

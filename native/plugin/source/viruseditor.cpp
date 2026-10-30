@@ -1365,6 +1365,19 @@ public:
                 return;
             }
         }
+        // right-click on a section header or on the padlock next to "?" (shown while a part has locks): the
+        // original's lock menus (0x1800684d0, E378); the padlock is a disabled control, so it needs its own hit test
+        if (event.buttonState.isRight() && !help_) {
+            Hit l = h;
+            if (!l.element || l.element->get("Parameter").rfind("Locks/", 0) != 0)
+                l = renderer_.hit_test((int)event.mousePosition.x, (int)event.mousePosition.y, true);
+            const std::string lp = l.element ? l.element->get("Parameter") : std::string();
+            if (lp.rfind("Locks/", 0) == 0 || (lp == kGlobalLock && plugin_->any_part_locked())) {
+                lock_menu(l, event.mousePosition);
+                event.consumed = true;
+                return;
+            }
+        }
         // right-click on the user pattern: the original's pattern menu (0x1800684d0, E371) - shift, randomize, reset,
         // fill up for the steps up to the pattern length
         if (event.buttonState.isRight() && !help_ && h.element &&
@@ -1556,6 +1569,14 @@ public:
         }
         if (e.type == "Menu" || e.type == "HierarchicMenu" || e.type == "PatchSaveMenu") {
             open_menu(h);
+            event.consumed = true;
+            return;
+        }
+        if (e.type == "DblClkButton") { // a section header (E378): a double-click toggles the lock, one click nothing
+            if (event.clickCount >= 2)
+                plugin_->ui_set(param, h.part, drag_value_ ? 0 : 1);
+            drag_ = {};
+            invalid();
             event.consumed = true;
             return;
         }
@@ -2014,6 +2035,7 @@ private:
 
     // the last entry under "Personal Libraries" in the patch and bank menus, as in the original (E217)
     static constexpr const char *kCreateLibrary = "Create Empty Library";
+    static constexpr const char *kGlobalLock = "VirusControl/Global Section Lock Indicator"; // the padlock next to "?"
 
     // the original's save dialog for it: title, filter, the library folder and "New Library.mid"; the file is written
     // when the dialog ends with a name
@@ -2533,7 +2555,7 @@ private:
         const int pane = EditorRenderer::browser_pane(h.element->get("Parameter"));
         const bool lib = is_library(bank), ram = bank >= 0 && bank < 4;
         auto selection = browser_sel_.at(pane, bank).items();
-        enum Act { Undo, Download, Delete, Sort };
+        enum Act { Undo, Download, Delete, Sort, UnlockAll };
         std::vector<vti::PopupItem> items;
         std::vector<Act> acts;
         auto add = [&](const char *t, Act a) { items.push_back({t}), acts.push_back(a); };
@@ -2545,8 +2567,10 @@ private:
             add("Delete selection", Delete);
         if ((ram && !plugin_->downloading()) || lib)
             add("Sort alphabetically", Sort);
-        if (items.empty())
-            return;
+        // like the original's bank menu (E378): the browser page has no headers, but locks can be released here
+        if (!items.empty())
+            items.push_back(vti::PopupItem::line()), acts.push_back(Undo); // a separator is never chosen
+        add("Unlock all parts", UnlockAll);
         show_popup(std::move(items), -1, 0, where, [this, bank, pane, lib, selection, acts](const std::vector<int> &path) {
             if (path.empty() || path.front() < 0 || path.front() >= (int)acts.size())
                 return;
@@ -2564,6 +2588,10 @@ private:
             case Sort:
                 done = lib ? plugin_->sort_library(bank - VirusPlugin::LIB_BASE) : plugin_->sort_ram_bank(bank);
                 break;
+            case UnlockAll:
+                plugin_->unlock_all_parts();
+                done = true;
+                break;
             }
             if (acts[path.front()] == Delete || acts[path.front()] == Sort) {
                 browser_sel_.at(pane, bank).clear();
@@ -2571,6 +2599,66 @@ private:
             }
             if (done)
                 invalid();
+        });
+    }
+
+    // the original's lock menus (E378), for the panel part: on a header the section's own entry, the part, all
+    // parts and the presets; on the padlock only the part and all parts
+    void lock_menu(const Hit &h, const CPoint &where)
+    {
+        const std::string sec = h.element->get("Parameter");
+        const bool header = sec.rfind("Locks/", 0) == 0;
+        const int part = h.part;
+        enum Act { LockSec, UnlockSec, LockAll, UnlockAll, UnlockParts, None };
+        std::vector<vti::PopupItem> items;
+        std::vector<Act> acts;
+        if (header) {
+            const bool locked = plugin_->ui_value(sec, part) == 1;
+            items.push_back({locked ? "Lock" : "Lock Section", !locked}), acts.push_back(LockSec);
+            items.push_back({"Unlock Section", locked}), acts.push_back(UnlockSec);
+            items.push_back({"Lock all Sections for this Part"}), acts.push_back(LockAll);
+            items.push_back({"Unlock all Sections for this Part"}), acts.push_back(UnlockAll);
+        } else {
+            items.push_back({"Lock all Sections"}), acts.push_back(LockAll);
+            items.push_back({"Unlock all Sections"}), acts.push_back(UnlockAll);
+        }
+        items.push_back({"Unlock all Parts"}), acts.push_back(UnlockParts);
+        int presets = -1;
+        if (header) {
+            items.push_back(vti::PopupItem::line()), acts.push_back(None);
+            std::vector<vti::PopupItem> sub;
+            for (int p = 0; p < vti::SectionLock::PRESET_COUNT; p++)
+                sub.push_back({vti::SectionLock::preset_name(p)});
+            presets = (int)items.size();
+            items.push_back({"Presets", true, std::move(sub)}), acts.push_back(None);
+        }
+        show_popup(std::move(items), -1, 0, where, [this, sec, part, acts, presets](const std::vector<int> &path) {
+            if (path.empty() || path[0] < 0 || path[0] >= (int)acts.size())
+                return;
+            const auto &ed = plugin_->editor_device();
+            if (path[0] == presets && path.size() == 2)
+                plugin_->set_locks(part, vti::SectionLock::preset_values(ed, path[1]));
+            else if (path.size() == 1)
+                switch (acts[(size_t)path[0]]) {
+                case LockSec:
+                    plugin_->set_locks(part, {{sec, 1}});
+                    break;
+                case UnlockSec:
+                    plugin_->set_locks(part, {{sec, 0}});
+                    break;
+                case LockAll:
+                    plugin_->set_locks(part, vti::SectionLock::all_values(ed, 1));
+                    break;
+                case UnlockAll:
+                    plugin_->set_locks(part, vti::SectionLock::all_values(ed, 0));
+                    break;
+                case UnlockParts:
+                    plugin_->unlock_all_parts();
+                    break;
+                case None:
+                    break;
+                }
+            invalid();
         });
     }
 

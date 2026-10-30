@@ -65,8 +65,11 @@ const Entry ENTRIES[] = {
      "Links LFO 2's cutoff amounts so the Cutoff 1 and Cutoff 2 knobs move together."},
     {"VirusControl Links/Vocoder Link", "Vocoder link",
      "Links the vocoder's carrier and modulator spread and Q, so one knob moves both."},
-    {"Locks/*", "Section lock", "A section lock of the original Virus Control. Not supported by TI Revive yet."},
-    {"LockView/Part Lock Indicator", "Lock indicator", "Shows section locks. Not supported by TI Revive yet."},
+    {"Locks/*", "Section lock",
+     "Double-click the header to lock this section of the part (red), again to unlock it. A locked section keeps its "
+     "settings when you load another patch, in the browser or on the Virus. Right-click for more: all sections, all "
+     "parts and presets per page. Locks are not saved with the project, like in the original."},
+    {"LockView/Part Lock Indicator", "Lock indicator", "This part has locked sections."},
     {"VirusControl/Live Mode", nullptr, "A switch of the original Virus Control. Not used by TI Revive yet."},
     {"VirusControl/Direct Monitoring", nullptr, "A switch of the original Virus Control. Not used by TI Revive yet."},
     {"VirusControl/Access Website", nullptr, "A link to the manufacturer's website (not used by TI Revive)."},
