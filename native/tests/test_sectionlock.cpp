@@ -212,3 +212,15 @@ TEST(sectionlock_menu_values)
           V({{"Locks/Oscillator", 0}, {"Locks/Filter", 0}, {"Locks/FX A", 1}, {"Locks/FX B", 1}}));
     CHECK(SectionLock::preset_values(ed(), 42).empty()); // unknown preset: nothing changes
 }
+
+TEST(sectionlock_merge_needs_same_format)
+{
+    // byte 9 = the dump's format version: fields of another version are not where the template says
+    const MidiMessage *m = dev().message("Dump");
+    Bytes current = dump(10, 2, 5, 30, 40);
+    const Bytes orig = dump(100, 1, 20, 15, 90);
+    current[9] = 1;
+    Bytes in = orig;
+    CHECK(!SectionLock::merge(dev(), *m, current, in, {"Filt/Cutoff"}));
+    CHECK(in == orig);
+}

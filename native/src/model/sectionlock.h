@@ -19,6 +19,7 @@ struct SectionLock {
     enum Preset { LOCK_OSC, LOCK_FILTER, LOCK_LFO, LOCK_MATRIX, LOCK_ARP, LOCK_FX, PRESET_COUNT };
     static constexpr int FLAGS_BYTE = 10;    // single dump: Patchmanagement/Flags
     static constexpr uint8_t MERGED = 0x20;  // the original's flags value for a merged dump
+    static constexpr int VERSION_BYTE = 9;   // single dump: format version (the field layout depends on it)
 
     static const char *preset_name(int p)
     {
@@ -96,12 +97,13 @@ struct SectionLock {
     // `incoming` (a single dump for the part) with the `children` fields of `current` (the part's dump now): the
     // template's bytes of each child are copied (masked bits only, so a shared byte keeps the other parameter's
     // bits), then flags = MERGED and the checksums are recomputed. False and `incoming` unchanged when no child is a
-    // field of the dump or the sizes do not fit.
+    // field of the dump, the sizes do not fit or the two dumps have different format versions.
     static bool merge(const RemoteDevice &dev, const MidiMessage &tpl, const std::vector<uint8_t> &current,
                       std::vector<uint8_t> &incoming, const std::vector<std::string> &children)
     {
         const size_t n = RemoteDevice::dump_size(tpl);
-        if (current.size() != n || incoming.size() != n || n <= (size_t)FLAGS_BYTE)
+        if (current.size() != n || incoming.size() != n || n <= (size_t)FLAGS_BYTE ||
+            current[VERSION_BYTE] != incoming[VERSION_BYTE])
             return false;
         std::vector<uint8_t> out = incoming;
         bool any = false;

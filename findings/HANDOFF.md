@@ -36,8 +36,11 @@ Locks/Page X Lockings conditions, merge, all/preset values; access test: 39 sect
 38), presets 8/6/6/6/2/11 = the original's lists, only LFO n Clock/Divider (editor metas) outside the single dump);
 2bfc73f plug-in + editor (load_dump merge for every load path, setState clears locks, reflector + padlock values,
 double-click toggle, red frame, lock menus, browser 'Unlock all parts', help text; padlock keeps no note per the
-0.8.18 test). 452 unit tests, ctest 5/5, Linux build only. cpp-reviewer subagent running. DEV PLUG-IN INSTALLED in
-~/.vst3 (5954a270 = build-native of 2bfc73f); the 0.8.35 install b91e3682 backed up in
+0.8.18 test). cpp-reviewer: no CRITICAL/HIGH; taken: part indicator from part_locked (not the condition: cheaper,
+no 'all parts locked' when the condition is missing), merge refuses dumps of different format versions (byte 9);
+left: flags 0x20 also for bank patches (= the original's capture), pre-existing load_dump ordering between UI and
+sender thread, browser menu now always opens (only 'Unlock all parts' on ROM banks). 453 unit tests, ctest 5/5,
+Linux build only. DEV PLUG-IN INSTALLED in ~/.vst3 (37e46e27 = build-native incl. the review fixes); the 0.8.35 install b91e3682 backed up in
 ~/.vst3-backup/0.8.35-installed-b91e3682. NOT tested on hardware yet. NEXT: review findings, user smoke test in
 REAPER (double-click, menus, presets, cutoff kept on a browser load and on a program change on the Virus,
 unlocked = patch value), then evidence/README/site texts.

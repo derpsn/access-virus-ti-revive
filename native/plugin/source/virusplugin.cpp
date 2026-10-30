@@ -1916,9 +1916,8 @@ int VirusPlugin::ui_value(const std::string &path, int part)
     if (path == "VirusControl/Global Section Lock Indicator")
         return any_part_locked() ? 1 : 0;
     const Parameter *param = cond_ ? cond_->find(path) : nullptr;
-    if (param && param->type == "reflector") // the part strip's lock indicator = its condition (Locks/Part Lockings)
-        return cond_->eval(param->condition, [this](const std::string &p, int pt) { return ui_value(p, pt); },
-                           part < 0 ? 0 : part) ? 1 : 0;
+    if (param && param->type == "reflector") // the part strip's lock indicator (its condition: Locks/Part Lockings)
+        return part_locked(part < 0 ? 0 : part) ? 1 : 0;
     if (param && param->part == "none")
         part = -1; // global parameters (Panel Part, globals) are not per part
     if (param && !dev_.find(path) && param->part == "all") { // per-part editor values and meta parameters
