@@ -1,6 +1,26 @@
 # HANDOFF
 
-## START HERE (2026-10-29): v0.8.35 RELEASED, round closed; next weekly round not started
+## START HERE (2026-10-30): round 0.8.36 started on branch `round-0.8.36` - first task section locking (#21)
+
+**Round 0.8.36 (2026-10-30).** Branch `round-0.8.36` = main 404c101 + the 0.8.35 HANDOFF commits (fast-forward
+of round-0.8.35). Issues read with the user: #21 (new, jwalkermed: section locking of the original missing, M4 Pro,
+TI2) - the user chose to implement it; reply draft shown to the user, NOT posted yet (waits for OK). #20 waits for the
+reporter (version + stage 6 asked 10-28), #16 waits for an FL Studio retest of the AU fix (also: its 'bank preset
+number' display defect from the first post looks unanswered - check with the user), #14 waits for the Snow AU test.
+Section locking so far (no code yet): the Addendum describes it (double-click on a blue header = red/locked, per part,
+tab + part indicators, context menu lock all / unlock all / invert / presets on the active part, Easy/Browser/Common
+pages not lockable, locked sections stay on browser AND hardware patch changes). editordevice.xml (user's Access
+files, loaded at runtime) defines ParameterSet "Locks" (38 type="section" parameters with <Child> member lists,
+part="all"), conditions Locks/<S> Locked, Locks/Page <X> Lockings / No Lockings, Locks/Part Lockings and the
+reflector LockView/Part Lock Indicator; editor.xml has DblClkButton controls (Parameter Locks/<S>). Our parser
+(remotedevice.cpp) does not read <Child> yet. All patch loads go through VirusPlugin::load_dump (browser, RAM/ROM via
+load_reported_presets, init, revert, recent, part copy) = the place to keep locked values; link buttons persist as
+VTN editor records (state.cpp) - reuse for locks if the original stores them. REA subagent running (static, Virus
+Control.dll x64 a622f9a2..): merge vs. re-send on a load, hardware program change, state storage, menu entries and
+presets, drawing; result -> scratchpad section-lock-rea.md, then an E-entry. NEXT: REA result -> plan with the user
+-> TDD (parser <Child>, lock merge, persistence), editor (double-click, red header, menu), then hardware test.
+
+### 2026-10-29: v0.8.35 RELEASED, round closed
 
 **For the next round:** branch `round-0.8.36` from main (404c101 = the release + site font + download counter);
 round-0.8.35 is merged into main, nothing open on it. Open from 0.8.35: the user installs the release on the Mac
