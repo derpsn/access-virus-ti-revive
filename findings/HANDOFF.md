@@ -2,6 +2,13 @@
 
 ## START HERE (2026-10-30): round 0.8.36 started on branch `round-0.8.36` - first task section locking (#21)
 
+**Coverage check 2026-10-30 (/test-coverage).** Scratch coverage build (recipe below in the 0.8.8 notes), 442 tests,
+12 skipped (Access files). Line hits merged over vticore.dir + vtitests.dir (header-only code runs from the tests):
+96.2 % of 5373 lines in native/src, every file >= 90 %. The only file under 80 % was editorrender.h (66.7 %: the
+default no-op Canvas::push_clip/pop_clip/label); new test editor_render_bare_canvas (a canvas with only the required
+calls draws the same blits/fills/lines) -> 100 %. Lowest now: outputdelay.h 90 %, accessfiles.cpp 91.2 %. The site's
+COVERAGE (94 %, vticore-only method of 10-16) not changed - that is a different measure; TESTS +1 at the next site check.
+
 **Round 0.8.36 (2026-10-30).** Branch `round-0.8.36` = main 404c101 + the 0.8.35 HANDOFF commits (fast-forward
 of round-0.8.35). Issues read with the user: #21 (new, jwalkermed: section locking of the original missing, M4 Pro,
 TI2) - the user chose to implement it; reply draft shown to the user, NOT posted yet (waits for OK). #20 waits for the
