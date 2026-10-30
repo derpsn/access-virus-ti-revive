@@ -17,8 +17,18 @@ reflector LockView/Part Lock Indicator; editor.xml has DblClkButton controls (Pa
 load_reported_presets, init, revert, recent, part copy) = the place to keep locked values; link buttons persist as
 VTN editor records (state.cpp) - reuse for locks if the original stores them. REA subagent running (static, Virus
 Control.dll x64 a622f9a2..): merge vs. re-send on a load, hardware program change, state storage, menu entries and
-presets, drawing; result -> scratchpad section-lock-rea.md, then an E-entry. NEXT: REA result -> plan with the user
--> TDD (parser <Child>, lock merge, persistence), editor (double-click, red header, menu), then hardware test.
+presets, drawing. DONE 2026-10-30 ~18:10: REA study + user screenshots in win10ref + usbmon capture
+captures/orig-seclock-1 = **E378** (commit 9f5d442): presets REPLACE the part's locks; menus as in E378 (no
+'invert'); the original merges the locked values into ONE dump (byte 10 = 0x20, checksums left stale), no extra
+messages; locks are NOT in the project state (setState clears them) - so no VTN records for locks. STATE NOW:
+win10ref running with the Virus attached (Linux broker socket stopped by vm.sh attach); Live open there. Before any
+Linux test: `VM=win10ref scripts/vm.sh detach` (restarts the broker socket), then
+`sudo udevadm trigger --action=add --subsystem-match=usb --attr-match=idVendor=133e` if /dev/bus/usb stays root.
+Plan shown to the user (waits for OK to shut the VM): (1) model: parse <Child>, per-part lock state in memory,
+cleared in setState; (2) merge in load_dump (current values of locked children, byte 10 = 0x20, checksums
+recomputed); (3) editor: double-click toggle, red frame (frame 1 of SEC_*), tab/part/global indicators, the two
+menus + presets, browser 'Unlock all parts'; (4) helptext without 'not supported'; (5) Linux hardware test. #21
+reply still NOT posted (waits for OK). NEXT: VM off + Virus back, then TDD step 1.
 
 ### 2026-10-29: v0.8.35 RELEASED, round closed
 
