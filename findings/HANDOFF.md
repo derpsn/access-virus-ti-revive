@@ -56,7 +56,12 @@ user only). CI test build NOT started yet (waits for the user). Memory feedback-
 merged (diag.log, RAM A 10..13, 49 kept) = E379 (322b9b5; release notes tested-on updated). CI TEST BUILD run
 41102230393 on 520ddf4 started (jobs queued for runners). #21 reply draft work/issue21-reply2.md (rc1 link, no
 untested claims) waits for the user's OK. NEXT: CI green -> install the Linux CI build, short check -> user OK ->
-annotated tag v0.8.36-rc1 on 322b9b5 (pushed separately) -> release CI -> post the #21 reply. Weekly 0.8.36 later
+annotated tag v0.8.36-rc1 on 322b9b5 (pushed separately) -> release CI -> post the #21 reply.
+**Done ~19:50:** CI test build 41102230393 green; Linux CI build installed (plug-in db7d55ea, broker socket on; the
+0.8.35 install backed up in ~/.vst3-backup/0.8.35-installed-b91e3682); hil.sh ALL PASS (export 1.00x, max 1.16 ms,
+jitter 0.28 ms, drift +3 ppm); user OK ("go"). Tag v0.8.36-rc1 (annotated) on 7092b91 pushed alone, origin/main
+unchanged d6a20dc; release CI run 41118483696. NEXT: release green -> user OK -> post work/issue21-reply2.md on #21.
+Weekly 0.8.36 later
 with the full checklist and a website screenshot. Earlier NEXT (kept for the record): review findings, user smoke test in
 REAPER (double-click, menus, presets, cutoff kept on a browser load and on a program change on the Virus,
 unlocked = patch value), then evidence/README/site texts.
