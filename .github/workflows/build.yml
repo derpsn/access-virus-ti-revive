@@ -292,8 +292,9 @@ jobs:
           - Settings outside the sections, such as Transpose and Key Mode on the COMMON page, still come from the new
             patch, and locks are not saved with the project: both as in the original.
 
-          Tested on a Virus TI2 Desktop on Linux (REAPER): locking by double-click and from the menus, presets, and
-          patch loads from the browser with and without locks. Not tested on Windows and macOS yet.
+          Tested on a Virus TI2 Desktop on Linux (REAPER): locking by double-click and from the menus, presets, patch
+          loads from the browser and program changes on the Virus, with and without locks. Not tested on Windows and
+          macOS yet.
 
           Earlier versions: their own release pages, and every version's changes on one page in the
           [changelog](https://derpsn.github.io/access-virus-ti-revive/changelog.html).
