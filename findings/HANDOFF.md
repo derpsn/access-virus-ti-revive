@@ -29,6 +29,18 @@ cleared in setState; (2) merge in load_dump (current values of locked children, 
 recomputed); (3) editor: double-click toggle, red frame (frame 1 of SEC_*), tab/part/global indicators, the two
 menus + presets, browser 'Unlock all parts'; (4) helptext without 'not supported'; (5) Linux hardware test. #21
 reply still NOT posted (waits for OK). NEXT: VM off + Virus back, then TDD step 1.
+**Update 2026-10-30 evening:** VM off, Virus back on Linux (node root:plugdev + ACL, broker socket active). #21 reply
+POSTED (issuecomment-6528791185, user OK). User test: locks gone after reopening a saved Live project (added to
+E378). IMPLEMENTED (TDD): 3425d97 model (Parameter.type/children, SectionLock: sections, presets from the
+Locks/Page X Lockings conditions, merge, all/preset values; access test: 39 sections in editordevice.xml (skin shows
+38), presets 8/6/6/6/2/11 = the original's lists, only LFO n Clock/Divider (editor metas) outside the single dump);
+2bfc73f plug-in + editor (load_dump merge for every load path, setState clears locks, reflector + padlock values,
+double-click toggle, red frame, lock menus, browser 'Unlock all parts', help text; padlock keeps no note per the
+0.8.18 test). 452 unit tests, ctest 5/5, Linux build only. cpp-reviewer subagent running. DEV PLUG-IN INSTALLED in
+~/.vst3 (5954a270 = build-native of 2bfc73f); the 0.8.35 install b91e3682 backed up in
+~/.vst3-backup/0.8.35-installed-b91e3682. NOT tested on hardware yet. NEXT: review findings, user smoke test in
+REAPER (double-click, menus, presets, cutoff kept on a browser load and on a program change on the Virus,
+unlocked = patch value), then evidence/README/site texts.
 
 ### 2026-10-29: v0.8.35 RELEASED, round closed
 
