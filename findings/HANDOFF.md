@@ -60,7 +60,9 @@ annotated tag v0.8.36-rc1 on 322b9b5 (pushed separately) -> release CI -> post t
 **Done ~19:50:** CI test build 41102230393 green; Linux CI build installed (plug-in db7d55ea, broker socket on; the
 0.8.35 install backed up in ~/.vst3-backup/0.8.35-installed-b91e3682); hil.sh ALL PASS (export 1.00x, max 1.16 ms,
 jitter 0.28 ms, drift +3 ppm); user OK ("go"). Tag v0.8.36-rc1 (annotated) on 7092b91 pushed alone, origin/main
-unchanged d6a20dc; release CI run 41118483696. NEXT: release green -> user OK -> post work/issue21-reply2.md on #21.
+unchanged d6a20dc; release CI run 41118483696 (mac job got no runner, cancelled after 15 min with 0 steps; rerun
+--failed -> all green). Pre-release v0.8.36-rc1 is up (linux tar, mac zip, setup.exe, msi). #21 reply posted
+(issuecomment-6532705380, user OK). NEXT: wait for jwalkermed's macOS test; install rc1 on win11 + Mac push.
 Weekly 0.8.36 later
 with the full checklist and a website screenshot. Earlier NEXT (kept for the record): review findings, user smoke test in
 REAPER (double-click, menus, presets, cutoff kept on a browser load and on a program change on the Virus,
