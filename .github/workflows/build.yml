@@ -279,53 +279,21 @@ jobs:
           native plug-in **"TI Revive Virus Control"**: looks and works like the original Virus Control and runs
           natively on Windows, macOS (Apple Silicon and Intel) and Linux - no Rosetta, Wine or yabridge.
 
-          **New in 0.8.35: libraries by drag and drop, a Snow plug-in, Init Patch, note timing like the original, the
-          mod wheel from your DAW, and a crash fix for FL Studio.**
+          **New in 0.8.36: section locking, like in the original Virus Control (issue #21).**
 
-          - Drag a library's .mid or .syx file from Explorer, Finder or your file manager onto the browser: it is copied
-            into Personal Libraries in your Documents folder and shown at once (our own addition; the original takes no
-            file drops).
-          - A Snow plug-in, "TI Revive Virus Control (Snow)": like the original's own Snow plug-in it shows the Snow's
-            editor with its 4 parts, as VST3 and on macOS also as Audio Unit (the Audio Unit checked in Logic Pro on a
-            TI2; a first user report on a Snow with the VST3: parameters and sound work).
-          - "Init Patch" in the LOAD menu: the init patch from your Access installer, to start a sound from scratch;
-            "Revert to" brings the previous sound back (our own addition).
-          - Notes are now sent to the Virus with the same head start as the original (3072 samples), and a note can no
-            longer be scheduled in the past when a DAW hands over its audio unevenly. On macOS and Linux the plug-in
-            therefore reports about 43 ms more latency; your DAW compensates it.
-          - Controllers from your DAW reach the Virus: the mod wheel, sustain, expression and every other controller
-            0-119 (before, only pitch bend and aftertouch did; issue #18). Like in the original, the values they set
-            (mod wheel, volume, synth parameters sent as controllers) are kept and saved with the project.
-          - The part's name field closes again when you confirm it without a change (it stayed white and hid later
-            names; issue #18), and on Linux the selected name is marked light blue instead of red.
-          - A patch from a bank of the Virus is now selected on the Virus first, like with the original: its display
-            shows the location ("RAM-B 4", "ROM-A 0") instead of the old one; library patches show "LIB" (issue #14).
-          - The selected entry in the browser is filled blue while its list has the focus, like in the original.
-          - Like in the original (issue #19): the handles and lines in the filter and envelope displays can be
-            dragged (Shift: finer, Ctrl+click: back to the middle); the arpeggiator's user pattern edits length
-            and velocity of one step at a time and Alt+click switches a step on or off; the buttons below it
-            (shift, randomize) and its right-click menu (also Reset and Fill Up Pattern) work; the browser's bank
-            arrows step through the libraries instead of jumping to the factory banks, and are easier to hit.
-          - macOS Audio Unit: deleting a channel while the plug-in window is open no longer crashes FL Studio (issue
-            #16).
-          - REAPER: no more sync errors from the Virus at every Play. REAPER switches the plug-in off and on at each
-            Play, and the plug-in sent "all notes off" to all 16 parts then, right before the first notes; now only
-            notes and pedals that are still held are released.
-          - macOS: no more endless sync errors when the Virus runs at another sample rate than macOS reports (seen
-            after a power cycle and after another DAW used it; a sample rate change in the DAW fixed it). The plug-in
-            now measures the rate the audio really arrives at and switches the Virus over and back once.
-          - Control Center, Nerd mode: an Options... menu (and "tirevive-cc option") to compare with the original:
-            the output delays only on change instead of at every Play/Stop, and the timing as before 0.8.35.
-          - Greyed-out controls are drawn like in the original, and the plug-in's log names libraries with damaged
-            patches. On macOS, the "No Virus TI can be found" page names another Virus driver when one is installed
-            (AURA's, issue #17).
+          - Double-click a section's header to lock it for the selected part: the header turns red, the page tab and
+            the part get an orange mark, and a padlock appears next to "?". Double-click again to unlock it.
+          - A locked section keeps its settings when you load another patch, from the browser, the LOAD menu or on the
+            Virus. Like the original, the plug-in sends one patch with the locked settings already in it, no extra
+            messages.
+          - Right-click a header for more: lock or unlock all sections of the part, unlock all parts, and presets that
+            lock one page (OSC, Filter, LFO, Matrix, Arpeggiator, FX). The padlock and the browser's right-click menu
+            can unlock all parts too.
+          - Settings outside the sections, such as Transpose and Key Mode on the COMMON page, still come from the new
+            patch, and locks are not saved with the project: both as in the original.
 
-          Tested on a Virus TI2 Desktop: Linux (REAPER and the automated run), Windows 11 (Ableton Live 11 in a VM and
-          the automated run), macOS (MacBook Air M3, Logic Pro with the Snow Audio Unit, Ableton Live 12 and the
-          automated run; the FL Studio crash with a test host that deletes the plug-in the same way). The macOS sample
-          rate recovery is built and runs without side effects, but the stuck state did not come back on the fixed
-          build, so the recovery itself is not yet tested. The Snow plug-ins ran on the TI2; on a Snow, only the VST3
-          has a user report.
+          Tested on a Virus TI2 Desktop on Linux (REAPER): locking by double-click and from the menus, presets, and
+          patch loads from the browser with and without locks. Not tested on Windows and macOS yet.
 
           Earlier versions: their own release pages, and every version's changes on one page in the
           [changelog](https://derpsn.github.io/access-virus-ti-revive/changelog.html).
