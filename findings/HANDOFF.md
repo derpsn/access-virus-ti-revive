@@ -51,7 +51,13 @@ build.yml 'New in 0.8.36' (tested-on: Linux REAPER only), README paragraph + 453
 FAST-FORWARDED origin/main 404c101 -> d6a20dc (all round commits; nothing lost, no force). round-0.8.36 now pushed
 explicitly (same d6a20dc, upstream fixed). Site run 41101816792 (push to main) queued; cancel was blocked by auto
 mode - user decides. Options given: leave main + RC soon (recommended) / revert commit on main / force push (rule 6,
-user only). CI test build NOT started yet (waits for the user). Memory feedback-push-new-branch written. NEXT: review findings, user smoke test in
+user only). CI test build NOT started yet (waits for the user). Memory feedback-push-new-branch written.
+**User decision (~19:00): leave main as it is; RC yes.** Step 4 done: program changes on the Virus with a lock
+merged (diag.log, RAM A 10..13, 49 kept) = E379 (322b9b5; release notes tested-on updated). CI TEST BUILD run
+41102230393 on 520ddf4 started (jobs queued for runners). #21 reply draft work/issue21-reply2.md (rc1 link, no
+untested claims) waits for the user's OK. NEXT: CI green -> install the Linux CI build, short check -> user OK ->
+annotated tag v0.8.36-rc1 on 322b9b5 (pushed separately) -> release CI -> post the #21 reply. Weekly 0.8.36 later
+with the full checklist and a website screenshot. Earlier NEXT (kept for the record): review findings, user smoke test in
 REAPER (double-click, menus, presets, cutoff kept on a browser load and on a program change on the Virus,
 unlocked = patch value), then evidence/README/site texts.
 
