@@ -1082,6 +1082,13 @@ TEST(editor_graph_hit_under_a_knob)
     CHECK(ss.size() == 3 && ss[2].grab.xparam.empty() && ss[2].grab.yparam.empty());
     const double fx = ss[2].x0 + 0.8 * (ss[2].x1 - ss[2].x0), fy = ss[2].y0 + 0.8 * (ss[2].y1 - ss[2].y0);
     CHECK(!r.graph_hit_test((int)std::lround(fx), (int)std::lround(fy)).element);
+    // help mode: anywhere on the display its own note, not the knob's (user, 2026-10-31: the inner frame could not
+    // be hovered); outside the display the knob
+    Hit hd = r.help_hit_test(45, 45);
+    CHECK(hd.element && hd.element->type == "LP4Response" && hd.x == 40 && hd.y == 40);
+    Hit hk = r.help_hit_test(20, 20);
+    CHECK(hk.element && hk.element->type == "MaskedKnob");
+    CHECK(!r.help_hit_test(190, 190).element);
     (void)d;
 }
 

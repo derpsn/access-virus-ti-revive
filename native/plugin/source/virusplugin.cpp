@@ -4419,7 +4419,7 @@ tresult PLUGIN_API VirusPlugin::getState(IBStream *state)
     {
         std::lock_guard<std::mutex> lk(compare_mu_);
         for (int p = 0; p < 16; p++)
-            if (auto e = compare_.edited(p); !e.empty())
+            if (std::vector<uint8_t> e; compare_.edited(p, e))
                 edited[p] = std::move(e);
     }
     {

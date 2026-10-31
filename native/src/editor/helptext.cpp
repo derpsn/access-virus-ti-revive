@@ -21,6 +21,12 @@ const Entry ENTRIES[] = {
      "Opens TI Revive's menu: Explain the Controls (this help mode: point at a control to read about it, click to "
      "keep the note on screen, click ? again or press Esc to leave; clicks change no value meanwhile), the website, "
      "Report a Problem, Save Logs for a Bug Report, the detailed log and Panic (all notes off)."},
+    // the displays share their parameter with the knob around them: their own notes (help mode looks them up by type)
+    {"VirusControl/Filter Display", "Filter display",
+     "Shows how the filter shapes the sound: the point is the cutoff (left / right) and the resonance (up / down). "
+     "Drag the point or the line to change them; in band stop mode the point moves only the cutoff."},
+    {"VirusControl/Envelope Display", "Envelope display",
+     "Shows the envelope's shape over time. Drag a point or a line to change its times and levels."},
     {"VirusControl/SelectedPage", "Pages",
      "Switches between the editor's pages (Easy, Oscillators, Filters, LFOs, Matrix, Arpeggiator, Effects ...). "
      "Page tabs keep working in help mode, so you can read every page."},

@@ -1439,10 +1439,10 @@ public:
             return;
         }
         if (help_ && !(h.element && help_navigates(h.element->get("Parameter")))) {
-            h = renderer_.hit_test((int)event.mousePosition.x, (int)event.mousePosition.y, true); // disabled too
+            h = renderer_.help_hit_test((int)event.mousePosition.x, (int)event.mousePosition.y); // disabled too
             HelpText t;
-            help_pinned_ = h.element && help_for(h.element->get("Parameter"), t);
-            help_hit_ = help_pinned_ ? h : Hit{};
+            help_pin_ = h.element && help_for(help_key(*h.element), t) ? h : Hit{}; // an empty spot: none
+            help_hit_ = help_pin_;
             invalid();
             event.consumed = true;
             return;
@@ -1889,15 +1889,15 @@ private:
         invalid();
         return shown >= 0;
     }
-    // help mode ("?"): frames around the explained controls, a note for the one under the mouse (or clicked)
-    bool help_ = false, help_pinned_ = false;
-    Hit help_hit_;
+    // help mode ("?"): frames around the explained controls, a note for the one under the mouse and one for the
+    // clicked one (kept until the next click; the note under the mouse is drawn over it)
+    bool help_ = false;
+    Hit help_hit_, help_pin_;
     Hit lcd_hit_; // the control lcd_hover last told the plug-in about
     void set_help(bool on)
     {
         help_ = on;
-        help_pinned_ = false;
-        help_hit_ = {};
+        help_hit_ = help_pin_ = {};
         invalid();
     }
     // the note follows the mouse; a pinned (clicked) one stays while the mouse is over no explained control
@@ -1912,16 +1912,24 @@ private:
     }
     void help_hover(const CPoint &p)
     {
-        Hit h = renderer_.hit_test((int)p.x, (int)p.y, true); // disabled controls too (with the reason)
+        Hit h = renderer_.help_hit_test((int)p.x, (int)p.y); // disabled controls too (with the reason)
         HelpText t;
-        if (!(h.element && help_for(h.element->get("Parameter"), t)))
-            h = help_pinned_ ? help_hit_ : Hit{};
-        else
-            help_pinned_ = false;
+        if (!(h.element && help_for(help_key(*h.element), t)))
+            h = Hit{};
         if (h.element != help_hit_.element || h.part != help_hit_.part) {
             help_hit_ = h;
             invalid();
         }
+    }
+    // the note of a control: its parameter's, the filter and envelope displays their own (they share the parameter
+    // with the knob around them)
+    static std::string help_key(const Element &e)
+    {
+        if (e.type.size() == 11 && e.type.compare(3, 8, "Response") == 0)
+            return "VirusControl/Filter Display";
+        if (e.type == "ADSTREnvelope")
+            return "VirusControl/Envelope Display";
+        return e.get("Parameter");
     }
     static bool help_navigates(const std::string &param)
     {
@@ -1962,7 +1970,7 @@ private:
         ctx->setDrawMode(kAntiAliasing);
         HelpText t;
         for (auto &c : renderer_.visible_controls(true))
-            if (help_for(c.element->get("Parameter"), t)) {
+            if (help_for(help_key(*c.element), t)) {
                 ctx->setFrameColor(frame_col);
                 ctx->drawRect(CRect(c.x + 0.5, c.y + 0.5, c.x + c.element->w - 0.5, c.y + c.element->h - 0.5),
                               kDrawStroked);
@@ -1988,20 +1996,30 @@ private:
             ctx->setLineWidth(2);
             ctx->drawRect(CRect(q[0][0], q[0][1], q[0][0] + q[0][2], q[0][1] + q[0][3]), kDrawStroked);
         }
-        if (!help_hit_.element || !help_for(help_hit_.element->get("Parameter"), t))
+        draw_note(ctx, help_pin_, font, bold);
+        if (help_hit_.element != help_pin_.element || help_hit_.part != help_pin_.part)
+            draw_note(ctx, help_hit_, font, bold); // over the clicked one
+    }
+    // one control's frame and note: title + wrapped text, below the control if it fits, else above
+    void draw_note(CDrawContext *ctx, const Hit &n, CFontDesc *font, CFontDesc *bold)
+    {
+        HelpText t;
+        if (!n.element || !help_for(help_key(*n.element), t))
             return;
-        const Element &e = *help_hit_.element;
-        CRect cr(help_hit_.x, help_hit_.y, help_hit_.x + e.w, help_hit_.y + e.h);
+        const CColor hot_col(120, 190, 255, 255);
+        const CRect view(0, 0, getViewSize().getWidth(), getViewSize().getHeight());
+        const Element &e = *n.element;
+        CRect cr(n.x, n.y, n.x + e.w, n.y + e.h);
         ctx->setFrameColor(hot_col);
         ctx->setLineWidth(2);
         ctx->drawRect(cr, kDrawStroked);
-        // the note: title + wrapped text, below the control if it fits, else above; kept inside the editor
+        // kept inside the editor
         const double w = 260, pad = 8, lh = 14;
         ctx->setFont(font);
         auto lines = wrap(ctx, t.text, w - 2 * pad);
-        if (help_hit_.inactive) { // why it is greyed out now: the condition of the page that shows it, or the
-                                  // parameters its own condition tests
-            std::string why = help_hit_.disabled ? inactive_reason(help_hit_.why) : depends_reason(help_hit_.depends);
+        if (n.inactive) { // why it is greyed out now: the condition of the page that shows it, or the parameters
+                          // its own condition tests
+            std::string why = n.disabled ? inactive_reason(n.why) : depends_reason(n.depends);
             for (auto &l : wrap(ctx, why.empty() ? "Inactive with the current settings." : "Inactive now: " + why + ".",
                                 w - 2 * pad))
                 lines.push_back(l);

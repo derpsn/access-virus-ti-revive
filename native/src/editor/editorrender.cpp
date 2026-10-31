@@ -923,6 +923,14 @@ Hit EditorRenderer::graph_hit_test(int px, int py) const
     return g.xparam.empty() && g.yparam.empty() ? Hit{} : h;
 }
 
+Hit EditorRenderer::help_hit_test(int px, int py) const
+{
+    Hit h;
+    for (auto &e : layout_.elements)
+        hit(e, 0, 0, -1, px, py, h, true, std::string(), false, -1);
+    return h.element ? h : hit_test(px, py, true);
+}
+
 Hit EditorRenderer::menu_hit_test(int px, int py) const
 {
     Hit h;

@@ -83,8 +83,9 @@ TEST(comparestate_edited_for_the_project)
 {
     CompareState c;
     c.set_reference(1, single(1));
-    CHECK(c.edited(1).empty());
+    Patch e;
+    CHECK(!c.edited(1, e));
     Patch p;
     c.start(1, single(2), p);
-    CHECK(c.edited(1) == single(2));
+    CHECK(c.edited(1, e) && e == single(2));
 }

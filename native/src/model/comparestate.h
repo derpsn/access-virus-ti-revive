@@ -26,11 +26,14 @@ public:
         return it == ref_.end() ? Patch() : it->second;
     }
     bool active(int part) const { return edited_.count(part) != 0; }
-    // the edited sound of a comparing part (empty when it does not compare): what the project keeps
-    Patch edited(int part) const
+    // the edited sound of a comparing part, what the project keeps; false when it does not compare
+    bool edited(int part, Patch &out) const
     {
         auto it = edited_.find(part);
-        return it == edited_.end() ? Patch() : it->second;
+        if (it == edited_.end())
+            return false;
+        out = it->second;
+        return true;
     }
 
     // compare on: `edited` = the part's sound now; `to_load` = the reference to put into the part. False when there
