@@ -2061,6 +2061,61 @@ bool VirusPlugin::apply_undo(bool redo)
     return true;
 }
 
+// a load done by Compare itself: the part's reference stays
+static thread_local int t_compare_load = 0;
+
+bool VirusPlugin::comparing(int part)
+{
+    std::lock_guard<std::mutex> lk(compare_mu_);
+    return compare_.active(part);
+}
+
+bool VirusPlugin::compare(int part)
+{
+    if (part < 0 || part > 15)
+        return false;
+    std::vector<uint8_t> load;
+    const std::vector<uint8_t> now = part_dump(part); // (state_mu_ before compare_mu_, never inside it)
+    bool on = false;
+    {
+        std::lock_guard<std::mutex> lk(compare_mu_);
+        if (compare_.active(part))
+            compare_.stop(part, load);
+        else if (compare_.start(part, now, load))
+            on = true;
+    }
+    if (load.empty()) {
+        lcd_message("Compare" + part_suffix(part), "nothing edited since the load");
+        return false;
+    }
+    {
+        NoUndo g;
+        t_compare_load++;
+        load_dump(load, part);
+        t_compare_load--;
+    }
+    lcd_message("Compare" + part_suffix(part), on ? "the loaded patch" : "back to your edit");
+    if (out_)
+        out_->log("Virus TI native: compare %s on part %d\n", on ? "on" : "off", part + 1);
+    ui_dirty_ = true;
+    return true;
+}
+
+void VirusPlugin::end_compare(int part)
+{
+    std::vector<uint8_t> edited;
+    {
+        std::lock_guard<std::mutex> lk(compare_mu_);
+        if (!compare_.interrupted(part, edited))
+            return;
+    }
+    if (t_no_undo == 0) { // Undo brings the edit back (an undo/redo itself, or the Virus' own change, records nothing)
+        std::lock_guard<std::mutex> lk(undo_mu_);
+        undo_.patch(part, std::move(edited), part_dump(part), "Compare" + part_suffix(part), now_ms());
+    }
+    ui_dirty_ = true;
+}
+
 bool VirusPlugin::arp_action(int part, int action)
 {
     if (action < 0 || action >= ARP_ACTION_COUNT || part < 0 || part > 15)
@@ -2189,6 +2244,8 @@ void VirusPlugin::ui_set(const std::string &path, int part, int value)
         ui_dirty_ = true;
         return;
     }
+    if (meta_depth_ == 0 && part >= 0 && dev_.find(path))
+        end_compare(part); // an edit while comparing goes on from the loaded patch
     if (meta_depth_ == 0 && t_no_undo == 0) // an edit in the editor (linked parameters follow their source)
         if (const Parameter *p = dev_.find(path)) {
             const int before = ui_value(path, part);
@@ -3075,6 +3132,8 @@ bool VirusPlugin::load_dump(std::vector<uint8_t> d, int part)
         a += d[i];
     d[522] = a & 0x7F;
     // locked sections keep the part's current values, like the original (E378): merged into this one dump
+    if (t_compare_load == 0)
+        end_compare(part); // a load while comparing: the edit stays an undo step
     const auto keep = locked_children(part);
     bool merged = false;
     std::vector<uint8_t> was; // the part's patch before: an undo step (not for the Virus' own program changes)
@@ -3093,6 +3152,10 @@ bool VirusPlugin::load_dump(std::vector<uint8_t> d, int part)
     if (t_no_undo == 0 && was.size() == 524) {
         std::lock_guard<std::mutex> lk(undo_mu_);
         undo_.patch(part, std::move(was), d, load_label(d, part), now_ms());
+    }
+    if (t_compare_load == 0) { // the patch Compare goes back to (an undo/redo load too: it is the part's patch now)
+        std::lock_guard<std::mutex> lk(compare_mu_);
+        compare_.set_reference(part, d);
     }
     if (out_)
         out_->send(d);
@@ -4258,6 +4321,14 @@ tresult PLUGIN_API VirusPlugin::setState(IBStream *state)
         std::lock_guard<std::mutex> lk(undo_mu_);
         undo_.clear(); // another project: the steps belong to the one before
     }
+    {
+        std::lock_guard<std::mutex> lk(compare_mu_);
+        compare_.clear(); // the project's patches are the parts' references
+        for (int p = 0; p < 16; p++)
+            for (auto &r : recs)
+                if (is_part_dump(r, p))
+                    compare_.set_reference(p, r);
+    }
     // part dumps of an older format: upgraded as the Virus does on receipt, so the editor shows what it plays and
     // later edits of the newer fields (Input Mode, unison, envelopes 3/4 ...) reach it (E174)
     if (int up = upgrade_state_dumps(recs); up && out_)
@@ -4276,9 +4347,21 @@ tresult PLUGIN_API VirusPlugin::setState(IBStream *state)
 tresult PLUGIN_API VirusPlugin::getState(IBStream *state)
 {
     std::vector<uint8_t> d;
+    std::map<int, std::vector<uint8_t>> edited; // parts that compare: the project keeps their edit
+    {
+        std::lock_guard<std::mutex> lk(compare_mu_);
+        for (int p = 0; p < 16; p++)
+            if (auto e = compare_.edited(p); !e.empty())
+                edited[p] = std::move(e);
+    }
     {
         std::lock_guard<std::mutex> lk(state_mu_);
-        d = build_container(state_.empty() ? default_ : state_);
+        auto recs = state_.empty() ? default_ : state_;
+        for (auto &r : recs)
+            for (auto &e : edited)
+                if (is_part_dump(r, e.first))
+                    r = e.second;
+        d = build_container(recs);
     }
     int32 done = 0;
     return state->write(d.data(), (int32)d.size(), &done);

@@ -110,3 +110,21 @@ TEST(editormenus_edit_menu_nothing_to_undo)
     s.zoom = 1.3; // no size entry fits: none checked
     CHECK(edit_menu(s).checked == -1);
 }
+
+// Compare for the selected part, after Undo/Redo; its text says which way it goes (the menu has one check mark,
+// the size's)
+TEST(editormenus_edit_menu_compare)
+{
+    EditMenuState s;
+    BuiltMenu m = edit_menu(s);
+    CHECK(index_of(m, MenuAction::Compare) < 0); // no part selected (no editor state yet)
+    s.part = 1;
+    m = edit_menu(s);
+    int i = index_of(m, MenuAction::Compare);
+    CHECK(i > index_of(m, MenuAction::Redo) && i < index_of(m, MenuAction::Panic));
+    CHECK(m.items[i].text == "Compare with Loaded Patch (Part 2)" && m.items[i].enabled);
+    s.comparing = true;
+    m = edit_menu(s);
+    i = index_of(m, MenuAction::Compare);
+    CHECK(m.items[i].text == "End Compare, Back to Your Edit (Part 2)");
+}

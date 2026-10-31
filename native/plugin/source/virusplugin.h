@@ -44,6 +44,7 @@
 #include "model/sectionlock.h"
 #include "model/rambackup.h"
 #include "model/undohistory.h"
+#include "model/comparestate.h"
 #include "pluginterfaces/vst/ivstmidicontrollers.h"
 #include "public.sdk/source/vst/vstsinglecomponenteffect.h"
 #include <array>
@@ -363,6 +364,11 @@ public:
     bool redo_edit() { return apply_undo(true); }
     std::string undo_label();
     std::string redo_label();
+    // Compare (comparestate.h): the part switches between its edited sound and the patch as it was loaded, and back;
+    // false when there is nothing to compare. An edit or a load ends it (the edit stays an undo step). UI thread.
+    bool compare(int part);
+    bool comparing(int part);
+    int selected_part() { return ui_value(layout_.frame_parameter, -1); }
     bool has_init_patch() const { return init_single_.size() == 524; } // set once in initialize()
     // the "No Virus TI can be found" page's hint: another Virus driver installed (macOS, E366); set once in initialize()
     const std::vector<std::string> &other_driver_lines() const { return other_driver_lines_; }
@@ -746,6 +752,9 @@ private:
     std::mutex undo_mu_;
     UndoHistory undo_; // editor edits (undo_mu_); ui_set and load_dump record, setState clears
     bool apply_undo(bool redo);
+    std::mutex compare_mu_;
+    CompareState compare_; // compare_mu_; load_dump and setState set the references
+    void end_compare(int part); // an edit or a load while the part compares: the edit becomes an undo step
     // a library operation: `op` makes the library's new patches from the current ones (empty = refused); the old
     // ones are kept for the undo, the file is saved
     bool edit_library(int library, const char *what, const std::function<LibraryEdit::Lib(const LibraryEdit::Lib &)> &op);

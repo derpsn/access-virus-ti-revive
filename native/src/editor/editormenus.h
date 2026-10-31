@@ -1,7 +1,7 @@
 // editormenus.h - TI Revive's own menus in the editor, built from plain state so they can be tested: the "?" menu
 // (the original's "?" opens its manuals and videos at access-music.de; ours explains the controls, links the TI Revive
 // website and issues, saves the logs for a bug report and has Panic) and the menu of a right-click where there is no
-// control (Undo/Redo, Panic and the editor's size). Each entry stands for one MenuAction (and an argument); the
+// control (Undo/Redo, Compare, Panic and the editor's size). Each entry stands for one MenuAction (and an argument); the
 // editor carries the action out. Header only, no drawing.
 #pragma once
 #include "editor/popupmenu.h"
@@ -13,7 +13,7 @@ namespace vti {
 // where bug reports go (the "?" menu's "Report a Problem")
 inline const char *issues_url() { return "https://github.com/derpsn/access-virus-ti-revive/issues"; }
 
-enum class MenuAction { None, HelpMode, Website, Report, SaveLogs, DiagLog, Panic, Undo, Redo, Size };
+enum class MenuAction { None, HelpMode, Website, Report, SaveLogs, DiagLog, Panic, Undo, Redo, Compare, Size };
 
 // the editor sizes of the right-click menu (the original has no such setting)
 struct EditorSize {
@@ -67,7 +67,9 @@ inline BuiltMenu help_menu(const HelpMenuState &s)
 struct EditMenuState {
     std::string undo, redo; // what Undo / Redo would take back or do again ("" = nothing)
     bool connected = false;
-    double zoom = 1.0; // the editor's size now
+    double zoom = 1.0;      // the editor's size now
+    int part = -1;          // the selected part (Compare), -1 = none
+    bool comparing = false; // that part compares now
 };
 
 inline BuiltMenu edit_menu(const EditMenuState &s)
@@ -75,6 +77,10 @@ inline BuiltMenu edit_menu(const EditMenuState &s)
     BuiltMenu m;
     m.add(MenuAction::Undo, s.undo.empty() ? "Undo" : "Undo " + s.undo, !s.undo.empty());
     m.add(MenuAction::Redo, s.redo.empty() ? "Redo" : "Redo " + s.redo, !s.redo.empty());
+    if (s.part >= 0) {
+        const std::string p = " (Part " + std::to_string(s.part + 1) + ")";
+        m.add(MenuAction::Compare, s.comparing ? "End Compare, Back to Your Edit" + p : "Compare with Loaded Patch" + p);
+    }
     m.line();
     m.add(MenuAction::Panic, "Panic (All Notes Off)", s.connected);
     m.line();

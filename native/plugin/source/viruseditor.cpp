@@ -2728,6 +2728,9 @@ private:
         case vti::MenuAction::Redo:
             plugin_->redo_edit();
             break;
+        case vti::MenuAction::Compare:
+            plugin_->compare(plugin_->selected_part());
+            break;
         case vti::MenuAction::Size: // the zoom changes the frame: after the menu's session has ended
             if (arg >= 0 && arg < (int)(sizeof vti::kEditorSizes / sizeof vti::kEditorSizes[0]))
                 if (auto *f = getFrame())
@@ -2777,6 +2780,8 @@ private:
         st.redo = plugin_->redo_label();
         st.connected = plugin_->virus_connected();
         st.zoom = editor_->user_zoom();
+        st.part = plugin_->selected_part();
+        st.comparing = st.part >= 0 && plugin_->comparing(st.part);
         vti::BuiltMenu m = vti::edit_menu(st);
         const int checked = m.checked;
         show_list(std::move(m.items), checked, 0, where,
