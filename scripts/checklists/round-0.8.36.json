@@ -1,0 +1,127 @@
+{
+ "round": "0.8.36",
+ "core": "core.json",
+ "core_items": [],
+ "lead": "Test of 0.8.36 (CI test build 41194611708). risk.py: class C on all three systems, so from the core list only the automated runs (hil: cold start, reopen, export). The round's own items: section locking (#21), the ? menu (help mode with pinned and hover notes, Save Logs, Panic), Undo/Redo, Compare, Randomize and the RAM backup. Linux was checked with dev builds during the round; Windows and the Mac have seen nothing of this round yet. Mark each item, add a note where something looks different, then copy the results at the bottom into the chat.",
+ "rules": [
+  "Order: Linux first (the Virus is on this PC), then the Windows VM, then the Mac. Close the DAW before the Virus moves.",
+  "Never power-cycle the Virus while it is attached to the VM; switch it off and on only while it is on Linux.",
+  "Use a disposable project. SAVE only into a RAM slot you can spare: TI Revive backs it up first ('RAM Backup (date)' in Personal Libraries)."
+ ],
+ "sections": [
+  {
+   "id": "linux",
+   "title": "Linux",
+   "where": "REAPER, Virus on this PC, CI build 0.8.36 (installed with install.sh)",
+   "prep": [
+    "Claude installs the CI build and runs hil.sh (cold start, reopen, export, broker killed while playing)."
+   ],
+   "items": [
+    {
+     "id": "L1",
+     "title": "The round's features on the CI build",
+     "steps": [
+      "? menu: Explain the Controls, click a control (note stays), hover others (on top), hover the filter display in the cutoff knob; Save Logs writes a file; Panic.",
+      "Right-click where there is no control: Undo/Redo after a knob turn (also Ctrl+Z), Compare on and off, Randomize Medium with one section locked."
+     ],
+     "expect": "As with the dev build: notes, menu entries and shortcuts work; the locked section keeps its values."
+    },
+    {
+     "id": "L2",
+     "title": "Download entire bank in REAPER",
+     "steps": [
+      "Browser, right-click a RAM bank: Download entire bank from Virus TI. Wait up to about 2 minutes."
+     ],
+     "expect": "The bank's names fill in. (Under our test host it got no answer, E380 (4): is that the test host or a bug?)"
+    }
+   ]
+  },
+  {
+   "id": "win",
+   "title": "Windows 11 (VM)",
+   "where": "win11 VM, Ableton Live 11, CI build 0.8.36 (installed silently by Claude)",
+   "prep": [
+    "Claude installs the build in the VM, attaches the Virus and copies the hil-windows kit."
+   ],
+   "items": [
+    {
+     "id": "W1",
+     "title": "hil-win on the new build",
+     "steps": [
+      "Run hil-win.cmd (about 5 minutes); Claude grades the result folder on Linux."
+     ],
+     "expect": "Cold start, reopen and export pass (drift in the VM is not judged, E334)."
+    },
+    {
+     "id": "W2",
+     "title": "Section locking (#21)",
+     "steps": [
+      "Double-click a blue section header (e.g. Filter 1): it turns red. Load other patches from the browser and with the Virus' own program buttons.",
+      "Right-click a header: Unlock all Sections."
+     ],
+     "expect": "The locked section keeps its values on every patch change; Unlock all Sections clears the red headers."
+    },
+    {
+     "id": "W3",
+     "title": "? menu and help mode in Live",
+     "steps": [
+      "? menu: Explain the Controls, click a control, hover others; Save Logs for a Bug Report (save to the Desktop); Panic while a note hangs or plays."
+     ],
+     "expect": "Clicked note stays, hover note on top; the log file is written; Panic stops the notes."
+    },
+    {
+     "id": "W4",
+     "title": "Undo, Compare, Randomize, RAM backup",
+     "steps": [
+      "Turn a knob, Ctrl+Z in the editor (Live may take the key: then use the right-click menu); Compare on and off; Randomize Medium.",
+      "SAVE the part into a spare RAM slot, then drag that slot's entry from 'RAM Backup (date)' back onto the slot."
+     ],
+     "expect": "Undo takes the turn back; Compare switches and returns; Randomize changes the sound in one step; the old patch is back in the slot."
+    }
+   ]
+  },
+  {
+   "id": "mac",
+   "title": "macOS",
+   "where": "MacBook Air M3, Ableton Live 12",
+   "prep": [
+    "Claude pushes the CI package to the Mac (INSTALL-COMMAND.txt and 'Install test build.command' in the unpacked folder); you run the installer, then hil-mac.command. The Mac must be awake for the push."
+   ],
+   "items": [
+    {
+     "id": "M1",
+     "title": "hil-mac on the new build",
+     "steps": [
+      "Run hil-mac.command from the unpacked folder's hil folder (about 5 minutes) and send the result folder."
+     ],
+     "expect": "ALL PASS (cold start, reopen, export)."
+    },
+    {
+     "id": "M2",
+     "title": "Section locking (#21)",
+     "steps": [
+      "Double-click a blue section header: it turns red. Load other patches from the browser and with the Virus' program buttons; right-click a header: Unlock all Sections."
+     ],
+     "expect": "The locked section keeps its values on every patch change; Unlock all Sections clears the red headers."
+    },
+    {
+     "id": "M3",
+     "title": "? menu, Undo, Compare, Randomize",
+     "steps": [
+      "? menu: Explain the Controls (click, hover), Save Logs (Desktop), Panic.",
+      "Turn a knob, Cmd+Z in the editor (or the right-click menu); Compare on and off; Randomize Medium."
+     ],
+     "expect": "Same as on Linux; the log file is written."
+    },
+    {
+     "id": "M4",
+     "title": "RAM backup",
+     "steps": [
+      "SAVE the part into a spare RAM slot, then drag that slot's entry from 'RAM Backup (date)' back onto the slot."
+     ],
+     "expect": "The backup library has the old patch; after the drag the slot plays it again."
+    }
+   ]
+  }
+ ]
+}
