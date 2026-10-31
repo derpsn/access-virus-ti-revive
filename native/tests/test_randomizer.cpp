@@ -135,3 +135,21 @@ TEST(randomizer_amount_names)
     CHECK(Randomizer::kAmounts[0].percent == 10 && std::string(Randomizer::kAmounts[0].name) == "Subtle");
     CHECK(sizeof Randomizer::kAmounts / sizeof Randomizer::kAmounts[0] == 3);
 }
+
+TEST(randomizer_number_texts)
+{
+    CHECK(Randomizer::number_text("12") && Randomizer::number_text(" -64") && Randomizer::number_text("+63"));
+    CHECK(Randomizer::number_text("50 %") && Randomizer::number_text("1.5"));
+    CHECK(!Randomizer::number_text("") && !Randomizer::number_text("+") && !Randomizer::number_text("Saw"));
+    CHECK(!Randomizer::number_text("1/16") && !Randomizer::number_text("12 dB"));
+}
+
+// a section child the device does not describe (or one without a range) is left out, not guessed
+TEST(randomizer_unknown_children_left_out)
+{
+    Fixture f;
+    auto t = Randomizer::targets(f.ed, f.dev, [](const std::string &) { return false; },
+                                 [](const std::string &) { return true; }); // LFO/Clock "in the dump", but unknown
+    for (auto &x : t)
+        CHECK(x.path != "LFO/Clock");
+}
