@@ -74,3 +74,39 @@ TEST(editormenus_links)
 {
     CHECK(std::string(issues_url()) == "https://github.com/derpsn/access-virus-ti-revive/issues");
 }
+
+// right-click where there is no control: Undo/Redo with what they take back, Panic, then the editor sizes (the
+// menu this click had before)
+TEST(editormenus_edit_menu_undo_redo_and_sizes)
+{
+    EditMenuState s;
+    s.zoom = 1.5;
+    s.undo = "Cutoff (Part 1)";
+    s.connected = true;
+    BuiltMenu m = edit_menu(s);
+    CHECK(m.items.size() == m.actions.size() && m.args.size() == m.actions.size());
+    CHECK(m.items[0].text == "Undo Cutoff (Part 1)" && m.items[0].enabled && m.actions[0] == MenuAction::Undo);
+    CHECK(m.items[1].text == "Redo" && !m.items[1].enabled && m.actions[1] == MenuAction::Redo);
+    CHECK(m.items[index_of(m, MenuAction::Panic)].enabled);
+    int sizes = 0;
+    for (size_t i = 0; i < m.actions.size(); i++)
+        if (m.actions[i] == MenuAction::Size) {
+            CHECK(m.items[i].text == "Size " + std::to_string(kEditorSizes[m.args[i]].percent) + " %");
+            sizes++;
+        }
+    CHECK(sizes == (int)(sizeof kEditorSizes / sizeof kEditorSizes[0]));
+    CHECK(m.action_at(m.checked) == MenuAction::Size && kEditorSizes[m.args[m.checked]].percent == 150);
+    CHECK(m.arg_at(m.checked) == m.args[m.checked] && m.arg_at(-1) == 0);
+}
+
+TEST(editormenus_edit_menu_nothing_to_undo)
+{
+    EditMenuState s;
+    s.redo = "Load watercop (Part 2)";
+    BuiltMenu m = edit_menu(s);
+    CHECK(m.items[0].text == "Undo" && !m.items[0].enabled);
+    CHECK(m.items[1].text == "Redo Load watercop (Part 2)" && m.items[1].enabled);
+    CHECK(!m.items[index_of(m, MenuAction::Panic)].enabled); // not connected
+    s.zoom = 1.3; // no size entry fits: none checked
+    CHECK(edit_menu(s).checked == -1);
+}

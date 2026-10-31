@@ -2004,6 +2004,63 @@ const char *VirusPlugin::arp_action_name(int a)
     return a >= 0 && a < ARP_ACTION_COUNT ? n[a] : "";
 }
 
+// no undo step for what this thread sets meanwhile: an undo/redo itself, a preset chosen on the Virus (the Virus'
+// own change, not an edit in the editor)
+static thread_local int t_no_undo = 0;
+struct NoUndo {
+    NoUndo() { t_no_undo++; }
+    ~NoUndo() { t_no_undo--; }
+    NoUndo(const NoUndo &) = delete;
+    NoUndo &operator=(const NoUndo &) = delete;
+};
+
+static std::string part_suffix(int part) { return part < 0 ? std::string() : " (Part " + std::to_string(part + 1) + ")"; }
+
+// "Load <patch name> (Part n)": the undo step of a patch load
+static std::string load_label(const std::vector<uint8_t> &d, int part)
+{
+    std::string name(d.begin() + 249, d.begin() + 259);
+    name.erase(name.find_last_not_of(' ') + 1);
+    return "Load " + name + part_suffix(part);
+}
+
+std::string VirusPlugin::undo_label()
+{
+    std::lock_guard<std::mutex> lk(undo_mu_);
+    return undo_.undo_label();
+}
+
+std::string VirusPlugin::redo_label()
+{
+    std::lock_guard<std::mutex> lk(undo_mu_);
+    return undo_.redo_label();
+}
+
+bool VirusPlugin::apply_undo(bool redo)
+{
+    UndoStep s;
+    {
+        std::lock_guard<std::mutex> lk(undo_mu_);
+        if (!(redo ? undo_.redo(s) : undo_.undo(s)))
+            return false;
+    }
+    NoUndo g;
+    if (s.kind == UndoStep::Patch)
+        load_dump(redo ? s.dump_after : s.dump_before, s.part);
+    else if (redo)
+        for (const auto &c : s.changes)
+            ui_set(c.path, c.part, c.after);
+    else
+        for (auto c = s.changes.rbegin(); c != s.changes.rend(); ++c)
+            ui_set(c->path, c->part, c->before);
+    if (s.kind == UndoStep::Patch || s.changes.size() > 1) // a single parameter shows itself on the LCD (ui_set)
+        lcd_message(redo ? "Redo" : "Undo", s.label);
+    if (out_)
+        out_->log("Virus TI native: %s %s\n", redo ? "redo" : "undo", s.label.c_str());
+    ui_dirty_ = true;
+    return true;
+}
+
 bool VirusPlugin::arp_action(int part, int action)
 {
     if (action < 0 || action >= ARP_ACTION_COUNT || part < 0 || part > 15)
@@ -2035,7 +2092,11 @@ bool VirusPlugin::arp_action(int part, int action)
     }
     case ARP_FILL_UP: new_len = arp_fill_up(s, len); break;
     }
-    // only what changed goes to the Virus (at most 96 parameters + the length)
+    // only what changed goes to the Virus (at most 96 parameters + the length); one undo step
+    if (t_no_undo == 0) {
+        std::lock_guard<std::mutex> lk(undo_mu_);
+        undo_.group_begin(std::string(arp_action_name(action)) + part_suffix(part));
+    }
     for (int i = 0; i < 32; i++) {
         if (s[(size_t)i].on != before[(size_t)i].on)
             ui_set(field(i, "Bitfield"), part, s[(size_t)i].on);
@@ -2046,6 +2107,10 @@ bool VirusPlugin::arp_action(int part, int action)
     }
     if (new_len != len)
         ui_set("Arpeggiator/UserPatternLength", part, new_len - 1);
+    if (t_no_undo == 0) {
+        std::lock_guard<std::mutex> lk(undo_mu_);
+        undo_.group_end(now_ms());
+    }
     if (out_)
         out_->log("Virus TI native: ARP %s on part %d (pattern length %d)\n", arp_action_name(action), part + 1, len);
     return true;
@@ -2124,6 +2189,13 @@ void VirusPlugin::ui_set(const std::string &path, int part, int value)
         ui_dirty_ = true;
         return;
     }
+    if (meta_depth_ == 0 && t_no_undo == 0) // an edit in the editor (linked parameters follow their source)
+        if (const Parameter *p = dev_.find(path)) {
+            const int before = ui_value(path, part);
+            std::lock_guard<std::mutex> lk(undo_mu_);
+            undo_.param(path, part, before, value, (p->displayname.empty() ? path : p->displayname) + part_suffix(part),
+                        now_ms());
+        }
     auto id = ids_.find({path, part});
     if (id != ids_.end()) { // automatable: through the host, which hands it to process()
         ParamValue n = value / 127.0;
@@ -2877,6 +2949,10 @@ bool VirusPlugin::load_patch_remembered(int bank, int program, int part)
         for (auto &m : select)
             out_->send(m);
         follow_.preset_chosen(part, bank, program, PanelFollow::Clock::now());
+        // the patch arrives on the sender thread like the Virus' own program changes (no undo step there): the
+        // step is this choice in the editor
+        std::lock_guard<std::mutex> lk(undo_mu_);
+        undo_.patch(part, before, d, load_label(d, part), now_ms());
     } else if (!load_patch(bank, program, part))
         return false;
     std::lock_guard<std::mutex> lk(history_mu_);
@@ -3001,6 +3077,7 @@ bool VirusPlugin::load_dump(std::vector<uint8_t> d, int part)
     // locked sections keep the part's current values, like the original (E378): merged into this one dump
     const auto keep = locked_children(part);
     bool merged = false;
+    std::vector<uint8_t> was; // the part's patch before: an undo step (not for the Virus' own program changes)
     {
         std::lock_guard<std::mutex> lk(state_mu_);
         if (state_.empty())
@@ -3009,8 +3086,13 @@ bool VirusPlugin::load_dump(std::vector<uint8_t> d, int part)
             if (is_part_dump(r, part)) {
                 if (!keep.empty() && single_template_)
                     merged = SectionLock::merge(dev_, *single_template_, r, d, keep);
+                was = r;
                 r = d;
             }
+    }
+    if (t_no_undo == 0 && was.size() == 524) {
+        std::lock_guard<std::mutex> lk(undo_mu_);
+        undo_.patch(part, std::move(was), d, load_label(d, part), now_ms());
     }
     if (out_)
         out_->send(d);
@@ -4054,6 +4136,7 @@ void VirusPlugin::load_reported_presets()
                         if (auto v = pv->second.find(p); v != pv->second.end())
                             ctl.push_back({p, v->second});
             }
+            NoUndo g; // the Virus' own program change, not an edit
             const bool ok = load_patch(bank, patch, part);
             if (ok && out_)
                 for (auto &c : ctl)
@@ -4171,6 +4254,10 @@ tresult PLUGIN_API VirusPlugin::setState(IBStream *state)
                   part1_name(recs).c_str());
     if (recs.empty())
         return kResultFalse;
+    {
+        std::lock_guard<std::mutex> lk(undo_mu_);
+        undo_.clear(); // another project: the steps belong to the one before
+    }
     // part dumps of an older format: upgraded as the Virus does on receipt, so the editor shows what it plays and
     // later edits of the newer fields (Input Mode, unison, envelopes 3/4 ...) reach it (E174)
     if (int up = upgrade_state_dumps(recs); up && out_)

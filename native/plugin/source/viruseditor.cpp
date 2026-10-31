@@ -1213,12 +1213,28 @@ public:
             fprintf(stderr, "help hover %.0f,%.0f\n", p.x, p.y);
         help_hover(p);
     }
-    void onKeyboardEvent(KeyboardEvent &event, CFrame *) override
+    void onKeyboardEvent(KeyboardEvent &event, CFrame *frame) override
     {
         if (help_ && event.type == EventType::KeyDown && event.virt == VirtualKey::Escape) {
             set_help(false);
             event.consumed = true;
+            return;
         }
+        // Ctrl+Z / Ctrl+Shift+Z / Ctrl+Y (Cmd on macOS: VSTGUI's Control) undo and redo editor edits - while the
+        // editor has the keyboard (a host may keep these keys) and no text field is being edited (it has its own)
+        if (event.type != EventType::KeyDown || !event.modifiers.has(ModifierKey::Control) ||
+            event.modifiers.has(ModifierKey::Alt) || (frame && dynamic_cast<CTextEdit *>(frame->getFocusView())))
+            return;
+        const char32_t c = event.character;
+        const bool z = c == 'z' || c == 'Z' || c == 0x1A, y = c == 'y' || c == 'Y' || c == 0x19;
+        if (z && !event.modifiers.has(ModifierKey::Shift))
+            plugin_->undo_edit();
+        else if ((z && event.modifiers.has(ModifierKey::Shift)) || y)
+            plugin_->redo_edit();
+        else
+            return;
+        invalid();
+        event.consumed = true;
     }
 
     void drawRect(CDrawContext *ctx, const CRect &update) override
@@ -1400,9 +1416,10 @@ public:
             event.consumed = true;
             return;
         }
-        // right-click where there is no control: the editor's size (the original has no such setting)
+        // right-click where there is no control: Undo/Redo, Panic and the editor's size (the original has no such
+        // menu, editormenus.h)
         if (event.buttonState.isRight() && (!h.element || h.element->get("Parameter").empty())) {
-            size_menu(event.mousePosition);
+            edit_menu(event.mousePosition);
             event.consumed = true;
             return;
         }
@@ -2675,12 +2692,12 @@ private:
         vti::BuiltMenu m = vti::help_menu(st);
         const int checked = m.checked;
         show_list(std::move(m.items), checked, 0, where, [this, actions = std::move(m.actions)](int i) {
-            menu_action(i >= 0 && i < (int)actions.size() ? actions[i] : vti::MenuAction::None);
+            menu_action(i >= 0 && i < (int)actions.size() ? actions[(size_t)i] : vti::MenuAction::None, 0);
         });
     }
 
-    // what a TI Revive menu entry does (editormenus.h)
-    void menu_action(vti::MenuAction a)
+    // what a TI Revive menu entry does (editormenus.h); `arg`: the entry's argument (Size: index in kEditorSizes)
+    void menu_action(vti::MenuAction a, int arg)
     {
         std::string err;
         switch (a) {
@@ -2704,6 +2721,17 @@ private:
             break;
         case vti::MenuAction::Panic:
             plugin_->panic();
+            break;
+        case vti::MenuAction::Undo:
+            plugin_->undo_edit();
+            break;
+        case vti::MenuAction::Redo:
+            plugin_->redo_edit();
+            break;
+        case vti::MenuAction::Size: // the zoom changes the frame: after the menu's session has ended
+            if (arg >= 0 && arg < (int)(sizeof vti::kEditorSizes / sizeof vti::kEditorSizes[0]))
+                if (auto *f = getFrame())
+                    after_event(f, [this, arg]() { editor_->set_user_zoom(vti::kEditorSizes[arg].zoom); });
             break;
         case vti::MenuAction::None:
             break;
@@ -2742,24 +2770,20 @@ private:
         fs->forget();
     }
 
-    void size_menu(const CPoint &where)
+    void edit_menu(const CPoint &where)
     {
-        static const double sizes[] = {1.0, 1.25, 1.5, 1.75, 2.0};
-        std::vector<vti::PopupItem> items;
-        int checked = -1;
-        for (double z : sizes) {
-            char t[32];
-            snprintf(t, sizeof t, "Size %d %%", (int)std::lround(z * 100));
-            if (std::fabs(editor_->user_zoom() - z) < 0.01)
-                checked = (int)items.size();
-            items.push_back({t, true});
-        }
-        // the zoom changes the frame: after the menu's session has ended
-        show_list(std::move(items), checked, 0, where, [this](int idx) {
-            if (idx >= 0 && idx < (int)(sizeof sizes / sizeof sizes[0]))
-                if (auto *f = getFrame())
-                    after_event(f, [this, idx]() { editor_->set_user_zoom(sizes[idx]); });
-        });
+        vti::EditMenuState st;
+        st.undo = plugin_->undo_label();
+        st.redo = plugin_->redo_label();
+        st.connected = plugin_->virus_connected();
+        st.zoom = editor_->user_zoom();
+        vti::BuiltMenu m = vti::edit_menu(st);
+        const int checked = m.checked;
+        show_list(std::move(m.items), checked, 0, where,
+                  [this, actions = std::move(m.actions), args = std::move(m.args)](int i) {
+                      const bool in = i >= 0 && i < (int)actions.size();
+                      menu_action(in ? actions[(size_t)i] : vti::MenuAction::None, in ? args[(size_t)i] : 0);
+                  });
     }
     EditorRenderer renderer_;
     std::map<std::string, SharedPointer<CBitmap>> bitmaps_;

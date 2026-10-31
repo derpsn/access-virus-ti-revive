@@ -43,6 +43,7 @@
 #include "model/remotetemplates.h"
 #include "model/sectionlock.h"
 #include "model/rambackup.h"
+#include "model/undohistory.h"
 #include "pluginterfaces/vst/ivstmidicontrollers.h"
 #include "public.sdk/source/vst/vstsinglecomponenteffect.h"
 #include <array>
@@ -356,6 +357,12 @@ public:
     // false when the Virus is not connected (nothing sent)
     bool panic();
     bool virus_connected() const { return out_ && out_->connected(); }
+    // Undo/Redo of editor edits (undohistory.h, TI Revive's own addition): parameter changes made in the editor and
+    // patch loads into parts, session only; false when there is nothing to take back / do again. UI thread.
+    bool undo_edit() { return apply_undo(false); }
+    bool redo_edit() { return apply_undo(true); }
+    std::string undo_label();
+    std::string redo_label();
     bool has_init_patch() const { return init_single_.size() == 524; } // set once in initialize()
     // the "No Virus TI can be found" page's hint: another Virus driver installed (macOS, E366); set once in initialize()
     const std::vector<std::string> &other_driver_lines() const { return other_driver_lines_; }
@@ -736,6 +743,9 @@ private:
     // the patches `w` would overwrite into the day's "RAM Backup" library (rambackup.h); false = not backed up, the
     // caller writes nothing (write policy 2026-10-31)
     bool backup_ram(const std::vector<BankDrop::Write> &w);
+    std::mutex undo_mu_;
+    UndoHistory undo_; // editor edits (undo_mu_); ui_set and load_dump record, setState clears
+    bool apply_undo(bool redo);
     // a library operation: `op` makes the library's new patches from the current ones (empty = refused); the old
     // ones are kept for the undo, the file is saved
     bool edit_library(int library, const char *what, const std::function<LibraryEdit::Lib(const LibraryEdit::Lib &)> &op);
