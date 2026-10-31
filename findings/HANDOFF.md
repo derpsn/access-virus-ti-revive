@@ -12,8 +12,8 @@ COVERAGE (94 %, vticore-only method of 10-16) not changed - that is a different 
 **Round 0.8.36 (2026-10-30).** Branch `round-0.8.36` = main 404c101 + the 0.8.35 HANDOFF commits (fast-forward
 of round-0.8.35). Issues read with the user: #21 (new, jwalkermed: section locking of the original missing, M4 Pro,
 TI2) - the user chose to implement it; reply draft shown to the user, NOT posted yet (waits for OK). #20 waits for the
-reporter (version + stage 6 asked 10-28), #16 waits for an FL Studio retest of the AU fix (also: its 'bank preset
-number' display defect from the first post looks unanswered - check with the user), #14 waits for the Snow AU test.
+reporter (version + stage 6 asked 10-28), #16 waits for an FL Studio retest of the AU fix (its 'bank preset
+number' display defect is settled: Alex confirmed it fixed in 0.8.31 on 2026-10-23), #14 waits for the Snow AU test.
 Section locking so far (no code yet): the Addendum describes it (double-click on a blue header = red/locked, per part,
 tab + part indicators, context menu lock all / unlock all / invert / presets on the active part, Easy/Browser/Common
 pages not lockable, locked sections stay on browser AND hardware patch changes). editordevice.xml (user's Access
