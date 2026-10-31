@@ -13,8 +13,19 @@ Panic (HeldNotes::panic: CC64 0 + CC123 on 16 channels); Xvfb: menu shown, Panic
 from the backup library restored it, virussync read RAM D = byte-identical to the pre-test cache (128/128).
 Personal Libraries now holds 'RAM Backup 2026-10-31' (3 test entries; delete it if unwanted). SEEN, NOT CHECKED:
 browser 'Download entire bank' got no answer under nativehost (stopped at the end, 90 s), virussync read fine.
-Tools: scratchpad tools/xshot (root-window grab) + guishot.sh. NEXT: Undo/Redo, Compare, Randomizer, then
-cpp-reviewer, test-coverage, docs (README/site text, evidence E380).
+Tools: scratchpad tools/xshot (root-window grab) + guishot.sh.
+**All features done (2026-10-31):** 1aa049b Undo/Redo (undohistory.h; ui_set/load_dump/load_patch_remembered record,
+NoUndo guard for the Virus' own program changes, ARP actions grouped; right-click menu where there is no control =
+Undo/Redo/Compare/Randomize/Panic/sizes, Ctrl/Cmd+Z), 434660a Compare (comparestate.h), a9dda1b Randomize
+(randomizer.h: unlocked sections, 10/25/50 %, one dump, one undo step; number-text lists are ranges - found on the
+TI2), 9864253 coverage tests, d128c5c cpp-reviewer fixes (H1 Compare edit kept on any load, H2 meta_depth_
+thread_local, M1-M5, LOWs; left as is: Panic/forget race benign, menu part read at click, Save Logs on Linux passes a
+file path like create_library). Coverage: native/src 96.4 % (5442/5647), new headers 98-100 %. 499 tests. Docs:
+README (? menu, Undo/Redo/Compare/Randomize, RAM backup, help mode lead), site build.py same texts (NOT rebuilt),
+build.yml 0.8.36 notes, help text of '?', E380. All Linux only, nativehost under Xvfb, no DAW; keyboard shortcuts not
+checked. Installed plug-in is still the rc1 CI build (dev builds only in build-native). NEXT (with the user):
+tirevive-site-check, a DAW smoke test (REAPER) of the menus, then rc2 / weekly 0.8.36 with the checklist; REMOTE
+templates' open question (does the Virus keep records over a power cycle) needs the user at the Virus.
 
 **Write policy loosened (user, 2026-10-31).** AGENTS.md rule 2 now has three tiers: NEVER the firmware path
 (update, bootloader/DFU, flash erase/program), unknown vendor requests/SysEx, interrupting a store; ALLOWED known

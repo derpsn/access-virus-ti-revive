@@ -296,6 +296,20 @@ jobs:
           loads from the browser and program changes on the Virus, with and without locks. Not tested on Windows and
           macOS yet.
 
+          **Also new, our own additions:**
+
+          - The "?" button opens a menu: Explain the Controls (the help mode), the website, Report a Problem, Save Logs
+            for a Bug Report, the detailed log, and Panic (sustain off and all notes off on all 16 channels).
+          - Right-click where there is no control: Undo and Redo of editor edits and patch loads (Ctrl+Z /
+            Ctrl+Shift+Z, Cmd on the Mac), Compare (your edit against the patch as you loaded it), and Randomize the
+            selected part by 10, 25 or 50 % (locked sections, Transpose, the patch volume, input and arpeggiator stay).
+          - RAM backup: before a SAVE or a browser operation overwrites RAM slots, the old patches go into a library of
+            the day ("RAM Backup <date>" in Personal Libraries); drag them back to restore.
+
+          Tested on a Virus TI2 Desktop on Linux (our test host): the menus, Panic, Undo/Redo, Compare and Randomize;
+          the RAM backup with a store and a restore, checked byte for byte by reading the bank back. Not tested in a
+          DAW, on Windows or on macOS yet.
+
           Earlier versions: their own release pages, and every version's changes on one page in the
           [changelog](https://derpsn.github.io/access-virus-ti-revive/changelog.html).
 

@@ -17,9 +17,10 @@ struct Entry {
 
 const Entry ENTRIES[] = {
     // --- editor, pages, browser --------------------------------------------------------------------------------
-    {"VirusControl/Help Menu", "Help mode",
-     "Shows what the controls do: point at a control to read about it, click to keep the note on screen. Click ? "
-     "again or press Esc to leave. While help mode is on, clicks do not change any value."},
+    {"VirusControl/Help Menu", "Help menu",
+     "Opens TI Revive's menu: Explain the Controls (this help mode: point at a control to read about it, click to "
+     "keep the note on screen, click ? again or press Esc to leave; clicks change no value meanwhile), the website, "
+     "Report a Problem, Save Logs for a Bug Report, the detailed log and Panic (all notes off)."},
     {"VirusControl/SelectedPage", "Pages",
      "Switches between the editor's pages (Easy, Oscillators, Filters, LFOs, Matrix, Arpeggiator, Effects ...). "
      "Page tabs keep working in help mode, so you can read every page."},
