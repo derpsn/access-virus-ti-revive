@@ -42,6 +42,7 @@
 #include "model/sysinfo.h"
 #include "model/remotetemplates.h"
 #include "model/sectionlock.h"
+#include "model/rambackup.h"
 #include "pluginterfaces/vst/ivstmidicontrollers.h"
 #include "public.sdk/source/vst/vstsinglecomponenteffect.h"
 #include <array>
@@ -732,6 +733,9 @@ private:
     HostGestures gestures_;
     std::atomic<int> editors_open_{0};
     bool send_ram_writes(const std::vector<BankDrop::Write> &w); // dumps into RAM slots + cache + cache files
+    // the patches `w` would overwrite into the day's "RAM Backup" library (rambackup.h); false = not backed up, the
+    // caller writes nothing (write policy 2026-10-31)
+    bool backup_ram(const std::vector<BankDrop::Write> &w);
     // a library operation: `op` makes the library's new patches from the current ones (empty = refused); the old
     // ones are kept for the undo, the file is saved
     bool edit_library(int library, const char *what, const std::function<LibraryEdit::Lib(const LibraryEdit::Lib &)> &op);

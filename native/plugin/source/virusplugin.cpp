@@ -3075,6 +3075,8 @@ bool VirusPlugin::store_patch(int part, int bank, int program)
     for (int i = 265; i < 522; i++)
         a += d[i];
     d[522] = a & 0x7F;
+    if (!backup_ram({{bank, program, d}}))
+        return false;
     if (out_)
         out_->send(d);
     Bank cache;
@@ -3394,10 +3396,85 @@ bool VirusPlugin::undo_drop()
     return send_ram_writes(w);
 }
 
+bool VirusPlugin::backup_ram(const std::vector<BankDrop::Write> &w)
+{
+    std::vector<RamBackup::Patch> lost;
+    {
+        std::lock_guard<std::mutex> lk(banks_mu_);
+        std::map<int, std::vector<RamBackup::Patch>> before;
+        for (auto &x : w)
+            if (auto it = banks_.find(x.bank); it != banks_.end())
+                before[x.bank] = it->second;
+        lost = RamBackup::lost(w, before);
+    }
+    if (lost.empty())
+        return true;
+    char date[16];
+    const time_t now = time(nullptr);
+    strftime(date, sizeof date, "%Y-%m-%d", localtime(&now));
+    const std::string dir = library_dir();
+    std::error_code ec;
+    std::filesystem::create_directories(dir, ec);
+    // a backup library is found by its file in the Personal Libraries folder, listed or not
+    auto path_of = [&dir](const std::string &name) { return (std::filesystem::path(dir) / (name + ".mid")).string(); };
+    auto listed = [this](const std::string &path) { // index in lib_paths_ or -1 (banks_mu_ held)
+        auto it = std::find(lib_paths_.begin(), lib_paths_.end(), path);
+        return it == lib_paths_.end() ? -1 : (int)(it - lib_paths_.begin());
+    };
+    const std::vector<uint8_t> page_b = files_ ? files_->default_page_b() : std::vector<uint8_t>();
+    auto read = [&](const std::string &name, std::vector<RamBackup::Patch> &dumps) {
+        const std::string path = path_of(name);
+        {
+            std::lock_guard<std::mutex> lk(banks_mu_);
+            if (int i = listed(path); i >= 0) {
+                dumps = banks_[LIB_BASE + i];
+                return;
+            }
+        }
+        PatchLibrary lib;
+        dumps = load_library_file(path, lib, page_b) ? lib.dumps : std::vector<RamBackup::Patch>();
+    };
+    auto count_of = [&](const std::string &name) {
+        std::vector<RamBackup::Patch> d;
+        read(name, d);
+        return (int)d.size();
+    };
+    size_t next = 0;
+    for (const auto &t : RamBackup::plan(date, count_of, (int)lost.size())) {
+        PatchLibrary lib;
+        lib.name = t.name, lib.path = path_of(t.name);
+        read(t.name, lib.dumps);
+        for (int k = 0; k < t.count; k++)
+            lib.dumps.push_back(lost[next++]);
+        std::string err;
+        if (!save_library(lib, err)) {
+            if (out_)
+                out_->log("Virus TI native: RAM backup failed (%s), nothing written to RAM\n", err.c_str());
+            lcd_message("RAM not written:", "backup failed");
+            return false;
+        }
+        std::lock_guard<std::mutex> lk(banks_mu_);
+        int i = listed(lib.path);
+        if (i < 0) { // listed like a new library (create_library)
+            i = (int)lib_names_.size();
+            lib_names_.push_back(lib.name);
+            lib_paths_.push_back(lib.path);
+            lib_roots_.push_back("Personal Libraries");
+        }
+        banks_[LIB_BASE + i] = lib.dumps;
+        if (out_)
+            out_->log("Virus TI native: RAM backup, %d patch(es) into \"%s\"\n", t.count, lib.name.c_str());
+    }
+    ui_dirty_ = true;
+    return true;
+}
+
 // one single dump per slot, in order (the original: one after the other, no reply, E294); the dump pacer spaces
 // them on cable 3 like any dump. Then the cache and its file, like a SAVE.
 bool VirusPlugin::send_ram_writes(const std::vector<BankDrop::Write> &w)
 {
+    if (!backup_ram(w))
+        return false;
     if (out_)
         for (auto &x : w)
             out_->send(x.dump);
