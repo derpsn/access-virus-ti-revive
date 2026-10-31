@@ -3,8 +3,9 @@
 // control in a row merge into one step while they come less than kMergeMs apart - a knob drag is one step - and a
 // step that ends where it started is dropped. An action that sets many parameters at once (the ARP page's pattern
 // actions, the randomizer) is one step: group_begin .. group_end. A new edit clears the redo steps; the oldest steps
-// go beyond kMaxSteps. Session only, like "Revert to" (not in the project). Header only. Not thread safe: the caller
-// locks.
+// go beyond kMaxSteps. Session only, like "Revert to" (not in the project). Not recorded (the plug-in's choice): the
+// editor's linked controls (FX switches, link buttons, LFO clock menus), which set their parameters through the meta
+// engine. Header only. Not thread safe: the caller locks.
 #pragma once
 #include <cstdint>
 #include <deque>
@@ -34,8 +35,8 @@ public:
 
     void param(const std::string &path, int part, int before, int after, const std::string &label, int64_t now_ms)
     {
-        redo_.clear();
         if (grouping_) {
+            redo_.clear();
             for (auto &c : group_.changes)
                 if (c.path == path && c.part == part) {
                     c.after = after;
@@ -47,6 +48,7 @@ public:
         if (!undo_.empty() && can_merge_ && undo_.back().kind == UndoStep::Param && undo_.back().changes.size() == 1 &&
             undo_.back().changes[0].path == path && undo_.back().changes[0].part == part &&
             now_ms - undo_.back().t_ms < kMergeMs) {
+            redo_.clear();
             UndoStep &s = undo_.back();
             s.changes[0].after = after, s.t_ms = now_ms;
             if (s.changes[0].after == s.changes[0].before) { // dragged back to where it started
@@ -55,8 +57,9 @@ public:
             }
             return;
         }
-        if (before == after)
+        if (before == after) // a control set to the value it has: nothing changed, Redo stays
             return;
+        redo_.clear();
         UndoStep s;
         s.kind = UndoStep::Param, s.changes.push_back({path, part, before, after}), s.label = label, s.t_ms = now_ms;
         push(std::move(s));
@@ -82,15 +85,16 @@ public:
         if (changed.empty())
             return;
         s.changes = std::move(changed), s.t_ms = now_ms;
+        redo_.clear();
         push(std::move(s));
         can_merge_ = false;
     }
 
     void patch(int part, std::vector<uint8_t> before, std::vector<uint8_t> after, const std::string &label, int64_t now_ms)
     {
-        redo_.clear();
         if (before == after)
             return;
+        redo_.clear();
         UndoStep s;
         s.kind = UndoStep::Patch, s.part = part, s.dump_before = std::move(before), s.dump_after = std::move(after);
         s.label = label, s.t_ms = now_ms;

@@ -602,7 +602,10 @@ private:
     bool meta_indexed_ = false; // meta_mu_
     std::unordered_map<std::string, std::vector<std::pair<const Parameter *, const MetaClient *>>> meta_sources_;
     std::vector<const Parameter *> meta_retriggers_;
-    int meta_depth_ = 0; // > 0 while the engine sets linked parameters (no LCD update for those)
+    // > 0 while the engine sets linked parameters (no LCD update, no undo step for those). Per thread: the UI
+    // thread (ui_set) and the receiver (reports from the Virus) both run the engine under meta_mu_, and ui_set reads
+    // the depth without it - one nesting is always one thread's call stack
+    static thread_local int meta_depth_;
     void meta_source(const std::string &path, int part, int value, bool full);
     void meta_set(const Parameter &m, int part, int mv, const std::string &except, bool full);
     void meta_retrigger(int part, bool full);

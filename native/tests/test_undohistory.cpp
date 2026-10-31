@@ -167,3 +167,16 @@ TEST(undohistory_group_without_change_leaves_no_step)
     h.group_end(1000);
     CHECK(!h.can_undo());
 }
+
+// setting a control to the value it has (a click on the current menu entry) changes nothing: Redo stays (review)
+TEST(undohistory_no_change_keeps_redo)
+{
+    UndoHistory h;
+    h.param("A", 0, 0, 1, "A", 1000);
+    UndoStep s;
+    h.undo(s);
+    h.param("B", 0, 5, 5, "B", 5000);
+    CHECK(h.can_redo());
+    h.patch(0, dump(1), dump(1), "same", 6000);
+    CHECK(h.can_redo());
+}

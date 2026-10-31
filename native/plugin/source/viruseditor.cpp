@@ -1225,6 +1225,10 @@ public:
         if (event.type != EventType::KeyDown || !event.modifiers.has(ModifierKey::Control) ||
             event.modifiers.has(ModifierKey::Alt) || (frame && dynamic_cast<CTextEdit *>(frame->getFocusView())))
             return;
+        if (event.isRepeat) { // a held key: one step per press (a group step can be ~100 parameter messages)
+            event.consumed = true;
+            return;
+        }
         const char32_t c = event.character;
         const bool z = c == 'z' || c == 'Z' || c == 0x1A, y = c == 'y' || c == 'Y' || c == 0x19;
         if (z && !event.modifiers.has(ModifierKey::Shift))

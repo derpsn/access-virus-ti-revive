@@ -2038,6 +2038,9 @@ std::string VirusPlugin::redo_label()
 
 bool VirusPlugin::apply_undo(bool redo)
 {
+    for (int p = 0; p < 16; p++) // while a part compares, Undo / Redo first bring its edit back
+        if (comparing(p))
+            return compare(p);
     UndoStep s;
     {
         std::lock_guard<std::mutex> lk(undo_mu_);
@@ -2061,6 +2064,8 @@ bool VirusPlugin::apply_undo(bool redo)
     return true;
 }
 
+thread_local int VirusPlugin::meta_depth_ = 0;
+
 // a load that is no new patch for the part (Compare's own, the randomizer's): its reference for Compare stays
 static thread_local int t_keep_reference = 0;
 
@@ -2076,6 +2081,8 @@ bool VirusPlugin::compare(int part)
         return false;
     std::vector<uint8_t> load;
     const std::vector<uint8_t> now = part_dump(part); // (state_mu_ before compare_mu_, never inside it)
+    if (now.size() != 524)
+        return false;
     bool on = false;
     {
         std::lock_guard<std::mutex> lk(compare_mu_);
@@ -2122,7 +2129,8 @@ bool VirusPlugin::randomize(int part, int amount)
         lcd_message("Randomize" + part_suffix(part), "every section is locked");
         return false;
     }
-    end_compare(part); // an edit: a compare ends here
+    // while the part compares, what plays (the loaded patch) is randomized; the edit stays an undo step
+    end_compare(part);
     const std::vector<uint8_t> before = d;
     dev_.update_dump(*single_template_, d, values);
     {
@@ -2151,7 +2159,9 @@ void VirusPlugin::end_compare(int part)
         if (!compare_.interrupted(part, edited))
             return;
     }
-    if (t_no_undo == 0) { // Undo brings the edit back (an undo/redo itself, or the Virus' own change, records nothing)
+    // Undo brings the edit back - also after the Virus' own program change (no undo step for the change itself);
+    // an undo/redo never gets here while a part compares (apply_undo ends the compare first)
+    {
         std::lock_guard<std::mutex> lk(undo_mu_);
         undo_.patch(part, std::move(edited), part_dump(part), "Compare" + part_suffix(part), now_ms());
     }
@@ -2273,6 +2283,8 @@ void VirusPlugin::ui_set(const std::string &path, int part, int value)
         if (p->part == "none")
             part = -1;
     if (const Parameter *ep = ed_.find(path); ep && !dev_.find(path)) {
+        if (meta_depth_ == 0 && ep->part == "all" && part >= 0)
+            end_compare(part); // a linked control (FX switch, link button, LFO clock) changes the part: an edit
         if (ep->meta) { // e.g. the LFO clock menus: set the meta value and pass it to its clients
             std::lock_guard<std::recursive_mutex> mk(meta_mu_);
             meta_set(*ep, part < 0 ? 0 : part, std::max(ep->min, std::min(ep->max, value)), std::string(), true);
@@ -3030,6 +3042,7 @@ std::vector<uint8_t> VirusPlugin::part_dump(int part)
 
 bool VirusPlugin::load_patch_remembered(int bank, int program, int part)
 {
+    end_compare(part); // here, not when the patch arrives: then "before" below is the edit, not the compared patch
     std::vector<uint8_t> before = part_dump(part), d;
     {
         std::lock_guard<std::mutex> lk(banks_mu_);
@@ -3580,7 +3593,11 @@ bool VirusPlugin::undo_drop()
         return false;
     if (out_)
         out_->log("Virus TI native: undo of the last operation, %d slot(s) of RAM %c\n", (int)w.size(), 'A' + w[0].bank);
-    return send_ram_writes(w);
+    if (send_ram_writes(w))
+        return true;
+    std::lock_guard<std::mutex> lk(banks_mu_); // nothing written (the backup failed): the undo stays possible
+    drop_.take_undo();                         // (take_undo toggles: a second call puts the state back)
+    return false;
 }
 
 bool VirusPlugin::backup_ram(const std::vector<BankDrop::Write> &w)
@@ -3590,15 +3607,16 @@ bool VirusPlugin::backup_ram(const std::vector<BankDrop::Write> &w)
         std::lock_guard<std::mutex> lk(banks_mu_);
         std::map<int, std::vector<RamBackup::Patch>> before;
         for (auto &x : w)
-            if (auto it = banks_.find(x.bank); it != banks_.end())
-                before[x.bank] = it->second;
+            if (auto it = banks_.find(x.bank); it != banks_.end() && !before.count(x.bank))
+                before.emplace(x.bank, it->second);
         lost = RamBackup::lost(w, before);
     }
     if (lost.empty())
         return true;
-    char date[16];
+    char date[16] = "undated";
     const time_t now = time(nullptr);
-    strftime(date, sizeof date, "%Y-%m-%d", localtime(&now));
+    if (const struct tm *lt = localtime(&now))
+        strftime(date, sizeof date, "%Y-%m-%d", lt);
     const std::string dir = library_dir();
     std::error_code ec;
     std::filesystem::create_directories(dir, ec);
@@ -3609,28 +3627,36 @@ bool VirusPlugin::backup_ram(const std::vector<BankDrop::Write> &w)
         return it == lib_paths_.end() ? -1 : (int)(it - lib_paths_.begin());
     };
     const std::vector<uint8_t> page_b = files_ ? files_->default_page_b() : std::vector<uint8_t>();
+    // false: a file of that name exists but cannot be read - never written over (it holds earlier backups)
     auto read = [&](const std::string &name, std::vector<RamBackup::Patch> &dumps) {
         const std::string path = path_of(name);
         {
             std::lock_guard<std::mutex> lk(banks_mu_);
             if (int i = listed(path); i >= 0) {
                 dumps = banks_[LIB_BASE + i];
-                return;
+                return true;
             }
         }
         PatchLibrary lib;
-        dumps = load_library_file(path, lib, page_b) ? lib.dumps : std::vector<RamBackup::Patch>();
+        dumps.clear();
+        std::error_code fe;
+        if (!std::filesystem::exists(path, fe))
+            return true;
+        if (!load_library_file(path, lib, page_b))
+            return false;
+        dumps = lib.dumps;
+        return true;
     };
-    auto count_of = [&](const std::string &name) {
+    auto count_of = [&](const std::string &name) { // an unreadable file counts as full: the next name is used
         std::vector<RamBackup::Patch> d;
-        read(name, d);
-        return (int)d.size();
+        return read(name, d) ? (int)d.size() : RamBackup::kPerLibrary;
     };
     size_t next = 0;
     for (const auto &t : RamBackup::plan(date, count_of, (int)lost.size())) {
         PatchLibrary lib;
         lib.name = t.name, lib.path = path_of(t.name);
-        read(t.name, lib.dumps);
+        if (!read(t.name, lib.dumps))
+            lib.dumps.clear(); // not reached: plan() skipped it (counted as full)
         for (int k = 0; k < t.count; k++)
             lib.dumps.push_back(lost[next++]);
         std::string err;
