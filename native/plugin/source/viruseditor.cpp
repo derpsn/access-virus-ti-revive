@@ -2731,6 +2731,9 @@ private:
         case vti::MenuAction::Compare:
             plugin_->compare(plugin_->selected_part());
             break;
+        case vti::MenuAction::Randomize:
+            plugin_->randomize(plugin_->selected_part(), arg);
+            break;
         case vti::MenuAction::Size: // the zoom changes the frame: after the menu's session has ended
             if (arg >= 0 && arg < (int)(sizeof vti::kEditorSizes / sizeof vti::kEditorSizes[0]))
                 if (auto *f = getFrame())

@@ -2061,8 +2061,8 @@ bool VirusPlugin::apply_undo(bool redo)
     return true;
 }
 
-// a load done by Compare itself: the part's reference stays
-static thread_local int t_compare_load = 0;
+// a load that is no new patch for the part (Compare's own, the randomizer's): its reference for Compare stays
+static thread_local int t_keep_reference = 0;
 
 bool VirusPlugin::comparing(int part)
 {
@@ -2090,13 +2090,55 @@ bool VirusPlugin::compare(int part)
     }
     {
         NoUndo g;
-        t_compare_load++;
+        t_keep_reference++;
         load_dump(load, part);
-        t_compare_load--;
+        t_keep_reference--;
     }
     lcd_message("Compare" + part_suffix(part), on ? "the loaded patch" : "back to your edit");
     if (out_)
         out_->log("Virus TI native: compare %s on part %d\n", on ? "on" : "off", part + 1);
+    ui_dirty_ = true;
+    return true;
+}
+
+bool VirusPlugin::randomize(int part, int amount)
+{
+    if (part < 0 || part > 15 || amount < 0 || amount >= (int)(sizeof Randomizer::kAmounts / sizeof Randomizer::kAmounts[0]) ||
+        !single_template_)
+        return false;
+    std::vector<uint8_t> d = part_dump(part);
+    std::map<std::string, int> current;
+    std::string err;
+    if (d.size() != 524 || !dev_.decode_dump(*single_template_, d, current, err))
+        return false;
+    const auto targets = Randomizer::targets(
+        ed_, dev_, [this, part](const std::string &s) { return ui_value(s, part) == 1; },
+        [this](const std::string &p) { return dump_paths_.count(p) != 0; });
+    static std::mt19937 rng{std::random_device{}()};
+    std::uniform_real_distribution<double> uni(0.0, 1.0);
+    const Randomizer::Amount a = Randomizer::kAmounts[amount];
+    const auto values = Randomizer::values(targets, current, a.percent / 100.0, [&] { return uni(rng); });
+    if (values.empty()) {
+        lcd_message("Randomize" + part_suffix(part), "every section is locked");
+        return false;
+    }
+    end_compare(part); // an edit: a compare ends here
+    const std::vector<uint8_t> before = d;
+    dev_.update_dump(*single_template_, d, values);
+    {
+        NoUndo g; // recorded below as one step with its own name
+        t_keep_reference++;
+        load_dump(d, part); // one single dump to the Virus, like a patch load (locked sections are merged there too)
+        t_keep_reference--;
+    }
+    const std::string label = std::string("Randomize ") + a.name + part_suffix(part);
+    {
+        std::lock_guard<std::mutex> lk(undo_mu_);
+        undo_.patch(part, before, part_dump(part), label, now_ms());
+    }
+    lcd_message(label, std::to_string(values.size()) + " parameters, " + std::to_string(a.percent) + " %");
+    if (out_)
+        out_->log("Virus TI native: randomize part %d, %zu parameters by up to %d %%\n", part + 1, values.size(), a.percent);
     ui_dirty_ = true;
     return true;
 }
@@ -3132,7 +3174,7 @@ bool VirusPlugin::load_dump(std::vector<uint8_t> d, int part)
         a += d[i];
     d[522] = a & 0x7F;
     // locked sections keep the part's current values, like the original (E378): merged into this one dump
-    if (t_compare_load == 0)
+    if (t_keep_reference == 0)
         end_compare(part); // a load while comparing: the edit stays an undo step
     const auto keep = locked_children(part);
     bool merged = false;
@@ -3153,7 +3195,7 @@ bool VirusPlugin::load_dump(std::vector<uint8_t> d, int part)
         std::lock_guard<std::mutex> lk(undo_mu_);
         undo_.patch(part, std::move(was), d, load_label(d, part), now_ms());
     }
-    if (t_compare_load == 0) { // the patch Compare goes back to (an undo/redo load too: it is the part's patch now)
+    if (t_keep_reference == 0) { // the patch Compare goes back to (an undo/redo load too: it is the part's patch now)
         std::lock_guard<std::mutex> lk(compare_mu_);
         compare_.set_reference(part, d);
     }

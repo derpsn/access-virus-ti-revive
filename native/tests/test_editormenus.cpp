@@ -128,3 +128,23 @@ TEST(editormenus_edit_menu_compare)
     i = index_of(m, MenuAction::Compare);
     CHECK(m.items[i].text == "End Compare, Back to Your Edit (Part 2)");
 }
+
+// Randomize the selected part's unlocked sections, one entry per amount (randomizer.h), after Compare
+TEST(editormenus_edit_menu_randomize)
+{
+    EditMenuState s;
+    CHECK(index_of(edit_menu(s), MenuAction::Randomize) < 0); // no part selected
+    s.part = 0;
+    BuiltMenu m = edit_menu(s);
+    int n = 0, first = -1;
+    for (size_t i = 0; i < m.actions.size(); i++)
+        if (m.actions[i] == MenuAction::Randomize) {
+            if (first < 0)
+                first = (int)i;
+            CHECK(m.args[i] == n);
+            n++;
+        }
+    CHECK(n == 3 && first > index_of(m, MenuAction::Compare) && first < index_of(m, MenuAction::Panic));
+    CHECK(m.items[first].text == "Randomize Unlocked Sections: Subtle (10 %)");
+    CHECK(m.items[first + 2].text == "Randomize Unlocked Sections: Strong (50 %)");
+}

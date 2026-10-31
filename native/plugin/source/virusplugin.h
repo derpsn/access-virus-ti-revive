@@ -45,6 +45,7 @@
 #include "model/rambackup.h"
 #include "model/undohistory.h"
 #include "model/comparestate.h"
+#include "model/randomizer.h"
 #include "pluginterfaces/vst/ivstmidicontrollers.h"
 #include "public.sdk/source/vst/vstsinglecomponenteffect.h"
 #include <array>
@@ -368,6 +369,8 @@ public:
     // false when there is nothing to compare. An edit or a load ends it (the edit stays an undo step). UI thread.
     bool compare(int part);
     bool comparing(int part);
+    // Randomize (randomizer.h): the part's unlocked sections by Randomizer::kAmounts[amount], one dump, one undo step
+    bool randomize(int part, int amount);
     int selected_part() { return ui_value(layout_.frame_parameter, -1); }
     bool has_init_patch() const { return init_single_.size() == 524; } // set once in initialize()
     // the "No Virus TI can be found" page's hint: another Virus driver installed (macOS, E366); set once in initialize()

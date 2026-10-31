@@ -1,10 +1,11 @@
 // editormenus.h - TI Revive's own menus in the editor, built from plain state so they can be tested: the "?" menu
 // (the original's "?" opens its manuals and videos at access-music.de; ours explains the controls, links the TI Revive
 // website and issues, saves the logs for a bug report and has Panic) and the menu of a right-click where there is no
-// control (Undo/Redo, Compare, Panic and the editor's size). Each entry stands for one MenuAction (and an argument); the
+// control (Undo/Redo, Compare, Randomize, Panic and the editor's size). Each entry stands for one MenuAction (and an argument); the
 // editor carries the action out. Header only, no drawing.
 #pragma once
 #include "editor/popupmenu.h"
+#include "model/randomizer.h"
 #include <string>
 #include <vector>
 
@@ -13,7 +14,7 @@ namespace vti {
 // where bug reports go (the "?" menu's "Report a Problem")
 inline const char *issues_url() { return "https://github.com/derpsn/access-virus-ti-revive/issues"; }
 
-enum class MenuAction { None, HelpMode, Website, Report, SaveLogs, DiagLog, Panic, Undo, Redo, Compare, Size };
+enum class MenuAction { None, HelpMode, Website, Report, SaveLogs, DiagLog, Panic, Undo, Redo, Compare, Randomize, Size };
 
 // the editor sizes of the right-click menu (the original has no such setting)
 struct EditorSize {
@@ -80,6 +81,12 @@ inline BuiltMenu edit_menu(const EditMenuState &s)
     if (s.part >= 0) {
         const std::string p = " (Part " + std::to_string(s.part + 1) + ")";
         m.add(MenuAction::Compare, s.comparing ? "End Compare, Back to Your Edit" + p : "Compare with Loaded Patch" + p);
+        m.line();
+        for (int i = 0; i < (int)(sizeof Randomizer::kAmounts / sizeof Randomizer::kAmounts[0]); i++)
+            m.add(MenuAction::Randomize,
+                  std::string("Randomize Unlocked Sections: ") + Randomizer::kAmounts[i].name + " (" +
+                      std::to_string(Randomizer::kAmounts[i].percent) + " %)",
+                  true, i);
     }
     m.line();
     m.add(MenuAction::Panic, "Panic (All Notes Off)", s.connected);
