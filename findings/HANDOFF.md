@@ -2,6 +2,20 @@
 
 ## START HERE (2026-10-30): round 0.8.36 started on branch `round-0.8.36` - first task section locking (#21)
 
+**Feature work 2026-10-31 (user away: 'Work on all Features and the new possibilities with 15 and 16 ... use the
+ecc cpp reviewer and ecc code coverage skill'; release/testing skipped, the VM sync reports not a priority).**
+Item 16 (REMOTE templates) turned out DONE since 0.8.22 (E196-E201: edit, send, cache, .vrt files, hardware test);
+open there only what the Virus does with the records (power-cycle test with the user). Done so far:
+40aa292 "?" menu (editormenus.h: Explain the Controls, website, Report a Problem, Save Logs, Detailed Log, Panic) +
+Panic (HeldNotes::panic: CC64 0 + CC123 on 16 channels); Xvfb: menu shown, Panic logged. c1fa1b2 RAM backup
+(rambackup.h; store_patch + send_ram_writes back up what they lose into 'RAM Backup <date>' in Personal Libraries,
+128 per file; backup fails -> nothing written). HARDWARE: SAVE into RAM D 127 backed up 'watercop >', drag back
+from the backup library restored it, virussync read RAM D = byte-identical to the pre-test cache (128/128).
+Personal Libraries now holds 'RAM Backup 2026-10-31' (3 test entries; delete it if unwanted). SEEN, NOT CHECKED:
+browser 'Download entire bank' got no answer under nativehost (stopped at the end, 90 s), virussync read fine.
+Tools: scratchpad tools/xshot (root-window grab) + guishot.sh. NEXT: Undo/Redo, Compare, Randomizer, then
+cpp-reviewer, test-coverage, docs (README/site text, evidence E380).
+
 **Write policy loosened (user, 2026-10-31).** AGENTS.md rule 2 now has three tiers: NEVER the firmware path
 (update, bootloader/DFU, flash erase/program), unknown vendor requests/SysEx, interrupting a store; ALLOWED known
 writes (edit buffers, RAM patch store, multis, globals, REMOTE templates) with a backup before overwriting stored data
