@@ -27,6 +27,12 @@ checked. Installed plug-in is still the rc1 CI build (dev builds only in build-n
 tirevive-site-check, a DAW smoke test (REAPER) of the menus, then rc2 / weekly 0.8.36 with the checklist; REMOTE
 templates' open question (does the Virus keep records over a power cycle) needs the user at the Virus.
 
+**User REAPER test 2026-10-31 (dev build installed in ~/.vst3; rc1 backed up in ~/.vst3-backup/0.8.36-rc1-installed-db7d55ea):**
+? menu, Panic, Undo/Redo, Compare, Randomize, RAM backup, project recall during Compare: ALL PASS. Help mode: clicked
+note vanished on mouse move -> fixed + user wish (pinned note stays, hover note on top; user: 'works nice'); the filter
+display inside the cutoff knob was not hoverable -> help_hit_test + own display notes, 918ebed (installed 9a81c223,
+not yet checked by the user).
+
 **Write policy loosened (user, 2026-10-31).** AGENTS.md rule 2 now has three tiers: NEVER the firmware path
 (update, bootloader/DFU, flash erase/program), unknown vendor requests/SysEx, interrupting a store; ALLOWED known
 writes (edit buffers, RAM patch store, multis, globals, REMOTE templates) with a backup before overwriting stored data
