@@ -558,9 +558,7 @@ def features_section():
         <li>Three stereo outputs over USB, plus the analog outputs of the Virus. Parts on the analog outputs stay in time with the USB parts: like the original, the Virus holds them back by the USB latency (since 0.8.33).</li>
         <li>Audio from your DAW through the filters and effects of the Virus (sidechain input), as in the original.</li>
         <li>A help mode: the ? menu's Explain the Controls explains every control, and why a greyed-out one is inactive.</li>
-        <li><strong>Section locking.</strong> Like in the original (since 0.8.36, <a href="{GH}/issues/21">issue #21</a>): double-click a section's header to lock it for the selected part (the header turns red, the page tab and the part get an orange mark), double-click again to unlock it. A locked section keeps its settings when you load another patch, from the browser or on the Virus. Right-click a header for more: lock or unlock all sections of the part, unlock all parts, and presets that lock one page (OSC, Filter, LFO, Matrix, Arpeggiator, FX). Settings outside the sections, such as Transpose and Key Mode on the COMMON page, still come from the new patch, as in the original. Locks are not saved with the project, also like the original. Tested on Linux (REAPER), Windows 11 (VM, Ableton Live 11) and macOS (Ableton Live 12).</li>
         <li><strong>The ? menu.</strong> Since 0.8.36 the ? at the bottom right opens a menu (the original's lists its manuals): Explain the Controls (the help mode above), the TI Revive website, Report a Problem (the GitHub issues), Save Logs for a Bug Report (one text file with the system, the versions and the ends of the plug-in and broker logs, home folder and user name replaced), the detailed log for the next start, and Panic, which sends sustain off and all notes off on all 16 channels.</li>
-        <li><strong>Undo, Redo, Compare and Randomize.</strong> Our own additions since 0.8.36, in the menu of a right-click where there is no control (next to the editor sizes). Undo and Redo take back your edits in the editor and patch loads into a part; a knob turn is one step, and Ctrl+Z / Ctrl+Shift+Z (Cmd on the Mac) work while the editor has the keyboard. The steps last for the session. Edits of the linked controls (FX switches, link buttons, LFO clock menus) are not in Undo yet. Compare switches the selected part between your edit and the patch as you loaded it, and back; an edit or a load while comparing ends it, and Undo brings your edit back. Randomize changes the selected part's sections by up to 10, 25 or 50 % of each value's range and sends one patch to the Virus; it is one Undo step. Locked sections stay as they are (lock what you want to keep), and so do Transpose, Key Mode, the patch volume, the input and vocoder settings and the arpeggiator. Tested on Linux (REAPER), Windows 11 (VM, Ableton Live 11) and macOS (Ableton Live 12).</li>
         <li><strong>RAM backup.</strong> Before TI Revive writes patches into the Virus' RAM banks (SAVE, a drop, swap, rename or sort in the browser, Undo last operation), it saves the patches that would be overwritten in a library of the day, "RAM Backup 2026-10-31" in Personal Libraries (since 0.8.36, our own addition). To get a patch back, drag it from that library onto a RAM slot. If the backup cannot be written, nothing is written to the Virus. The backup knows what the plug-in's bank cache knows: a patch you stored on the Virus itself since the last sync is not in it. Tested on Linux with a TI2 Desktop: the backup and the drag back restored the slot byte for byte; the backup and the restore also on Windows 11 (VM, Ableton Live 11) and macOS (Ableton Live 12).</li>
         <li>The REMOTE page (since 0.8.22): the Virus' remote templates with their names, knob names and MIDI strings, the original's knob template list, template files to load and save, sent to the Virus like the original.</li>
         <li>Projects bring back every patch setting of all 16 parts.</li>
@@ -604,10 +602,27 @@ def features_section():
     </div>
 
     <div class="feature">
+      <div><h3>Section locking</h3>
+      <p>Like in the original (since 0.8.36, <a href="{GH}/issues/21">issue #21</a>): double-click a section's header to lock it for the selected part (the header turns red, the page tab and the part get an orange mark), double-click again to unlock it. A locked section keeps its settings when you load another patch, from the browser or on the Virus. Right-click a header for more: lock or unlock all sections of the part, unlock all parts, and presets that lock one page (OSC, Filter, LFO, Matrix, Arpeggiator, FX). Settings outside the sections, such as Transpose and Key Mode on the COMMON page, still come from the new patch, as in the original. Locks are not saved with the project, also like the original. Tested on Linux (REAPER), Windows 11 (VM, Ableton Live 11) and macOS (Ableton Live 12).</p></div>
+      <figure class="shot"><img loading="lazy" src="plugin-section-lock.png" width="907" height="512"
+      alt="The FILTER page with Filter 1 and the Amplifier Envelope locked: red headers with a padlock, an orange mark on the tab and part 1, a padlock next to the ?">
+      <figcaption>Two locked sections on the FILTER page (Linux), drawn from your own Access installer. TI Revive is not affiliated with Access Music or Kemper.</figcaption></figure>
+    </div>
+
+    <div class="feature">
+      <div><h3>Undo, Redo, Compare and Randomize</h3>
+      <p>Our own additions since 0.8.36, in the menu of a right-click where there is no control (next to the editor sizes). Undo and Redo take back your edits in the editor and patch loads into a part; a knob turn is one step, and Ctrl+Z / Ctrl+Shift+Z (Cmd on the Mac) work while the editor has the keyboard. The steps last for the session. Edits of the linked controls (FX switches, link buttons, LFO clock menus) are not in Undo yet. Compare switches the selected part between your edit and the patch as you loaded it, and back; an edit or a load while comparing ends it, and Undo brings your edit back. Randomize changes the selected part's sections by up to 10, 25 or 50 % of each value's range and sends one patch to the Virus; it is one Undo step. Locked sections stay as they are (lock what you want to keep), and so do Transpose, Key Mode, the patch volume, the input and vocoder settings and the arpeggiator. Tested on Linux (REAPER), Windows 11 (VM, Ableton Live 11) and macOS (Ableton Live 12).</p></div>
+      <figure class="shot"><img loading="lazy" src="plugin-edit-menu.png" width="912" height="594"
+      alt="The right-click menu after Randomize Medium: Undo Randomize Medium (Part 1), Compare, the three Randomize amounts, Panic and the editor sizes; the LCD shows 271 parameters, 25 %">
+      <figcaption>The right-click menu after Randomize (Linux), drawn from your own Access installer. TI Revive is not affiliated with Access Music or Kemper.</figcaption></figure>
+    </div>
+
+    <div class="feature">
       <div><h3>Help mode</h3>
-      <p>Click the ? at the bottom right of the editor: every control gets a short note on what it does. Point at a
-      control to read it, click to keep the note on screen; clicks do not change values in this mode, and the page tabs
-      still work. Esc or ? ends it. The notes are written for TI Revive, not taken from the Access manual. A greyed-out
+      <p>Click the ? at the bottom right of the editor and choose Explain the Controls: every control gets a short note
+      on what it does. Point at a control to read it, click to keep its note on screen: it stays while you point at
+      other controls, whose notes show on top (since 0.8.36), and the filter and envelope displays have their own
+      notes. Clicks do not change values in this mode, and the page tabs still work. Esc or ? ends it. The notes are written for TI Revive, not taken from the Access manual. A greyed-out
       control says why, for example &ldquo;Inactive now: Chorus Type is Off.&rdquo; or &ldquo;depends on Input Mode,
       Input Atomizer.&rdquo;</p></div>
       <figure class="shot"><img loading="lazy" src="plugin-help-mode.png" width="1360" height="769"
@@ -618,6 +633,9 @@ def features_section():
       alt="A help note on the greyed-out chorus delay knob: Inactive now, Chorus Type is Off">
       <figcaption>Help note on a greyed-out control, drawn from your own Access installer. TI Revive is not affiliated
       with Access Music or Kemper.</figcaption></figure>
+      <figure class="shot"><img loading="lazy" src="plugin-help-menu.png" width="1149" height="645"
+      alt="The ? menu: Explain the Controls, website, Report a Problem, Save Logs, Detailed Log, Panic">
+      <figcaption>The ? menu (Linux), drawn from your own Access installer. TI Revive is not affiliated with Access Music or Kemper.</figcaption></figure>
     </div>
 
     <div class="feature">
@@ -765,7 +783,8 @@ def page_changelog_landing(releases):
 
 # the README's screenshots that the site shows too (copied at build time)
 SHARED_IMAGES = ["control-center.png", "control-center-nerd-mode.png", "plugin-help-mode.png", "plugin-help-inactive.png",
-                 "plugin-menus.png", "plugin-library-drop.png"]
+                 "plugin-menus.png", "plugin-library-drop.png",
+                 "plugin-section-lock.png", "plugin-edit-menu.png", "plugin-help-menu.png"]
 TESTS = 500 # unit tests in native/tests (vtitests), as of 2026-10-31 (0.8.36 round)
 
 # Important information shown at the top of the page, newest first (empty list = no box). The README starts with the
