@@ -27,6 +27,8 @@ checked. Installed plug-in is still the rc1 CI build (dev builds only in build-n
 tirevive-site-check, a DAW smoke test (REAPER) of the menus, then rc2 / weekly 0.8.36 with the checklist; REMOTE
 templates' open question (does the Virus keep records over a power cycle) needs the user at the Virus.
 
+**Site check 2026-10-31 (tirevive-site-check, scoped to the round; full check was at 0.8.33):** branch pushed (origin/round-0.8.36 = d1ad569, main unchanged). New README/site texts identical; ? menu, Panic (E380 (2)), Undo/Compare/Randomize (kept params checked against editordevice.xml: Transpose/Key Mode in no Locks section), RAM backup (E380 (1); SAVE, drop, swap, rename, sort and browser Undo all go through send_ram_writes/backup_ram), log scrubbing (diag.h) ok. Unit tests 453 -> 500 (stale, fixed in README + build.py; 488 run + 12 skipped without Access files). Coverage 94 % (16 Oct, vticore-only) kept with its date. Open: the Ctrl/Cmd+Z shortcuts are claimed but not confirmed checked (Xvfb run had no keys) - user to confirm in REAPER or soften the sentence. VERSION 0.8.36 ok. Site built locally, not deployed.
+
 **User REAPER test 2026-10-31 (dev build installed in ~/.vst3; rc1 backed up in ~/.vst3-backup/0.8.36-rc1-installed-db7d55ea):**
 ? menu, Panic, Undo/Redo, Compare, Randomize, RAM backup, project recall during Compare: ALL PASS. Help mode: clicked
 note vanished on mouse move -> fixed + user wish (pinned note stays, hover note on top; user: 'works nice'); the filter

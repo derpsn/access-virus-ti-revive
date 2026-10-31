@@ -765,7 +765,7 @@ def page_changelog_landing(releases):
 # the README's screenshots that the site shows too (copied at build time)
 SHARED_IMAGES = ["control-center.png", "control-center-nerd-mode.png", "plugin-help-mode.png", "plugin-help-inactive.png",
                  "plugin-menus.png", "plugin-library-drop.png"]
-TESTS = 453 # unit tests in native/tests (vtitests), as of 2026-10-30 (0.8.36-rc1)
+TESTS = 500 # unit tests in native/tests (vtitests), as of 2026-10-31 (0.8.36 round)
 
 # Important information shown at the top of the page, newest first (empty list = no box). The README starts with the
 # same text ("Important" block), keep both identical. Remove an entry when it no longer matters to users.
