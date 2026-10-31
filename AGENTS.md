@@ -17,11 +17,23 @@ The findings are free to use elsewhere; the maintainers would be happy about a m
    the website 2026-10-16): screenshots of the running plug-in and Control Center for the README (`docs/images/`)
    and the project website (`site/`), always next to the "not affiliated" notice and never as the site's logo or
    branding - never the skin files themselves.
-2. **Do not risk the user's hardware.** Never send untested USB vendor requests or SysEx to a Virus, never trigger
-   firmware/OS updates, never write to the Virus' flash. Keep MIDI rates bounded (a parameter flood can hang the
-   Virus' audio until a power cycle — see evidence on automation limits). Prefer read-only diagnostics.
-   Never send the Multi parameter "Original Patch" (`72 00 03`): issue #7 reports that it sets all 16 edit
-   buffers to Init at the next power-up (2/2 on their TI2, not reproduced by us; TI Revive never sends it, E209).
+2. **Do not risk the user's hardware.** The one thing that can brick a Virus is its firmware, so the line is drawn
+   there (write policy decided by the maintainer, 2026-10-31):
+   - **Never:** trigger firmware/OS updates or anything on that path (bootloader/DFU entry, flash erase/program);
+     send USB vendor requests or SysEx that are not *known*, i.e. seen from the original Access software in a
+     capture or clearly identified as harmless by the firmware analysis - no "let's see what happens" commands;
+     interrupt a store on purpose (power-off or USB pull mid-write).
+   - **Allowed:** known writes - edit-buffer parameters, storing patches to RAM banks, multis, global settings,
+     REMOTE templates. The worst case is lost user data, so a shipped feature that overwrites stored data backs it
+     up first (or asks), and a store is one user action, never a loop (flash wear: no store per knob move or
+     automation step).
+   - **Own Virus first:** writes whose effect survives a power cycle (global settings, MIDI/USB routing) are tried
+     on our own Virus and written up as evidence before a shipped feature sends them: a wrong one can make the
+     Virus look dead over USB until it is fixed on the front panel.
+   Keep MIDI rates bounded (a parameter flood can hang the Virus' audio until a power cycle — see evidence on
+   automation limits). Never send the Multi parameter "Original Patch" (`72 00 03`): issue #7 reports that it
+   sets all 16 edit buffers to Init at the next power-up (2/2 on their TI2, not reproduced by us; TI Revive never
+   sends it, E209).
 3. **Evidence before claims.** Do not invent protocol details. Every claim about the device or the Access software
    needs a source (capture, log, hardware test, static analysis) and goes into `findings/evidence.md` with a
    confidence level. If you are guessing, say so in the PR and mark the entry `open` or `LOW`.

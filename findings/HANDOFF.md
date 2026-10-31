@@ -2,6 +2,13 @@
 
 ## START HERE (2026-10-30): round 0.8.36 started on branch `round-0.8.36` - first task section locking (#21)
 
+**Write policy loosened (user, 2026-10-31).** AGENTS.md rule 2 now has three tiers: NEVER the firmware path
+(update, bootloader/DFU, flash erase/program), unknown vendor requests/SysEx, interrupting a store; ALLOWED known
+writes (edit buffers, RAM patch store, multis, globals, REMOTE templates) with a backup before overwriting stored data
+and no store loops; OWN VIRUS FIRST for writes that survive a power cycle. tirevive-test safety rules follow it
+(stored patches only with a backup). Issues checked 10-31 with the user: no news on #14/#16/#20/#21. NEXT: pick the
+round tasks with the user (rc1 on win11 + Mac, Panic/Help menu, Undo/Redo, RAM backup, REMOTE templates).
+
 **Coverage check 2026-10-30 (/test-coverage).** Scratch coverage build (recipe below in the 0.8.8 notes), 442 tests,
 12 skipped (Access files). Line hits merged over vticore.dir + vtitests.dir (header-only code runs from the tests):
 96.2 % of 5373 lines in native/src, every file >= 90 %. The only file under 80 % was editorrender.h (66.7 %: the
