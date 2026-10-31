@@ -2,11 +2,60 @@
 
 ## START HERE (2026-10-30): round 0.8.36 started on branch `round-0.8.36` - first task section locking (#21)
 
+**Feature work 2026-10-31 (user away: 'Work on all Features and the new possibilities with 15 and 16 ... use the
+ecc cpp reviewer and ecc code coverage skill'; release/testing skipped, the VM sync reports not a priority).**
+Item 16 (REMOTE templates) turned out DONE since 0.8.22 (E196-E201: edit, send, cache, .vrt files, hardware test);
+open there only what the Virus does with the records (power-cycle test with the user). Done so far:
+40aa292 "?" menu (editormenus.h: Explain the Controls, website, Report a Problem, Save Logs, Detailed Log, Panic) +
+Panic (HeldNotes::panic: CC64 0 + CC123 on 16 channels); Xvfb: menu shown, Panic logged. c1fa1b2 RAM backup
+(rambackup.h; store_patch + send_ram_writes back up what they lose into 'RAM Backup <date>' in Personal Libraries,
+128 per file; backup fails -> nothing written). HARDWARE: SAVE into RAM D 127 backed up 'watercop >', drag back
+from the backup library restored it, virussync read RAM D = byte-identical to the pre-test cache (128/128).
+Personal Libraries now holds 'RAM Backup 2026-10-31' (3 test entries; delete it if unwanted). SEEN, NOT CHECKED:
+browser 'Download entire bank' got no answer under nativehost (stopped at the end, 90 s), virussync read fine.
+Tools: scratchpad tools/xshot (root-window grab) + guishot.sh.
+**All features done (2026-10-31):** 1aa049b Undo/Redo (undohistory.h; ui_set/load_dump/load_patch_remembered record,
+NoUndo guard for the Virus' own program changes, ARP actions grouped; right-click menu where there is no control =
+Undo/Redo/Compare/Randomize/Panic/sizes, Ctrl/Cmd+Z), 434660a Compare (comparestate.h), a9dda1b Randomize
+(randomizer.h: unlocked sections, 10/25/50 %, one dump, one undo step; number-text lists are ranges - found on the
+TI2), 9864253 coverage tests, d128c5c cpp-reviewer fixes (H1 Compare edit kept on any load, H2 meta_depth_
+thread_local, M1-M5, LOWs; left as is: Panic/forget race benign, menu part read at click, Save Logs on Linux passes a
+file path like create_library). Coverage: native/src 96.4 % (5442/5647), new headers 98-100 %. 499 tests. Docs:
+README (? menu, Undo/Redo/Compare/Randomize, RAM backup, help mode lead), site build.py same texts (NOT rebuilt),
+build.yml 0.8.36 notes, help text of '?', E380. All Linux only, nativehost under Xvfb, no DAW; keyboard shortcuts not
+checked. Installed plug-in is still the rc1 CI build (dev builds only in build-native). NEXT (with the user):
+tirevive-site-check, a DAW smoke test (REAPER) of the menus, then rc2 / weekly 0.8.36 with the checklist; REMOTE
+templates' open question (does the Virus keep records over a power cycle) needs the user at the Virus.
+
+**Test round 0.8.36 started (user: 'start the 0.8.36 test build and checklist', 2026-10-31 ~11:54).** risk.py --round 0.8.36: class C on all three -> only the automated hil runs from core. CI TEST BUILD run 41194611708 on e69314e (version 0.8.36). CHECKLIST published: https://claude.ai/artifact/9hcVxj2pDe9oXLKEygnnNn (spec scripts/checklists/round-0.8.36.json; db, marks rounds/0.8.36/marks): L1 features on the CI build + L2 Download entire bank in REAPER (E380 (4)); W1 hil-win, W2 section locks, W3 ? menu, W4 Undo/Compare/Randomize/RAM backup; M1 hil-mac, M2 section locks, M3 ? menu/Undo/Compare/Randomize, M4 RAM backup. CI GREEN (all jobs). Artifacts in ~/Downloads/TI-Revive-0.8.36-test2 (the rc1 folder -test kept). LINUX: L1 + L2 PASS (user, ~10:57/10:59 UTC, REAPER) - run on the installed dev build 9a81c223 before the CI build was in; native/ is unchanged 918ebed..e69314e, so they count. L2 = 'Download entire bank' works in REAPER -> E380 (4) was the test host. Then the CI build installed (install.sh; plug-in 8990bb9b = the tarball's; dev build backed up in ~/.vst3-backup/0.8.36-dev-installed-9a81c223), hil.sh ALL PASS (work/hil/20261031-120134; H3 export 1.00x, H6 max 0.42 ms). MISTAKE: scripts/vm.sh defaults to VM=win10 - the build went into win10 first (setup /quiet exit 0, left installed there; win10 shut down, Virus detached). Always VM=win11. WIN11 VM (Windows 11 Pro) = CI build 0.8.36 (setup.exe /quiet exit 0, TI Revive 0.8.36, plug-in 98ec445f = the CI's; C:\tirevive-test\0.8.36, hil kit in ...\hil); Virus attached to win11. W1 hil-win run 1 (results-20261031-121124, pulled to work/hil/win11-0.8.36): H2-1, H2-2, H6 pass; H1 FAIL (first note 16.1 s: Virus ready 3.9 s, sync marker 7.7 s, then the notes at 8/9/10 s 'no onset within 2 s', one blip at 12 s, steady from 16 s; drift -320 ppm over 4 notes - VM, not judged, E334); H3 FAIL (first note 13.1 s: 'Virus ready after 11.5 s (no reply to the probe)'). Both = the Virus not answering / not sounding for seconds after the start; first session after the Virus moved win10 -> win11 without a power cycle. 0.8.35 on win11: first notes 8-9 s. NOT yet known whether VM/Virus state or a regression: rerun hil-win; if it fails again, power-cycle on Linux (detached) and diff the 0.8.36 start path. Run 2 (results-20261031-121943): H2-1, H2-2, H3 (export 1.00x), H6 PASS; H1 FAIL in a different way: first note 8.1 s ok, onsets on the grid to 13.1 s, then 14.002 (~95 ms early), 15 missing, 16-19 ~30 ms early (2nd sync report, safety net moved 1 stamp) -> '5 sounds off the grid', 'last note 13.1 s'. The start path (bank sync paused for notes, RAM A/B fetch, safety net) looks the same in the 0.8.35 win11 logs, which passed. Failing items move between runs (run 1 H1+H3, run 2 H1), like the 0.8.2x VM runs judged as VM USB timing (MED). Judged: VM timing, not a 0.8.36 regression (MEDIUM, not proven on a real PC). USER: W1 counted as PASS (function; Windows timing not judged in the VM). WINDOWS DONE (user, ~11:28 UTC, win11 VM, Live 11): W1-W4 PASS (section locks, ? menu, Undo/Compare/Randomize/RAM backup). Virus detached, win11 off. MAC PUSHED (~12:29): ~/Downloads/TI-Revive-0.8.36-mac (TI Revive.pkg sha256 d938fc0a = the CI zip's, INSTALL-COMMAND.txt, 'Install test build.command', hil/hil-mac.command). MAC DONE (user, ~11:38 UTC, MacBook Air M3, Live 12; pkgutil 0.8.36): M1 hil-mac ALL PASS (results-20261031-123023 on the Mac; export 1.00x, max 0.77 ms), M2-M4 PASS. ROUND 0.8.36 TEST COMPLETE: all 10 items pass (L1 L2 W1-W4 M1-M4). User: 'ready for the release' + asked for website screenshots of the new features. Release prep: README + site tested-on lines updated (section locks, Undo/Compare/Randomize: Linux, Windows 11 VM Live 11, macOS Live 12; RAM backup also on Windows/macOS; drag and drop: + Windows 11 VM from round 0.8.35 W3); section locking was missing on the site (README only) -> added, same wording. SCREENSHOTS (user asked, Virus back on Linux): nativehost under Xvfb with the CI-equivalent dev build, state scratchpad gui/r5.state: docs/images/plugin-section-lock.png (Filter 1 + Amplifier Envelope locked), plugin-help-menu.png (the ? menu), plugin-edit-menu.png (right-click menu after Randomize Medium: 'Undo Randomize Medium (Part 1)', LCD '271 parameters, 25 %'; Randomize = an edit-buffer write, allowed). The test host's --drag on a knob did not register (not checked why). README: image after the ? menu, Undo and Section locking paragraphs; site: Section locking and Undo/Redo/Compare/Randomize moved from list items into feature blocks with the shots, ? menu shot in the Help mode block, SHARED_IMAGES +3. Help mode text (README + site): pinned note stays, hover notes on top, display notes (site still had the old lead). Release notes tested-on lines: Linux REAPER, win11 VM Live 11, macOS Live 12. Site built locally (site2), not deployed. vst3sdk submodule shows a dirty vstgui4 (not touched, not committed). NEXT: merge + tag v0.8.36 (user: 'ready for the release'). E380 (4) updated (download works in REAPER, MEDIUM). NEXT: W1-W4 (user), then detach + Mac push.
+
+**Site check 2026-10-31 (tirevive-site-check, scoped to the round; full check was at 0.8.33):** branch pushed (origin/round-0.8.36 = d1ad569, main unchanged). New README/site texts identical; ? menu, Panic (E380 (2)), Undo/Compare/Randomize (kept params checked against editordevice.xml: Transpose/Key Mode in no Locks section), RAM backup (E380 (1); SAVE, drop, swap, rename, sort and browser Undo all go through send_ram_writes/backup_ram), log scrubbing (diag.h) ok. Unit tests 453 -> 500 (stale, fixed in README + build.py; 488 run + 12 skipped without Access files). Coverage 94 % (16 Oct, vticore-only) kept with its date. Ctrl+Z confirmed by the user in REAPER (Linux, 2026-10-31): claim ok (Cmd on the Mac not tested). VERSION 0.8.36 ok. Site built locally, not deployed.
+
+**User REAPER test 2026-10-31 (dev build installed in ~/.vst3; rc1 backed up in ~/.vst3-backup/0.8.36-rc1-installed-db7d55ea):**
+? menu, Panic, Undo/Redo, Compare, Randomize, RAM backup, project recall during Compare: ALL PASS. Help mode: clicked
+note vanished on mouse move -> fixed + user wish (pinned note stays, hover note on top; user: 'works nice'); the filter
+display inside the cutoff knob was not hoverable -> help_hit_test + own display notes, 918ebed (installed 9a81c223,
+not yet checked by the user).
+
+**Write policy loosened (user, 2026-10-31).** AGENTS.md rule 2 now has three tiers: NEVER the firmware path
+(update, bootloader/DFU, flash erase/program), unknown vendor requests/SysEx, interrupting a store; ALLOWED known
+writes (edit buffers, RAM patch store, multis, globals, REMOTE templates) with a backup before overwriting stored data
+and no store loops; OWN VIRUS FIRST for writes that survive a power cycle. tirevive-test safety rules follow it
+(stored patches only with a backup). Issues checked 10-31 with the user: no news on #14/#16/#20/#21. NEXT: pick the
+round tasks with the user (rc1 on win11 + Mac, Panic/Help menu, Undo/Redo, RAM backup, REMOTE templates).
+
+**Coverage check 2026-10-30 (/test-coverage).** Scratch coverage build (recipe below in the 0.8.8 notes), 442 tests,
+12 skipped (Access files). Line hits merged over vticore.dir + vtitests.dir (header-only code runs from the tests):
+96.2 % of 5373 lines in native/src, every file >= 90 %. The only file under 80 % was editorrender.h (66.7 %: the
+default no-op Canvas::push_clip/pop_clip/label); new test editor_render_bare_canvas (a canvas with only the required
+calls draws the same blits/fills/lines) -> 100 %. Lowest now: outputdelay.h 90 %, accessfiles.cpp 91.2 %. The site's
+COVERAGE (94 %, vticore-only method of 10-16) not changed - that is a different measure; TESTS +1 at the next site check.
+
 **Round 0.8.36 (2026-10-30).** Branch `round-0.8.36` = main 404c101 + the 0.8.35 HANDOFF commits (fast-forward
 of round-0.8.35). Issues read with the user: #21 (new, jwalkermed: section locking of the original missing, M4 Pro,
 TI2) - the user chose to implement it; reply draft shown to the user, NOT posted yet (waits for OK). #20 waits for the
-reporter (version + stage 6 asked 10-28), #16 waits for an FL Studio retest of the AU fix (also: its 'bank preset
-number' display defect from the first post looks unanswered - check with the user), #14 waits for the Snow AU test.
+reporter (version + stage 6 asked 10-28), #16 waits for an FL Studio retest of the AU fix (its 'bank preset
+number' display defect is settled: Alex confirmed it fixed in 0.8.31 on 2026-10-23), #14 waits for the Snow AU test.
 Section locking so far (no code yet): the Addendum describes it (double-click on a blue header = red/locked, per part,
 tab + part indicators, context menu lock all / unlock all / invert / presets on the active part, Easy/Browser/Common
 pages not lockable, locked sections stay on browser AND hardware patch changes). editordevice.xml (user's Access
@@ -41,7 +90,30 @@ no 'all parts locked' when the condition is missing), merge refuses dumps of dif
 left: flags 0x20 also for bank patches (= the original's capture), pre-existing load_dump ordering between UI and
 sender thread, browser menu now always opens (only 'Unlock all parts' on ROM banks). 453 unit tests, ctest 5/5,
 Linux build only. DEV PLUG-IN INSTALLED in ~/.vst3 (37e46e27 = build-native incl. the review fixes); the 0.8.35 install b91e3682 backed up in
-~/.vst3-backup/0.8.35-installed-b91e3682. NOT tested on hardware yet. NEXT: review findings, user smoke test in
+~/.vst3-backup/0.8.35-installed-b91e3682. **User smoke test (REAPER, TI2 Desktop, dev 37e46e27): works** - 66 merge
+lines in diag.log (393/62/37/29 kept), unlocked load without merge; 'sound changes with all locked' = Transpose
+(and Key Mode) are in no section (45 single-dump fields outside all sections; RAM banks: ~half the patches
+transposed) - same definitions as the original. NOT evidenced: a program change on the Virus with a lock (no
+'preset chosen on the Virus' line in the session; asked the user to repeat). RC PREP d6a20dc: VERSION 0.8.36,
+build.yml 'New in 0.8.36' (tested-on: Linux REAPER only), README paragraph + 453 tests, site TESTS 453.
+**MISTAKE 2026-10-30 ~18:50:** `git push -u origin round-0.8.36` with push.default=upstream (upstream origin/main)
+FAST-FORWARDED origin/main 404c101 -> d6a20dc (all round commits; nothing lost, no force). round-0.8.36 now pushed
+explicitly (same d6a20dc, upstream fixed). Site run 41101816792 (push to main) queued; cancel was blocked by auto
+mode - user decides. Options given: leave main + RC soon (recommended) / revert commit on main / force push (rule 6,
+user only). CI test build NOT started yet (waits for the user). Memory feedback-push-new-branch written.
+**User decision (~19:00): leave main as it is; RC yes.** Step 4 done: program changes on the Virus with a lock
+merged (diag.log, RAM A 10..13, 49 kept) = E379 (322b9b5; release notes tested-on updated). CI TEST BUILD run
+41102230393 on 520ddf4 started (jobs queued for runners). #21 reply draft work/issue21-reply2.md (rc1 link, no
+untested claims) waits for the user's OK. NEXT: CI green -> install the Linux CI build, short check -> user OK ->
+annotated tag v0.8.36-rc1 on 322b9b5 (pushed separately) -> release CI -> post the #21 reply.
+**Done ~19:50:** CI test build 41102230393 green; Linux CI build installed (plug-in db7d55ea, broker socket on; the
+0.8.35 install backed up in ~/.vst3-backup/0.8.35-installed-b91e3682); hil.sh ALL PASS (export 1.00x, max 1.16 ms,
+jitter 0.28 ms, drift +3 ppm); user OK ("go"). Tag v0.8.36-rc1 (annotated) on 7092b91 pushed alone, origin/main
+unchanged d6a20dc; release CI run 41118483696 (mac job got no runner, cancelled after 15 min with 0 steps; rerun
+--failed -> all green). Pre-release v0.8.36-rc1 is up (linux tar, mac zip, setup.exe, msi). #21 reply posted
+(issuecomment-6532705380, user OK). NEXT: wait for jwalkermed's macOS test; install rc1 on win11 + Mac push.
+Weekly 0.8.36 later
+with the full checklist and a website screenshot. Earlier NEXT (kept for the record): review findings, user smoke test in
 REAPER (double-click, menus, presets, cutoff kept on a browser load and on a program change on the Virus,
 unlocked = patch value), then evidence/README/site texts.
 

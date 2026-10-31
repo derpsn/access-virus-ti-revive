@@ -61,3 +61,12 @@ TEST(help_depends_reason)
     CHECK(depends_reason({"Vocoder/Mode", "Filter 2/Cutoff Link"}) == "depends on Vocoder Mode, Filter 2 Cutoff Link");
     CHECK(depends_reason({}).empty());
 }
+
+// the filter and envelope displays have their own notes in help mode (they share their parameter with the knob
+// around them, so a parameter's note would only repeat the knob's)
+TEST(helptext_display_notes)
+{
+    HelpText t;
+    CHECK(help_for("VirusControl/Filter Display", t) && t.title == "Filter display" && !t.text.empty());
+    CHECK(help_for("VirusControl/Envelope Display", t) && t.title == "Envelope display" && !t.text.empty());
+}

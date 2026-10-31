@@ -10,8 +10,10 @@ stage as **pass**, **fail** or **not tested**. Never claim something you did not
 
 ## Safety first (tell the user before you start)
 
-- Never update the Virus firmware/OS, never write stored patches or banks, never send SysEx or USB requests that
-  TI Revive itself does not send. No "let's see what happens" commands.
+- Never update the Virus firmware/OS, never send SysEx or USB requests that TI Revive itself does not send. No
+  "let's see what happens" commands (AGENTS.md rule 2).
+- Do not overwrite the user's stored patches or banks as part of a test unless they have a backup first (a bank
+  dump or the Access/TI Revive backup); losing their own sounds is the real risk of a store, not the hardware.
 - Never send the Multi parameter "Original Patch" (`72 00 03`): reported to set all 16 edit buffers to Init at
   the next power-up (issue #7, AGENTS.md rule 2).
 - Use a **disposable DAW project**. Loading the plug-in sends its project state to the Virus' **edit buffers**

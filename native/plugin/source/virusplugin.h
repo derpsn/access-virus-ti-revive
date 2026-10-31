@@ -42,6 +42,10 @@
 #include "model/sysinfo.h"
 #include "model/remotetemplates.h"
 #include "model/sectionlock.h"
+#include "model/rambackup.h"
+#include "model/undohistory.h"
+#include "model/comparestate.h"
+#include "model/randomizer.h"
 #include "pluginterfaces/vst/ivstmidicontrollers.h"
 #include "public.sdk/source/vst/vstsinglecomponenteffect.h"
 #include <array>
@@ -351,6 +355,23 @@ public:
                      ARP_RESET, ARP_FILL_UP, ARP_ACTION_COUNT };
     static const char *arp_action_name(int a);
     bool arp_action(int part, int action);
+    // Panic in the "?" menu (TI Revive's own addition): sustain off + all notes off on all 16 channels (heldnotes.h);
+    // false when the Virus is not connected (nothing sent)
+    bool panic();
+    bool virus_connected() const { return out_ && out_->connected(); }
+    // Undo/Redo of editor edits (undohistory.h, TI Revive's own addition): parameter changes made in the editor and
+    // patch loads into parts, session only; false when there is nothing to take back / do again. UI thread.
+    bool undo_edit() { return apply_undo(false); }
+    bool redo_edit() { return apply_undo(true); }
+    std::string undo_label();
+    std::string redo_label();
+    // Compare (comparestate.h): the part switches between its edited sound and the patch as it was loaded, and back;
+    // false when there is nothing to compare. An edit or a load ends it (the edit stays an undo step). UI thread.
+    bool compare(int part);
+    bool comparing(int part);
+    // Randomize (randomizer.h): the part's unlocked sections by Randomizer::kAmounts[amount], one dump, one undo step
+    bool randomize(int part, int amount);
+    int selected_part() { return ui_value(layout_.frame_parameter, -1); }
     bool has_init_patch() const { return init_single_.size() == 524; } // set once in initialize()
     // the "No Virus TI can be found" page's hint: another Virus driver installed (macOS, E366); set once in initialize()
     const std::vector<std::string> &other_driver_lines() const { return other_driver_lines_; }
@@ -581,7 +602,10 @@ private:
     bool meta_indexed_ = false; // meta_mu_
     std::unordered_map<std::string, std::vector<std::pair<const Parameter *, const MetaClient *>>> meta_sources_;
     std::vector<const Parameter *> meta_retriggers_;
-    int meta_depth_ = 0; // > 0 while the engine sets linked parameters (no LCD update for those)
+    // > 0 while the engine sets linked parameters (no LCD update, no undo step for those). Per thread: the UI
+    // thread (ui_set) and the receiver (reports from the Virus) both run the engine under meta_mu_, and ui_set reads
+    // the depth without it - one nesting is always one thread's call stack
+    static thread_local int meta_depth_;
     void meta_source(const std::string &path, int part, int value, bool full);
     void meta_set(const Parameter &m, int part, int mv, const std::string &except, bool full);
     void meta_retrigger(int part, bool full);
@@ -728,6 +752,15 @@ private:
     HostGestures gestures_;
     std::atomic<int> editors_open_{0};
     bool send_ram_writes(const std::vector<BankDrop::Write> &w); // dumps into RAM slots + cache + cache files
+    // the patches `w` would overwrite into the day's "RAM Backup" library (rambackup.h); false = not backed up, the
+    // caller writes nothing (write policy 2026-10-31)
+    bool backup_ram(const std::vector<BankDrop::Write> &w);
+    std::mutex undo_mu_;
+    UndoHistory undo_; // editor edits (undo_mu_); ui_set and load_dump record, setState clears
+    bool apply_undo(bool redo);
+    std::mutex compare_mu_;
+    CompareState compare_; // compare_mu_; load_dump and setState set the references
+    void end_compare(int part); // an edit or a load while the part compares: the edit becomes an undo step
     // a library operation: `op` makes the library's new patches from the current ones (empty = refused); the old
     // ones are kept for the undo, the file is saved
     bool edit_library(int library, const char *what, const std::function<LibraryEdit::Lib(const LibraryEdit::Lib &)> &op);

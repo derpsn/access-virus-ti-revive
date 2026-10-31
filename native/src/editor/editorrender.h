@@ -144,6 +144,9 @@ public:
     // a filter / envelope display with a handle or segment under the point, even under another control (the filter
     // display lies inside the big cutoff knob); no element if none
     Hit graph_hit_test(int px, int py) const;
+    // help mode: a filter / envelope display anywhere on it before the control around it (the cutoff knob), else
+    // hit_test with disabled controls
+    Hit help_hit_test(int px, int py) const;
     // the value of `param` that puts its handle at (hx, hy) - the inverse of the drawing, clamped to 0..127
     int graph_value(const Element &e, int x, int y, int part, const std::string &param, double hx, double hy) const;
     // the pane of a PatchBrowser's parameter "Browser N/Selected Bank": N (0 upper, 1 lower), 0 for anything else

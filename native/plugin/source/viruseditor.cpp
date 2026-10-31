@@ -25,6 +25,7 @@ extern char **environ;
 #include "access/library.h"
 #include "cc/diag.h"
 #include "editor/helptext.h"
+#include "editor/editormenus.h"
 #include "editor/dragsend.h"
 #include "editor/textfield.h"
 #include "editor/popupmenu.h"
@@ -1212,12 +1213,32 @@ public:
             fprintf(stderr, "help hover %.0f,%.0f\n", p.x, p.y);
         help_hover(p);
     }
-    void onKeyboardEvent(KeyboardEvent &event, CFrame *) override
+    void onKeyboardEvent(KeyboardEvent &event, CFrame *frame) override
     {
         if (help_ && event.type == EventType::KeyDown && event.virt == VirtualKey::Escape) {
             set_help(false);
             event.consumed = true;
+            return;
         }
+        // Ctrl+Z / Ctrl+Shift+Z / Ctrl+Y (Cmd on macOS: VSTGUI's Control) undo and redo editor edits - while the
+        // editor has the keyboard (a host may keep these keys) and no text field is being edited (it has its own)
+        if (event.type != EventType::KeyDown || !event.modifiers.has(ModifierKey::Control) ||
+            event.modifiers.has(ModifierKey::Alt) || (frame && dynamic_cast<CTextEdit *>(frame->getFocusView())))
+            return;
+        if (event.isRepeat) { // a held key: one step per press (a group step can be ~100 parameter messages)
+            event.consumed = true;
+            return;
+        }
+        const char32_t c = event.character;
+        const bool z = c == 'z' || c == 'Z' || c == 0x1A, y = c == 'y' || c == 'Y' || c == 0x19;
+        if (z && !event.modifiers.has(ModifierKey::Shift))
+            plugin_->undo_edit();
+        else if ((z && event.modifiers.has(ModifierKey::Shift)) || y)
+            plugin_->redo_edit();
+        else
+            return;
+        invalid();
+        event.consumed = true;
     }
 
     void drawRect(CDrawContext *ctx, const CRect &update) override
@@ -1399,24 +1420,29 @@ public:
             event.consumed = true;
             return;
         }
-        // right-click where there is no control: the editor's size (the original has no such setting)
+        // right-click where there is no control: Undo/Redo, Panic and the editor's size (the original has no such
+        // menu, editormenus.h)
         if (event.buttonState.isRight() && (!h.element || h.element->get("Parameter").empty())) {
-            size_menu(event.mousePosition);
+            edit_menu(event.mousePosition);
             event.consumed = true;
             return;
         }
-        // "?" (the original's help menu of manuals): our help mode; in help mode a click pins a control's note and
-        // changes nothing - only the page/part/envelope selectors still work, so every page can be read
+        // "?" (the original's help menu of manuals): our "?" menu (editormenus.h), its first entry our help mode; in
+        // help mode a click pins a control's note and changes nothing - only the page/part/envelope selectors still
+        // work, so every page can be read - and "?" ends it
         if (h.element && h.element->get("Parameter") == "VirusControl/Help Menu") {
-            set_help(!help_);
+            if (help_)
+                set_help(false);
+            else
+                help_menu(event.mousePosition);
             event.consumed = true;
             return;
         }
         if (help_ && !(h.element && help_navigates(h.element->get("Parameter")))) {
-            h = renderer_.hit_test((int)event.mousePosition.x, (int)event.mousePosition.y, true); // disabled too
+            h = renderer_.help_hit_test((int)event.mousePosition.x, (int)event.mousePosition.y); // disabled too
             HelpText t;
-            help_pinned_ = h.element && help_for(h.element->get("Parameter"), t);
-            help_hit_ = help_pinned_ ? h : Hit{};
+            help_pin_ = h.element && help_for(help_key(*h.element), t) ? h : Hit{}; // an empty spot: none
+            help_hit_ = help_pin_;
             invalid();
             event.consumed = true;
             return;
@@ -1863,15 +1889,15 @@ private:
         invalid();
         return shown >= 0;
     }
-    // help mode ("?"): frames around the explained controls, a note for the one under the mouse (or clicked)
-    bool help_ = false, help_pinned_ = false;
-    Hit help_hit_;
+    // help mode ("?"): frames around the explained controls, a note for the one under the mouse and one for the
+    // clicked one (kept until the next click; the note under the mouse is drawn over it)
+    bool help_ = false;
+    Hit help_hit_, help_pin_;
     Hit lcd_hit_; // the control lcd_hover last told the plug-in about
     void set_help(bool on)
     {
         help_ = on;
-        help_pinned_ = false;
-        help_hit_ = {};
+        help_hit_ = help_pin_ = {};
         invalid();
     }
     // the note follows the mouse; a pinned (clicked) one stays while the mouse is over no explained control
@@ -1886,16 +1912,24 @@ private:
     }
     void help_hover(const CPoint &p)
     {
-        Hit h = renderer_.hit_test((int)p.x, (int)p.y, true); // disabled controls too (with the reason)
+        Hit h = renderer_.help_hit_test((int)p.x, (int)p.y); // disabled controls too (with the reason)
         HelpText t;
-        if (!(h.element && help_for(h.element->get("Parameter"), t)))
-            h = help_pinned_ ? help_hit_ : Hit{};
-        else
-            help_pinned_ = false;
+        if (!(h.element && help_for(help_key(*h.element), t)))
+            h = Hit{};
         if (h.element != help_hit_.element || h.part != help_hit_.part) {
             help_hit_ = h;
             invalid();
         }
+    }
+    // the note of a control: its parameter's, the filter and envelope displays their own (they share the parameter
+    // with the knob around them)
+    static std::string help_key(const Element &e)
+    {
+        if (e.type.size() == 11 && e.type.compare(3, 8, "Response") == 0)
+            return "VirusControl/Filter Display";
+        if (e.type == "ADSTREnvelope")
+            return "VirusControl/Envelope Display";
+        return e.get("Parameter");
     }
     static bool help_navigates(const std::string &param)
     {
@@ -1936,7 +1970,7 @@ private:
         ctx->setDrawMode(kAntiAliasing);
         HelpText t;
         for (auto &c : renderer_.visible_controls(true))
-            if (help_for(c.element->get("Parameter"), t)) {
+            if (help_for(help_key(*c.element), t)) {
                 ctx->setFrameColor(frame_col);
                 ctx->drawRect(CRect(c.x + 0.5, c.y + 0.5, c.x + c.element->w - 0.5, c.y + c.element->h - 0.5),
                               kDrawStroked);
@@ -1962,20 +1996,30 @@ private:
             ctx->setLineWidth(2);
             ctx->drawRect(CRect(q[0][0], q[0][1], q[0][0] + q[0][2], q[0][1] + q[0][3]), kDrawStroked);
         }
-        if (!help_hit_.element || !help_for(help_hit_.element->get("Parameter"), t))
+        draw_note(ctx, help_pin_, font, bold);
+        if (help_hit_.element != help_pin_.element || help_hit_.part != help_pin_.part)
+            draw_note(ctx, help_hit_, font, bold); // over the clicked one
+    }
+    // one control's frame and note: title + wrapped text, below the control if it fits, else above
+    void draw_note(CDrawContext *ctx, const Hit &n, CFontDesc *font, CFontDesc *bold)
+    {
+        HelpText t;
+        if (!n.element || !help_for(help_key(*n.element), t))
             return;
-        const Element &e = *help_hit_.element;
-        CRect cr(help_hit_.x, help_hit_.y, help_hit_.x + e.w, help_hit_.y + e.h);
+        const CColor hot_col(120, 190, 255, 255);
+        const CRect view(0, 0, getViewSize().getWidth(), getViewSize().getHeight());
+        const Element &e = *n.element;
+        CRect cr(n.x, n.y, n.x + e.w, n.y + e.h);
         ctx->setFrameColor(hot_col);
         ctx->setLineWidth(2);
         ctx->drawRect(cr, kDrawStroked);
-        // the note: title + wrapped text, below the control if it fits, else above; kept inside the editor
+        // kept inside the editor
         const double w = 260, pad = 8, lh = 14;
         ctx->setFont(font);
         auto lines = wrap(ctx, t.text, w - 2 * pad);
-        if (help_hit_.inactive) { // why it is greyed out now: the condition of the page that shows it, or the
-                                  // parameters its own condition tests
-            std::string why = help_hit_.disabled ? inactive_reason(help_hit_.why) : depends_reason(help_hit_.depends);
+        if (n.inactive) { // why it is greyed out now: the condition of the page that shows it, or the parameters
+                          // its own condition tests
+            std::string why = n.disabled ? inactive_reason(n.why) : depends_reason(n.depends);
             for (auto &l : wrap(ctx, why.empty() ? "Inactive with the current settings." : "Inactive now: " + why + ".",
                                 w - 2 * pad))
                 lines.push_back(l);
@@ -2662,24 +2706,114 @@ private:
         });
     }
 
-    void size_menu(const CPoint &where)
+    void help_menu(const CPoint &where)
     {
-        static const double sizes[] = {1.0, 1.25, 1.5, 1.75, 2.0};
-        std::vector<vti::PopupItem> items;
-        int checked = -1;
-        for (double z : sizes) {
-            char t[32];
-            snprintf(t, sizeof t, "Size %d %%", (int)std::lround(z * 100));
-            if (std::fabs(editor_->user_zoom() - z) < 0.01)
-                checked = (int)items.size();
-            items.push_back({t, true});
-        }
-        // the zoom changes the frame: after the menu's session has ended
-        show_list(std::move(items), checked, 0, where, [this](int idx) {
-            if (idx >= 0 && idx < (int)(sizeof sizes / sizeof sizes[0]))
-                if (auto *f = getFrame())
-                    after_event(f, [this, idx]() { editor_->set_user_zoom(sizes[idx]); });
+        vti::HelpMenuState st;
+        st.connected = plugin_->virus_connected();
+        st.diag_log = vti::cc::plugin_log_enabled();
+        vti::BuiltMenu m = vti::help_menu(st);
+        const int checked = m.checked;
+        show_list(std::move(m.items), checked, 0, where, [this, actions = std::move(m.actions)](int i) {
+            menu_action(i >= 0 && i < (int)actions.size() ? actions[(size_t)i] : vti::MenuAction::None, 0);
         });
+    }
+
+    // what a TI Revive menu entry does (editormenus.h); `arg`: the entry's argument (Size: index in kEditorSizes)
+    void menu_action(vti::MenuAction a, int arg)
+    {
+        std::string err;
+        switch (a) {
+        case vti::MenuAction::HelpMode:
+            set_help(true);
+            break;
+        case vti::MenuAction::Website:
+            open_url(vti::website_url());
+            break;
+        case vti::MenuAction::Report:
+            open_url(vti::issues_url());
+            break;
+        case vti::MenuAction::SaveLogs:
+            save_logs_dialog();
+            break;
+        case vti::MenuAction::DiagLog:
+            if (!vti::cc::set_plugin_log(!vti::cc::plugin_log_enabled(), err))
+                plugin_->lcd_message("Detailed log", "not changed: " + err);
+            else
+                plugin_->lcd_message("Detailed log", vti::cc::plugin_log_enabled() ? "on from the next start" : "off");
+            break;
+        case vti::MenuAction::Panic:
+            plugin_->panic();
+            break;
+        case vti::MenuAction::Undo:
+            plugin_->undo_edit();
+            break;
+        case vti::MenuAction::Redo:
+            plugin_->redo_edit();
+            break;
+        case vti::MenuAction::Compare:
+            plugin_->compare(plugin_->selected_part());
+            break;
+        case vti::MenuAction::Randomize:
+            plugin_->randomize(plugin_->selected_part(), arg);
+            break;
+        case vti::MenuAction::Size: // the zoom changes the frame: after the menu's session has ended
+            if (arg >= 0 && arg < (int)(sizeof vti::kEditorSizes / sizeof vti::kEditorSizes[0]))
+                if (auto *f = getFrame())
+                    after_event(f, [this, arg]() { editor_->set_user_zoom(vti::kEditorSizes[arg].zoom); });
+            break;
+        case vti::MenuAction::None:
+            break;
+        }
+        invalid();
+    }
+
+    // "Save Logs for a Bug Report...": the Control Center's collection (diag.h: system, versions, the ends of the
+    // plug-in and broker logs, home folder and user name replaced) into a file the user chooses
+    void save_logs_dialog()
+    {
+        auto *fs = CNewFileSelector::create(getFrame(), CNewFileSelector::kSelectSaveFile);
+        if (!fs)
+            return;
+        char stamp[32];
+        const time_t now = time(nullptr);
+        strftime(stamp, sizeof stamp, "%Y-%m-%d-%H%M", localtime(&now));
+        const std::string name = std::string("TI-Revive-logs-") + stamp + ".txt";
+        fs->setTitle("Save logs for a bug report");
+        fs->setDefaultExtension(CFileExtension("Text", "txt"));
+#if defined(_WIN32) || defined(__APPLE__)
+        fs->setDefaultSaveName(name.c_str());
+#else
+        fs->setInitialDirectory((std::filesystem::path(vti::cc::plugin_dir()).parent_path() / name).string().c_str());
+#endif
+        auto *plugin = plugin_;
+        fs->run([plugin](CNewFileSelector *sel) {
+            if (sel->getNumSelectedFiles() != 1)
+                return;
+            std::string err;
+            if (vti::cc::collect_logs(sel->getSelectedFile(0), VTI_NATIVE_VERSION, err))
+                plugin->lcd_message("Logs saved", "please look through them first");
+            else
+                plugin->lcd_message("Logs not saved", err);
+        });
+        fs->forget();
+    }
+
+    void edit_menu(const CPoint &where)
+    {
+        vti::EditMenuState st;
+        st.undo = plugin_->undo_label();
+        st.redo = plugin_->redo_label();
+        st.connected = plugin_->virus_connected();
+        st.zoom = editor_->user_zoom();
+        st.part = plugin_->selected_part();
+        st.comparing = st.part >= 0 && plugin_->comparing(st.part);
+        vti::BuiltMenu m = vti::edit_menu(st);
+        const int checked = m.checked;
+        show_list(std::move(m.items), checked, 0, where,
+                  [this, actions = std::move(m.actions), args = std::move(m.args)](int i) {
+                      const bool in = i >= 0 && i < (int)actions.size();
+                      menu_action(in ? actions[(size_t)i] : vti::MenuAction::None, in ? args[(size_t)i] : 0);
+                  });
     }
     EditorRenderer renderer_;
     std::map<std::string, SharedPointer<CBitmap>> bitmaps_;

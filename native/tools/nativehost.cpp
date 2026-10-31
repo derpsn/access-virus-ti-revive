@@ -243,7 +243,7 @@ int main(int argc, char **argv)
     struct Action {
         double t;
         char kind; // c = click, d = drag, s = screenshot
-        int x, y, dy;
+        int x, y, dy, dx; // dx: --drag's optional sideways part (browser pane to pane)
         std::string file;
         bool done = false;
     };
@@ -326,7 +326,7 @@ int main(int argc, char **argv)
                   !strcmp(argv[i], "--twice") || !strcmp(argv[i], "--type") || !strcmp(argv[i], "--move") ||
                   !strcmp(argv[i], "--rclick")) &&
                  i + 1 < argc) {
-            // --click x,y@t  --rclick x,y@t (right button)  --drag x,y,dy@t  --shot file.ppm@t
+            // --click x,y@t  --rclick x,y@t (right button)  --drag x,y,dy[,dx]@t  --shot file.ppm@t
             Action a{};
             a.kind = !strcmp(argv[i], "--type") ? 'y' : !strcmp(argv[i], "--move") ? 'm' : argv[i][2];
             std::string v = argv[++i];
@@ -336,7 +336,7 @@ int main(int argc, char **argv)
             if (a.kind == 's' || a.kind == 'y') // --shot file, --type text
                 a.file = v;
             else
-                sscanf(v.c_str(), "%d,%d,%d", &a.x, &a.y, &a.dy);
+                sscanf(v.c_str(), "%d,%d,%d,%d", &a.x, &a.y, &a.dy, &a.dx);
             actions.push_back(a);
         }
         else if (!strcmp(argv[i], "--reopen") && i + 1 < argc) { // --reopen T: close the editor at T s, open a new
@@ -809,7 +809,7 @@ int main(int argc, char **argv)
                     for (int k = 1; a.kind == 'd' && k <= 10; k++) { // drag in 10 steps
                         runloop.pump();
                         std::this_thread::sleep_for(std::chrono::milliseconds(15));
-                        XTestFakeMotionEvent(dpy, -1, wx, wy - a.dy * k / 10, 0);
+                        XTestFakeMotionEvent(dpy, -1, wx + a.dx * k / 10, wy - a.dy * k / 10, 0);
                         XFlush(dpy);
                     }
                     runloop.pump();

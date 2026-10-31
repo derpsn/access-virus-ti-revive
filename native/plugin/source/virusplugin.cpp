@@ -707,11 +707,11 @@ void DeviceOut::run()
                 BlockEvents::MAX);
             ev_lost_logged_ = lost;
         }
-        if (rt_lost_off_.exchange(false, std::memory_order_relaxed))
-            for (uint8_t ch = 0; ch < 16; ch++) { // a note-off was among them: nothing may keep sounding
-                send({(uint8_t)(0xB0 | ch), 64, 0});
-                send({(uint8_t)(0xB0 | ch), 123, 0});
-            }
+        if (rt_lost_off_.exchange(false, std::memory_order_relaxed)) { // a note-off was among them: nothing may keep sounding
+            uint8_t m[32][3];
+            for (int i = 0, n = HeldNotes::panic(m); i < n; i++)
+                send({m[i][0], m[i][1], m[i][2]});
+        }
         if (!piece.empty()) { // a piece of a dump (dumppacer.h)
             bool wok = broker_.write(EP_PLUGIN_OUT, piece.data(), piece.size());
             if (piece_last && dump_pending_) {
@@ -1080,6 +1080,19 @@ tresult PLUGIN_API VirusPlugin::terminate()
     }
     out_.reset();
     return SingleComponentEffect::terminate();
+}
+
+bool VirusPlugin::panic()
+{
+    if (!out_ || !out_->connected())
+        return false;
+    uint8_t m[32][3];
+    const int n = HeldNotes::panic(m);
+    held_notes_.forget();
+    for (int i = 0; i < n; i++)
+        out_->send({m[i][0], m[i][1], m[i][2]});
+    out_->log("Virus TI native: panic, sustain off + all notes off on 16 channels\n");
+    return true;
 }
 
 tresult PLUGIN_API VirusPlugin::setActive(TBool state)
@@ -1991,6 +2004,170 @@ const char *VirusPlugin::arp_action_name(int a)
     return a >= 0 && a < ARP_ACTION_COUNT ? n[a] : "";
 }
 
+// no undo step for what this thread sets meanwhile: an undo/redo itself, a preset chosen on the Virus (the Virus'
+// own change, not an edit in the editor)
+static thread_local int t_no_undo = 0;
+struct NoUndo {
+    NoUndo() { t_no_undo++; }
+    ~NoUndo() { t_no_undo--; }
+    NoUndo(const NoUndo &) = delete;
+    NoUndo &operator=(const NoUndo &) = delete;
+};
+
+static std::string part_suffix(int part) { return part < 0 ? std::string() : " (Part " + std::to_string(part + 1) + ")"; }
+
+// "Load <patch name> (Part n)": the undo step of a patch load
+static std::string load_label(const std::vector<uint8_t> &d, int part)
+{
+    std::string name(d.begin() + 249, d.begin() + 259);
+    name.erase(name.find_last_not_of(' ') + 1);
+    return "Load " + name + part_suffix(part);
+}
+
+std::string VirusPlugin::undo_label()
+{
+    std::lock_guard<std::mutex> lk(undo_mu_);
+    return undo_.undo_label();
+}
+
+std::string VirusPlugin::redo_label()
+{
+    std::lock_guard<std::mutex> lk(undo_mu_);
+    return undo_.redo_label();
+}
+
+bool VirusPlugin::apply_undo(bool redo)
+{
+    for (int p = 0; p < 16; p++) // while a part compares, Undo / Redo first bring its edit back
+        if (comparing(p))
+            return compare(p);
+    UndoStep s;
+    {
+        std::lock_guard<std::mutex> lk(undo_mu_);
+        if (!(redo ? undo_.redo(s) : undo_.undo(s)))
+            return false;
+    }
+    NoUndo g;
+    if (s.kind == UndoStep::Patch)
+        load_dump(redo ? s.dump_after : s.dump_before, s.part);
+    else if (redo)
+        for (const auto &c : s.changes)
+            ui_set(c.path, c.part, c.after);
+    else
+        for (auto c = s.changes.rbegin(); c != s.changes.rend(); ++c)
+            ui_set(c->path, c->part, c->before);
+    if (s.kind == UndoStep::Patch || s.changes.size() > 1) // a single parameter shows itself on the LCD (ui_set)
+        lcd_message(redo ? "Redo" : "Undo", s.label);
+    if (out_)
+        out_->log("Virus TI native: %s %s\n", redo ? "redo" : "undo", s.label.c_str());
+    ui_dirty_ = true;
+    return true;
+}
+
+thread_local int VirusPlugin::meta_depth_ = 0;
+
+// a load that is no new patch for the part (Compare's own, the randomizer's): its reference for Compare stays
+static thread_local int t_keep_reference = 0;
+
+bool VirusPlugin::comparing(int part)
+{
+    std::lock_guard<std::mutex> lk(compare_mu_);
+    return compare_.active(part);
+}
+
+bool VirusPlugin::compare(int part)
+{
+    if (part < 0 || part > 15)
+        return false;
+    std::vector<uint8_t> load;
+    const std::vector<uint8_t> now = part_dump(part); // (state_mu_ before compare_mu_, never inside it)
+    if (now.size() != 524)
+        return false;
+    bool on = false;
+    {
+        std::lock_guard<std::mutex> lk(compare_mu_);
+        if (compare_.active(part))
+            compare_.stop(part, load);
+        else if (compare_.start(part, now, load))
+            on = true;
+    }
+    if (load.empty()) {
+        lcd_message("Compare" + part_suffix(part), "nothing edited since the load");
+        return false;
+    }
+    {
+        NoUndo g;
+        t_keep_reference++;
+        load_dump(load, part);
+        t_keep_reference--;
+    }
+    lcd_message("Compare" + part_suffix(part), on ? "the loaded patch" : "back to your edit");
+    if (out_)
+        out_->log("Virus TI native: compare %s on part %d\n", on ? "on" : "off", part + 1);
+    ui_dirty_ = true;
+    return true;
+}
+
+bool VirusPlugin::randomize(int part, int amount)
+{
+    if (part < 0 || part > 15 || amount < 0 || amount >= (int)(sizeof Randomizer::kAmounts / sizeof Randomizer::kAmounts[0]) ||
+        !single_template_)
+        return false;
+    std::vector<uint8_t> d = part_dump(part);
+    std::map<std::string, int> current;
+    std::string err;
+    if (d.size() != 524 || !dev_.decode_dump(*single_template_, d, current, err))
+        return false;
+    const auto targets = Randomizer::targets(
+        ed_, dev_, [this, part](const std::string &s) { return ui_value(s, part) == 1; },
+        [this](const std::string &p) { return dump_paths_.count(p) != 0; });
+    static std::mt19937 rng{std::random_device{}()};
+    std::uniform_real_distribution<double> uni(0.0, 1.0);
+    const Randomizer::Amount a = Randomizer::kAmounts[amount];
+    const auto values = Randomizer::values(targets, current, a.percent / 100.0, [&] { return uni(rng); });
+    if (values.empty()) {
+        lcd_message("Randomize" + part_suffix(part), "every section is locked");
+        return false;
+    }
+    // while the part compares, what plays (the loaded patch) is randomized; the edit stays an undo step
+    end_compare(part);
+    const std::vector<uint8_t> before = d;
+    dev_.update_dump(*single_template_, d, values);
+    {
+        NoUndo g; // recorded below as one step with its own name
+        t_keep_reference++;
+        load_dump(d, part); // one single dump to the Virus, like a patch load (locked sections are merged there too)
+        t_keep_reference--;
+    }
+    const std::string label = std::string("Randomize ") + a.name + part_suffix(part);
+    {
+        std::lock_guard<std::mutex> lk(undo_mu_);
+        undo_.patch(part, before, part_dump(part), label, now_ms());
+    }
+    lcd_message(label, std::to_string(values.size()) + " parameters, " + std::to_string(a.percent) + " %");
+    if (out_)
+        out_->log("Virus TI native: randomize part %d, %zu parameters by up to %d %%\n", part + 1, values.size(), a.percent);
+    ui_dirty_ = true;
+    return true;
+}
+
+void VirusPlugin::end_compare(int part)
+{
+    std::vector<uint8_t> edited;
+    {
+        std::lock_guard<std::mutex> lk(compare_mu_);
+        if (!compare_.interrupted(part, edited))
+            return;
+    }
+    // Undo brings the edit back - also after the Virus' own program change (no undo step for the change itself);
+    // an undo/redo never gets here while a part compares (apply_undo ends the compare first)
+    {
+        std::lock_guard<std::mutex> lk(undo_mu_);
+        undo_.patch(part, std::move(edited), part_dump(part), "Compare" + part_suffix(part), now_ms());
+    }
+    ui_dirty_ = true;
+}
+
 bool VirusPlugin::arp_action(int part, int action)
 {
     if (action < 0 || action >= ARP_ACTION_COUNT || part < 0 || part > 15)
@@ -2022,7 +2199,11 @@ bool VirusPlugin::arp_action(int part, int action)
     }
     case ARP_FILL_UP: new_len = arp_fill_up(s, len); break;
     }
-    // only what changed goes to the Virus (at most 96 parameters + the length)
+    // only what changed goes to the Virus (at most 96 parameters + the length); one undo step
+    if (t_no_undo == 0) {
+        std::lock_guard<std::mutex> lk(undo_mu_);
+        undo_.group_begin(std::string(arp_action_name(action)) + part_suffix(part));
+    }
     for (int i = 0; i < 32; i++) {
         if (s[(size_t)i].on != before[(size_t)i].on)
             ui_set(field(i, "Bitfield"), part, s[(size_t)i].on);
@@ -2033,6 +2214,10 @@ bool VirusPlugin::arp_action(int part, int action)
     }
     if (new_len != len)
         ui_set("Arpeggiator/UserPatternLength", part, new_len - 1);
+    if (t_no_undo == 0) {
+        std::lock_guard<std::mutex> lk(undo_mu_);
+        undo_.group_end(now_ms());
+    }
     if (out_)
         out_->log("Virus TI native: ARP %s on part %d (pattern length %d)\n", arp_action_name(action), part + 1, len);
     return true;
@@ -2098,6 +2283,8 @@ void VirusPlugin::ui_set(const std::string &path, int part, int value)
         if (p->part == "none")
             part = -1;
     if (const Parameter *ep = ed_.find(path); ep && !dev_.find(path)) {
+        if (meta_depth_ == 0 && ep->part == "all" && part >= 0)
+            end_compare(part); // a linked control (FX switch, link button, LFO clock) changes the part: an edit
         if (ep->meta) { // e.g. the LFO clock menus: set the meta value and pass it to its clients
             std::lock_guard<std::recursive_mutex> mk(meta_mu_);
             meta_set(*ep, part < 0 ? 0 : part, std::max(ep->min, std::min(ep->max, value)), std::string(), true);
@@ -2111,6 +2298,15 @@ void VirusPlugin::ui_set(const std::string &path, int part, int value)
         ui_dirty_ = true;
         return;
     }
+    if (meta_depth_ == 0 && part >= 0 && dev_.find(path))
+        end_compare(part); // an edit while comparing goes on from the loaded patch
+    if (meta_depth_ == 0 && t_no_undo == 0) // an edit in the editor (linked parameters follow their source)
+        if (const Parameter *p = dev_.find(path)) {
+            const int before = ui_value(path, part);
+            std::lock_guard<std::mutex> lk(undo_mu_);
+            undo_.param(path, part, before, value, (p->displayname.empty() ? path : p->displayname) + part_suffix(part),
+                        now_ms());
+        }
     auto id = ids_.find({path, part});
     if (id != ids_.end()) { // automatable: through the host, which hands it to process()
         ParamValue n = value / 127.0;
@@ -2846,6 +3042,7 @@ std::vector<uint8_t> VirusPlugin::part_dump(int part)
 
 bool VirusPlugin::load_patch_remembered(int bank, int program, int part)
 {
+    end_compare(part); // here, not when the patch arrives: then "before" below is the edit, not the compared patch
     std::vector<uint8_t> before = part_dump(part), d;
     {
         std::lock_guard<std::mutex> lk(banks_mu_);
@@ -2864,6 +3061,10 @@ bool VirusPlugin::load_patch_remembered(int bank, int program, int part)
         for (auto &m : select)
             out_->send(m);
         follow_.preset_chosen(part, bank, program, PanelFollow::Clock::now());
+        // the patch arrives on the sender thread like the Virus' own program changes (no undo step there): the
+        // step is this choice in the editor
+        std::lock_guard<std::mutex> lk(undo_mu_);
+        undo_.patch(part, before, d, load_label(d, part), now_ms());
     } else if (!load_patch(bank, program, part))
         return false;
     std::lock_guard<std::mutex> lk(history_mu_);
@@ -2986,8 +3187,11 @@ bool VirusPlugin::load_dump(std::vector<uint8_t> d, int part)
         a += d[i];
     d[522] = a & 0x7F;
     // locked sections keep the part's current values, like the original (E378): merged into this one dump
+    if (t_keep_reference == 0)
+        end_compare(part); // a load while comparing: the edit stays an undo step
     const auto keep = locked_children(part);
     bool merged = false;
+    std::vector<uint8_t> was; // the part's patch before: an undo step (not for the Virus' own program changes)
     {
         std::lock_guard<std::mutex> lk(state_mu_);
         if (state_.empty())
@@ -2996,8 +3200,17 @@ bool VirusPlugin::load_dump(std::vector<uint8_t> d, int part)
             if (is_part_dump(r, part)) {
                 if (!keep.empty() && single_template_)
                     merged = SectionLock::merge(dev_, *single_template_, r, d, keep);
+                was = r;
                 r = d;
             }
+    }
+    if (t_no_undo == 0 && was.size() == 524) {
+        std::lock_guard<std::mutex> lk(undo_mu_);
+        undo_.patch(part, std::move(was), d, load_label(d, part), now_ms());
+    }
+    if (t_keep_reference == 0) { // the patch Compare goes back to (an undo/redo load too: it is the part's patch now)
+        std::lock_guard<std::mutex> lk(compare_mu_);
+        compare_.set_reference(part, d);
     }
     if (out_)
         out_->send(d);
@@ -3062,6 +3275,8 @@ bool VirusPlugin::store_patch(int part, int bank, int program)
     for (int i = 265; i < 522; i++)
         a += d[i];
     d[522] = a & 0x7F;
+    if (!backup_ram({{bank, program, d}}))
+        return false;
     if (out_)
         out_->send(d);
     Bank cache;
@@ -3378,13 +3593,101 @@ bool VirusPlugin::undo_drop()
         return false;
     if (out_)
         out_->log("Virus TI native: undo of the last operation, %d slot(s) of RAM %c\n", (int)w.size(), 'A' + w[0].bank);
-    return send_ram_writes(w);
+    if (send_ram_writes(w))
+        return true;
+    std::lock_guard<std::mutex> lk(banks_mu_); // nothing written (the backup failed): the undo stays possible
+    drop_.take_undo();                         // (take_undo toggles: a second call puts the state back)
+    return false;
+}
+
+bool VirusPlugin::backup_ram(const std::vector<BankDrop::Write> &w)
+{
+    std::vector<RamBackup::Patch> lost;
+    {
+        std::lock_guard<std::mutex> lk(banks_mu_);
+        std::map<int, std::vector<RamBackup::Patch>> before;
+        for (auto &x : w)
+            if (auto it = banks_.find(x.bank); it != banks_.end() && !before.count(x.bank))
+                before.emplace(x.bank, it->second);
+        lost = RamBackup::lost(w, before);
+    }
+    if (lost.empty())
+        return true;
+    char date[16] = "undated";
+    const time_t now = time(nullptr);
+    if (const struct tm *lt = localtime(&now))
+        strftime(date, sizeof date, "%Y-%m-%d", lt);
+    const std::string dir = library_dir();
+    std::error_code ec;
+    std::filesystem::create_directories(dir, ec);
+    // a backup library is found by its file in the Personal Libraries folder, listed or not
+    auto path_of = [&dir](const std::string &name) { return (std::filesystem::path(dir) / (name + ".mid")).string(); };
+    auto listed = [this](const std::string &path) { // index in lib_paths_ or -1 (banks_mu_ held)
+        auto it = std::find(lib_paths_.begin(), lib_paths_.end(), path);
+        return it == lib_paths_.end() ? -1 : (int)(it - lib_paths_.begin());
+    };
+    const std::vector<uint8_t> page_b = files_ ? files_->default_page_b() : std::vector<uint8_t>();
+    // false: a file of that name exists but cannot be read - never written over (it holds earlier backups)
+    auto read = [&](const std::string &name, std::vector<RamBackup::Patch> &dumps) {
+        const std::string path = path_of(name);
+        {
+            std::lock_guard<std::mutex> lk(banks_mu_);
+            if (int i = listed(path); i >= 0) {
+                dumps = banks_[LIB_BASE + i];
+                return true;
+            }
+        }
+        PatchLibrary lib;
+        dumps.clear();
+        std::error_code fe;
+        if (!std::filesystem::exists(path, fe))
+            return true;
+        if (!load_library_file(path, lib, page_b))
+            return false;
+        dumps = lib.dumps;
+        return true;
+    };
+    auto count_of = [&](const std::string &name) { // an unreadable file counts as full: the next name is used
+        std::vector<RamBackup::Patch> d;
+        return read(name, d) ? (int)d.size() : RamBackup::kPerLibrary;
+    };
+    size_t next = 0;
+    for (const auto &t : RamBackup::plan(date, count_of, (int)lost.size())) {
+        PatchLibrary lib;
+        lib.name = t.name, lib.path = path_of(t.name);
+        if (!read(t.name, lib.dumps))
+            lib.dumps.clear(); // not reached: plan() skipped it (counted as full)
+        for (int k = 0; k < t.count; k++)
+            lib.dumps.push_back(lost[next++]);
+        std::string err;
+        if (!save_library(lib, err)) {
+            if (out_)
+                out_->log("Virus TI native: RAM backup failed (%s), nothing written to RAM\n", err.c_str());
+            lcd_message("RAM not written:", "backup failed");
+            return false;
+        }
+        std::lock_guard<std::mutex> lk(banks_mu_);
+        int i = listed(lib.path);
+        if (i < 0) { // listed like a new library (create_library)
+            i = (int)lib_names_.size();
+            lib_names_.push_back(lib.name);
+            lib_paths_.push_back(lib.path);
+            lib_roots_.push_back("Personal Libraries");
+        }
+        banks_[LIB_BASE + i] = lib.dumps;
+        if (out_)
+            out_->log("Virus TI native: RAM backup, %d patch(es) into \"%s\"\n", t.count, lib.name.c_str());
+    }
+    ui_dirty_ = true;
+    return true;
 }
 
 // one single dump per slot, in order (the original: one after the other, no reply, E294); the dump pacer spaces
 // them on cable 3 like any dump. Then the cache and its file, like a SAVE.
 bool VirusPlugin::send_ram_writes(const std::vector<BankDrop::Write> &w)
 {
+    if (!backup_ram(w))
+        return false;
     if (out_)
         for (auto &x : w)
             out_->send(x.dump);
@@ -3964,6 +4267,7 @@ void VirusPlugin::load_reported_presets()
                         if (auto v = pv->second.find(p); v != pv->second.end())
                             ctl.push_back({p, v->second});
             }
+            NoUndo g; // the Virus' own program change, not an edit
             const bool ok = load_patch(bank, patch, part);
             if (ok && out_)
                 for (auto &c : ctl)
@@ -4081,6 +4385,18 @@ tresult PLUGIN_API VirusPlugin::setState(IBStream *state)
                   part1_name(recs).c_str());
     if (recs.empty())
         return kResultFalse;
+    {
+        std::lock_guard<std::mutex> lk(undo_mu_);
+        undo_.clear(); // another project: the steps belong to the one before
+    }
+    {
+        std::lock_guard<std::mutex> lk(compare_mu_);
+        compare_.clear(); // the project's patches are the parts' references
+        for (int p = 0; p < 16; p++)
+            for (auto &r : recs)
+                if (is_part_dump(r, p))
+                    compare_.set_reference(p, r);
+    }
     // part dumps of an older format: upgraded as the Virus does on receipt, so the editor shows what it plays and
     // later edits of the newer fields (Input Mode, unison, envelopes 3/4 ...) reach it (E174)
     if (int up = upgrade_state_dumps(recs); up && out_)
@@ -4099,9 +4415,21 @@ tresult PLUGIN_API VirusPlugin::setState(IBStream *state)
 tresult PLUGIN_API VirusPlugin::getState(IBStream *state)
 {
     std::vector<uint8_t> d;
+    std::map<int, std::vector<uint8_t>> edited; // parts that compare: the project keeps their edit
+    {
+        std::lock_guard<std::mutex> lk(compare_mu_);
+        for (int p = 0; p < 16; p++)
+            if (std::vector<uint8_t> e; compare_.edited(p, e))
+                edited[p] = std::move(e);
+    }
     {
         std::lock_guard<std::mutex> lk(state_mu_);
-        d = build_container(state_.empty() ? default_ : state_);
+        auto recs = state_.empty() ? default_ : state_;
+        for (auto &r : recs)
+            for (auto &e : edited)
+                if (is_part_dump(r, e.first))
+                    r = e.second;
+        d = build_container(recs);
     }
     int32 done = 0;
     return state->write(d.data(), (int32)d.size(), &done);

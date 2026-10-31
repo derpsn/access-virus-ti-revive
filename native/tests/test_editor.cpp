@@ -842,6 +842,57 @@ TEST(editor_system_font_text)
     CHECK(l.c.r == 245 && l.c.g == 245 && l.c.a == 255);
 }
 
+// a canvas with only the required calls (a new port's first canvas): clipping and system-font labels are optional,
+// and leaving them out changes nothing else that is drawn
+TEST(editor_render_bare_canvas)
+{
+    struct Bare : Canvas {
+        RecCanvas &rec;
+        explicit Bare(RecCanvas &r) : rec(r) {}
+        void *image(const std::string &name) override { return rec.image(name); }
+        int image_width(void *i) override { return rec.image_width(i); }
+        int image_height(void *i) override { return rec.image_height(i); }
+        void blit(void *i, int sx, int sy, int dx, int dy, int w, int h, double a) override
+        {
+            rec.blit(i, sx, sy, dx, dy, w, h, a);
+        }
+        void fill(int x, int y, int w, int h, Rgba c) override { rec.fill(x, y, w, h, c); }
+        void line(double x0, double y0, double x1, double y1, Rgba c) override { rec.line(x0, y0, x1, y1, c); }
+    };
+    static const char *L = R"(<?xml version="1.0"?>
+<Editor><Frame width="100" height="20"><Container><Size left="0" top="0" width="100" height="20"/>
+ <SearchEdit Parameter="Osc/Shape" FontSize="8" Align="Middle Left"><Size left="4" top="3" width="80" height="12"/></SearchEdit>
+</Container></Frame></Editor>)";
+    Rig g;
+    EditorLayout lay;
+    std::string err;
+    CHECK(lay.load(Bytes(L, L + strlen(L)), err));
+    EditorRenderer sys(lay, *g.cond, g.dev, g.ed);
+    sys.values = g.r->values;
+    sys.live_text = [](const std::string &) { return std::string("LIVE"); };
+    g.r->live_text = sys.live_text;
+    g.vals[{"Osc/Mode", 0}] = 2;
+
+    g.r->render(g.canvas);
+    sys.render(g.canvas);
+    RecCanvas rec;
+    rec.imgs = g.canvas.imgs;
+    Bare bare(rec);
+    g.r->render(bare);
+    sys.render(bare);
+
+    CHECK(g.canvas.clips > 0 && !g.canvas.labels.empty()); // the full canvas got the optional calls
+    CHECK(rec.clips == 0 && rec.labels.empty());            // the bare one did not, and did not need them
+    CHECK_EQ(rec.blits.size(), g.canvas.blits.size());
+    CHECK_EQ(rec.fills.size(), g.canvas.fills.size());
+    CHECK_EQ(rec.lines, g.canvas.lines);
+    for (size_t i = 0; i < std::min(rec.blits.size(), g.canvas.blits.size()); i++) {
+        auto &a = rec.blits[i], &b = g.canvas.blits[i];
+        CHECK(a.img == b.img && a.sx == b.sx && a.sy == b.sy && a.dx == b.dx && a.dy == b.dy && a.w == b.w &&
+              a.h == b.h && a.alpha == b.alpha);
+    }
+}
+
 // while dragging, the source entries and the slot under the cursor are drawn like the original's (E298 (L7)): filled
 // 66,111,204 with the browser's SelectedFont (white); the others in ControlFont
 TEST(editor_render_browser_drag_highlight)
@@ -1031,6 +1082,13 @@ TEST(editor_graph_hit_under_a_knob)
     CHECK(ss.size() == 3 && ss[2].grab.xparam.empty() && ss[2].grab.yparam.empty());
     const double fx = ss[2].x0 + 0.8 * (ss[2].x1 - ss[2].x0), fy = ss[2].y0 + 0.8 * (ss[2].y1 - ss[2].y0);
     CHECK(!r.graph_hit_test((int)std::lround(fx), (int)std::lround(fy)).element);
+    // help mode: anywhere on the display its own note, not the knob's (user, 2026-10-31: the inner frame could not
+    // be hovered); outside the display the knob
+    Hit hd = r.help_hit_test(45, 45);
+    CHECK(hd.element && hd.element->type == "LP4Response" && hd.x == 40 && hd.y == 40);
+    Hit hk = r.help_hit_test(20, 20);
+    CHECK(hk.element && hk.element->type == "MaskedKnob");
+    CHECK(!r.help_hit_test(190, 190).element);
     (void)d;
 }
 
