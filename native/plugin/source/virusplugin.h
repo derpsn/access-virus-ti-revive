@@ -351,6 +351,10 @@ public:
                      ARP_RESET, ARP_FILL_UP, ARP_ACTION_COUNT };
     static const char *arp_action_name(int a);
     bool arp_action(int part, int action);
+    // Panic in the "?" menu (TI Revive's own addition): sustain off + all notes off on all 16 channels (heldnotes.h);
+    // false when the Virus is not connected (nothing sent)
+    bool panic();
+    bool virus_connected() const { return out_ && out_->connected(); }
     bool has_init_patch() const { return init_single_.size() == 524; } // set once in initialize()
     // the "No Virus TI can be found" page's hint: another Virus driver installed (macOS, E366); set once in initialize()
     const std::vector<std::string> &other_driver_lines() const { return other_driver_lines_; }

@@ -25,6 +25,7 @@ extern char **environ;
 #include "access/library.h"
 #include "cc/diag.h"
 #include "editor/helptext.h"
+#include "editor/editormenus.h"
 #include "editor/dragsend.h"
 #include "editor/textfield.h"
 #include "editor/popupmenu.h"
@@ -1405,10 +1406,14 @@ public:
             event.consumed = true;
             return;
         }
-        // "?" (the original's help menu of manuals): our help mode; in help mode a click pins a control's note and
-        // changes nothing - only the page/part/envelope selectors still work, so every page can be read
+        // "?" (the original's help menu of manuals): our "?" menu (editormenus.h), its first entry our help mode; in
+        // help mode a click pins a control's note and changes nothing - only the page/part/envelope selectors still
+        // work, so every page can be read - and "?" ends it
         if (h.element && h.element->get("Parameter") == "VirusControl/Help Menu") {
-            set_help(!help_);
+            if (help_)
+                set_help(false);
+            else
+                help_menu(event.mousePosition);
             event.consumed = true;
             return;
         }
@@ -2660,6 +2665,81 @@ private:
                 }
             invalid();
         });
+    }
+
+    void help_menu(const CPoint &where)
+    {
+        vti::HelpMenuState st;
+        st.connected = plugin_->virus_connected();
+        st.diag_log = vti::cc::plugin_log_enabled();
+        vti::BuiltMenu m = vti::help_menu(st);
+        const int checked = m.checked;
+        show_list(std::move(m.items), checked, 0, where, [this, actions = std::move(m.actions)](int i) {
+            menu_action(i >= 0 && i < (int)actions.size() ? actions[i] : vti::MenuAction::None);
+        });
+    }
+
+    // what a TI Revive menu entry does (editormenus.h)
+    void menu_action(vti::MenuAction a)
+    {
+        std::string err;
+        switch (a) {
+        case vti::MenuAction::HelpMode:
+            set_help(true);
+            break;
+        case vti::MenuAction::Website:
+            open_url(vti::website_url());
+            break;
+        case vti::MenuAction::Report:
+            open_url(vti::issues_url());
+            break;
+        case vti::MenuAction::SaveLogs:
+            save_logs_dialog();
+            break;
+        case vti::MenuAction::DiagLog:
+            if (!vti::cc::set_plugin_log(!vti::cc::plugin_log_enabled(), err))
+                plugin_->lcd_message("Detailed log", "not changed: " + err);
+            else
+                plugin_->lcd_message("Detailed log", vti::cc::plugin_log_enabled() ? "on from the next start" : "off");
+            break;
+        case vti::MenuAction::Panic:
+            plugin_->panic();
+            break;
+        case vti::MenuAction::None:
+            break;
+        }
+        invalid();
+    }
+
+    // "Save Logs for a Bug Report...": the Control Center's collection (diag.h: system, versions, the ends of the
+    // plug-in and broker logs, home folder and user name replaced) into a file the user chooses
+    void save_logs_dialog()
+    {
+        auto *fs = CNewFileSelector::create(getFrame(), CNewFileSelector::kSelectSaveFile);
+        if (!fs)
+            return;
+        char stamp[32];
+        const time_t now = time(nullptr);
+        strftime(stamp, sizeof stamp, "%Y-%m-%d-%H%M", localtime(&now));
+        const std::string name = std::string("TI-Revive-logs-") + stamp + ".txt";
+        fs->setTitle("Save logs for a bug report");
+        fs->setDefaultExtension(CFileExtension("Text", "txt"));
+#if defined(_WIN32) || defined(__APPLE__)
+        fs->setDefaultSaveName(name.c_str());
+#else
+        fs->setInitialDirectory((std::filesystem::path(vti::cc::plugin_dir()).parent_path() / name).string().c_str());
+#endif
+        auto *plugin = plugin_;
+        fs->run([plugin](CNewFileSelector *sel) {
+            if (sel->getNumSelectedFiles() != 1)
+                return;
+            std::string err;
+            if (vti::cc::collect_logs(sel->getSelectedFile(0), VTI_NATIVE_VERSION, err))
+                plugin->lcd_message("Logs saved", "please look through them first");
+            else
+                plugin->lcd_message("Logs not saved", err);
+        });
+        fs->forget();
     }
 
     void size_menu(const CPoint &where)

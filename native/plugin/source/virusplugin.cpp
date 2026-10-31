@@ -707,11 +707,11 @@ void DeviceOut::run()
                 BlockEvents::MAX);
             ev_lost_logged_ = lost;
         }
-        if (rt_lost_off_.exchange(false, std::memory_order_relaxed))
-            for (uint8_t ch = 0; ch < 16; ch++) { // a note-off was among them: nothing may keep sounding
-                send({(uint8_t)(0xB0 | ch), 64, 0});
-                send({(uint8_t)(0xB0 | ch), 123, 0});
-            }
+        if (rt_lost_off_.exchange(false, std::memory_order_relaxed)) { // a note-off was among them: nothing may keep sounding
+            uint8_t m[32][3];
+            for (int i = 0, n = HeldNotes::panic(m); i < n; i++)
+                send({m[i][0], m[i][1], m[i][2]});
+        }
         if (!piece.empty()) { // a piece of a dump (dumppacer.h)
             bool wok = broker_.write(EP_PLUGIN_OUT, piece.data(), piece.size());
             if (piece_last && dump_pending_) {
@@ -1080,6 +1080,19 @@ tresult PLUGIN_API VirusPlugin::terminate()
     }
     out_.reset();
     return SingleComponentEffect::terminate();
+}
+
+bool VirusPlugin::panic()
+{
+    if (!out_ || !out_->connected())
+        return false;
+    uint8_t m[32][3];
+    const int n = HeldNotes::panic(m);
+    held_notes_.forget();
+    for (int i = 0; i < n; i++)
+        out_->send({m[i][0], m[i][1], m[i][2]});
+    out_->log("Virus TI native: panic, sustain off + all notes off on 16 channels\n");
+    return true;
 }
 
 tresult PLUGIN_API VirusPlugin::setActive(TBool state)

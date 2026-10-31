@@ -39,6 +39,23 @@ public:
         }
         return n;
     }
+    // Panic (the editor's "?" menu, TI Revive's own addition): pedal up + all notes off on every channel, 32
+    // messages in the order of release(); the Virus took them from setActive before E373
+    static int panic(uint8_t out[32][3])
+    {
+        for (int ch = 0; ch < 16; ch++) {
+            put(out[2 * ch], ch, 64);
+            put(out[2 * ch + 1], ch, 123);
+        }
+        return 32;
+    }
+    // after a panic: nothing is held any more
+    void forget()
+    {
+        pedal_.store(0, std::memory_order_relaxed);
+        for (auto &k : keys_)
+            k[0].store(0, std::memory_order_relaxed), k[1].store(0, std::memory_order_relaxed);
+    }
 
 private:
     std::atomic<uint64_t> keys_[16][2] = {};
