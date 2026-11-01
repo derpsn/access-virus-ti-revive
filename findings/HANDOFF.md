@@ -77,7 +77,12 @@ d1bfaf4c = the tarball's; dev 0dbd528c backed up in ~/.vst3-backup/0.8.37-dev-in
 starts began reading ROM C and were stopped (-2) at each close; Live then read only the remaining 92 = RESUME AFTER
 A STOP WORKS (Windows). W2, W3 PASS (user marks). Switch removed, Virus detached, win11 off. MAC PUSHED:
 ~/Downloads/TI-Revive-0.8.37-mac (TI Revive.pkg cc49d09d = the CI zip's, INSTALL-COMMAND.txt, 'Install test
-build.command', hil/hil-mac.command), switch rom-user.on = C set on the Mac. NEXT: user installs, M1-M3.
+build.command', hil/hil-mac.command), switch rom-user.on = C set on the Mac. MAC DONE (user, MacBook Air M3, Live
+12; pkgutil 0.8.37): M1 hil-mac ALL PASS (results-20261101-095252, pulled to work/hil/mac-0.8.37; max 0.73 ms),
+M2 (hil starts stopped the ROM C read twice, then 113 -> 93 left, read 93, reopen 0 to read), M3 PASS. Mac switch
+removed. ROUND 0.8.37 TEST COMPLETE: all 8 items pass (L1 L2 W1-W3 M1-M3). No switch left on any machine.
+NEXT: v0.8.37-rc1 pre-release (user OK) + #22 reply asking the reporter to test with real user banks; then the
+weekly 0.8.37 release.
 
 ## (previous START HERE) (2026-11-01): issues #22 / #23 (after the 0.8.36 release), branch `round-0.8.36` (= released)
 
