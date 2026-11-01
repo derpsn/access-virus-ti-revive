@@ -356,3 +356,62 @@ TEST(memsync_cancel_during_a_request_is_a_stop)
     CHECK_EQ(quiet.sync_bank(1, cache), -1);
     CHECK_EQ(quiet.read_bank(1, cache), -1);
 }
+
+// a user ROM bank (E381/E382): the original reads the programs it has no data for, each after the display message
+// 74 01 7E 04, with 30 <5+i> pp - one at a time, no bank info for ROM banks. Programs already cached are not read.
+TEST(memsync_read_missing_reads_only_empty_slots)
+{
+    FakeVirus v;
+    v.ram.resize(31);
+    MemorySync sync(v.send());
+    v.sync = &sync;
+    Bank cache;
+    for (int p = 0; p < 128; p++)
+        v.ram[30][p] = fake_single(30, p, p + 3); // ROM Z = bank 30
+    cache[0] = v.ram[30][0];
+    cache[64] = v.ram[30][64];
+    std::vector<int> order;
+    int n = sync.read_missing(30, cache, [&](int p) { order.push_back(p); });
+    CHECK_EQ(n, 126);
+    CHECK_EQ(order.size(), 126u);
+    CHECK(order.front() == 1 && order.back() == 127);
+    for (int p = 0; p < 128; p++)
+        CHECK(cache[p] == v.ram[30][p]);
+    CHECK_EQ(v.requests.size(), 252u); // 126 x (display message + request), no bank info
+    const Bytes rise = {0xF0, 0x00, 0x20, 0x33, 0x01, 0x10, 0x74, 0x01, 0x7E, 0x04, 0xF7};
+    CHECK(v.requests[0] == rise);
+    CHECK((v.requests[1] == Bytes{0xF0, 0x00, 0x20, 0x33, 0x01, 0x10, 0x30, 0x1E, 0x01, 0xF7}));
+    for (auto &r : v.requests)
+        CHECK(r[6] != 0x39);
+}
+
+TEST(memsync_read_missing_full_cache_sends_nothing)
+{
+    FakeVirus v;
+    MemorySync sync(v.send());
+    v.sync = &sync;
+    Bank cache;
+    for (int p = 0; p < 128; p++)
+        cache[p] = fake_single(5, p, p);
+    CHECK_EQ(sync.read_missing(5, cache), 0);
+    CHECK(v.requests.empty());
+}
+
+// stopped (closed, notes) or no reply: what was read stays, the next start continues with the rest
+TEST(memsync_read_missing_stops)
+{
+    FakeVirus v;
+    v.ram.resize(6);
+    MemorySync sync(v.send());
+    v.sync = &sync;
+    Bank cache;
+    for (int p = 0; p < 128; p++)
+        v.ram[5][p] = fake_single(5, p, p);
+    int calls = 0;
+    sync.before_request = [&] { return ++calls <= 3; };
+    CHECK_EQ(sync.read_missing(5, cache), -2);
+    CHECK(cache[2] == v.ram[5][2] && cache[3].empty());
+    sync.before_request = nullptr;
+    std::atomic<bool> stop{true};
+    CHECK_EQ(sync.read_missing(5, cache, nullptr, &stop), -2);
+}

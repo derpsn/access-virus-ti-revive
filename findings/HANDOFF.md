@@ -1,6 +1,29 @@
 # HANDOFF
 
-## START HERE (2026-11-01): issues #22 / #23 (after the 0.8.36 release), branch `round-0.8.36` (= released)
+## START HERE (2026-11-01, later): round 0.8.37 on branch `round-0.8.37` (from main 7c15188 + the 0.8.36 notes)
+
+**Posted (user OK):** #22 reply issuecomment-6554788726 (cause, no store while a flashed slot plays, test build to
+follow, asks: original browser + Sequencer mode, which banks, diag.on log, only the ff7fd0 line of tirevive-cc info
+--raw), #23 reply issuecomment-6554788924 (several TIs later, size should already stick - asks DAW/format/ui-zoom,
+arrow keys next round). User chose the SAFE route: no ROM flashing on our Virus (rule 2); test with a switch instead,
+the #22 reporter tests the RC on real user banks.
+**#22 fix BUILT (TDD, uncommitted while the active GitHub account is the other one - the identity hook blocks):**
+native/src/device/userrom.h (user_rom_mask: 'FLSH' at FF7FC0 + FF7FE0 = 6/7, BE u32 FF7FD2..D5, bit 31 = ROM A ..
+bit 6 = ROM Z, limited to the bank count - sub-agent follow-up, HIGH; rom_letters_mask / rom_mask_letters;
+user_rom_key = FNV-1a of all identification bytes + mask -> cache/rom-<key>/ROM X, one folder per unit and flash
+state, serial never written), MemorySync::read_missing (only empty slots, 74 01 7E 04 + 30 <5+i> pp, no bank info),
+SyncPage::total, DeviceOut::flash_blocks(), VirusPlugin::use_user_rom_banks (marked banks: cache file or empty slots,
+never firmware.bin; test switch <plug-in folder>/rom-user.on with letters), sync_banks reads them after RAM D (riser
+7E 07 paused, LCD 'Synchronizing ROM X', partial reads saved), miss log 'user ROM bank not read from the Virus yet'.
+Our TI2: FF7FE0 = 07, FF7FD2..D5 = 0. vtitests 510/510, ctest 5/5 (Linux). Dev build 1cb5216d installed in ~/.vst3
+(release 57cd87a5 backed up in ~/.vst3-backup/0.8.36-release-installed-57cd87a5). MISTAKE: copied over the .so while
+REAPER was running - always check first. Test switch set: ~/.local/share/virus-ti-native/rom-user.on = 'Z', diag.on.
+NEXT: user REAPER test (sync page + ROM Z 128 reads ~2 min, notes pause it, browser names, ROM Z patch on the Virus,
+restart = no read); then diag.log + compare the read ROM Z with firmware.bin's; cpp-reviewer; #23 arrow keys + Mac
+window-size check; README/site; risk.py --round 0.8.37, CI test build, checklist; v0.8.37-rc1 for the #22 reporter.
+Not done: Control Center / tirevive-cc backup ignore user ROM banks (RAM only, unchanged).
+
+## (previous START HERE) (2026-11-01): issues #22 / #23 (after the 0.8.36 release), branch `round-0.8.36` (= released)
 
 **Issues read with the user (2026-11-01):** #22 (sbostock76, macOS M4, Logic 12.4, TI2 Polar + TI2 Desktop, 0.8.36):
 own banks flashed into ROM A-Z with the original Control Center -> the browser shows factory 5.1.7 names, a program

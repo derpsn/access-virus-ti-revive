@@ -49,3 +49,16 @@ TEST(startprogress_sync_end_names_an_abort)
     CHECK(std::string(sync_end(-1)) == "failed");
     CHECK(std::string(sync_end(-2)) == "stopped");
 }
+
+// with user ROM banks to read (E381) the sync covers more than the 512 RAM programs: the page runs to the end
+// of all of them, not to 100 % after RAM D
+TEST(startprogress_sync_page_total)
+{
+    SyncPage s;
+    s.total = 512 + 2 * 128;
+    s.expect();
+    CHECK(s.progress(512, false) == 512 * 126 / 768);
+    CHECK(s.progress(768, true) == 126);
+    s.total = 0; // never divides by zero
+    CHECK(s.progress(10, true) == 126);
+}

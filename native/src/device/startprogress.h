@@ -27,15 +27,16 @@ struct RecallMeter {
 // InitialSyncProgress: hidden (127) during the bank check, shown from the first patch that is really fetched
 struct SyncPage {
     bool on = false;
+    int total = 512; // programs the sync covers: RAM A-D, plus 128 per user ROM bank to read (E381)
     bool shown() const { return on; }
     void expect() { on = true; } // a bank without a cache file: it will be read, show the page from the start
-    int progress(int done, bool fetched) // done = patches checked so far (of 512)
+    int progress(int done, bool fetched) // done = patches checked so far (of `total`)
     {
         if (fetched)
             on = true;
         if (!on)
             return 127;
-        return done >= 512 ? 126 : done * 126 / 512;
+        return done >= total ? 126 : done * 126 / total;
     }
 };
 
