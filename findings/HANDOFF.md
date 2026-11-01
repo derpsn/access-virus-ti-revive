@@ -37,6 +37,16 @@ launcher (also 'reaper', SteamLaunch) - the first copy was safe after all; skip 
 rom-user.on = 'A' still set on Linux (remove before the checklist / at round end). NEXT: cpp-reviewer on the round
 diff, #23 arrow keys in the browser, Mac window-size check (#23 point 3), README/site, risk.py --round 0.8.37, CI
 test build, checklist, v0.8.37-rc1 for the #22 reporter.
+**Review + arrow keys (45a6197, 2026-11-01):** ecc cpp-reviewer on 7c15188..HEAD: no CRITICAL; fixed H1 (out_/stop
+during the wait), H2+M3 (DeviceOut::flash_read() flag: set after every read attempt incl. skipped, cleared with
+flash_ in lost()), M4+M5 (load_user_rom_bank in userrom.h: files outside the lock, a damaged file = whole bank to
+read; tests), M6 (load_rom_banks now does both: all ROM slots erased and filled at once after the mask is known),
+M7 (riser joined before the ROM phase, no early page for ROM), M8 (ETA + ROM programs), L10 (comments). Kept: L9 key
+over all identification bytes (flash contents, stable: restart found the cache), old rom-<key> folders not pruned,
+L11 one missing reply stops the ROM phase (as RAM). #23 point 4 DONE: Up/Down in the focused browser list
+(renderer_.focused_pane) = BrowserSelection::step + load like a double-click, no repeat, stops at the ends / a
+library's last patch (test browserselection_step). 514 tests, ctest 5/5. Dev fbc11124 installed, rom-user.on = 'B'.
+NEXT: user test (ROM B read, arrow keys), then the Mac window-size check, README/site, risk.py, CI, checklist, rc1.
 
 ## (previous START HERE) (2026-11-01): issues #22 / #23 (after the 0.8.36 release), branch `round-0.8.36` (= released)
 
