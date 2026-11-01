@@ -3154,6 +3154,8 @@ bool VirusPlugin::load_patch_remembered(int bank, int program, int part)
         for (auto &m : select)
             out_->send(m);
         follow_.preset_chosen(part, bank, program, PanelFollow::Clock::now());
+        for (auto &v : PanelFollow::chosen_location(bank, program)) // the Virus does not report these back
+            set_part_value(part, v.first, v.second);
         // the patch arrives on the sender thread like the Virus' own program changes (no undo step there): the
         // step is this choice in the editor
         std::lock_guard<std::mutex> lk(undo_mu_);

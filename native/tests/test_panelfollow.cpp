@@ -156,3 +156,19 @@ TEST(panelfollow_preset_chosen_loads_later)
     CHECK(!f.chosen(0, bank, patch)); // a later report of the Virus uses its own values again
     CHECK(!f.preset_chosen(16, 1, 4, t0));
 }
+
+// A patch chosen in the plug-in goes to the Virus as Bank Select + Program Change, and the Virus does not report
+// them back. The part's Bank / Patch values must follow the choice, else the next step on the Virus (it reports only
+// the new Patch: its bank did not change) combines with the stale bank - test 2026-11-01: ROM A 0 chosen in the
+// browser, the Virus stepped to ROM A 1, the plug-in loaded RAM A 1 "Fimplex HS" over it.
+TEST(panelfollow_chosen_location_values)
+{
+    auto v = PanelFollow::chosen_location(4, 0);
+    CHECK_EQ(v.size(), 2u);
+    CHECK(v[0].first == "Multi Part Parameter/Bank" && v[0].second == 4);
+    CHECK(v[1].first == "Multi Part Parameter/Patch" && v[1].second == 0);
+    for (auto &p : v)
+        CHECK(PanelFollow::is_preset_path(p.first)); // the paths the Virus' reports use
+    CHECK(PanelFollow::chosen_location(-1, 0).empty());
+    CHECK(PanelFollow::chosen_location(4, 128).empty());
+}

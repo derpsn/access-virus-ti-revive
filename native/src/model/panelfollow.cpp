@@ -66,6 +66,13 @@ std::vector<std::vector<uint8_t>> PanelFollow::program_select(int part, int bank
     return {{(uint8_t)(0xB0 | ch), 0x00, 0x00}, {(uint8_t)(0xB0 | ch), 0x20, (uint8_t)bank}, {(uint8_t)(0xC0 | ch), (uint8_t)program}};
 }
 
+std::vector<std::pair<std::string, int>> PanelFollow::chosen_location(int bank, int program)
+{
+    if (bank < 0 || bank > 127 || program < 0 || program > 127)
+        return {};
+    return {{"Multi Part Parameter/Bank", bank}, {"Multi Part Parameter/Patch", program}};
+}
+
 bool PanelFollow::preset_chosen(int part, int bank, int patch, Clock::time_point now)
 {
     if (part < 0 || part > 15)
