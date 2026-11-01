@@ -361,6 +361,9 @@ void DeviceOut::check_presence()
     auto lost = [this] {
         drop_dump();
         close_audio();
+        std::lock_guard<std::mutex> g(info_mu_); // the next Virus may be another unit, or have new banks burned
+        flash_.clear();
+        flash_read_ = false;
     };
     auto arrived = [this] {
         // a new audio stream counts its frames from 0 again: the scan positions of the old one would keep
@@ -381,6 +384,7 @@ void DeviceOut::check_presence()
             tios_ = os;
             flash_ = n > 0 ? fl : std::vector<uint8_t>();
         }
+        flash_read_ = true; // also when skipped: the sync must not wait for blocks that will not come
     };
     const bool present = broker_.device_present(); // the flag before the count (the reader counts first)
     switch (presence_.update(present, broker_.device_arrivals())) {
@@ -2724,26 +2728,22 @@ int VirusPlugin::load_rom_banks()
     }
     std::string err;
     auto roms = vti::load_rom_banks(firmware_path(files_ ? files_->source() : std::string()), model, err);
-    if (roms.empty()) {
+    if (roms.empty())
         fprintf(stderr, "Virus TI native: no ROM banks (%s)\n", err.c_str());
+    if (!out_ || stop_warm_)
         return 0;
-    }
-    std::lock_guard<std::mutex> lk(banks_mu_);
-    for (size_t i = 0; i < roms.size(); i++)
-        banks_[4 + (int)i] = std::move(roms[i]);
-    ui_dirty_ = true;
-    return (int)roms.size();
-}
 
-int VirusPlugin::use_user_rom_banks(int rom_banks)
-{
-    // the record comes with the identification blocks the worker reads when the Virus arrives (~2 s, before the
-    // start-up messages); a short wait in case the sync got here first
+    // ROM banks with the user's own patches (E381, #22). The record comes with the identification blocks the worker
+    // reads when the Virus arrives (~2 s, before the start-up messages): wait until that read is over (it may find
+    // nothing: another program's plug-in has the Virus, an old broker)
     std::vector<uint8_t> fl;
-    for (int i = 0; i < 50 && out_ && (fl = out_->flash_blocks()).empty() && !stop_warm_; i++)
+    for (int i = 0; i < 50 && !out_->flash_read() && !stop_warm_; i++)
         std::this_thread::sleep_for(std::chrono::milliseconds(100));
+    if (stop_warm_)
+        return 0;
+    fl = out_->flash_blocks();
     // without firmware.bin the original still has 26 ROM banks when the record is valid (E381)
-    uint32_t mask = user_rom_mask(fl, rom_banks > 0 ? rom_banks : 26);
+    uint32_t mask = user_rom_mask(fl, roms.empty() ? 26 : (int)roms.size());
     // test switch: <plug-in folder>/rom-user.on with letters ("Z") treats those banks as user banks, so the path
     // can be tried on a Virus with factory ROMs: they are read from the Virus with the same requests (E382)
     std::string base = own_cache_dir(), test;
@@ -2754,32 +2754,36 @@ int VirusPlugin::use_user_rom_banks(int rom_banks)
         test.assign(buf, n);
         mask |= rom_letters_mask(test) & ((1u << 26) - 1);
     }
-    user_rom_ = mask;
     if (fl.empty())
         out_->log("Virus TI native: no identification blocks from the Virus: ROM banks as in firmware.bin\n");
-    if (!mask)
-        return 0;
-    user_rom_dir_ = base.empty() ? std::string() : base + "/rom-" + user_rom_key(fl, mask);
+    // the identification bytes are flash contents (model, serial, the record): the key stays the same from start to
+    // start and changes when banks are burned again or another unit is connected
+    user_rom_dir_ = mask && !base.empty() ? base + "/rom-" + user_rom_key(fl, mask) : std::string();
+    // a user bank is never filled with the factory patches: what was read from this Virus, or empty slots (a program
+    // chosen there is then left alone instead of being replaced by the factory sound); files read before the lock
     int missing = 0;
+    std::map<int, Bank> user;
+    for (int i = 0; i < 26; i++)
+        if (mask >> i & 1) {
+            Bank &bk = user[i];
+            missing += user_rom_dir_.empty() ? (bk = Bank(), 128)
+                                             : load_user_rom_bank(user_rom_dir_ + "/ROM " + (char)('A' + i), bk);
+        }
     {
         std::lock_guard<std::mutex> lk(banks_mu_);
-        for (int i = 0; i < 26; i++) {
+        for (int i = 0; i < 26; i++) // all ROM slots at once: nothing left from another unit or an earlier start
+            banks_.erase(4 + i);
+        for (size_t i = 0; i < roms.size() && i < 26; i++)
             if (!(mask >> i & 1))
-                continue;
-            Bank bank; // never the factory patches for a user bank: what was read from this Virus, or nothing
-            if (!user_rom_dir_.empty())
-                load_bank_file(user_rom_dir_ + "/ROM " + (char)('A' + i), bank);
-            for (auto &d : bank)
-                if (d.size() != 524) {
-                    d.clear();
-                    missing++;
-                }
-            banks_[4 + i].assign(bank.begin(), bank.end());
-        }
+                banks_[4 + (int)i] = std::move(roms[i]);
+        for (auto &u : user)
+            banks_[4 + u.first].assign(u.second.begin(), u.second.end());
+        user_rom_ = mask;
     }
     ui_dirty_ = true;
-    out_->log("Virus TI native: user ROM banks %s%s, %d programs to read\n", rom_mask_letters(mask).c_str(),
-              test.empty() ? "" : " (test switch rom-user.on)", missing);
+    if (mask)
+        out_->log("Virus TI native: user ROM banks %s%s, %d programs to read\n", rom_mask_letters(mask).c_str(),
+                  test.empty() ? "" : " (test switch rom-user.on)", missing);
     return missing;
 }
 
@@ -2969,7 +2973,7 @@ void VirusPlugin::sync_banks()
         std::error_code ec;
         std::filesystem::create_directories(dir, ec);
     }
-    const int rom_missing = use_user_rom_banks(load_rom_banks());
+    const int rom_missing = load_rom_banks();
     sync_->before_request = [this] { return wait_until_quiet(); };
     const int64_t sync_t0 = now_ms();
     // like the original: its page "Syncing memory with Virus" (VirusControl/InitialSyncProgress 0..126) covers the
@@ -2978,8 +2982,8 @@ void VirusPlugin::sync_banks()
     // syncs (74 01 7E 07 about once a second) - also only then
     SyncPage page;
     int result = 0; // the last bank's sync_bank result: < 0 = the sync stopped there
-    page.total = 512 + rom_missing; // user ROM banks are read after RAM D
-    if (sync_expected || rom_missing > 0)
+    page.total = 512 + rom_missing; // user ROM banks are read after RAM D (the page shows once their reading starts)
+    if (sync_expected)
         page.expect();
     std::atomic<bool> rise{true}, fetching{page.shown()};
     std::thread riser([this, &rise, &fetching] {
@@ -2999,7 +3003,7 @@ void VirusPlugin::sync_banks()
                 for (size_t p = 0; p < 128 && p < it->second.size(); p++)
                     bank[p] = it->second[p];
         }
-        int n = sync_->sync_bank(b + 1, bank, [this, b, &bank, sync_t0, &page, &fetching](int p, bool fetched) {
+        int n = sync_->sync_bank(b + 1, bank, [this, b, &bank, sync_t0, &page, &fetching, rom_missing](int p, bool fetched) {
             set_sync_progress(page.progress(b * 128 + p + 1, fetched));
             fetching = page.shown();
             // remaining time at the pace so far (pauses for notes not counted): the original's start page promises
@@ -3007,7 +3011,8 @@ void VirusPlugin::sync_banks()
             int done = b * 128 + p + 1;
             int64_t worked = now_ms() - sync_t0 - sync_paused_ms_;
             if (done >= 8 && worked > 0)
-                sync_eta_s_ = (int)((512 - done) * worked / done / 1000);
+                sync_eta_s_ = (int)((512 - done) * worked / done / 1000) + rom_missing; // ROM: one a second
+
             if (page.shown()) {
                 std::lock_guard<std::mutex> lk(values_mu_); // progress on the LCD
                 lcd_param_ = "Synchronizing " + bank_name(b);
@@ -3041,7 +3046,10 @@ void VirusPlugin::sync_banks()
         ui_dirty_ = true;
     }
     // user ROM banks (E381/E382): their programs not cached yet, read like the original - no bank info, each request
-    // after its own display message 74 01 7E 04 (read_missing), so the riser's 7E 07 pauses meanwhile
+    // after its own display message 74 01 7E 04 (read_missing); the riser's 7E 07 ends first, so none comes between a
+    // 7E 04 and its request (the capture has only 7E 04 while ROM A is read)
+    rise = false;
+    riser.join();
     int rom_done = 0;
     if (result >= 0 && rom_missing > 0 && !user_rom_dir_.empty()) {
         std::error_code ec;
@@ -3057,7 +3065,6 @@ void VirusPlugin::sync_banks()
             for (size_t p = 0; p < 128 && p < v.size(); p++)
                 bank[p] = v[p];
         }
-        fetching = false;
         const std::string name = std::string("ROM ") + (char)('A' + i);
         int n = sync_->read_missing(5 + i, bank, [this, i, &bank, &page, &rom_done, rom_missing, &name](int p) {
             rom_done++;
@@ -3082,8 +3089,6 @@ void VirusPlugin::sync_banks()
         result = n < 0 ? n : result;
         ui_dirty_ = true;
     }
-    rise = false;
-    riser.join();
     // like the original after its bank check: the message timer back at 1 (E321)
     out_->send({0xF0, 0x00, 0x20, 0x33, 0x01, 0x10, 0x74, 0x00, 0x29, 0x01, 0xF7});
     syncing_ = false;

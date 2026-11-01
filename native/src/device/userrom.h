@@ -7,6 +7,7 @@
 // 7, then the big-endian u32 at FF7FD2..FF7FD5 whose bit 31 is ROM A .. bit 6 ROM Z. A marked bank is not taken from
 // firmware.bin but read from the Virus once (30 <5+i> pp, captured E382) and cached.
 #pragma once
+#include "memsync.h"
 #include <cstdint>
 #include <cstdio>
 #include <string>
@@ -68,6 +69,24 @@ inline std::string user_rom_key(const std::vector<uint8_t> &blocks, uint32_t mas
     char out[17];
     snprintf(out, sizeof out, "%016llx", (unsigned long long)h);
     return out;
+}
+
+// A user bank's cache file (<cache>/rom-<key>/ROM X) into `bank`: programs that are not a single dump stay empty and
+// are read from the Virus; a file that does not load completely (cut short, not a bank file) counts for nothing - an
+// entry cut inside would otherwise look like a patch of zeros. Returns the number of programs to read.
+inline int load_user_rom_bank(const std::string &path, Bank &bank)
+{
+    Bank b;
+    if (!load_bank_file(path, b))
+        b = Bank();
+    int missing = 0;
+    for (auto &d : b)
+        if (d.size() != 524) {
+            d.clear();
+            missing++;
+        }
+    bank = std::move(b);
+    return missing;
 }
 
 } // namespace vti

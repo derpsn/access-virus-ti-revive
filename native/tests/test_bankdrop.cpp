@@ -391,3 +391,28 @@ TEST(paneselections_per_pane_not_per_bank)
     s.at(0, 1);
     CHECK(s.framed(0, 1).empty()); // and back to RAM B: the old selection does not come back
 }
+
+// Up/Down in the browser (#23, our own addition - the original has none): one entry further from the last clicked
+// one, selected alone; nothing without a click before, and the ends (or a library's last patch) stop it
+TEST(browserselection_step)
+{
+    BrowserSelection s;
+    auto any = [](int) { return true; };
+    CHECK_EQ(s.step(1, any), -1); // nothing clicked yet
+    s.press(10, false, false);
+    CHECK_EQ(s.step(1, any), 11);
+    CHECK(s.contains(11) && !s.contains(10));
+    CHECK_EQ(s.step(-1, any), 10);
+    s.press(20, true, false); // Shift: a range 10..20, the anchor stays 10
+    CHECK_EQ(s.step(1, any), 11);
+    CHECK_EQ(s.items().size(), 1u);
+    s.press(127, false, false);
+    CHECK_EQ(s.step(1, any), -1); // the end: no step, the selection stays
+    CHECK(s.contains(127));
+    s.press(0, false, false);
+    CHECK_EQ(s.step(-1, any), -1);
+    auto lib = [](int p) { return p < 5; }; // a library with 5 patches
+    s.press(4, false, false);
+    CHECK_EQ(s.step(1, lib), -1);
+    CHECK_EQ(s.step(-1, lib), 3);
+}

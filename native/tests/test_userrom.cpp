@@ -4,6 +4,8 @@
 // bit 31 = ROM A .. bit 6 = ROM Z.
 #include "check.h"
 #include "device/userrom.h"
+#include <cstdio>
+#include <filesystem>
 #include <string>
 #include <vector>
 
@@ -91,4 +93,45 @@ TEST(userrom_cache_key)
     CHECK(k != user_rom_key(a, 3u)); // the test switch adds a bank
     for (char c : k)
         CHECK((c >= '0' && c <= '9') || (c >= 'a' && c <= 'f'));
+}
+
+TEST(userrom_short_block_is_not_valid)
+{
+    // the record ends at FF7FE0 (offset 0x40): a read shorter than that is no record
+    auto b = blocks(0x80000000u);
+    b.resize(0x40);
+    CHECK_EQ(user_rom_mask(b, 26), 0u);
+    b = blocks(0x80000000u);
+    b.resize(0x50);
+    CHECK_EQ(user_rom_mask(b, 26), 1u);
+}
+
+// a user bank's cache file: what was read stays, the rest is read; a damaged file is not trusted at all (an entry
+// cut short would look like a real patch of zeros)
+TEST(userrom_load_cache)
+{
+    namespace fs = std::filesystem;
+    const fs::path dir = fs::temp_directory_path() / "vti-userrom-test";
+    fs::create_directories(dir);
+    const std::string f = (dir / "ROM A").string();
+    Dump d(524, 0x11);
+    Bank full;
+    for (auto &x : full)
+        x = d;
+    Bank out;
+    CHECK_EQ(load_user_rom_bank((dir / "missing").string(), out), 128); // no file: everything to read
+    CHECK(save_bank_file(f, full));
+    CHECK_EQ(load_user_rom_bank(f, out), 0);
+    CHECK(out[127] == d);
+    Bank part = full;
+    part[3].clear();
+    part[9].resize(100); // not a single dump: read again
+    CHECK(save_bank_file(f, part));
+    CHECK_EQ(load_user_rom_bank(f, out), 2);
+    CHECK(out[3].empty() && out[9].empty() && out[4] == d);
+    CHECK(save_bank_file(f, full));
+    fs::resize_file(f, fs::file_size(f) - 300); // cut inside the last entry
+    CHECK_EQ(load_user_rom_bank(f, out), 128);
+    CHECK(out[0].empty());
+    fs::remove_all(dir);
 }

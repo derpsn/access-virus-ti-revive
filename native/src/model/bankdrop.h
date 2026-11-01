@@ -317,6 +317,20 @@ public:
             sel_ = {prog};
         kept_ = -1;
     }
+    // Up/Down (#23, our own addition): the entry `delta` away from the last clicked one, selected alone and the new
+    // anchor; -1 (nothing changes) without a click before, past 0..127 or onto an entry `exists` rejects (the end of a
+    // library)
+    template <class Exists>
+    int step(int delta, Exists exists)
+    {
+        const int to = anchor_ + delta;
+        if (anchor_ < 0 || to < 0 || to > 127 || !exists(to))
+            return -1;
+        sel_ = {to};
+        anchor_ = to;
+        kept_ = -1;
+        return to;
+    }
     std::vector<int> items() const { return {sel_.begin(), sel_.end()}; } // ascending: the order a drop writes
     bool contains(int prog) const { return sel_.count(prog) != 0; }
     void clear() { sel_.clear(), anchor_ = -1, kept_ = -1; }
