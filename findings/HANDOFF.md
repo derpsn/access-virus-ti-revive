@@ -50,8 +50,13 @@ User test (fbc11124): arrow keys work, focus rule works; a HELD key ran through 
 repeats as plain presses, isRepeat false) = one patch load per step -> changed: BrowserKeyLoad (bankdrop.h, test
 browserkeyload_quiet_time): selection follows every step, the load comes 150 ms after the last one from the editor
 timer (50 ms), repeats allowed on every OS. 515 tests, ctest 5/5.
-NEXT: user retest (hold Down = runs, loads once at the stop; ROM B read result), then the Mac window-size check,
-README/site, risk.py, CI, checklist, rc1.
+Retest PASSED (user 'works :)', dev 0dbd528c): held key runs, loads once at the stop, also in a library. ROM B read
+128 earlier (diag.log), later starts '0 programs to read'.
+**#23 point 3 (size) checked on the Mac (user, 2026-11-01, 0.8.36):** size chosen in the menu comes back after
+reopening ('it worked'); ui-zoom = '1.5' written 09:16, AppleLocale de_AT (no decimal-comma problem). The save path
+is only the right-click size menu (set_user_zoom). Not reproduced - waits for the reporter's answer (DAW, AU/VST3,
+how they resize). NEXT: README/site (user ROM banks, arrow keys, bank fix), risk.py --round 0.8.37, CI test build,
+checklist, remove rom-user.on before the checklist, v0.8.37-rc1 for #22.
 
 ## (previous START HERE) (2026-11-01): issues #22 / #23 (after the 0.8.36 release), branch `round-0.8.36` (= released)
 
