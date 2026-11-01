@@ -22,6 +22,15 @@ NEXT: user REAPER test (sync page + ROM Z 128 reads ~2 min, notes pause it, brow
 restart = no read); then diag.log + compare the read ROM Z with firmware.bin's; cpp-reviewer; #23 arrow keys + Mac
 window-size check; README/site; risk.py --round 0.8.37, CI test build, checklist; v0.8.37-rc1 for the #22 reporter.
 Not done: Control Center / tirevive-cc backup ignore user ROM banks (RAM only, unchanged).
+**User test 1 (REAPER, Linux, dev 1cb5216d, 2026-11-01):** switch 'Z': ROM Z read 128 programs in 137 s, paused for
+notes twice (log), browser all 'Empty' = CORRECT (factory TI2 ROM Z is empty; vtimodel rom: the 128 dumps read from
+the Virus are byte-identical to firmware.bin's ROM Z). Switch now 'A': ROM A read 128 in 131 s, browser names right
+(user). BUG found (old, also in 0.8.36): browser load sends Bank Select + PC but kept the part's Bank value, so a
+step on the Virus (reports only Patch) combined with the stale bank: ROM A 0 chosen, Virus to ROM A 1 -> plug-in
+loaded RAM A 1 'Fimplex HS' (log 'bank 0 patch 1'). FIXED 158b780: PanelFollow::chosen_location, stored with
+set_part_value after program_select (test panelfollow_chosen_location_values; 511/511). Not installed yet (REAPER
+was running). NEXT: install when REAPER is closed, user retests steps (browser ROM A 0, step on the Virus, restart =
+no sync page), then the rest of the round list above. Evidence entry for the bank bug + the ROM Z byte match to add.
 
 ## (previous START HERE) (2026-11-01): issues #22 / #23 (after the 0.8.36 release), branch `round-0.8.36` (= released)
 
