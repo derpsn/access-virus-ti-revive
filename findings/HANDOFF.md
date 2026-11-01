@@ -17,6 +17,16 @@ in one project (large, later), (3) remember window size - ALREADY saved globally
 browser list -> next weekly round. Drafts (NOT posted, wait for the user's OK): work/issue22-reply1.md (cause, no
 store while a flashed slot plays, questions: original's browser + Sequencer mode, which banks, diag.on log),
 work/issue23-reply1.md. #14/#16/#20 unchanged (waiting for reporters).
+**REA + capture (E381, E382, 2026-11-01):** the original marks user ROM banks from FF7FD2..FF7FD5 (block FF7FD0,
+already read by the broker; letters A..Z = bits 31..6 when 'FLSH' at FF7FC0; our TI2: 00 00 00 00), takes factory
+banks from firmware.bin, user banks from its cache, and reads a bank without cache with 74 01 7E 04 + 30 <5+i> pp
+(CAPTURED in win10ref with firmware.bin + the ROM A cache moved aside: 128 requests, ~1 s each, replies identical to
+its cache; win10ref restored, ROM A.new kept in ProgramData\Access Music\Virus TI\rom-a-aside; VM off, Virus on
+Linux). So the request is known (rule 2). #22 draft updated (mechanism; asks for the ff7fd0 line only - serial).
+NEXT: fix design with the user: use the bitfield, firmware.bin only for unmarked banks, fetch marked banks with
+30 <5+i> pp like RAM programs (once, ~2 min per bank), cache per FLSH stamp; unit tests first (TDD).
+Committed after the account switch (user, 2026-11-01): E381/E382, this entry and
+.claude/hooks/github-identity.sh (registration stays local). The hook also blocks on GitHub words inside heredoc text (fail-safe, accepted).
 **GitHub identity hook (user, 2026-11-01: two GitHub accounts on this machine):** .claude/hooks/github-identity.sh,
 PreToolUse Bash in .claude/settings.local.json (git-ignored, like the Stop hook): gh, networked git, commits/merges/
 tags and curl/wget to github are blocked unless the active gh account (gh config get -h github.com user; git pushes
