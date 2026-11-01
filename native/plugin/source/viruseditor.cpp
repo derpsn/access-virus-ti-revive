@@ -1079,6 +1079,8 @@ public:
 #endif
             plugin_->diag_report();
             plugin_->tick_gestures(); // knob moves on the Virus -> host edits (E304)
+            if (int kb, kp; key_load_.due(now_ms(), kb, kp)) // Up/Down in the browser stopped
+                plugin_->load_patch_remembered(kb, kp, plugin_->ui_value(plugin_->layout().frame_parameter, -1));
             drop_switched_selections();
             if (plugin_->ui_changed() && !partial_) { // during a drag the drag repaints its own area
                 plugin_->diag.dirty_ticks++;
@@ -1244,8 +1246,8 @@ public:
     }
 
     // Up/Down in the browser list that has the focus (#23, our own addition: the original has none): the next or
-    // previous patch, selected and loaded into the current part like a double-click. One step per press - a held key
-    // would load a patch per repeat (the Virus gets each one)
+    // previous patch, selected at once and loaded into the current part like a double-click once the steps stop
+    // (BrowserKeyLoad: a held key runs through the list, the Virus gets only the patch it stops on)
     bool browser_key(KeyboardEvent &event, CFrame *frame)
     {
         const int pane = renderer_.focused_pane;
@@ -1255,7 +1257,7 @@ public:
             return false;
         event.consumed = true;
         auto param = pane_param_.find(pane);
-        if (event.isRepeat || param == pane_param_.end())
+        if (param == pane_param_.end())
             return true;
         const int bank = plugin_->ui_value(param->second, -1);
         const int prog = browser_sel_.at(pane, bank).step(event.virt == VirtualKey::Down ? 1 : -1, [this, bank](int p) {
@@ -1263,7 +1265,7 @@ public:
         });
         if (prog >= 0) {
             show_selection(pane, bank);
-            plugin_->load_patch_remembered(bank, prog, plugin_->ui_value(plugin_->layout().frame_parameter, -1));
+            key_load_.step(bank, prog, now_ms());
             invalid();
         }
         return true;
@@ -2856,6 +2858,7 @@ private:
     vti::PaneSelections browser_sel_;      // one selection per browser pane (E318)
     std::map<int, std::string> pane_param_; // pane -> its "Browser N/Selected Bank" parameter
     int drag_value_ = 0;
+    vti::BrowserKeyLoad key_load_;
 };
 
 // the user's size choice, kept for every editor (not per project): <plug-in folder>/ui-zoom ("1.5");

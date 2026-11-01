@@ -416,3 +416,25 @@ TEST(browserselection_step)
     CHECK_EQ(s.step(1, lib), -1);
     CHECK_EQ(s.step(-1, lib), 3);
 }
+
+// Up/Down held: some systems send a held key as plain presses (Linux/X11, 2026-11-01: 'it runs through each preset'),
+// ~30 a second. The selection follows every step; the patch is loaded once, 150 ms after the last step - like the
+// Virus' value knob turned through the presets (PanelFollow::PRESET_QUIET, E152) - so a held key is one load, not 30
+// patch dumps a second
+TEST(browserkeyload_quiet_time)
+{
+    BrowserKeyLoad k;
+    int bank = -1, prog = -1;
+    CHECK(!k.due(1000, bank, prog)); // nothing pending
+    k.step(4, 1, 1000);
+    CHECK(!k.due(1100, bank, prog));
+    k.step(4, 2, 1130); // held: the next step moves the time on
+    CHECK(!k.due(1250, bank, prog));
+    CHECK(k.due(1280, bank, prog));
+    CHECK_EQ(bank, 4);
+    CHECK_EQ(prog, 2); // only the last one
+    CHECK(!k.due(2000, bank, prog)); // once
+    k.step(4, 3, 3000);
+    k.cancel(); // dropped: nothing loads
+    CHECK(!k.due(4000, bank, prog));
+}

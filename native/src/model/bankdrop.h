@@ -340,6 +340,29 @@ private:
     int anchor_ = -1, kept_ = -1;
 };
 
+// Up/Down in the browser (#23): the patch to load after the key steps stop. A held key arrives as ~30 presses a second
+// on some systems; the selection follows each, the load waits until 150 ms after the last (like the Virus' value knob
+// turned through the presets, E152), so the Virus gets one patch, not a flood
+class BrowserKeyLoad {
+public:
+    static constexpr int64_t QUIET_MS = 150;
+    void step(int bank, int prog, int64_t now_ms) { bank_ = bank, prog_ = prog, due_ = now_ms + QUIET_MS; }
+    // true once, when the last step is QUIET_MS old: its bank and program
+    bool due(int64_t now_ms, int &bank, int &prog)
+    {
+        if (prog_ < 0 || now_ms < due_)
+            return false;
+        bank = bank_, prog = prog_;
+        prog_ = -1;
+        return true;
+    }
+    void cancel() { prog_ = -1; }
+
+private:
+    int bank_ = -1, prog_ = -1;
+    int64_t due_ = 0;
+};
+
 // the browser panes' selections: one per pane, like the original's KPatchTable, which keeps a selected flag per entry
 // of each pane (select 0x180051c90, deselect all 0x180051bf0, E318) - the same bank in both panes is framed only in
 // the pane that was clicked. A pane's selection belongs to the bank it showed then: the original keeps none per bank.
