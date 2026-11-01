@@ -55,8 +55,15 @@ Retest PASSED (user 'works :)', dev 0dbd528c): held key runs, loads once at the 
 **#23 point 3 (size) checked on the Mac (user, 2026-11-01, 0.8.36):** size chosen in the menu comes back after
 reopening ('it worked'); ui-zoom = '1.5' written 09:16, AppleLocale de_AT (no decimal-comma problem). The save path
 is only the right-click size menu (set_user_zoom). Not reproduced - waits for the reporter's answer (DAW, AU/VST3,
-how they resize). NEXT: README/site (user ROM banks, arrow keys, bank fix), risk.py --round 0.8.37, CI test build,
-checklist, remove rom-user.on before the checklist, v0.8.37-rc1 for #22.
+how they resize).
+**Release prep 0.8.37 (2026-11-01):** README + site (same wording): feature items 'Your own ROM banks' (#22) and 'Up
+and Down in the browser' (#23) after the drag-and-drop item; README reliability fix (E383). tirevive-site-check
+scoped: TESTS 500 -> 515 (site + README), 'reads them again after new banks are burned' softened to 'when the Virus'
+record of them changes' (E381: the stamp change on a re-burn is only inferred), the rest sourced (E381-E383).
+native VERSION 0.8.37, build.yml notes 0.8.37. Site built locally (scratchpad site-0837), NOT deployed.
+risk.py --round 0.8.37: class C on all three -> only hil cold/reopen/export from core. NEXT: CI test build, round
+checklist (L: hil + user ROM switch + arrows/bank fix on the CI build; W/M: hil + the same in Live), remove
+rom-user.on before the checklist's normal-use items, v0.8.37-rc1 for #22.
 
 ## (previous START HERE) (2026-11-01): issues #22 / #23 (after the 0.8.36 release), branch `round-0.8.36` (= released)
 

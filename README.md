@@ -325,6 +325,18 @@ same with Access' own driver.
   alphabetically"), and patches keep their positions with gaps like in the original. A RAM bank's right-click menu
   has "Download entire bank from Virus TI" (reads all 128 again, about 2 minutes, progress on the LCD) and "Sort alphabetically" (writes
   only the slots that change; like the original, it cannot be undone).
+- **Your own ROM banks** (since 0.8.37, [issue #22](https://github.com/derpsn/access-virus-ti-revive/issues/22)):
+  if you burned your own banks into the Virus' ROM slots with the original Control Center, TI Revive reads those
+  banks from the Virus instead of taking the factory banks from your Access installer, like the original. The Virus
+  marks these banks itself. TI Revive reads each of them once, patch by patch (about 2 minutes per bank, progress on
+  the LCD, notes still play), and keeps them for that Virus; it reads them again when the Virus' record of them changes. Until a
+  bank is read, a patch chosen from it on the Virus is left alone instead of being replaced by the factory sound.
+  Tested on Linux (REAPER) with a TI2 Desktop with factory ROMs and a bank marked by hand: the patches read from the
+  Virus were byte for byte those of the Access installer. Not tested yet with real user banks.
+- **Up and Down in the browser** (since 0.8.37, [issue #23](https://github.com/derpsn/access-virus-ti-
+  revive/issues/23), our own addition): click a patch in a browser list, then the arrow keys step to the next or
+  previous patch and load it into the selected part. Holding a key runs through the list, and the patch it stops on
+  is loaded. Tested on Linux (REAPER).
 - **Library folders like the original's** (since 0.8.29): Patch libraries from the original's three places, each its own menu (since 0.8.29): Personal Libraries (your Documents folder), User Libraries and Public Libraries. On the Mac the factory libraries that Access installs in /Library/Application Support appear under Public Libraries. On Linux only Personal Libraries. To add a library, drop its .mid or .syx file from Explorer, Finder or your file manager onto the browser (since 0.8.35, our own addition: the original takes no file drops). It is copied into Access Music/Virus TI/Patches in your Documents folder, never over an existing file, and the browser shows it at once; a .syx is saved as a .mid so the original finds it too. Copying the file into that folder yourself works as well; it shows up the next time the plug-in is loaded. Damaged patches in a library (dumps of the wrong length) are left out, as in the original; since 0.8.35 the plug-in's log names the library and how many.
 - **The LCD shows the control under the mouse** (since 0.8.34), as in the original: its name, its value, the value stored in the patch in brackets, and the part.
 - **Presets, soft knobs and the part selected on the Virus itself** are followed, as in the original (the part since
@@ -508,7 +520,7 @@ hardware (TI2 Desktop) - details and raw numbers in [`findings/evidence.md`](fin
 - **Automation rate limit** (250 messages/s, coalesced per parameter): unthrottled parameter floods hung the Virus'
   audio until a power cycle within 4 minutes; with the limit a 4-minute full-load test (16 channels of notes + 32
   automation lanes) passes.
-- Checked with ThreadSanitizer and AddressSanitizer (one race in the broker connection found and fixed); 500 unit
+- Checked with ThreadSanitizer and AddressSanitizer (one race in the broker connection found and fixed); 515 unit
   tests run with every release build on Windows and Linux, plus two end-to-end tests on Linux in a virtual display
   (two editors of a duplicated track; the Control Center's window and close button).
 
@@ -536,6 +548,9 @@ hardware (TI2 Desktop) - details and raw numbers in [`findings/evidence.md`](fin
 - Notes play while the bank sync runs: the sync pauses while you play (dump requests delay the Virus' notes by
   ~130 ms) and continues in the gaps; notes are only held back for the first ~4 s, when the Virus would play them
   up to 1.6 s late (E144).
+- A patch chosen in the browser from another bank, followed by Program +/- on the Virus, no longer loads the patch
+  of the old bank. Since 0.8.37 the plug-in keeps the bank it sent with the patch: the Virus reports only the new
+  program number. (E383)
 - Big knobs on Windows (images over Direct2D's 16384-pixel limit are drawn in tiles), unplug/replug recovery,
   projects use the original's state format: a state saved by the original loads (older part dumps are upgraded to
   the current format, E174).

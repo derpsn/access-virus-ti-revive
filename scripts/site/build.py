@@ -551,6 +551,18 @@ def features_section():
         selection", "Sort alphabetically"), and patches keep their positions with gaps like in the original. A RAM
         bank's right-click menu has "Download entire bank from Virus TI" (reads all 128 again, about 2 minutes, progress on the LCD) and
         "Sort alphabetically" (writes only the slots that change; like the original, it cannot be undone).</li>
+        <li>Your own ROM banks (since 0.8.37, <a href="{GH}/issues/22">issue #22</a>): if you burned your own banks into
+        the Virus' ROM slots with the original Control Center, TI Revive reads those banks from the Virus instead of
+        taking the factory banks from your Access installer, like the original. The Virus marks these banks itself.
+        TI Revive reads each of them once, patch by patch (about 2 minutes per bank, progress on the LCD, notes
+        still play), and keeps them for that Virus; it reads them again when the Virus' record of them changes. Until a bank is
+        read, a patch chosen from it on the Virus is left alone instead of being replaced by the factory sound.
+        Tested on Linux (REAPER) with a TI2 Desktop with factory ROMs and a bank marked by hand: the patches read
+        from the Virus were byte for byte those of the Access installer. Not tested yet with real user banks.</li>
+        <li>Up and Down in the browser (since 0.8.37, <a href="{GH}/issues/23">issue #23</a>, our own addition): click a
+        patch in a browser list, then the arrow keys step to the next or previous patch and load it into the
+        selected part. Holding a key runs through the list, and the patch it stops on is loaded. Tested on Linux
+        (REAPER).</li>
         <li>Patch libraries from the original's three places, each its own menu (since 0.8.29): Personal Libraries (your Documents folder), User Libraries and Public Libraries. On the Mac the factory libraries that Access installs in /Library/Application Support appear under Public Libraries. On Linux only Personal Libraries. To add a library, drop its .mid or .syx file from Explorer, Finder or your file manager onto the browser (since 0.8.35, our own addition: the original takes no file drops). It is copied into Access Music/Virus TI/Patches in your Documents folder, never over an existing file, and the browser shows it at once; a .syx is saved as a .mid so the original finds it too. Copying the file into that folder yourself works as well; it shows up the next time the plug-in is loaded. Damaged patches in a library (dumps of the wrong length) are left out, as in the original; since 0.8.35 the plug-in's log names the library and how many.</li>
         <li>The LCD shows the control under the mouse (since 0.8.34), as in the original: its name, its value, the value stored in the patch in brackets, and the part.</li>
         <li>Presets, soft knobs and the part selected on the Virus itself are followed, as in the original (the part since 0.8.33).</li>
@@ -785,7 +797,7 @@ def page_changelog_landing(releases):
 SHARED_IMAGES = ["control-center.png", "control-center-nerd-mode.png", "plugin-help-mode.png", "plugin-help-inactive.png",
                  "plugin-menus.png", "plugin-library-drop.png",
                  "plugin-section-lock.png", "plugin-edit-menu.png", "plugin-help-menu.png"]
-TESTS = 500 # unit tests in native/tests (vtitests), as of 2026-10-31 (0.8.36 round)
+TESTS = 515 # unit tests in native/tests (vtitests), as of 2026-11-01 (0.8.37 round)
 
 # Important information shown at the top of the page, newest first (empty list = no box). The README starts with the
 # same text ("Important" block), keep both identical. Remove an entry when it no longer matters to users.

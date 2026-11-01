@@ -279,36 +279,25 @@ jobs:
           native plug-in **"TI Revive Virus Control"**: looks and works like the original Virus Control and runs
           natively on Windows, macOS (Apple Silicon and Intel) and Linux - no Rosetta, Wine or yabridge.
 
-          **New in 0.8.36: section locking, like in the original Virus Control (issue #21).**
+          **New in 0.8.37: your own ROM banks (issue #22).**
 
-          - Double-click a section's header to lock it for the selected part: the header turns red, the page tab and
-            the part get an orange mark, and a padlock appears next to "?". Double-click again to unlock it.
-          - A locked section keeps its settings when you load another patch, from the browser, the LOAD menu or on the
-            Virus. Like the original, the plug-in sends one patch with the locked settings already in it, no extra
-            messages.
-          - Right-click a header for more: lock or unlock all sections of the part, unlock all parts, and presets that
-            lock one page (OSC, Filter, LFO, Matrix, Arpeggiator, FX). The padlock and the browser's right-click menu
-            can unlock all parts too.
-          - Settings outside the sections, such as Transpose and Key Mode on the COMMON page, still come from the new
-            patch, and locks are not saved with the project: both as in the original.
+          - If you burned your own banks into the Virus' ROM slots with the original Control Center, the plug-in now
+            reads those banks from the Virus instead of taking the factory banks from your Access installer, like the
+            original. The browser shows your patches, and a patch chosen on the Virus is no longer replaced by the
+            factory sound.
+          - Each such bank is read once, patch by patch (about 2 minutes per bank, progress on the LCD, notes still
+            play), and kept for that Virus. Until a bank is read, a patch chosen from it on the Virus is left alone.
 
-          Tested on a Virus TI2 Desktop on Linux (REAPER), Windows 11 (VM, Ableton Live 11) and macOS (Ableton Live 12):
-          locking by double-click and from the menus, presets, patch loads from the browser and program changes on the
-          Virus, with and without locks.
+          Tested on a Virus TI2 Desktop with factory ROMs on Linux (REAPER), with a bank marked by hand: the patches
+          read from the Virus were byte for byte those of the Access installer. Not tested yet with real user banks.
 
-          **Also new, our own additions:**
+          **Also new:**
 
-          - The "?" button opens a menu: Explain the Controls (the help mode), the website, Report a Problem, Save Logs
-            for a Bug Report, the detailed log, and Panic (sustain off and all notes off on all 16 channels).
-          - Right-click where there is no control: Undo and Redo of editor edits and patch loads (Ctrl+Z /
-            Ctrl+Shift+Z, Cmd on the Mac), Compare (your edit against the patch as you loaded it), and Randomize the
-            selected part by 10, 25 or 50 % (locked sections, Transpose, the patch volume, input and arpeggiator stay).
-          - RAM backup: before a SAVE or a browser operation overwrites RAM slots, the old patches go into a library of
-            the day ("RAM Backup <date>" in Personal Libraries); drag them back to restore.
-
-          Tested on a Virus TI2 Desktop on Linux (REAPER), Windows 11 (VM, Ableton Live 11) and macOS (Ableton Live
-          12): the menus, Panic, Undo/Redo, Compare, Randomize and the RAM backup with a store and a restore; on Linux
-          the restored bank was checked byte for byte by reading it back.
+          - Up and Down in the browser (issue #23, our own addition): click a patch in a browser list, then the arrow
+            keys step to the next or previous patch and load it. Holding a key runs through the list; the patch it
+            stops on is loaded.
+          - Fixed: a patch chosen in the browser from another bank, followed by Program +/- on the Virus, loaded the
+            patch of the old bank.
 
           Earlier versions: their own release pages, and every version's changes on one page in the
           [changelog](https://derpsn.github.io/access-virus-ti-revive/changelog.html).
