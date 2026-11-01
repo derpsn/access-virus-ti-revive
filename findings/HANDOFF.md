@@ -1,6 +1,30 @@
 # HANDOFF
 
-## START HERE (2026-10-30): round 0.8.36 started on branch `round-0.8.36` - first task section locking (#21)
+## START HERE (2026-11-01): issues #22 / #23 (after the 0.8.36 release), branch `round-0.8.36` (= released)
+
+**Issues read with the user (2026-11-01):** #22 (sbostock76, macOS M4, Logic 12.4, TI2 Polar + TI2 Desktop, 0.8.36):
+own banks flashed into ROM A-Z with the original Control Center -> the browser shows factory 5.1.7 names, a program
+chosen on the Virus shows its real name briefly and is then replaced, fine without USB. Cause (code reading, NOT
+reproduced - our TI2 has factory ROMs): ROM banks come only from firmware.bin (native/src/access/firmware.h), never
+checked against the device (memsync syncs RAM 1..4 only); a program chosen on the Virus is loaded from that cache
+(E152) -> the factory dump overwrites the edit buffer. Also reported: 10 min first start (= first RAM A-D sync,
+512 x ~1 s, expected), Virus jumps to Sequencer mode (not checked against the original), AURA editor installed.
+Their log has only the broker part (diag.on off). OPEN: how the original learns/reads user ROM banks (REA sub-agent
+started; E117 hints the original caches ROM banks from the device; E169/E313: Control Center backups have 'user ROM
+banks' + a ROM bitfield). No ROM request may be sent before it is known (rule 2). #23 (same reporter): (1) several TIs
+in one project (large, later), (3) remember window size - ALREADY saved globally in <plug-in folder>/ui-zoom
+(viruseditor.cpp load_zoom), so a non-sticking size on macOS is a bug to check on the Mac, (4) up/down keys in the
+browser list -> next weekly round. Drafts (NOT posted, wait for the user's OK): work/issue22-reply1.md (cause, no
+store while a flashed slot plays, questions: original's browser + Sequencer mode, which banks, diag.on log),
+work/issue23-reply1.md. #14/#16/#20 unchanged (waiting for reporters).
+**GitHub identity hook (user, 2026-11-01: two GitHub accounts on this machine):** .claude/hooks/github-identity.sh,
+PreToolUse Bash in .claude/settings.local.json (git-ignored, like the Stop hook): gh, networked git, commits/merges/
+tags and curl/wget to github are blocked unless the active gh account (gh config get -h github.com user; git pushes
+use gh as credential helper) and git user.name are derpsn; GH_TOKEN/GITHUB_TOKEN checked with gh api user. Tested
+with a fake GH_CONFIG_DIR (wrong account -> exit 2 for gh/push/commit/fetch/curl, ls/status/log pass). On a block:
+ask the user for `gh auth switch -h github.com -u derpsn`, never switch it ourselves.
+
+## (previous START HERE) (2026-10-30): round 0.8.36 started on branch `round-0.8.36` - first task section locking (#21)
 
 **Feature work 2026-10-31 (user away: 'Work on all Features and the new possibilities with 15 and 16 ... use the
 ecc cpp reviewer and ecc code coverage skill'; release/testing skipped, the VM sync reports not a priority).**
