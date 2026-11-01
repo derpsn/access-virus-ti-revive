@@ -81,8 +81,13 @@ build.command', hil/hil-mac.command), switch rom-user.on = C set on the Mac. MAC
 12; pkgutil 0.8.37): M1 hil-mac ALL PASS (results-20261101-095252, pulled to work/hil/mac-0.8.37; max 0.73 ms),
 M2 (hil starts stopped the ROM C read twice, then 113 -> 93 left, read 93, reopen 0 to read), M3 PASS. Mac switch
 removed. ROUND 0.8.37 TEST COMPLETE: all 8 items pass (L1 L2 W1-W3 M1-M3). No switch left on any machine.
-NEXT: v0.8.37-rc1 pre-release (user OK) + #22 reply asking the reporter to test with real user banks; then the
-weekly 0.8.37 release.
+v0.8.37-rc1 PUBLISHED (user OK 'yes. go on', 2026-11-01): annotated tag on 06a3776 pushed alone, release CI run
+41291539080 all jobs green, pre-release with msi, setup.exe, mac zip, linux tarball, usbinfo, libusb source. #22/#23
+checked with the user first: no new replies. #22 reply POSTED issuecomment-6555947004 (draft work/issue22-reply2.md:
+rc1 link, what to expect - ~2 min per own bank, all 26 ~1 h, resume, per unit -, asks: names/sound match, the ff7fd0
+line + which banks, a log if wrong; arrow keys note). NEXT: wait for the #22 reporter (real user banks = the open
+point of E381/E383); #23 waits (size question); then the weekly 0.8.37 release (merge with -F, tag alone, site
+rebuild by hand, test machines on the release).
 
 ## (previous START HERE) (2026-11-01): issues #22 / #23 (after the 0.8.36 release), branch `round-0.8.36` (= released)
 
