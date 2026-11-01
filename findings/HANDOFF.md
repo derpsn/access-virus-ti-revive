@@ -10,15 +10,17 @@ meaning open. The plug-in calls the Polar "Virus TI2 Desktop" (no Polar/Desktop 
 (maintainer promised it). DONE (TDD): BROWSER_ROWS = 16 in bankdrop.h, browser_key_delta in viruseditor.cpp (Left/Right
 = -+16, stops at the first/last column and at empty library slots), test browserselection_column_step, vtitests
 516/516, ctest 5/5 (Linux). README + site + release notes: "Arrow keys in the browser", 516 tests, and the #22 user
-confirmation in place of "Not tested yet with real user banks". NOT tested on hardware yet: Left/Right needs a user
-smoke test (Linux dev build) before the final 0.8.37.
+confirmation in place of "Not tested yet with real user banks". Left/Right TESTED: user, REAPER, Linux, TI2 Desktop, dev
+build 93bec190 in ~/.vst3 (rc1 backed up in ~/.vst3-backup/0.8.37-rc1-installed-d1bfaf4c): 'left right works great'.
+#24 follow-up (E385): holes end on host block boundaries, same pitch in both takes = not a running rate mismatch
+(E377); cause still open, waiting for the log.
 **#24 NEW (E385):** macOS/Logic audio glitches until Logic restarts, sometimes a skip on the first bar. The glitch
 take has exact-zero holes every 11-12 ms (67-108 frames, ~16% of the signal, on 1 ms boundaries); the log starts after
 the restart and is clean (drops 0, filled 0). Reply posted (issuecomment-6561307970, work/issue24-reply1.md): diag log
 saved DURING a glitch, which unit, when it starts, Virus sample rate in Audio MIDI Setup, first-bar skip in a bounce.
 With such a log: 'filled' rising = GapFill (Core Audio sample time ahead of the ring), 'drops' rising = AudioIn::read
 re-anchor, neither = the holes come from Core Audio's input already. Do not guess a fix before that log.
-NEXT: Left/Right smoke test; wait for #22 (Desktop A-L) and #24 (log); weekly final 0.8.37 (merge -F, tag alone,
+NEXT: wait for #22 (Desktop A-L) and #24 (log); weekly final 0.8.37 (merge -F, tag alone,
 site by hand on OK, test machines).
 
 ## (previous START HERE) (2026-11-01, later): round 0.8.37 on branch `round-0.8.37` (from main 7c15188 + the 0.8.36 notes)
