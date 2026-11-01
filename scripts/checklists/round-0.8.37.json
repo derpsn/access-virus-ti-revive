@@ -1,0 +1,114 @@
+{
+ "round": "0.8.37",
+ "core": "core.json",
+ "core_items": [],
+ "lead": "Test of 0.8.37 (CI test build 41288474375). risk.py: class C on all three systems, so from the core list only the automated runs (hil: cold start, reopen, export). The round's own items: your own ROM banks (#22, tried with the test switch rom-user.on, because our Virus has only factory ROMs), Up/Down in the browser (#23) and the browser bank fix (E383). Linux was checked with dev builds during the round; Windows and the Mac have seen nothing of this round yet. Mark each item, add a note where something looks different, then copy the results at the bottom into the chat.",
+ "rules": [
+  "Order: Linux first (the Virus is on this PC), then the Windows VM, then the Mac. Close the DAW before the Virus moves.",
+  "Never power-cycle the Virus while it is attached to the VM; switch it off and on only while it is on Linux.",
+  "Use a disposable project. The test switch only makes the plug-in read a ROM bank from the Virus; it writes nothing to the Virus. Claude sets it before a block and removes it afterwards."
+ ],
+ "sections": [
+  {
+   "id": "linux",
+   "title": "Linux",
+   "where": "REAPER, Virus on this PC, CI build 0.8.37 (installed with install.sh)",
+   "prep": [
+    "Claude installs the CI build, runs hil.sh (cold start, reopen, export, broker killed while playing) and sets the test switch to ROM C."
+   ],
+   "items": [
+    {
+     "id": "L1",
+     "title": "Own ROM bank read from the Virus (#22, test switch ROM C)",
+     "steps": [
+      "Start REAPER, open the plug-in. Wait for 'Synchronizing ROM C 1 / 128 ... 128 / 128' (about 2 minutes); play a few notes meanwhile.",
+      "Browser: open ROM C. On the Virus, step through a few ROM C patches.",
+      "Close REAPER and open it again."
+     ],
+     "expect": "Notes play and the read pauses for them; ROM C shows its names; the Virus' own steps load the right sound; after the restart no sync page."
+    },
+    {
+     "id": "L2",
+     "title": "Up/Down in the browser and the bank fix",
+     "steps": [
+      "Click a patch in the browser, press Down and Up a few times, then hold Down for two seconds. Click a knob, press Down.",
+      "Choose a ROM A patch in the browser, then Program +/- on the Virus a few times."
+     ],
+     "expect": "Each press loads the next/previous patch; holding runs through the list and loads where it stops; after the knob click the browser does not react. The Virus' steps stay in ROM A (no jump to a RAM patch)."
+    }
+   ]
+  },
+  {
+   "id": "win",
+   "title": "Windows 11 (VM)",
+   "where": "win11 VM, Ableton Live 11, CI build 0.8.37 (installed silently by Claude)",
+   "prep": [
+    "Claude installs the build in the VM, attaches the Virus, copies the hil-windows kit and sets the test switch to ROM C (%LOCALAPPDATA%\\virus-ti-native\\rom-user.on)."
+   ],
+   "items": [
+    {
+     "id": "W1",
+     "title": "hil-win on the new build",
+     "steps": [
+      "Run hil-win.cmd (about 5 minutes); Claude grades the result folder on Linux."
+     ],
+     "expect": "Cold start, reopen and export pass (drift in the VM is not judged, E334)."
+    },
+    {
+     "id": "W2",
+     "title": "Own ROM bank read from the Virus (#22, test switch ROM C)",
+     "steps": [
+      "Open the plug-in in Live. Wait for 'Synchronizing ROM C ... / 128' (about 2 minutes); play a few notes meanwhile.",
+      "Browser: open ROM C; step through a few ROM C patches on the Virus. Close Live and open the project again."
+     ],
+     "expect": "ROM C shows its names, the Virus' steps load the right sound, no sync page after reopening."
+    },
+    {
+     "id": "W3",
+     "title": "Up/Down in the browser and the bank fix in Live",
+     "steps": [
+      "Click a patch in the browser, press Down/Up, hold Down. (If Live takes the arrow keys, note it.)",
+      "Choose a ROM A patch in the browser, then Program +/- on the Virus."
+     ],
+     "expect": "As on Linux: steps load, holding loads where it stops, the Virus' steps stay in ROM A."
+    }
+   ]
+  },
+  {
+   "id": "mac",
+   "title": "macOS",
+   "where": "MacBook Air M3, Ableton Live 12, CI build 0.8.37 (the user installs the package; Claude pushes it)",
+   "prep": [
+    "Claude pushes the package with INSTALL-COMMAND.txt and 'Install test build.command', the hil-mac kit, and sets the test switch to ROM C (~/Library/Application Support/virus-ti-native/rom-user.on)."
+   ],
+   "items": [
+    {
+     "id": "M1",
+     "title": "hil-mac on the new build",
+     "steps": [
+      "Double-click hil/hil-mac.command (about 5 minutes); Claude grades the results."
+     ],
+     "expect": "Cold start, reopen and export pass."
+    },
+    {
+     "id": "M2",
+     "title": "Own ROM bank read from the Virus (#22, test switch ROM C)",
+     "steps": [
+      "Open the plug-in in Live (VST3). Wait for 'Synchronizing ROM C ... / 128'; play a few notes meanwhile.",
+      "Browser: open ROM C; step through a few ROM C patches on the Virus. Close Live and open the project again."
+     ],
+     "expect": "ROM C shows its names, the Virus' steps load the right sound, no sync page after reopening."
+    },
+    {
+     "id": "M3",
+     "title": "Up/Down in the browser and the bank fix in Live",
+     "steps": [
+      "Click a patch in the browser, press Down/Up, hold Down.",
+      "Choose a ROM A patch in the browser, then Program +/- on the Virus."
+     ],
+     "expect": "As on Linux."
+    }
+   ]
+  }
+ ]
+}

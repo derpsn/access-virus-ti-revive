@@ -64,6 +64,10 @@ native VERSION 0.8.37, build.yml notes 0.8.37. Site built locally (scratchpad si
 risk.py --round 0.8.37: class C on all three -> only hil cold/reopen/export from core. NEXT: CI test build, round
 checklist (L: hil + user ROM switch + arrows/bank fix on the CI build; W/M: hil + the same in Live), remove
 rom-user.on before the checklist's normal-use items, v0.8.37-rc1 for #22.
+CI TEST BUILD run 41288474375 (e951412, version 0.8.37) started ~09:20. CHECKLIST published:
+https://claude.ai/artifact/J8RjKYZkH4fVTEhkJ8RRJi (spec scripts/checklists/round-0.8.37.json; db, marks
+rounds/0.8.37/marks - empty at publish): L1 own ROM bank (switch C) + L2 arrows/bank fix; W1 hil-win + W2 + W3;
+M1 hil-mac + M2 + M3. Claude sets rom-user.on = C before each block and removes it after.
 
 ## (previous START HERE) (2026-11-01): issues #22 / #23 (after the 0.8.36 release), branch `round-0.8.36` (= released)
 
