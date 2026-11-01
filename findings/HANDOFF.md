@@ -5,7 +5,11 @@
 **#22 CONFIRMED on real units (E384):** reporter: names and sounds right after the read, Program/Bank +/- match.
 FF7FD2..D5: Polar 0xFFFFFFC0 (ROM A-Z), Desktop 0xFFF00000 (ROM A-L). FF7FD0..D1 ASCII '26' / '33' (ours '01'):
 meaning open. The plug-in calls the Polar "Virus TI2 Desktop" (no Polar/Desktop distinction). Reply posted
-(issuecomment-6561307709, work/issue22-reply3.md): asks whether the Desktop has only A-L flashed.
+(issuecomment-6561307709, work/issue22-reply3.md); the user CONFIRMED (17:35 UTC): Desktop only A-L flashed, the rest factory
+5.1.7 (W-Z empty) - the mask is exact on both units (E384 HIGH). No reply needed beyond a thank-you at the release.
+**Long Logic test on our Mac (E385 follow-up) RUNNING:** 0.8.37 round build (= rc1 code), Logic 44.1 kHz / 512, Virus at
+44.1 in Core Audio, fresh diag.log since 17:31 UTC (old one: diag.log.pre-logic-long-20261101); block A = 20-30 min cycle
+play with Output 1-2 recorded, block B = Stop/Play x5, editor close/open, 48 kHz and back, sleep, Virus power cycle.
 **#23:** arrow keys confirmed by the reporter; window size works for them (1.25 -> 1.50 kept). New ask: Left/Right
 (maintainer promised it). DONE (TDD): BROWSER_ROWS = 16 in bankdrop.h, browser_key_delta in viruseditor.cpp (Left/Right
 = -+16, stops at the first/last column and at empty library slots), test browserselection_column_step, vtitests
