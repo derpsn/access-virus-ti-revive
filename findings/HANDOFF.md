@@ -30,7 +30,13 @@ step on the Virus (reports only Patch) combined with the stale bank: ROM A 0 cho
 loaded RAM A 1 'Fimplex HS' (log 'bank 0 patch 1'). FIXED 158b780: PanelFollow::chosen_location, stored with
 set_part_value after program_select (test panelfollow_chosen_location_values; 511/511). Not installed yet (REAPER
 was running). NEXT: install when REAPER is closed, user retests steps (browser ROM A 0, step on the Virus, restart =
-no sync page), then the rest of the round list above. Evidence entry for the bank bug + the ROM Z byte match to add.
+no sync page), then the rest of the round list above.
+**Retest PASSED (user 'works!', dev a6438c9d installed):** restart = 0 to read, 3.5 s; browser ROM A 0 + Virus steps
+= bank 4 patch 1/2/3; RAM B 0 + steps = bank 1. E383 written. Note: the 'REAPER RUNNING' check matched Steam's game
+launcher (also 'reaper', SteamLaunch) - the first copy was safe after all; skip SteamLaunch when checking. Test switch
+rom-user.on = 'A' still set on Linux (remove before the checklist / at round end). NEXT: cpp-reviewer on the round
+diff, #23 arrow keys in the browser, Mac window-size check (#23 point 3), README/site, risk.py --round 0.8.37, CI
+test build, checklist, v0.8.37-rc1 for the #22 reporter.
 
 ## (previous START HERE) (2026-11-01): issues #22 / #23 (after the 0.8.36 release), branch `round-0.8.36` (= released)
 
