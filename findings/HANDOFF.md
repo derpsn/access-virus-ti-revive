@@ -68,6 +68,16 @@ CI TEST BUILD run 41288474375 (e951412, version 0.8.37) started ~09:20. CHECKLIS
 https://claude.ai/artifact/J8RjKYZkH4fVTEhkJ8RRJi (spec scripts/checklists/round-0.8.37.json; db, marks
 rounds/0.8.37/marks - empty at publish): L1 own ROM bank (switch C) + L2 arrows/bank fix; W1 hil-win + W2 + W3;
 M1 hil-mac + M2 + M3. Claude sets rom-user.on = C before each block and removes it after.
+CI GREEN (all jobs). Artifacts ~/Downloads/TI-Revive-0.8.37-test. LINUX: CI build installed (install.sh, plug-in
+d1bfaf4c = the tarball's; dev 0dbd528c backed up in ~/.vst3-backup/0.8.37-dev-installed-0dbd528c); hil.sh ALL PASS
+(work/hil/20261101-092906; export 1.00x, max 0.77 ms; first try 'No Virus TI on USB' - Virus was off). L1 PASS
+(ROM C 128 read in 132 s, restart 0 to read), L2 PASS (user marks). Linux switch removed. WIN11 VM: setup.exe
+/quiet exit 0, TI Revive 0.8.37, plug-in 25f672f9, C:\tirevive-test\0.8.37. W1 hil-win ALL PASS
+(results-20261101-094147, pulled to work/hil/win11-0.8.37; max 1.14 ms) - the switch was already set, so the hil
+starts began reading ROM C and were stopped (-2) at each close; Live then read only the remaining 92 = RESUME AFTER
+A STOP WORKS (Windows). W2, W3 PASS (user marks). Switch removed, Virus detached, win11 off. MAC PUSHED:
+~/Downloads/TI-Revive-0.8.37-mac (TI Revive.pkg cc49d09d = the CI zip's, INSTALL-COMMAND.txt, 'Install test
+build.command', hil/hil-mac.command), switch rom-user.on = C set on the Mac. NEXT: user installs, M1-M3.
 
 ## (previous START HERE) (2026-11-01): issues #22 / #23 (after the 0.8.36 release), branch `round-0.8.36` (= released)
 
