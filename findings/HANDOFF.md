@@ -7,7 +7,10 @@ FF7FD2..D5: Polar 0xFFFFFFC0 (ROM A-Z), Desktop 0xFFF00000 (ROM A-L). FF7FD0..D1
 meaning open. The plug-in calls the Polar "Virus TI2 Desktop" (no Polar/Desktop distinction). Reply posted
 (issuecomment-6561307709, work/issue22-reply3.md); the user CONFIRMED (17:35 UTC): Desktop only A-L flashed, the rest factory
 5.1.7 (W-Z empty) - the mask is exact on both units (E384 HIGH). No reply needed beyond a thank-you at the release.
-**Long Logic test on our Mac (E385 follow-up) RUNNING:** 0.8.37 round build (= rc1 code), Logic 44.1 kHz / 512, Virus at
+**Long Logic test on our Mac DONE (E386): #24 NOT reproduced** (44.1/512, 48 k, 44.1/1024, sleep, Virus power cycle; 4 takes 0
+holes, the scan finds 45 in the reporter's take); update posted on #24 (work/issue24-reply2.md). Logic's rate changes left
+the Virus at the old rate 2/2 - the E377 relock fixed it (first run on hardware). GAP (candidate for 0.8.38): a new stream
+while the host keeps playing gets no marker (notes sounding), timing unaligned until Stop. Was: 0.8.37 round build (= rc1 code), Logic 44.1 kHz / 512, Virus at
 44.1 in Core Audio, fresh diag.log since 17:31 UTC (old one: diag.log.pre-logic-long-20261101); block A = 20-30 min cycle
 play with Output 1-2 recorded, block B = Stop/Play x5, editor close/open, 48 kHz and back, sleep, Virus power cycle.
 **#23:** arrow keys confirmed by the reporter; window size works for them (1.25 -> 1.50 kept). New ask: Left/Right
