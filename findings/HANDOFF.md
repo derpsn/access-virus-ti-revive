@@ -46,7 +46,12 @@ over all identification bytes (flash contents, stable: restart found the cache),
 L11 one missing reply stops the ROM phase (as RAM). #23 point 4 DONE: Up/Down in the focused browser list
 (renderer_.focused_pane) = BrowserSelection::step + load like a double-click, no repeat, stops at the ends / a
 library's last patch (test browserselection_step). 514 tests, ctest 5/5. Dev fbc11124 installed, rom-user.on = 'B'.
-NEXT: user test (ROM B read, arrow keys), then the Mac window-size check, README/site, risk.py, CI, checklist, rc1.
+User test (fbc11124): arrow keys work, focus rule works; a HELD key ran through the presets one by one (X11 sends
+repeats as plain presses, isRepeat false) = one patch load per step -> changed: BrowserKeyLoad (bankdrop.h, test
+browserkeyload_quiet_time): selection follows every step, the load comes 150 ms after the last one from the editor
+timer (50 ms), repeats allowed on every OS. 515 tests, ctest 5/5.
+NEXT: user retest (hold Down = runs, loads once at the stop; ROM B read result), then the Mac window-size check,
+README/site, risk.py, CI, checklist, rc1.
 
 ## (previous START HERE) (2026-11-01): issues #22 / #23 (after the 0.8.36 release), branch `round-0.8.36` (= released)
 
