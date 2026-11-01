@@ -1245,13 +1245,23 @@ public:
         event.consumed = true;
     }
 
-    // Up/Down in the browser list that has the focus (#23, our own addition: the original has none): the next or
-    // previous patch, selected at once and loaded into the current part like a double-click once the steps stop
-    // (BrowserKeyLoad: a held key runs through the list, the Virus gets only the patch it stops on)
+    // Up/Down/Left/Right in the browser list that has the focus (#23, our own addition: the original has none): the
+    // next or previous patch (Left/Right: the same row in the next or previous column), selected at once and loaded
+    // into the current part like a double-click once the steps stop (BrowserKeyLoad: a held key runs through the
+    // list, the Virus gets only the patch it stops on)
+    static int browser_key_delta(VirtualKey k)
+    {
+        return k == VirtualKey::Down    ? 1
+               : k == VirtualKey::Up    ? -1
+               : k == VirtualKey::Right ? vti::BROWSER_ROWS
+               : k == VirtualKey::Left  ? -vti::BROWSER_ROWS
+                                        : 0;
+    }
     bool browser_key(KeyboardEvent &event, CFrame *frame)
     {
         const int pane = renderer_.focused_pane;
-        if (event.type != EventType::KeyDown || pane < 0 || (event.virt != VirtualKey::Up && event.virt != VirtualKey::Down) ||
+        const int delta = browser_key_delta(event.virt);
+        if (event.type != EventType::KeyDown || pane < 0 || delta == 0 ||
             event.modifiers.has(ModifierKey::Control) || event.modifiers.has(ModifierKey::Alt) ||
             event.modifiers.has(ModifierKey::Shift) || (frame && dynamic_cast<CTextEdit *>(frame->getFocusView())))
             return false;
@@ -1260,7 +1270,7 @@ public:
         if (param == pane_param_.end())
             return true;
         const int bank = plugin_->ui_value(param->second, -1);
-        const int prog = browser_sel_.at(pane, bank).step(event.virt == VirtualKey::Down ? 1 : -1, [this, bank](int p) {
+        const int prog = browser_sel_.at(pane, bank).step(delta, [this, bank](int p) {
             return !plugin_->bank_patch(bank, p).empty();
         });
         if (prog >= 0) {

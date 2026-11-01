@@ -289,13 +289,14 @@ jobs:
             play), and kept for that Virus. Until a bank is read, a patch chosen from it on the Virus is left alone.
 
           Tested on a Virus TI2 Desktop with factory ROMs on Linux (REAPER), with a bank marked by hand: the patches
-          read from the Virus were byte for byte those of the Access installer. Not tested yet with real user banks.
+          read from the Virus were byte for byte those of the Access installer. Works for a user with a TI2 Polar
+          whose ROM A-Z hold their own banks (macOS, Logic Pro).
 
           **Also new:**
 
-          - Up and Down in the browser (issue #23, our own addition): click a patch in a browser list, then the arrow
-            keys step to the next or previous patch and load it. Holding a key runs through the list; the patch it
-            stops on is loaded.
+          - Arrow keys in the browser (issue #23, our own addition): click a patch in a browser list, then Up and Down
+            step to the next or previous patch, Left and Right to the next or previous column, and load it. Holding
+            a key runs through the list; the patch it stops on is loaded.
           - Fixed: a patch chosen in the browser from another bank, followed by Program +/- on the Virus, loaded the
             patch of the old bank.
 

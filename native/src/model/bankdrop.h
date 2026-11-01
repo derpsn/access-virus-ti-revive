@@ -340,6 +340,9 @@ private:
     int anchor_ = -1, kept_ = -1;
 };
 
+// the browser list: 8 columns of 16 entries, column by column (EditorRenderer::browser_entry); Left/Right step a column
+constexpr int BROWSER_ROWS = 16;
+
 // Up/Down in the browser (#23): the patch to load after the key steps stop. A held key arrives as ~30 presses a second
 // on some systems; the selection follows each, the load waits until 150 ms after the last (like the Virus' value knob
 // turned through the presets, E152), so the Virus gets one patch, not a flood

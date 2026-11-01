@@ -417,6 +417,26 @@ TEST(browserselection_step)
     CHECK_EQ(s.step(-1, lib), 3);
 }
 
+// Left/Right (#23 follow-up): the list shows 8 columns of 16 (EditorRenderer::browser_entry), so a column step is
+// +-BROWSER_ROWS from the anchor and stops at the first or last column
+TEST(browserselection_column_step)
+{
+    BrowserSelection s;
+    auto any = [](int) { return true; };
+    CHECK_EQ(BROWSER_ROWS, 16);
+    s.press(10, false, false);
+    CHECK_EQ(s.step(BROWSER_ROWS, any), 26);
+    CHECK_EQ(s.step(-BROWSER_ROWS, any), 10);
+    CHECK_EQ(s.step(-BROWSER_ROWS, any), -1); // first column
+    CHECK(s.contains(10));
+    s.press(120, false, false);
+    CHECK_EQ(s.step(BROWSER_ROWS, any), -1); // last column
+    CHECK(s.contains(120));
+    auto lib = [](int p) { return p < 20; }; // a library with 20 patches: no column step into empty slots
+    s.press(10, false, false);
+    CHECK_EQ(s.step(BROWSER_ROWS, lib), -1);
+}
+
 // Up/Down held: some systems send a held key as plain presses (Linux/X11, 2026-11-01: 'it runs through each preset'),
 // ~30 a second. The selection follows every step; the patch is loaded once, 150 ms after the last step - like the
 // Virus' value knob turned through the presets (PanelFollow::PRESET_QUIET, E152) - so a held key is one load, not 30
