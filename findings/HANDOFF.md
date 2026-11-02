@@ -17,7 +17,8 @@ marker gap: wait).** Tested-on lines made true in README, site and release notes
 with the switch on Linux/Win11 VM Live 11/macOS Live 12 (checklist L1/W2/M2), byte compare Linux only; #22 user
 Polar A-Z + Desktop A-L (E384); Up/Down Linux/Win11/macOS (L2/W3/M3) + user Logic; Left/Right Linux only.
 native/ unchanged since e38ce6b (516 tests). Site built locally (scratchpad site-0837final), not deployed.
-Snow endpoint check running as a background sub-agent (static, vti_snow.bin).
+Snow endpoint check DONE (E387, static): the Snow's vendor EPs 05/85/06/86 are BULK, TI/TI2 INTERRUPT, same sizes - #26's claim holds; vticore.c should pick the transfer call per bmAttributes. Waiting for their PR (+ lsusb -v).
+MERGED main e708f53 (-F, parents 7c15188 + 9e68e70, tree = round), tag v0.8.37 pushed alone, release CI run 41498369950 running. #22 thank-you drafted (work/issue22-reply4.md), NOT posted - needs user OK. NEXT after CI green: site rebuild, Linux + win11 release install, Mac push.
 
 **#22 CONFIRMED on real units (E384):** reporter: names and sounds right after the read, Program/Bank +/- match.
 FF7FD2..D5: Polar 0xFFFFFFC0 (ROM A-Z), Desktop 0xFFF00000 (ROM A-L). FF7FD0..D1 ASCII '26' / '33' (ours '01'):
