@@ -34,7 +34,57 @@ struct vti {
     volatile int stop, dead;
     pthread_t rd[2];
     uint8_t rd_ep[2];
+    uint8_t bulk[16];       // by endpoint number: 1 = bulk (Virus TI Snow), 0 = interrupt (TI/TI2 Desktop, E021) - E387
+    unsigned long idle;     // FF FE 00 00 packets dropped on a bulk EP 0x85 (E387)
 };
+
+// The Snow has bulk endpoints 05/85/06/86 where the TI2 Desktop has interrupt ones (E021, E387). Linux usbfs rejects
+// an interrupt URB on a bulk endpoint (EINVAL, LIBUSB_ERROR_IO on every transfer), so the call follows the descriptor.
+static void find_bulk_endpoints(vti *v)
+{
+    struct libusb_config_descriptor *cfg;
+    char list[64] = "";
+    if (libusb_get_active_config_descriptor(libusb_get_device(v->h), &cfg))
+        return;
+    for (int i = 0; i < cfg->bNumInterfaces; i++)
+        for (int a = 0; a < cfg->interface[i].num_altsetting; a++) {
+            const struct libusb_interface_descriptor *d = &cfg->interface[i].altsetting[a];
+            for (int e = 0; e < d->bNumEndpoints; e++) {
+                uint8_t ep = d->endpoint[e].bEndpointAddress;
+                if ((d->endpoint[e].bmAttributes & 3) == LIBUSB_TRANSFER_TYPE_BULK && strlen(list) < sizeof list - 4) {
+                    v->bulk[ep & 15] = 1;
+                    snprintf(list + strlen(list), sizeof list - strlen(list), " %02x", ep);
+                }
+            }
+        }
+    libusb_free_config_descriptor(cfg);
+    if (list[0])
+        vti_log("vti: bulk endpoints%s (Virus TI Snow), using bulk transfers there\n", list);
+}
+
+static int xfer(vti *v, uint8_t ep, uint8_t *buf, int len, int *got, unsigned timeout)
+{
+    return v->bulk[ep & 15] ? libusb_bulk_transfer(v->h, ep, buf, len, got, timeout)
+                            : libusb_interrupt_transfer(v->h, ep, buf, len, got, timeout);
+}
+
+// The Snow's bulk EP 0x85 answers every read, ~2000 times a second, and the extra packets are all FF FE 00 00
+// (cable 15, CIN 0xF; nothing in the plug-in reads them - E387). They are dropped here, only on a bulk EP 0x85
+// and only that exact 4-byte packet; the TI2's interrupt endpoints never get here.
+static int drop_idle(vti *v, uint8_t *b, int n)
+{
+    static const uint8_t idle[4] = {0xff, 0xfe, 0x00, 0x00};
+    int w = 0, r = 0;
+    for (; r + 4 <= n; r += 4)
+        if (memcmp(b + r, idle, 4)) {
+            memmove(b + w, b + r, 4);
+            w += 4;
+        } else
+            v->idle++;
+    for (; r < n; r++)
+        b[w++] = b[r];
+    return w;
+}
 
 typedef struct {
     vti *v;
@@ -48,7 +98,9 @@ static void *reader(void *p)
     vti *v = a.v;
     uint8_t ep = v->rd_ep[a.i], buf[64];
     while (!v->stop) {
-        int got = 0, r = libusb_interrupt_transfer(v->h, ep, buf, sizeof buf, &got, 200);
+        int got = 0, r = xfer(v, ep, buf, sizeof buf, &got, 200);
+        if (r == 0 && got > 0 && ep == VTI_EP_MI03_IN && v->bulk[ep & 15] && !(got = drop_idle(v, buf, got)))
+            continue;
         if (r == 0 && got > 0)
             v->cb(v->user, ep, buf, got);
         else if (r != LIBUSB_ERROR_TIMEOUT && r != 0) {
@@ -79,6 +131,7 @@ vti *vti_open(vti_rx_cb cb, void *user)
         goto fail;
     }
     libusb_set_auto_detach_kernel_driver(v->h, 1);
+    find_bulk_endpoints(v);
     for (int i = 3; i <= 4; i++)
         if ((r = libusb_claim_interface(v->h, i))) {
             vti_log("vti: claim interface %d: %s\n", i, libusb_error_name(r));
@@ -121,6 +174,8 @@ void vti_close(vti *v)
     v->stop = 1;
     for (int i = 0; i < 2; i++)
         pthread_join(v->rd[i], NULL);
+    if (v->idle)
+        vti_log("vti: %lu idle packets (FF FE 00 00) dropped on bulk EP 0x85\n", v->idle);
 #ifdef __linux__
     // snd-usb-audio shuts the whole card down when interfaces 3/4 are taken away, and the dead card lives on while
     // any of its interfaces is still bound ("USB device is in the shutdown state", E113). So: take all five (the
@@ -147,7 +202,7 @@ struct write_ctx {
 static int write_packet(void *ctx, const uint8_t *data, int n, int *done)
 {
     struct write_ctx *c = ctx;
-    int r = libusb_interrupt_transfer(c->v->h, c->ep, (uint8_t *)data, n, done, 1000);
+    int r = xfer(c->v, c->ep, (uint8_t *)data, n, done, 1000);
     if (r == LIBUSB_ERROR_TIMEOUT)
         return VTI_XFER_TIMEOUT;
     c->err = r;
