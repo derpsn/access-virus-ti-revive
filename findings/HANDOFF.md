@@ -12,6 +12,12 @@ issuecomment-6584520916 (work/issue26-reply1.md): yes to a separate Snow PR (ask
 we test on our TI2 before merge, evidence entry), Wine declined for the main project (publish separately,
 VTI_BROKER_TCP + token stay; README link offered), hint E128/E131 registry stall for their sync reports. TODO when
 the PR comes: check the Snow endpoint types statically in vti_snow.bin (REA/firmware scripts) - not verified yet.
+**Final 0.8.37 (user 2026-11-02: 'release it', Left/Right NOT tested on Windows/Mac - user: no issue, skip; #24
+marker gap: wait).** Tested-on lines made true in README, site and release notes (same wording): own ROM banks
+with the switch on Linux/Win11 VM Live 11/macOS Live 12 (checklist L1/W2/M2), byte compare Linux only; #22 user
+Polar A-Z + Desktop A-L (E384); Up/Down Linux/Win11/macOS (L2/W3/M3) + user Logic; Left/Right Linux only.
+native/ unchanged since e38ce6b (516 tests). Site built locally (scratchpad site-0837final), not deployed.
+Snow endpoint check running as a background sub-agent (static, vti_snow.bin).
 
 **#22 CONFIRMED on real units (E384):** reporter: names and sounds right after the read, Program/Bank +/- match.
 FF7FD2..D5: Polar 0xFFFFFFC0 (ROM A-Z), Desktop 0xFFF00000 (ROM A-L). FF7FD0..D1 ASCII '26' / '33' (ours '01'):

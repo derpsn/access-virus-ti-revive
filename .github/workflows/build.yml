@@ -288,15 +288,17 @@ jobs:
           - Each such bank is read once, patch by patch (about 2 minutes per bank, progress on the LCD, notes still
             play), and kept for that Virus. Until a bank is read, a patch chosen from it on the Virus is left alone.
 
-          Tested on a Virus TI2 Desktop with factory ROMs on Linux (REAPER), with a bank marked by hand: the patches
-          read from the Virus were byte for byte those of the Access installer. Works for a user with a TI2 Polar
-          whose ROM A-Z hold their own banks (macOS, Logic Pro).
+          Tested on a Virus TI2 Desktop with factory ROMs and a bank marked by hand on Linux (REAPER), Windows 11
+          (VM, Ableton Live 11) and macOS (Ableton Live 12); on Linux the patches read from the Virus were byte for
+          byte those of the Access installer. Works for a user with a TI2 Polar whose ROM A-Z hold their own banks
+          and a TI2 Desktop with their own banks in ROM A-L (macOS, Logic Pro).
 
           **Also new:**
 
           - Arrow keys in the browser (issue #23, our own addition): click a patch in a browser list, then Up and Down
             step to the next or previous patch, Left and Right to the next or previous column, and load it. Holding
-            a key runs through the list; the patch it stops on is loaded.
+            a key runs through the list; the patch it stops on is loaded. Up and Down tested on Linux (REAPER),
+            Windows 11 (VM, Ableton Live 11) and macOS (Ableton Live 12); Left and Right on Linux (REAPER).
           - Fixed: a patch chosen in the browser from another bank, followed by Program +/- on the Virus, loaded the
             patch of the old bank.
 
