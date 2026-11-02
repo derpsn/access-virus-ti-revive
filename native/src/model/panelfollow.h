@@ -8,6 +8,7 @@
 #include <cstdint>
 #include <mutex>
 #include <string>
+#include <utility>
 #include <vector>
 
 namespace vti {
@@ -30,6 +31,10 @@ public:
     // the location, and sends the patch into the edit buffer like after a report (capture 2026-10-26, E369).
     // Empty for a part, bank or program out of range.
     static std::vector<std::vector<uint8_t>> program_select(int part, int bank, int program);
+    // the part's Bank / Patch values after such a choice: the Virus does not report a Program Change from the host,
+    // so the plug-in stores them itself - a later step on the Virus reports only the new Patch and must find the
+    // chosen bank (test 2026-11-01). Empty for a bank or program out of range.
+    static std::vector<std::pair<std::string, int>> chosen_location(int bank, int program);
     // marks `part` like a report, with the chosen bank and patch (the Virus does not report a Program Change from
     // the host); false if out of range
     bool preset_chosen(int part, int bank, int patch, Clock::time_point now);

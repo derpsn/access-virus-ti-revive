@@ -391,3 +391,70 @@ TEST(paneselections_per_pane_not_per_bank)
     s.at(0, 1);
     CHECK(s.framed(0, 1).empty()); // and back to RAM B: the old selection does not come back
 }
+
+// Up/Down in the browser (#23, our own addition - the original has none): one entry further from the last clicked
+// one, selected alone; nothing without a click before, and the ends (or a library's last patch) stop it
+TEST(browserselection_step)
+{
+    BrowserSelection s;
+    auto any = [](int) { return true; };
+    CHECK_EQ(s.step(1, any), -1); // nothing clicked yet
+    s.press(10, false, false);
+    CHECK_EQ(s.step(1, any), 11);
+    CHECK(s.contains(11) && !s.contains(10));
+    CHECK_EQ(s.step(-1, any), 10);
+    s.press(20, true, false); // Shift: a range 10..20, the anchor stays 10
+    CHECK_EQ(s.step(1, any), 11);
+    CHECK_EQ(s.items().size(), 1u);
+    s.press(127, false, false);
+    CHECK_EQ(s.step(1, any), -1); // the end: no step, the selection stays
+    CHECK(s.contains(127));
+    s.press(0, false, false);
+    CHECK_EQ(s.step(-1, any), -1);
+    auto lib = [](int p) { return p < 5; }; // a library with 5 patches
+    s.press(4, false, false);
+    CHECK_EQ(s.step(1, lib), -1);
+    CHECK_EQ(s.step(-1, lib), 3);
+}
+
+// Left/Right (#23 follow-up): the list shows 8 columns of 16 (EditorRenderer::browser_entry), so a column step is
+// +-BROWSER_ROWS from the anchor and stops at the first or last column
+TEST(browserselection_column_step)
+{
+    BrowserSelection s;
+    auto any = [](int) { return true; };
+    CHECK_EQ(BROWSER_ROWS, 16);
+    s.press(10, false, false);
+    CHECK_EQ(s.step(BROWSER_ROWS, any), 26);
+    CHECK_EQ(s.step(-BROWSER_ROWS, any), 10);
+    CHECK_EQ(s.step(-BROWSER_ROWS, any), -1); // first column
+    CHECK(s.contains(10));
+    s.press(120, false, false);
+    CHECK_EQ(s.step(BROWSER_ROWS, any), -1); // last column
+    CHECK(s.contains(120));
+    auto lib = [](int p) { return p < 20; }; // a library with 20 patches: no column step into empty slots
+    s.press(10, false, false);
+    CHECK_EQ(s.step(BROWSER_ROWS, lib), -1);
+}
+
+// Up/Down held: some systems send a held key as plain presses (Linux/X11, 2026-11-01: 'it runs through each preset'),
+// ~30 a second. The selection follows every step; the patch is loaded once, 150 ms after the last step - like the
+// Virus' value knob turned through the presets (PanelFollow::PRESET_QUIET, E152) - so a held key is one load, not 30
+// patch dumps a second
+TEST(browserkeyload_quiet_time)
+{
+    BrowserKeyLoad k;
+    int bank = -1, prog = -1;
+    CHECK(!k.due(1000, bank, prog)); // nothing pending
+    k.step(4, 1, 1000);
+    CHECK(!k.due(1100, bank, prog));
+    k.step(4, 2, 1130); // held: the next step moves the time on
+    CHECK(!k.due(1250, bank, prog));
+    CHECK(k.due(1280, bank, prog));
+    CHECK_EQ(bank, 4);
+    CHECK_EQ(prog, 2); // only the last one
+    CHECK(!k.due(2000, bank, prog)); // once
+    k.step(4, 3, 3000);
+    k.cancel(); // dropped: nothing loads
+    CHECK(!k.due(4000, bank, prog));
+}

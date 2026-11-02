@@ -55,6 +55,12 @@ public:
     // sync_bank); `cache` keeps what was read, the rest unchanged.
     int read_bank(int bank, Bank &cache, const std::function<void(int)> &progress = nullptr,
                   const std::atomic<bool> *stop = nullptr);
+    // A user ROM bank (bank 5..30, E381/E382): the original has no bank info for ROM banks, it reads the programs it
+    // has no data for, each after 74 01 7E 04, with 30 <bank> <program> (captured: 128 requests ~1 s apart). Reads
+    // only the empty slots of `cache`; progress(program) per program read. Returns the number read, -1 / -2 as
+    // read_bank; `cache` keeps what was read.
+    int read_missing(int bank, Bank &cache, const std::function<void(int)> &progress = nullptr,
+                     const std::atomic<bool> *stop = nullptr);
     // called before every request: may block (e.g. while the host plays - the Virus delays notes while it answers
     // dump requests); returning false cancels like `stop`
     std::function<bool()> before_request;

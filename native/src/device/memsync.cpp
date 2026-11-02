@@ -209,4 +209,26 @@ int MemorySync::read_bank(int bank, Bank &cache, const std::function<void(int)> 
     return 128;
 }
 
+int MemorySync::read_missing(int bank, Bank &cache, const std::function<void(int)> &progress,
+                             const std::atomic<bool> *stop)
+{
+    const std::vector<uint8_t> rise = {0xF0, 0x00, 0x20, 0x33, 0x01, (uint8_t)dev_, 0x74, 0x01, 0x7E, 0x04, 0xF7};
+    int read = 0;
+    for (int p = 0; p < 128; p++) {
+        if (!cache[p].empty())
+            continue;
+        if ((stop && *stop) || (before_request && !before_request()))
+            return -2;
+        send_(rise);
+        Dump d = single(bank, p);
+        if (d.empty())
+            return was_cancelled() ? -2 : -1;
+        cache[p] = std::move(d);
+        read++;
+        if (progress)
+            progress(p);
+    }
+    return read;
+}
+
 } // namespace vti

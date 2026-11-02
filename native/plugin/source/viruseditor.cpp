@@ -1079,6 +1079,8 @@ public:
 #endif
             plugin_->diag_report();
             plugin_->tick_gestures(); // knob moves on the Virus -> host edits (E304)
+            if (int kb, kp; key_load_.due(now_ms(), kb, kp)) // Up/Down in the browser stopped
+                plugin_->load_patch_remembered(kb, kp, plugin_->ui_value(plugin_->layout().frame_parameter, -1));
             drop_switched_selections();
             if (plugin_->ui_changed() && !partial_) { // during a drag the drag repaints its own area
                 plugin_->diag.dirty_ticks++;
@@ -1220,6 +1222,8 @@ public:
             event.consumed = true;
             return;
         }
+        if (browser_key(event, frame))
+            return;
         // Ctrl+Z / Ctrl+Shift+Z / Ctrl+Y (Cmd on macOS: VSTGUI's Control) undo and redo editor edits - while the
         // editor has the keyboard (a host may keep these keys) and no text field is being edited (it has its own)
         if (event.type != EventType::KeyDown || !event.modifiers.has(ModifierKey::Control) ||
@@ -1239,6 +1243,42 @@ public:
             return;
         invalid();
         event.consumed = true;
+    }
+
+    // Up/Down/Left/Right in the browser list that has the focus (#23, our own addition: the original has none): the
+    // next or previous patch (Left/Right: the same row in the next or previous column), selected at once and loaded
+    // into the current part like a double-click once the steps stop (BrowserKeyLoad: a held key runs through the
+    // list, the Virus gets only the patch it stops on)
+    static int browser_key_delta(VirtualKey k)
+    {
+        return k == VirtualKey::Down    ? 1
+               : k == VirtualKey::Up    ? -1
+               : k == VirtualKey::Right ? vti::BROWSER_ROWS
+               : k == VirtualKey::Left  ? -vti::BROWSER_ROWS
+                                        : 0;
+    }
+    bool browser_key(KeyboardEvent &event, CFrame *frame)
+    {
+        const int pane = renderer_.focused_pane;
+        const int delta = browser_key_delta(event.virt);
+        if (event.type != EventType::KeyDown || pane < 0 || delta == 0 ||
+            event.modifiers.has(ModifierKey::Control) || event.modifiers.has(ModifierKey::Alt) ||
+            event.modifiers.has(ModifierKey::Shift) || (frame && dynamic_cast<CTextEdit *>(frame->getFocusView())))
+            return false;
+        event.consumed = true;
+        auto param = pane_param_.find(pane);
+        if (param == pane_param_.end())
+            return true;
+        const int bank = plugin_->ui_value(param->second, -1);
+        const int prog = browser_sel_.at(pane, bank).step(delta, [this, bank](int p) {
+            return !plugin_->bank_patch(bank, p).empty();
+        });
+        if (prog >= 0) {
+            show_selection(pane, bank);
+            key_load_.step(bank, prog, now_ms());
+            invalid();
+        }
+        return true;
     }
 
     void drawRect(CDrawContext *ctx, const CRect &update) override
@@ -2828,6 +2868,7 @@ private:
     vti::PaneSelections browser_sel_;      // one selection per browser pane (E318)
     std::map<int, std::string> pane_param_; // pane -> its "Browser N/Selected Bank" parameter
     int drag_value_ = 0;
+    vti::BrowserKeyLoad key_load_;
 };
 
 // the user's size choice, kept for every editor (not per project): <plug-in folder>/ui-zoom ("1.5");

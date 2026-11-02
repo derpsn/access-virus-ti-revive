@@ -15,6 +15,7 @@
 #include "device/cablerule.h"
 #include "device/dumppacer.h"
 #include "device/startprogress.h"
+#include "device/userrom.h"
 #include "device/transport.h"
 #include "device/virusrate.h"
 #include "device/audiogate.h"
@@ -190,12 +191,22 @@ public:
         std::lock_guard<std::mutex> g(info_mu_);
         return tios_;
     }
+    // the identification blocks themselves (flashinfo.h order; empty until read): the user ROM bank record (E381)
+    std::vector<uint8_t> flash_blocks() const
+    {
+        std::lock_guard<std::mutex> g(info_mu_);
+        return flash_;
+    }
+    // the read for the present Virus is over (blocks found or not); false again when the Virus goes away
+    bool flash_read() const { return flash_read_.load(); }
 
 private:
     std::atomic<int> rate_req_{0};                       // a rate request for the worker (0 = none)
     std::atomic<unsigned> rate_req_seq_{0}, rate_done_seq_{0}; // requests made / handled
     mutable std::mutex info_mu_;
     std::string tios_;
+    std::vector<uint8_t> flash_;
+    std::atomic<bool> flash_read_{false};
     std::function<void(bool)> device_;
     std::function<void(bool)> on_waiting_;
     std::function<void(bool, bool)> status_;
@@ -671,7 +682,11 @@ private:
     bool probe_virus_ready(); // the readiness probe (30 00 00 behind everything queued); false: no reply
     std::atomic<bool> sync_started_{false};
     void sync_banks(); // brings the bank cache up to date with the Virus (background thread)
-    void load_rom_banks(); // ROM A.. from the user's firmware.bin for the connected model
+    // ROM A.. for the connected model: from the user's firmware.bin, except the banks with the user's own patches
+    // (E381, #22), which come from their cache file; returns the number of their programs still to read from the Virus
+    int load_rom_banks();
+    std::atomic<uint32_t> user_rom_{0}; // bit i = ROM bank A+i is a user bank (set by the sync thread, read by others)
+    std::string user_rom_dir_; // their cache folder <cache>/rom-<key> (userrom.h); only the sync thread uses it
     std::atomic<bool> syncing_{false};
     std::atomic<bool> downloading_{false}; // download_bank's thread is reading a bank
     std::thread download_thread_;

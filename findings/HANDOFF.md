@@ -1,6 +1,176 @@
 # HANDOFF
 
-## START HERE (2026-10-30): round 0.8.36 started on branch `round-0.8.36` - first task section locking (#21)
+## START HERE (2026-11-01, evening): issues after v0.8.37-rc1, branch `round-0.8.37`
+
+**2026-11-02, GitHub checked with the user:** #22/#23/#24 nothing new (#22 done, only a thank-you at the release).
+NEW #25 (TI Desktop, Win11, Live 11, 0.8.36: 'virus not seen', no logs) - reply POSTED issuecomment-6584520512
+(work/issue25-reply1.md): suspect the Access VIRUSUSB driver, asked usbinfo, diag.log via ? menu, vtibroker.log,
+which Control Center, Access software installed. NEW #26 (vmunoz82: Snow on Linux works with a patch - Snow EPs
+05/85/06/86 are BULK per them, vticore.c always uses libusb_interrupt_transfer -> LIBUSB_ERROR_IO; filter for ~2000/s
+'ff fe 00 00' on bulk EP 0x85; plus a vtibridge.exe Wine bridge over VTI_BROKER_TCP) - reply POSTED
+issuecomment-6584520916 (work/issue26-reply1.md): yes to a separate Snow PR (asked lsusb -v, filter note + logs;
+we test on our TI2 before merge, evidence entry), Wine declined for the main project (publish separately,
+VTI_BROKER_TCP + token stay; README link offered), hint E128/E131 registry stall for their sync reports. TODO when
+the PR comes: check the Snow endpoint types statically in vti_snow.bin (REA/firmware scripts) - not verified yet.
+**Final 0.8.37 (user 2026-11-02: 'release it', Left/Right NOT tested on Windows/Mac - user: no issue, skip; #24
+marker gap: wait).** Tested-on lines made true in README, site and release notes (same wording): own ROM banks
+with the switch on Linux/Win11 VM Live 11/macOS Live 12 (checklist L1/W2/M2), byte compare Linux only; #22 user
+Polar A-Z + Desktop A-L (E384); Up/Down Linux/Win11/macOS (L2/W3/M3) + user Logic; Left/Right Linux only.
+native/ unchanged since e38ce6b (516 tests). Site built locally (scratchpad site-0837final), not deployed.
+Snow endpoint check running as a background sub-agent (static, vti_snow.bin).
+
+**#22 CONFIRMED on real units (E384):** reporter: names and sounds right after the read, Program/Bank +/- match.
+FF7FD2..D5: Polar 0xFFFFFFC0 (ROM A-Z), Desktop 0xFFF00000 (ROM A-L). FF7FD0..D1 ASCII '26' / '33' (ours '01'):
+meaning open. The plug-in calls the Polar "Virus TI2 Desktop" (no Polar/Desktop distinction). Reply posted
+(issuecomment-6561307709, work/issue22-reply3.md); the user CONFIRMED (17:35 UTC): Desktop only A-L flashed, the rest factory
+5.1.7 (W-Z empty) - the mask is exact on both units (E384 HIGH). No reply needed beyond a thank-you at the release.
+**Long Logic test on our Mac DONE (E386): #24 NOT reproduced** (44.1/512, 48 k, 44.1/1024, sleep, Virus power cycle; 4 takes 0
+holes, the scan finds 45 in the reporter's take); update posted on #24 (work/issue24-reply2.md). Logic's rate changes left
+the Virus at the old rate 2/2 - the E377 relock fixed it (first run on hardware). GAP (candidate for 0.8.38): a new stream
+while the host keeps playing gets no marker (notes sounding), timing unaligned until Stop. Was: 0.8.37 round build (= rc1 code), Logic 44.1 kHz / 512, Virus at
+44.1 in Core Audio, fresh diag.log since 17:31 UTC (old one: diag.log.pre-logic-long-20261101); block A = 20-30 min cycle
+play with Output 1-2 recorded, block B = Stop/Play x5, editor close/open, 48 kHz and back, sleep, Virus power cycle.
+**#23:** arrow keys confirmed by the reporter; window size works for them (1.25 -> 1.50 kept). New ask: Left/Right
+(maintainer promised it). DONE (TDD): BROWSER_ROWS = 16 in bankdrop.h, browser_key_delta in viruseditor.cpp (Left/Right
+= -+16, stops at the first/last column and at empty library slots), test browserselection_column_step, vtitests
+516/516, ctest 5/5 (Linux). README + site + release notes: "Arrow keys in the browser", 516 tests, and the #22 user
+confirmation in place of "Not tested yet with real user banks". Left/Right TESTED: user, REAPER, Linux, TI2 Desktop, dev
+build 93bec190 in ~/.vst3 (rc1 backed up in ~/.vst3-backup/0.8.37-rc1-installed-d1bfaf4c): 'left right works great'.
+#24 follow-up (E385): holes end on host block boundaries, same pitch in both takes = not a running rate mismatch
+(E377); cause still open, waiting for the log.
+**#24 NEW (E385):** macOS/Logic audio glitches until Logic restarts, sometimes a skip on the first bar. The glitch
+take has exact-zero holes every 11-12 ms (67-108 frames, ~16% of the signal, on 1 ms boundaries); the log starts after
+the restart and is clean (drops 0, filled 0). Reply posted (issuecomment-6561307970, work/issue24-reply1.md): diag log
+saved DURING a glitch, which unit, when it starts, Virus sample rate in Audio MIDI Setup, first-bar skip in a bounce.
+With such a log: 'filled' rising = GapFill (Core Audio sample time ahead of the ring), 'drops' rising = AudioIn::read
+re-anchor, neither = the holes come from Core Audio's input already. Do not guess a fix before that log.
+NEXT: wait for #22 (Desktop A-L) and #24 (log); weekly final 0.8.37 (merge -F, tag alone,
+site by hand on OK, test machines).
+
+## (previous START HERE) (2026-11-01, later): round 0.8.37 on branch `round-0.8.37` (from main 7c15188 + the 0.8.36 notes)
+
+**Posted (user OK):** #22 reply issuecomment-6554788726 (cause, no store while a flashed slot plays, test build to
+follow, asks: original browser + Sequencer mode, which banks, diag.on log, only the ff7fd0 line of tirevive-cc info
+--raw), #23 reply issuecomment-6554788924 (several TIs later, size should already stick - asks DAW/format/ui-zoom,
+arrow keys next round). User chose the SAFE route: no ROM flashing on our Virus (rule 2); test with a switch instead,
+the #22 reporter tests the RC on real user banks.
+**#22 fix BUILT (TDD, uncommitted while the active GitHub account is the other one - the identity hook blocks):**
+native/src/device/userrom.h (user_rom_mask: 'FLSH' at FF7FC0 + FF7FE0 = 6/7, BE u32 FF7FD2..D5, bit 31 = ROM A ..
+bit 6 = ROM Z, limited to the bank count - sub-agent follow-up, HIGH; rom_letters_mask / rom_mask_letters;
+user_rom_key = FNV-1a of all identification bytes + mask -> cache/rom-<key>/ROM X, one folder per unit and flash
+state, serial never written), MemorySync::read_missing (only empty slots, 74 01 7E 04 + 30 <5+i> pp, no bank info),
+SyncPage::total, DeviceOut::flash_blocks(), VirusPlugin::use_user_rom_banks (marked banks: cache file or empty slots,
+never firmware.bin; test switch <plug-in folder>/rom-user.on with letters), sync_banks reads them after RAM D (riser
+7E 07 paused, LCD 'Synchronizing ROM X', partial reads saved), miss log 'user ROM bank not read from the Virus yet'.
+Our TI2: FF7FE0 = 07, FF7FD2..D5 = 0. vtitests 510/510, ctest 5/5 (Linux). Dev build 1cb5216d installed in ~/.vst3
+(release 57cd87a5 backed up in ~/.vst3-backup/0.8.36-release-installed-57cd87a5). MISTAKE: copied over the .so while
+REAPER was running - always check first. Test switch set: ~/.local/share/virus-ti-native/rom-user.on = 'Z', diag.on.
+NEXT: user REAPER test (sync page + ROM Z 128 reads ~2 min, notes pause it, browser names, ROM Z patch on the Virus,
+restart = no read); then diag.log + compare the read ROM Z with firmware.bin's; cpp-reviewer; #23 arrow keys + Mac
+window-size check; README/site; risk.py --round 0.8.37, CI test build, checklist; v0.8.37-rc1 for the #22 reporter.
+Not done: Control Center / tirevive-cc backup ignore user ROM banks (RAM only, unchanged).
+**User test 1 (REAPER, Linux, dev 1cb5216d, 2026-11-01):** switch 'Z': ROM Z read 128 programs in 137 s, paused for
+notes twice (log), browser all 'Empty' = CORRECT (factory TI2 ROM Z is empty; vtimodel rom: the 128 dumps read from
+the Virus are byte-identical to firmware.bin's ROM Z). Switch now 'A': ROM A read 128 in 131 s, browser names right
+(user). BUG found (old, also in 0.8.36): browser load sends Bank Select + PC but kept the part's Bank value, so a
+step on the Virus (reports only Patch) combined with the stale bank: ROM A 0 chosen, Virus to ROM A 1 -> plug-in
+loaded RAM A 1 'Fimplex HS' (log 'bank 0 patch 1'). FIXED 158b780: PanelFollow::chosen_location, stored with
+set_part_value after program_select (test panelfollow_chosen_location_values; 511/511). Not installed yet (REAPER
+was running). NEXT: install when REAPER is closed, user retests steps (browser ROM A 0, step on the Virus, restart =
+no sync page), then the rest of the round list above.
+**Retest PASSED (user 'works!', dev a6438c9d installed):** restart = 0 to read, 3.5 s; browser ROM A 0 + Virus steps
+= bank 4 patch 1/2/3; RAM B 0 + steps = bank 1. E383 written. Note: the 'REAPER RUNNING' check matched Steam's game
+launcher (also 'reaper', SteamLaunch) - the first copy was safe after all; skip SteamLaunch when checking. Test switch
+rom-user.on = 'A' still set on Linux (remove before the checklist / at round end). NEXT: cpp-reviewer on the round
+diff, #23 arrow keys in the browser, Mac window-size check (#23 point 3), README/site, risk.py --round 0.8.37, CI
+test build, checklist, v0.8.37-rc1 for the #22 reporter.
+**Review + arrow keys (45a6197, 2026-11-01):** ecc cpp-reviewer on 7c15188..HEAD: no CRITICAL; fixed H1 (out_/stop
+during the wait), H2+M3 (DeviceOut::flash_read() flag: set after every read attempt incl. skipped, cleared with
+flash_ in lost()), M4+M5 (load_user_rom_bank in userrom.h: files outside the lock, a damaged file = whole bank to
+read; tests), M6 (load_rom_banks now does both: all ROM slots erased and filled at once after the mask is known),
+M7 (riser joined before the ROM phase, no early page for ROM), M8 (ETA + ROM programs), L10 (comments). Kept: L9 key
+over all identification bytes (flash contents, stable: restart found the cache), old rom-<key> folders not pruned,
+L11 one missing reply stops the ROM phase (as RAM). #23 point 4 DONE: Up/Down in the focused browser list
+(renderer_.focused_pane) = BrowserSelection::step + load like a double-click, no repeat, stops at the ends / a
+library's last patch (test browserselection_step). 514 tests, ctest 5/5. Dev fbc11124 installed, rom-user.on = 'B'.
+User test (fbc11124): arrow keys work, focus rule works; a HELD key ran through the presets one by one (X11 sends
+repeats as plain presses, isRepeat false) = one patch load per step -> changed: BrowserKeyLoad (bankdrop.h, test
+browserkeyload_quiet_time): selection follows every step, the load comes 150 ms after the last one from the editor
+timer (50 ms), repeats allowed on every OS. 515 tests, ctest 5/5.
+Retest PASSED (user 'works :)', dev 0dbd528c): held key runs, loads once at the stop, also in a library. ROM B read
+128 earlier (diag.log), later starts '0 programs to read'.
+**#23 point 3 (size) checked on the Mac (user, 2026-11-01, 0.8.36):** size chosen in the menu comes back after
+reopening ('it worked'); ui-zoom = '1.5' written 09:16, AppleLocale de_AT (no decimal-comma problem). The save path
+is only the right-click size menu (set_user_zoom). Not reproduced - waits for the reporter's answer (DAW, AU/VST3,
+how they resize).
+**Release prep 0.8.37 (2026-11-01):** README + site (same wording): feature items 'Your own ROM banks' (#22) and 'Up
+and Down in the browser' (#23) after the drag-and-drop item; README reliability fix (E383). tirevive-site-check
+scoped: TESTS 500 -> 515 (site + README), 'reads them again after new banks are burned' softened to 'when the Virus'
+record of them changes' (E381: the stamp change on a re-burn is only inferred), the rest sourced (E381-E383).
+native VERSION 0.8.37, build.yml notes 0.8.37. Site built locally (scratchpad site-0837), NOT deployed.
+risk.py --round 0.8.37: class C on all three -> only hil cold/reopen/export from core. NEXT: CI test build, round
+checklist (L: hil + user ROM switch + arrows/bank fix on the CI build; W/M: hil + the same in Live), remove
+rom-user.on before the checklist's normal-use items, v0.8.37-rc1 for #22.
+CI TEST BUILD run 41288474375 (e951412, version 0.8.37) started ~09:20. CHECKLIST published:
+https://claude.ai/artifact/J8RjKYZkH4fVTEhkJ8RRJi (spec scripts/checklists/round-0.8.37.json; db, marks
+rounds/0.8.37/marks - empty at publish): L1 own ROM bank (switch C) + L2 arrows/bank fix; W1 hil-win + W2 + W3;
+M1 hil-mac + M2 + M3. Claude sets rom-user.on = C before each block and removes it after.
+CI GREEN (all jobs). Artifacts ~/Downloads/TI-Revive-0.8.37-test. LINUX: CI build installed (install.sh, plug-in
+d1bfaf4c = the tarball's; dev 0dbd528c backed up in ~/.vst3-backup/0.8.37-dev-installed-0dbd528c); hil.sh ALL PASS
+(work/hil/20261101-092906; export 1.00x, max 0.77 ms; first try 'No Virus TI on USB' - Virus was off). L1 PASS
+(ROM C 128 read in 132 s, restart 0 to read), L2 PASS (user marks). Linux switch removed. WIN11 VM: setup.exe
+/quiet exit 0, TI Revive 0.8.37, plug-in 25f672f9, C:\tirevive-test\0.8.37. W1 hil-win ALL PASS
+(results-20261101-094147, pulled to work/hil/win11-0.8.37; max 1.14 ms) - the switch was already set, so the hil
+starts began reading ROM C and were stopped (-2) at each close; Live then read only the remaining 92 = RESUME AFTER
+A STOP WORKS (Windows). W2, W3 PASS (user marks). Switch removed, Virus detached, win11 off. MAC PUSHED:
+~/Downloads/TI-Revive-0.8.37-mac (TI Revive.pkg cc49d09d = the CI zip's, INSTALL-COMMAND.txt, 'Install test
+build.command', hil/hil-mac.command), switch rom-user.on = C set on the Mac. MAC DONE (user, MacBook Air M3, Live
+12; pkgutil 0.8.37): M1 hil-mac ALL PASS (results-20261101-095252, pulled to work/hil/mac-0.8.37; max 0.73 ms),
+M2 (hil starts stopped the ROM C read twice, then 113 -> 93 left, read 93, reopen 0 to read), M3 PASS. Mac switch
+removed. ROUND 0.8.37 TEST COMPLETE: all 8 items pass (L1 L2 W1-W3 M1-M3). No switch left on any machine.
+v0.8.37-rc1 PUBLISHED (user OK 'yes. go on', 2026-11-01): annotated tag on 06a3776 pushed alone, release CI run
+41291539080 all jobs green, pre-release with msi, setup.exe, mac zip, linux tarball, usbinfo, libusb source. #22/#23
+checked with the user first: no new replies. #22 reply POSTED issuecomment-6555947004 (draft work/issue22-reply2.md:
+rc1 link, what to expect - ~2 min per own bank, all 26 ~1 h, resume, per unit -, asks: names/sound match, the ff7fd0
+line + which banks, a log if wrong; arrow keys note). NEXT: wait for the #22 reporter (real user banks = the open
+point of E381/E383); #23 waits (size question); then the weekly 0.8.37 release (merge with -F, tag alone, site
+rebuild by hand, test machines on the release).
+
+## (previous START HERE) (2026-11-01): issues #22 / #23 (after the 0.8.36 release), branch `round-0.8.36` (= released)
+
+**Issues read with the user (2026-11-01):** #22 (sbostock76, macOS M4, Logic 12.4, TI2 Polar + TI2 Desktop, 0.8.36):
+own banks flashed into ROM A-Z with the original Control Center -> the browser shows factory 5.1.7 names, a program
+chosen on the Virus shows its real name briefly and is then replaced, fine without USB. Cause (code reading, NOT
+reproduced - our TI2 has factory ROMs): ROM banks come only from firmware.bin (native/src/access/firmware.h), never
+checked against the device (memsync syncs RAM 1..4 only); a program chosen on the Virus is loaded from that cache
+(E152) -> the factory dump overwrites the edit buffer. Also reported: 10 min first start (= first RAM A-D sync,
+512 x ~1 s, expected), Virus jumps to Sequencer mode (not checked against the original), AURA editor installed.
+Their log has only the broker part (diag.on off). OPEN: how the original learns/reads user ROM banks (REA sub-agent
+started; E117 hints the original caches ROM banks from the device; E169/E313: Control Center backups have 'user ROM
+banks' + a ROM bitfield). No ROM request may be sent before it is known (rule 2). #23 (same reporter): (1) several TIs
+in one project (large, later), (3) remember window size - ALREADY saved globally in <plug-in folder>/ui-zoom
+(viruseditor.cpp load_zoom), so a non-sticking size on macOS is a bug to check on the Mac, (4) up/down keys in the
+browser list -> next weekly round. Drafts (NOT posted, wait for the user's OK): work/issue22-reply1.md (cause, no
+store while a flashed slot plays, questions: original's browser + Sequencer mode, which banks, diag.on log),
+work/issue23-reply1.md. #14/#16/#20 unchanged (waiting for reporters).
+**REA + capture (E381, E382, 2026-11-01):** the original marks user ROM banks from FF7FD2..FF7FD5 (block FF7FD0,
+already read by the broker; letters A..Z = bits 31..6 when 'FLSH' at FF7FC0; our TI2: 00 00 00 00), takes factory
+banks from firmware.bin, user banks from its cache, and reads a bank without cache with 74 01 7E 04 + 30 <5+i> pp
+(CAPTURED in win10ref with firmware.bin + the ROM A cache moved aside: 128 requests, ~1 s each, replies identical to
+its cache; win10ref restored, ROM A.new kept in ProgramData\Access Music\Virus TI\rom-a-aside; VM off, Virus on
+Linux). So the request is known (rule 2). #22 draft updated (mechanism; asks for the ff7fd0 line only - serial).
+NEXT: fix design with the user: use the bitfield, firmware.bin only for unmarked banks, fetch marked banks with
+30 <5+i> pp like RAM programs (once, ~2 min per bank), cache per FLSH stamp; unit tests first (TDD).
+Committed after the account switch (user, 2026-11-01): E381/E382, this entry and
+.claude/hooks/github-identity.sh (registration stays local). The hook also blocks on GitHub words inside heredoc text (fail-safe, accepted).
+**GitHub identity hook (user, 2026-11-01: two GitHub accounts on this machine):** .claude/hooks/github-identity.sh,
+PreToolUse Bash in .claude/settings.local.json (git-ignored, like the Stop hook): gh, networked git, commits/merges/
+tags and curl/wget to github are blocked unless the active gh account (gh config get -h github.com user; git pushes
+use gh as credential helper) and git user.name are derpsn; GH_TOKEN/GITHUB_TOKEN checked with gh api user. Tested
+with a fake GH_CONFIG_DIR (wrong account -> exit 2 for gh/push/commit/fetch/curl, ls/status/log pass). On a block:
+ask the user for `gh auth switch -h github.com -u derpsn`, never switch it ourselves.
+
+## (previous START HERE) (2026-10-30): round 0.8.36 started on branch `round-0.8.36` - first task section locking (#21)
 
 **Feature work 2026-10-31 (user away: 'Work on all Features and the new possibilities with 15 and 16 ... use the
 ecc cpp reviewer and ecc code coverage skill'; release/testing skipped, the VM sync reports not a priority).**
@@ -27,7 +197,7 @@ checked. Installed plug-in is still the rc1 CI build (dev builds only in build-n
 tirevive-site-check, a DAW smoke test (REAPER) of the menus, then rc2 / weekly 0.8.36 with the checklist; REMOTE
 templates' open question (does the Virus keep records over a power cycle) needs the user at the Virus.
 
-**Test round 0.8.36 started (user: 'start the 0.8.36 test build and checklist', 2026-10-31 ~11:54).** risk.py --round 0.8.36: class C on all three -> only the automated hil runs from core. CI TEST BUILD run 41194611708 on e69314e (version 0.8.36). CHECKLIST published: https://claude.ai/artifact/9hcVxj2pDe9oXLKEygnnNn (spec scripts/checklists/round-0.8.36.json; db, marks rounds/0.8.36/marks): L1 features on the CI build + L2 Download entire bank in REAPER (E380 (4)); W1 hil-win, W2 section locks, W3 ? menu, W4 Undo/Compare/Randomize/RAM backup; M1 hil-mac, M2 section locks, M3 ? menu/Undo/Compare/Randomize, M4 RAM backup. CI GREEN (all jobs). Artifacts in ~/Downloads/TI-Revive-0.8.36-test2 (the rc1 folder -test kept). LINUX: L1 + L2 PASS (user, ~10:57/10:59 UTC, REAPER) - run on the installed dev build 9a81c223 before the CI build was in; native/ is unchanged 918ebed..e69314e, so they count. L2 = 'Download entire bank' works in REAPER -> E380 (4) was the test host. Then the CI build installed (install.sh; plug-in 8990bb9b = the tarball's; dev build backed up in ~/.vst3-backup/0.8.36-dev-installed-9a81c223), hil.sh ALL PASS (work/hil/20261031-120134; H3 export 1.00x, H6 max 0.42 ms). MISTAKE: scripts/vm.sh defaults to VM=win10 - the build went into win10 first (setup /quiet exit 0, left installed there; win10 shut down, Virus detached). Always VM=win11. WIN11 VM (Windows 11 Pro) = CI build 0.8.36 (setup.exe /quiet exit 0, TI Revive 0.8.36, plug-in 98ec445f = the CI's; C:\tirevive-test\0.8.36, hil kit in ...\hil); Virus attached to win11. W1 hil-win run 1 (results-20261031-121124, pulled to work/hil/win11-0.8.36): H2-1, H2-2, H6 pass; H1 FAIL (first note 16.1 s: Virus ready 3.9 s, sync marker 7.7 s, then the notes at 8/9/10 s 'no onset within 2 s', one blip at 12 s, steady from 16 s; drift -320 ppm over 4 notes - VM, not judged, E334); H3 FAIL (first note 13.1 s: 'Virus ready after 11.5 s (no reply to the probe)'). Both = the Virus not answering / not sounding for seconds after the start; first session after the Virus moved win10 -> win11 without a power cycle. 0.8.35 on win11: first notes 8-9 s. NOT yet known whether VM/Virus state or a regression: rerun hil-win; if it fails again, power-cycle on Linux (detached) and diff the 0.8.36 start path. Run 2 (results-20261031-121943): H2-1, H2-2, H3 (export 1.00x), H6 PASS; H1 FAIL in a different way: first note 8.1 s ok, onsets on the grid to 13.1 s, then 14.002 (~95 ms early), 15 missing, 16-19 ~30 ms early (2nd sync report, safety net moved 1 stamp) -> '5 sounds off the grid', 'last note 13.1 s'. The start path (bank sync paused for notes, RAM A/B fetch, safety net) looks the same in the 0.8.35 win11 logs, which passed. Failing items move between runs (run 1 H1+H3, run 2 H1), like the 0.8.2x VM runs judged as VM USB timing (MED). Judged: VM timing, not a 0.8.36 regression (MEDIUM, not proven on a real PC). USER: W1 counted as PASS (function; Windows timing not judged in the VM). WINDOWS DONE (user, ~11:28 UTC, win11 VM, Live 11): W1-W4 PASS (section locks, ? menu, Undo/Compare/Randomize/RAM backup). Virus detached, win11 off. MAC PUSHED (~12:29): ~/Downloads/TI-Revive-0.8.36-mac (TI Revive.pkg sha256 d938fc0a = the CI zip's, INSTALL-COMMAND.txt, 'Install test build.command', hil/hil-mac.command). MAC DONE (user, ~11:38 UTC, MacBook Air M3, Live 12; pkgutil 0.8.36): M1 hil-mac ALL PASS (results-20261031-123023 on the Mac; export 1.00x, max 0.77 ms), M2-M4 PASS. ROUND 0.8.36 TEST COMPLETE: all 10 items pass (L1 L2 W1-W4 M1-M4). User: 'ready for the release' + asked for website screenshots of the new features. Release prep: README + site tested-on lines updated (section locks, Undo/Compare/Randomize: Linux, Windows 11 VM Live 11, macOS Live 12; RAM backup also on Windows/macOS; drag and drop: + Windows 11 VM from round 0.8.35 W3); section locking was missing on the site (README only) -> added, same wording. SCREENSHOTS (user asked, Virus back on Linux): nativehost under Xvfb with the CI-equivalent dev build, state scratchpad gui/r5.state: docs/images/plugin-section-lock.png (Filter 1 + Amplifier Envelope locked), plugin-help-menu.png (the ? menu), plugin-edit-menu.png (right-click menu after Randomize Medium: 'Undo Randomize Medium (Part 1)', LCD '271 parameters, 25 %'; Randomize = an edit-buffer write, allowed). The test host's --drag on a knob did not register (not checked why). README: image after the ? menu, Undo and Section locking paragraphs; site: Section locking and Undo/Redo/Compare/Randomize moved from list items into feature blocks with the shots, ? menu shot in the Help mode block, SHARED_IMAGES +3. Help mode text (README + site): pinned note stays, hover notes on top, display notes (site still had the old lead). Release notes tested-on lines: Linux REAPER, win11 VM Live 11, macOS Live 12. Site built locally (site2), not deployed. vst3sdk submodule shows a dirty vstgui4 (not touched, not committed). NEXT: merge + tag v0.8.36 (user: 'ready for the release'). E380 (4) updated (download works in REAPER, MEDIUM). NEXT: W1-W4 (user), then detach + Mac push.
+**Test round 0.8.36 started (user: 'start the 0.8.36 test build and checklist', 2026-10-31 ~11:54).** risk.py --round 0.8.36: class C on all three -> only the automated hil runs from core. CI TEST BUILD run 41194611708 on e69314e (version 0.8.36). CHECKLIST published: https://claude.ai/artifact/9hcVxj2pDe9oXLKEygnnNn (spec scripts/checklists/round-0.8.36.json; db, marks rounds/0.8.36/marks): L1 features on the CI build + L2 Download entire bank in REAPER (E380 (4)); W1 hil-win, W2 section locks, W3 ? menu, W4 Undo/Compare/Randomize/RAM backup; M1 hil-mac, M2 section locks, M3 ? menu/Undo/Compare/Randomize, M4 RAM backup. CI GREEN (all jobs). Artifacts in ~/Downloads/TI-Revive-0.8.36-test2 (the rc1 folder -test kept). LINUX: L1 + L2 PASS (user, ~10:57/10:59 UTC, REAPER) - run on the installed dev build 9a81c223 before the CI build was in; native/ is unchanged 918ebed..e69314e, so they count. L2 = 'Download entire bank' works in REAPER -> E380 (4) was the test host. Then the CI build installed (install.sh; plug-in 8990bb9b = the tarball's; dev build backed up in ~/.vst3-backup/0.8.36-dev-installed-9a81c223), hil.sh ALL PASS (work/hil/20261031-120134; H3 export 1.00x, H6 max 0.42 ms). MISTAKE: scripts/vm.sh defaults to VM=win10 - the build went into win10 first (setup /quiet exit 0, left installed there; win10 shut down, Virus detached). Always VM=win11. WIN11 VM (Windows 11 Pro) = CI build 0.8.36 (setup.exe /quiet exit 0, TI Revive 0.8.36, plug-in 98ec445f = the CI's; C:\tirevive-test\0.8.36, hil kit in ...\hil); Virus attached to win11. W1 hil-win run 1 (results-20261031-121124, pulled to work/hil/win11-0.8.36): H2-1, H2-2, H6 pass; H1 FAIL (first note 16.1 s: Virus ready 3.9 s, sync marker 7.7 s, then the notes at 8/9/10 s 'no onset within 2 s', one blip at 12 s, steady from 16 s; drift -320 ppm over 4 notes - VM, not judged, E334); H3 FAIL (first note 13.1 s: 'Virus ready after 11.5 s (no reply to the probe)'). Both = the Virus not answering / not sounding for seconds after the start; first session after the Virus moved win10 -> win11 without a power cycle. 0.8.35 on win11: first notes 8-9 s. NOT yet known whether VM/Virus state or a regression: rerun hil-win; if it fails again, power-cycle on Linux (detached) and diff the 0.8.36 start path. Run 2 (results-20261031-121943): H2-1, H2-2, H3 (export 1.00x), H6 PASS; H1 FAIL in a different way: first note 8.1 s ok, onsets on the grid to 13.1 s, then 14.002 (~95 ms early), 15 missing, 16-19 ~30 ms early (2nd sync report, safety net moved 1 stamp) -> '5 sounds off the grid', 'last note 13.1 s'. The start path (bank sync paused for notes, RAM A/B fetch, safety net) looks the same in the 0.8.35 win11 logs, which passed. Failing items move between runs (run 1 H1+H3, run 2 H1), like the 0.8.2x VM runs judged as VM USB timing (MED). Judged: VM timing, not a 0.8.36 regression (MEDIUM, not proven on a real PC). USER: W1 counted as PASS (function; Windows timing not judged in the VM). WINDOWS DONE (user, ~11:28 UTC, win11 VM, Live 11): W1-W4 PASS (section locks, ? menu, Undo/Compare/Randomize/RAM backup). Virus detached, win11 off. MAC PUSHED (~12:29): ~/Downloads/TI-Revive-0.8.36-mac (TI Revive.pkg sha256 d938fc0a = the CI zip's, INSTALL-COMMAND.txt, 'Install test build.command', hil/hil-mac.command). MAC DONE (user, ~11:38 UTC, MacBook Air M3, Live 12; pkgutil 0.8.36): M1 hil-mac ALL PASS (results-20261031-123023 on the Mac; export 1.00x, max 0.77 ms), M2-M4 PASS. ROUND 0.8.36 TEST COMPLETE: all 10 items pass (L1 L2 W1-W4 M1-M4). User: 'ready for the release' + asked for website screenshots of the new features. Release prep: README + site tested-on lines updated (section locks, Undo/Compare/Randomize: Linux, Windows 11 VM Live 11, macOS Live 12; RAM backup also on Windows/macOS; drag and drop: + Windows 11 VM from round 0.8.35 W3); section locking was missing on the site (README only) -> added, same wording. SCREENSHOTS (user asked, Virus back on Linux): nativehost under Xvfb with the CI-equivalent dev build, state scratchpad gui/r5.state: docs/images/plugin-section-lock.png (Filter 1 + Amplifier Envelope locked), plugin-help-menu.png (the ? menu), plugin-edit-menu.png (right-click menu after Randomize Medium: 'Undo Randomize Medium (Part 1)', LCD '271 parameters, 25 %'; Randomize = an edit-buffer write, allowed). The test host's --drag on a knob did not register (not checked why). README: image after the ? menu, Undo and Section locking paragraphs; site: Section locking and Undo/Redo/Compare/Randomize moved from list items into feature blocks with the shots, ? menu shot in the Help mode block, SHARED_IMAGES +3. Help mode text (README + site): pinned note stays, hover notes on top, display notes (site still had the old lead). Release notes tested-on lines: Linux REAPER, win11 VM Live 11, macOS Live 12. Site built locally (site2), not deployed. vst3sdk submodule shows a dirty vstgui4 (not touched, not committed). MERGED into main 7c15188 (-F file; parents d6a20dc + c872c54, tree = round tip), pushed; annotated tag v0.8.36 on it pushed alone; release CI run 41198360734 started. v0.8.36 RELEASED (2026-10-31, user: 'ship everything and build the site'): release CI 41198360734 all jobs green, GitHub release 'TI Revive 0.8.36' (not pre-release; msi, setup.exe, mac zip, linux tarball, usbinfo, libusb source). Site rebuilt (site.yml run 41198749194 green; live page shows 0.8.36, 500 unit tests, the Section locking block and the three new screenshots, all served 200). Linux = release (install.sh; plug-in 57cd87a5 = the tarball's; CI test build backed up in ~/.vst3-backup/0.8.36-ci-8990bb9b). win11 = release (setup.exe /quiet /norestart exit 0, TI Revive 0.8.36, plug-in 41dcb277 = the MSI's; C:\tirevive-test\0.8.36-release; VM left running). Mac: release pushed to ~/Downloads/TI-Revive-0.8.36-release-mac (pkg 9fa7e753 = the zip's; INSTALL-COMMAND.txt, 'Install test build.command') - the user installs. #21 reply about the final release POSTED (user OK, issuecomment-6543079093; draft work/issue21-reply3.md): tested on Linux/Windows 11/macOS, rc1 -> install over it on the Mac, the additions, asks for a short note to close. #21 CLOSED (2026-10-31 ~17:40 UTC): jwalkermed confirmed locking works on the M4 Pro (first user macOS test of 0.8.36); thank-you + close reply posted with user OK (issuecomment-6547086753, draft work/issue21-reply4.md). NEXT: #14/#16/#20 waiting; low priority: VM sync reports, E377 watch, nativehost knob --drag not registering; REMOTE templates power-cycle question. E380 (4) updated (download works in REAPER, MEDIUM). NEXT: W1-W4 (user), then detach + Mac push.
 
 **Site check 2026-10-31 (tirevive-site-check, scoped to the round; full check was at 0.8.33):** branch pushed (origin/round-0.8.36 = d1ad569, main unchanged). New README/site texts identical; ? menu, Panic (E380 (2)), Undo/Compare/Randomize (kept params checked against editordevice.xml: Transpose/Key Mode in no Locks section), RAM backup (E380 (1); SAVE, drop, swap, rename, sort and browser Undo all go through send_ram_writes/backup_ram), log scrubbing (diag.h) ok. Unit tests 453 -> 500 (stale, fixed in README + build.py; 488 run + 12 skipped without Access files). Coverage 94 % (16 Oct, vticore-only) kept with its date. Ctrl+Z confirmed by the user in REAPER (Linux, 2026-10-31): claim ok (Cmd on the Mac not tested). VERSION 0.8.36 ok. Site built locally, not deployed.
 
