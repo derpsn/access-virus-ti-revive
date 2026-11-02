@@ -2,6 +2,17 @@
 
 ## START HERE (2026-11-01, evening): issues after v0.8.37-rc1, branch `round-0.8.37`
 
+**2026-11-02, GitHub checked with the user:** #22/#23/#24 nothing new (#22 done, only a thank-you at the release).
+NEW #25 (TI Desktop, Win11, Live 11, 0.8.36: 'virus not seen', no logs) - reply POSTED issuecomment-6584520512
+(work/issue25-reply1.md): suspect the Access VIRUSUSB driver, asked usbinfo, diag.log via ? menu, vtibroker.log,
+which Control Center, Access software installed. NEW #26 (vmunoz82: Snow on Linux works with a patch - Snow EPs
+05/85/06/86 are BULK per them, vticore.c always uses libusb_interrupt_transfer -> LIBUSB_ERROR_IO; filter for ~2000/s
+'ff fe 00 00' on bulk EP 0x85; plus a vtibridge.exe Wine bridge over VTI_BROKER_TCP) - reply POSTED
+issuecomment-6584520916 (work/issue26-reply1.md): yes to a separate Snow PR (asked lsusb -v, filter note + logs;
+we test on our TI2 before merge, evidence entry), Wine declined for the main project (publish separately,
+VTI_BROKER_TCP + token stay; README link offered), hint E128/E131 registry stall for their sync reports. TODO when
+the PR comes: check the Snow endpoint types statically in vti_snow.bin (REA/firmware scripts) - not verified yet.
+
 **#22 CONFIRMED on real units (E384):** reporter: names and sounds right after the read, Program/Bank +/- match.
 FF7FD2..D5: Polar 0xFFFFFFC0 (ROM A-Z), Desktop 0xFFF00000 (ROM A-L). FF7FD0..D1 ASCII '26' / '33' (ours '01'):
 meaning open. The plug-in calls the Polar "Virus TI2 Desktop" (no Polar/Desktop distinction). Reply posted
