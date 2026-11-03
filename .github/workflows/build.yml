@@ -279,28 +279,15 @@ jobs:
           native plug-in **"TI Revive Virus Control"**: looks and works like the original Virus Control and runs
           natively on Windows, macOS (Apple Silicon and Intel) and Linux - no Rosetta, Wine or yabridge.
 
-          **New in 0.8.37: your own ROM banks (issue #22).**
+          **New in 0.8.38: the Virus TI Snow on Linux (issue #26, pull request #27 by @vmunoz82).**
 
-          - If you burned your own banks into the Virus' ROM slots with the original Control Center, the plug-in now
-            reads those banks from the Virus instead of taking the factory banks from your Access installer, like the
-            original. The browser shows your patches, and a patch chosen on the Virus is no longer replaced by the
-            factory sound.
-          - Each such bank is read once, patch by patch (about 2 minutes per bank, progress on the LCD, notes still
-            play), and kept for that Virus. Until a bank is read, a patch chosen from it on the Virus is left alone.
-
-          Tested on a Virus TI2 Desktop with factory ROMs and a bank marked by hand on Linux (REAPER), Windows 11
-          (VM, Ableton Live 11) and macOS (Ableton Live 12); on Linux the patches read from the Virus were byte for
-          byte those of the Access installer. Works for a user with a TI2 Polar whose ROM A-Z hold their own banks
-          and a TI2 Desktop with their own banks in ROM A-L (macOS, Logic Pro).
-
-          **Also new:**
-
-          - Arrow keys in the browser (issue #23, our own addition): click a patch in a browser list, then Up and Down
-            step to the next or previous patch, Left and Right to the next or previous column, and load it. Holding
-            a key runs through the list; the patch it stops on is loaded. Up and Down tested on Linux (REAPER),
-            Windows 11 (VM, Ableton Live 11) and macOS (Ableton Live 12); Left and Right on Linux (REAPER).
-          - Fixed: a patch chosen in the browser from another bank, followed by Program +/- on the Virus, loaded the
-            patch of the old bank.
+          - The Snow's MIDI endpoints are bulk endpoints, the TI and TI2 ones interrupt endpoints. The broker always
+            used interrupt transfers, which Linux refuses on a bulk endpoint, so it could not read from a Snow there. The
+            broker now takes the transfer type from the Snow's USB descriptor, and drops the idle packets a Snow
+            sends on its MIDI input.
+          - Tested by the contributor on their Snow (Linux). On our TI2 (Linux) nothing changes: it keeps its
+            interrupt transfers, checked with our automated hardware run. Not tested on a Snow under macOS (the USB
+            layer there picks the transfer type itself) or Windows (not affected).
 
           Earlier versions: their own release pages, and every version's changes on one page in the
           [changelog](https://derpsn.github.io/access-virus-ti-revive/changelog.html).
