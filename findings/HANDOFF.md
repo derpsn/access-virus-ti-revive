@@ -1,6 +1,10 @@
 # HANDOFF
 
-## START HERE (2026-11-01, evening): issues after v0.8.37-rc1, branch `round-0.8.37`
+## START HERE (2026-11-03): v0.8.37 RELEASED, branch `round-0.8.37` (= released + E387/HANDOFF commits)
+
+**v0.8.37 RELEASED (2026-11-03 ~06:20 UTC):** main e708f53 (merge -F, parents 7c15188 + 9e68e70), tag v0.8.37 alone; release CI 41498369950: the mac job (macos-15 arm64) was cancelled 5x by GitHub ('not acquired by Runner of type hosted', capacity notice) - 2 manual reruns + a retry loop (3 tries, stopped when the active gh account flipped to datoml) + the user's own restart, which got a runner; then all jobs green, release not pre-release (msi, setup.exe, mac zip, linux tarball, usbinfo, libusb source). #22 thank-you POSTED issuecomment-6596990788 (work/issue22-reply4.md). Site: site.yml 41589743554 green (by hand), live page shows 0.8.37, 516 unit, the new tested-on lines. Linux = release (install.sh; plug-in 4b72c248 = the tarball's; dev 93bec190 backed up in ~/.vst3-backup/0.8.37-dev-installed-93bec190). win11 = release (setup.exe /quiet /norestart exit 0, TI Revive 0.8.37, plug-in 6323ed23 = the MSI's; C:\tirevive-test\0.8.37-release; VM off). MAC: NOT reachable (No route to host, asleep) - push PENDING: ~/Downloads/TI-Revive-0.8.37-release/mac (TI Revive.pkg d646d53e = the release zip's); copy INSTALL-COMMAND.txt + 'Install test build.command' from the Mac's ~/Downloads/TI-Revive-0.8.36-release-mac. NOTE: the active gh account keeps flipping to datoml (twice on 2026-11-02/03, some other session/terminal): long gh loops should use GH_TOKEN=$(gh auth token -u derpsn). OPEN: #24 (log), #25 (logs), #26 (Snow PR; E387 confirms bulk EPs), 0.8.38 candidate: no marker for a new stream while the host plays (E386, user: wait).
+
+## (previous START HERE) (2026-11-01, evening): issues after v0.8.37-rc1, branch `round-0.8.37`
 
 **2026-11-02, GitHub checked with the user:** #22/#23/#24 nothing new (#22 done, only a thank-you at the release).
 NEW #25 (TI Desktop, Win11, Live 11, 0.8.36: 'virus not seen', no logs) - reply POSTED issuecomment-6584520512
