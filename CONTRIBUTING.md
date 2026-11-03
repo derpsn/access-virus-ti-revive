@@ -41,6 +41,9 @@ platform. They are what makes a quick answer possible:
 
 Please also tell us: what you did, what you expected, what happened, and whether it worked before.
 
+If we ask you for something (a log, a test, an answer) and do not hear back for more than 14 days, we close the issue
+to keep the list manageable. That is no judgement on the report: leave a comment at any time and we reopen it.
+
 ## Pull requests
 
 1. Fork, create a branch, keep the change focused on one problem.
