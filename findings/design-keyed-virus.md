@@ -40,15 +40,15 @@ The questions, and what each answer changes. The request to the reporter is in t
 | Is Local off after a power cycle? (the prediction) | B | close sequence is a real fix, rc2 | close sequence is only parity |
 | Does Local on change the sent notes? | C | adjust | confirms E392 2 |
 | Exact Local warning text | C | README note | - |
-| TI1 same as TI2? Polar same as Keyboard? | same test, other owners | one code path | model-specific handling; TI1 image not read |
+| Polar same as Keyboard? Real TI1 same as TI2? (code identical, E393) | same test, other owners | one code path | model-specific handling, or an older OS |
 
 Tool: `tirevive-cc capture` (rc2, also Record in Nerd mode, `cc/capture.h`): every transfer to and from the Virus, raw and
 decoded with endpoint and cable, the broker's own handshake and note-offs and control requests included (tap in `vti_write`
 and `vti_control`), plus a pre-roll of what happened before it connected (`trafficring.h`), losses marked where they happen.
 Not in it: the isochronous audio stream, and the rate's SET_CUR (`vtiusbaudio*.c`, log lines only).
 
-The reporter's unit: bcdDevice 1.00 (#29), by E099 a TI or Snow, so most likely a first-generation TI Keyboard. E392 read only
-the TI2 image.
+The reporter's unit: bcdDevice 1.00 (#29), by E099 a TI or Snow; with keys, a first-generation TI Keyboard. Its 5.1.7 code is
+the same as the TI2's (E393), so E392 applies if it runs that OS: the test asks for the OS version.
 
 ## What we check ourselves first
 
