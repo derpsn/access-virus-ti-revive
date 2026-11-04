@@ -39,7 +39,7 @@ The questions, and what each answer changes. The request to the reporter is in t
 | Does the channel follow the panel part? | A | one channel per part, documented | document that DAW routing decides |
 | Is Local off after a power cycle? (the prediction) | B | close sequence is a real fix, rc2 | close sequence is only parity |
 | Does Local on change the sent notes? | C | adjust | confirms E392 2 |
-| Exact Local warning text | C | README note | - |
+| Exact Local warning text | answered, E396: "Local On is not recommended when using VirusControl Plug-In" | README note | - |
 | Polar same as Keyboard? Real TI1 same as TI2? (code identical, E393) | same test, other owners | one code path | model-specific handling, or an older OS |
 
 Tool: `tirevive-cc capture` (rc2, also Record in Nerd mode, `cc/capture.h`): every transfer to and from the Virus, raw and
