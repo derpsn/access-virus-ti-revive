@@ -15,6 +15,7 @@
 #include "ctrlguard.h"
 #include "owner.h"
 #include "trafficring.h"
+#include "keyport.h"
 #include "ratelever.h"
 #include <errno.h>
 #include <pthread.h>
@@ -33,6 +34,7 @@
 #include <unistd.h>
 #ifdef __APPLE__
 #include "vtimidi_mac.h"
+#include "vtikeyport_mac.h"
 #include <launch.h>
 #endif
 #ifdef __linux__
@@ -499,6 +501,14 @@ static void f5_second(void);
 
 static volatile int g_rate_lever; // a recovery switch ran (E331): log the Virus' report of the rate's global (E257)
 
+#ifdef __APPLE__
+static void keyport_out(void *user, const uint8_t *msg, int n)
+{
+    (void)user;
+    vti_keyport_send(msg, n);
+}
+#endif
+
 static void on_rx(void *user, uint8_t ep, const uint8_t *data, int len)
 {
     (void)user;
@@ -511,6 +521,7 @@ static void on_rx(void *user, uint8_t ep, const uint8_t *data, int len)
 #ifdef __APPLE__
     if (ep == VTI_EP_MI04_IN)
         vtimidi_rx(data, len);
+    vti_keyport_filter(ep, data, (int)len, keyport_out, NULL); // the Virus keys to the DAW (#29)
 #endif
     pthread_mutex_lock(&g_cs_clients); // the owner and every sharing client
     for (int i = 0; i < MAX_CLIENTS; i++)
@@ -1308,6 +1319,8 @@ int main(int argc, char **argv)
 #ifdef __APPLE__
     // stand-in for Access' MIDI driver towards the original Virus Control (E100): only the classic path of 0.7.x
     // (bridge + Rosetta helper, src/mac) used it; the native plug-in talks to the broker directly. Opt-in.
+    if (!getenv("VTI_NO_MIDI_PORT")) // a test switch; the port is read-only and harmless when nothing listens
+        vti_keyport_start();
     if (getenv("VTI_BROKER_MIDISHIM") && atoi(getenv("VTI_BROKER_MIDISHIM")) == 1) {
         if (vtimidi_start(midi_write))
             blog("MIDI slot memory could not be created");

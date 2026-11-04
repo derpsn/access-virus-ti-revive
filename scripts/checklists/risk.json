@@ -63,7 +63,7 @@
              "src/broker/vtiusbaudio.c", "src/broker/vtiusbaudio.h"],
    "class": "C", "platforms": ["windows"], "core": ["cold", "reopen", "power", "sleep"]},
   {"why": "broker: platform USB layers",
-   "paths": ["src/broker/vtimidi_mac.*"], "class": "C", "platforms": ["mac"], "core": ["cold", "reopen", "power", "sleep"]},
+   "paths": ["src/broker/vtimidi_mac.*", "src/broker/vtikeyport_mac.*"], "class": "C", "platforms": ["mac"], "core": ["cold", "reopen", "power", "sleep"]},
   {"why": "broker: libusb audio and the POSIX broker (Linux and macOS)",
    "paths": ["src/broker/vtiusbaudio_libusb.*", "src/broker/vtibroker_posix.c", "src/broker/vticore_sock.c"],
    "class": "C", "platforms": ["linux", "mac"], "core": ["cold", "reopen", "power", "sleep"]},

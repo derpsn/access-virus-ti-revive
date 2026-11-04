@@ -131,6 +131,21 @@ int EditorRenderer::browser_pane(const std::string &param)
     return param.rfind("Browser ", 0) == 0 ? std::max(0, atoi(param.c_str() + 8)) : 0;
 }
 
+// The skin's numbers 100..127 start right where the previous name ends and 10 px before their own (measured, #28; the
+// original looks the same): 5 px to the right, in memory, drawn from the page's own bitmap under the translucent table.
+void EditorRenderer::browser_numbers(Canvas &c, const Element &e, int x, int y)
+{
+    void *bg = c.image("BG_Page_Browser.png");
+    if (!bg)
+        return;
+    for (int p = 100; p < 128; p++) {
+        const int col = 21 + (p / 16) * 84, row = 1 + (p % 16) * 11 + 4; // the digits' 5 rows
+        const int sx = e.x + col, sy = e.y + row, dx = x + col, dy = y + row;
+        c.blit(bg, sx - 25, sy, dx - 20, dy, 15, 5, 1.0); // digits (from the flag of the 1), with the background between them
+        c.blit(bg, sx - 10, sy, dx - 25, dy, 5, 5, 1.0);  // the digit-free 5 px right of them over their old left end
+    }
+}
+
 void EditorRenderer::patch_browser(Canvas &c, const Element &e, int x, int y, int bank, int pane)
 {
     const std::string &font = e.get("ControlFont"), &hfont = e.get("SelectedFont");
@@ -703,6 +718,8 @@ void EditorRenderer::draw(Canvas &c, const Element &e, int ox, int oy, int inher
     if (p)
         v = shown_value(vparam, v);
 
+    if (e.type == "PatchBrowser")
+        browser_numbers(c, e, x, y);
     void *normal = c.image(e.get("NormalBack"));
     // inactive controls with a DisabledBack strip use it at full opacity (the translucent "_Trs" look)
     bool use_disabled = alpha < 1.0 && normal && c.image(e.get("DisabledBack"));

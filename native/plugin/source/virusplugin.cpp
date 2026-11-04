@@ -10,6 +10,7 @@
 #include "access/library.h"
 #include "cc/diag.h"
 #include "base/source/fstreamer.h"
+#include "device/closeseq.h"
 #include "device/usbmidi.h"
 #include "model/state.h"
 #include "ratesw.h"
@@ -108,6 +109,30 @@ DeviceOut::~DeviceOut()
     // which are destroyed before broker_ (members go in reverse order), so it stops here (review M5)
     broker_.close();
     release_owner(); // a waiting instance takes over within ~2 s (start-up messages, state, a new sync ping)
+}
+
+// The original's close (closeseq.h, E391). Only the instance that talks to the Virus, and only if it did: a host's scan or a
+// waiting instance sends nothing. A waiting instance that takes over sends its own start-up (Mode back to REMOTE).
+void DeviceOut::leave_virus()
+{
+    if (!owner_ || !open_ || !broker_.device_present()) {
+        log("Virus TI native: closing without the close sequence (owner %d, open %d, present %d)\n", (int)owner_.load(),
+            (int)open_.load(), (int)broker_.device_present());
+        return;
+    }
+    log("Virus TI native: close sequence (cables 1, Mode SINGLE)\n");
+    abandon_dump_ = true; // a dump on its way must not hold up the close, and it is not wanted any more
+    cv_.notify_all();
+    auto sent = [this](int ms) {
+        for (int i = 0; i < ms && queued_.load() > 0; i += 5)
+            std::this_thread::sleep_for(std::chrono::milliseconds(5));
+    };
+    for (auto &m : close_messages_first())
+        send(m);
+    sent(500);
+    std::this_thread::sleep_for(std::chrono::milliseconds(CLOSE_WAIT_MS));
+    send(close_message_last());
+    sent(200);
 }
 
 static std::mutex g_owner_mu;
@@ -449,6 +474,8 @@ void DeviceOut::run()
     if (const char *e = getenv("VTI_NATIVE_MIDI_RATE")) // bytes/s of stamped traffic, 0 = unlimited (tests only)
         budget_.rate = atof(e);
     while (!stop_) {
+        if (abandon_dump_.exchange(false))
+            drop_dump();
         if (!open_) {
             std::string err;
             if (!rx_set_) {
@@ -1083,6 +1110,8 @@ tresult PLUGIN_API VirusPlugin::terminate()
         if (reconnect_thread_.joinable())
             reconnect_thread_.join();
     }
+    if (out_)
+        out_->leave_virus();
     out_.reset();
     return SingleComponentEffect::terminate();
 }

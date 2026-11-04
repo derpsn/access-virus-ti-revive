@@ -226,3 +226,16 @@ TEST(decode_handshake_is_not_a_pitch_bend)
     l = run(d, p);
     CHECK(l.size() == 1 && l[0].text.rfind("c4 ", 0) == 0);
 }
+
+TEST(decode_a_new_sysex_start_ends_the_unfinished_one)
+{
+    TrafficDecoder d;
+    // seen on a real Virus (2026-11-04): it repeats the reply to the handshake and starts a copy before the last one ended
+    std::vector<uint8_t> p = {1, 0x85, 1, 0, 0, 0, 0x14, 0xF0, 0x00, 0x20, 0x14, 0x33, 0x01, 0x10, 0x14, 0x73, 0x40, 0x40,
+                              0x14, 0xF0, 0x00, 0x20, 0x14, 0x33, 0x01, 0x10, 0x14, 0x73, 0x40, 0x40, 0x16, 0x00, 0xF7, 0};
+    auto l = run(d, p);
+    CHECK_EQ(l.size(), 2u);
+    CHECK(l.size() == 2 && l[0].text == "c1 Unfinished SysEx (9 bytes): F0 00 20 33 01 10 73 40 40" && l[0].kind == "sysex" && l[0].cable == 1);
+    CHECK(l.size() == 2 && l[1].bytes == (std::vector<uint8_t>{0xF0, 0x00, 0x20, 0x33, 0x01, 0x10, 0x73, 0x40, 0x40, 0x00, 0xF7}));
+}
+

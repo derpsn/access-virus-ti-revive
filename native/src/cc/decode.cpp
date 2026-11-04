@@ -199,6 +199,15 @@ void TrafficDecoder::feed(const uint8_t *p, size_t len, const std::function<void
         default: continue;
         }
         if (sysex_part) {
+            if (d[i + 1] == 0xF0 && !sx.empty()) { // a new start: the one before never ended (the Virus' repeated handshake reply)
+                TrafficLine l = base;
+                l.cable = cable;
+                l.kind = "sysex";
+                l.text = "c" + std::to_string(cable) + " Unfinished SysEx (" + std::to_string(sx.size()) + " bytes): " + hex(sx);
+                l.bytes = std::move(sx);
+                out(std::move(l));
+                sx.clear();
+            }
             sx.insert(sx.end(), d + i + 1, d + i + 1 + bytes);
             if (sx.size() > 4096) // runaway: show what there is
                 sysex_end = true;
