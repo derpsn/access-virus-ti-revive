@@ -1,6 +1,7 @@
 // nerdmode.cpp - see nerdmode.h.
 #include "nerdmode.h"
 #include "access/accessfiles.h"
+#include "cc/capture.h"
 #include "cc/decode.h"
 #include "cc/diag.h"
 #include "device/broker.h"
@@ -29,14 +30,53 @@ namespace {
 
 const CColor kBack(30, 30, 30), kText(220, 220, 220), kDim(150, 150, 150), kAccent(240, 170, 60), kGreen(10, 110, 30);
 constexpr CCoord W = kNerdWidth, H = kNerdHeight, M = 16, kLine = 15;
-enum Tag { kBack_ = 1, kLiveTab, kPluginTab, kBrokerTab, kPause, kClock, kPluginLog, kSave, kOptions };
+enum Tag { kBack_ = 1, kLiveTab, kPluginTab, kBrokerTab, kPause, kClock, kPluginLog, kSave, kOptions, kRecord };
 enum Page { kLive, kPluginPage, kBrokerPage };
 
 // The live view: a read-only observer connection to the broker (protocol 4) while the "Live" tab is shown. The
 // broker's reader thread fills the lines; the UI timer shows them.
 class Live {
 public:
-    ~Live() { stop(); }
+    ~Live()
+    {
+        stop();
+        stop_record();
+    }
+    // The full traffic log in a file (cc/capture.h): reconnects to get the broker's pre-roll too, and keeps running on the
+    // other tabs, until stop_record().
+    bool start_record(const std::string &path, const std::string &version)
+    {
+        stop();
+        FILE *f = fopen(path.c_str(), "w");
+        if (!f)
+            return false;
+        {
+            std::lock_guard<std::mutex> l(mu_);
+            char stamp[32];
+            time_t now = time(nullptr);
+            strftime(stamp, sizeof stamp, "%Y-%m-%d %H:%M:%S", localtime(&now));
+            fprintf(f, "TI Revive capture, Control Center %s, started %s. Not in it: the USB audio stream.\n", version.c_str(), stamp);
+            rec_file_ = f;
+        }
+        start();
+        return true;
+    }
+    void stop_record()
+    {
+        std::lock_guard<std::mutex> l(mu_);
+        if (!rec_file_)
+            return;
+        if (cap_)
+            cap_->summary();
+        cap_.reset();
+        fclose(rec_file_);
+        rec_file_ = nullptr;
+    }
+    bool recording()
+    {
+        std::lock_guard<std::mutex> l(mu_);
+        return rec_file_ != nullptr;
+    }
     void start()
     {
         if (running_.exchange(true))
@@ -69,6 +109,8 @@ private:
     std::unique_ptr<vti::Broker> broker_;
     std::unique_ptr<vti::RemoteDevice> model_;
     std::unique_ptr<vti::cc::TrafficDecoder> dec_;
+    FILE *rec_file_ = nullptr; // mu_
+    std::unique_ptr<vti::cc::CaptureLog> cap_; // mu_
     std::deque<std::pair<std::string, bool>> lines_; // text, is a clock line
     std::string status_ = "Connecting to the TI Revive broker...";
 
@@ -116,8 +158,28 @@ private:
         auto b = std::make_unique<vti::Broker>();
         b->set_name("TI Revive Control Center (Nerd mode)");
         std::string err;
+        bool replay = false;
+        {
+            std::lock_guard<std::mutex> l(mu_);
+            if (rec_file_ && !cap_) {
+                FILE *f = rec_file_;
+                cap_ = std::make_unique<vti::cc::CaptureLog>(model_.get(), [f](const std::string &line) {
+                    fprintf(f, "%s\n", line.c_str());
+                    fflush(f);
+                });
+                replay = true;
+            }
+        }
         bool ok = b->open(err) && b->observe([this](uint16_t type, const uint8_t *d, size_t n) {
             std::lock_guard<std::mutex> l(mu_);
+            if (cap_) {
+                if (type == VTIMSG_OBS_TRAFFIC)
+                    cap_->traffic(d, n);
+                else if (type == VTIMSG_OBS_LOG)
+                    cap_->log(std::string((const char *)d, n));
+                else if (type == VTIMSG_OBS_STATUS)
+                    cap_->status(std::string((const char *)d, n));
+            }
             if (type == VTIMSG_OBS_STATUS)
                 status_ = pretty_status(std::string((const char *)d, n));
             else if (type == VTIMSG_OBS_LOG)
@@ -127,9 +189,12 @@ private:
                     static const char *dir[] = {"-> Virus", "<- Virus", "USB ctl "};
                     char ts[24]; // by hand: GTK sets the locale's decimal comma
                     snprintf(ts, sizeof ts, "%4u.%03u ", t.ms / 1000, t.ms % 1000);
-                    add(ts + std::string(dir[t.dir]) + " " + t.text, t.kind == "clock");
+                    char ep[8] = "";
+                    if (t.dir != 2)
+                        snprintf(ep, sizeof ep, "ep%02x ", t.ep);
+                    add(ts + std::string(dir[t.dir]) + " " + ep + t.text, t.kind == "clock");
                 });
-        }, err);
+        }, err, replay);
         std::lock_guard<std::mutex> l(mu_);
         if (!ok) {
             status_ = "No live view: " + err;
@@ -170,7 +235,8 @@ public:
         active_ = on;
         if (!on) {
             timer_ = nullptr;
-            live_.stop();
+            if (!live_.recording()) // a recording goes on behind the other pages
+                live_.stop();
             return;
         }
         if (page_ == kLive)
@@ -186,8 +252,9 @@ public:
         switch (c->getTag()) {
         case kBack_: back_(); return;
         case kLiveTab: page_ = kLive; live_.start(); break;
-        case kPluginTab: page_ = kPluginPage; live_.stop(); break;
-        case kBrokerTab: page_ = kBrokerPage; live_.stop(); break;
+        case kPluginTab: page_ = kPluginPage; if (!live_.recording()) live_.stop(); break;
+        case kBrokerTab: page_ = kBrokerPage; if (!live_.recording()) live_.stop(); break;
+        case kRecord: record(); break;
         case kPause: paused_ = !paused_; break;
         case kClock: show_clock_ = !show_clock_; break;
         case kPluginLog: {
@@ -210,7 +277,8 @@ private:
     std::string version_;
     std::function<void()> back_;
     SharedPointer<CVSTGUITimer> timer_;
-    CTextButton *tabs_[3] = {}, *pause_ = nullptr, *clock_ = nullptr, *log_switch_ = nullptr;
+    CTextButton *tabs_[3] = {}, *pause_ = nullptr, *clock_ = nullptr, *log_switch_ = nullptr, *record_ = nullptr;
+    std::string record_path_;
     CMultiLineTextLabel *where_ = nullptr;
     CTextLabel *state_ = nullptr;
     CMultiLineTextLabel *text_ = nullptr;
@@ -266,7 +334,7 @@ private:
         auto title = makeOwned<CFontDesc>(*kSystemFont);
         title->setSize(16);
         title->setStyle(kBoldFace);
-        label(CRect(M, 10, W - M - 200, 34), kText, title)->setText("Nerd mode: what TI Revive is doing");
+        label(CRect(M, 10, W - M - 312, 34), kText, title)->setText("Nerd mode: what TI Revive is doing");
         button(W - M - 190, 10, 90, kOptions, "Options...");
         button(W - M - 90, 10, 90, kBack_, "Back");
         tabs_[0] = button(M, 44, 80, kLiveTab, "Live");
@@ -274,6 +342,7 @@ private:
         tabs_[2] = button(M + 192, 44, 100, kBrokerTab, "Broker log");
         pause_ = button(M + 304, 44, 70, kPause, "Pause");
         clock_ = button(M + 380, 44, 110, kClock, "");
+        record_ = button(W - M - 306, 10, 110, kRecord, "");
         log_switch_ = button(W - M - 330, 44, 160, kPluginLog, "");
         button(W - M - 160, 44, 160, kSave, "Save logs...");
         where_ = new CMultiLineTextLabel(CRect(M, 76, W - M, 108));
@@ -305,6 +374,8 @@ private:
         pause_->setTitle(paused_ ? "Resume" : "Pause");
         clock_->setTitle(show_clock_ ? "Clock: shown" : "Clock: hidden");
         clock_->setVisible(page_ == kLive);
+        record_->setTitle(live_.recording() ? "Stop recording" : "Record...");
+        record_->setTextColor(live_.recording() ? kGreen : kText);
         state_->setText(message_.c_str());
         const size_t n = (size_t)((H - 32 - 110 - 8) / kLine);
         std::vector<std::string> lines;
@@ -333,6 +404,37 @@ private:
                 : page_ == kBrokerPage ? "(no broker log yet: it is written while a program uses the Virus)"
                                        : "(no plug-in log yet)";
         text_->setText(t.c_str());
+    }
+
+    // Everything to and from the Virus in a file, as a USB sniffer would show it (cc/capture.h)
+    void record()
+    {
+        if (live_.recording()) {
+            live_.stop_record();
+            if (page_ != kLive)
+                live_.stop();
+            message_ = "Recording saved: " + record_path_;
+            return;
+        }
+        auto sel = owned(CNewFileSelector::create(getFrame(), CNewFileSelector::kSelectSaveFile));
+        if (!sel)
+            return;
+        char stamp[32];
+        time_t now = time(nullptr);
+        strftime(stamp, sizeof stamp, "%Y-%m-%d-%H%M%S", localtime(&now));
+        sel->setTitle("Record all traffic to and from the Virus");
+        sel->setDefaultSaveName((std::string("TI-Revive-capture-") + stamp + ".txt").c_str());
+        sel->setDefaultExtension(CFileExtension("Text", "txt"));
+        bool shown = sel->run([this](CNewFileSelector *s) {
+            if (!s->getNumSelectedFiles())
+                return;
+            record_path_ = s->getSelectedFile(0);
+            message_ = live_.start_record(record_path_, version_) ? "Recording to " + record_path_ + " (read-only)"
+                                                                  : "Cannot write " + record_path_;
+            refresh(true);
+        });
+        if (!shown)
+            message_ = "No file dialog could be opened (Linux: install zenity or kdialog).";
     }
 
     void save()

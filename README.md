@@ -398,6 +398,7 @@ tirevive-cc logs      # plug-in + broker logs in one file for a bug report (home
 tirevive-cc debug on  # the plug-in's log (from the next start of the plug-in)
 tirevive-cc option    # the Options of Nerd mode; tirevive-cc option outdelay-changes on|off
 tirevive-cc watch     # Nerd mode in the terminal: the traffic, decoded, while the plug-in plays
+tirevive-cc capture --seconds 300 --out FILE   # all traffic to and from the Virus in a file, raw and decoded (read-only), for bug reports
 ```
 
 Where it is: Windows `C:\Program Files\TI Revive\tirevive-cc.exe`, macOS

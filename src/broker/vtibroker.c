@@ -16,6 +16,7 @@
 #include "flashinfo.h"
 #include "ctrlguard.h"
 #include "owner.h"
+#include "trafficring.h"
 #include "ratelever.h"
 #include "vtipipe_io.h"
 #include "vtiaudioshm.h"
@@ -459,11 +460,16 @@ static void obs_log(const char *line, int len)
         obs_send(VTIMSG_OBS_LOG, line, len, NULL, 0);
 }
 
+// The pre-roll (trafficring.h): always filled, so that a capture also gets what happened before it connected. A few
+// memcpys per USB transfer; g_cs_pre makes "replay + attach" atomic against new traffic.
+#define PREROLL_BYTES (128 * 1024)
+static uint8_t g_pre_mem[PREROLL_BYTES];
+static vti_trafring g_pre = {g_pre_mem, PREROLL_BYTES, 0, 0, 0};
+static CRITICAL_SECTION g_cs_pre;
+
 static void obs_traffic(uint8_t kind, uint8_t ep, const void *a, int alen, const void *b, int blen)
 {
     InterlockedIncrement64(kind == 0 ? &g_cnt_out : kind == 1 ? &g_cnt_in : &g_cnt_ctl);
-    if (!g_obs_count)
-        return;
     uint8_t hdr[6] = {kind, ep};
     uint32_t t = (uint32_t)(GetTickCount64() - g_t0);
     memcpy(hdr + 2, &t, 4);
@@ -472,7 +478,16 @@ static void obs_traffic(uint8_t kind, uint8_t ep, const void *a, int alen, const
     memcpy(body, a, n);
     if (blen > 0 && n + blen <= (int)sizeof body)
         memcpy(body + n, b, blen), n += blen;
-    obs_send(VTIMSG_OBS_TRAFFIC, hdr, 6, body, n);
+    EnterCriticalSection(&g_cs_pre);
+    vti_trafring_push(&g_pre, hdr, body, n, NULL, 0);
+    if (g_obs_count)
+        obs_send(VTIMSG_OBS_TRAFFIC, hdr, 6, body, n);
+    LeaveCriticalSection(&g_cs_pre);
+}
+
+static void preroll_to_client(void *user, const uint8_t *hdr, const uint8_t *body, int n)
+{
+    send_msg(user, VTIMSG_OBS_TRAFFIC, hdr, 6, body, n);
 }
 
 static void obs_status(int dev_open) // once a second (device thread)
@@ -678,13 +693,24 @@ static DWORD WINAPI client_thread(LPVOID arg)
             }
             break;
         case VTIMSG_OBSERVE: { // read-only observer: no RX, no writes; traffic copy, log and status instead
+            uint32_t ver = VTI_PROTO_VERSION, st0 = 0;
+            send_msg(c, VTIMSG_STATE, &st0, 4, NULL, 0);
+            send_msg(c, VTIMSG_OBSERVE_REPLY, &ver, 4, NULL, 0);
+            EnterCriticalSection(&g_cs_pre); // nothing new between the replay and the attach, nothing twice
+            if (h.len >= 1 && (buf[0] & 1)) {
+                if (g_pre.lost) {
+                    char note[96];
+                    int n = snprintf(note, sizeof note, "pre-roll: %llu older records were overwritten before this capture started",
+                                     (unsigned long long)g_pre.lost);
+                    send_msg(c, VTIMSG_OBS_LOG, note, n, NULL, 0);
+                }
+                vti_trafring_each(&g_pre, preroll_to_client, c);
+            }
             EnterCriticalSection(&g_cs_clients);
             c->observer = 1;
             InterlockedIncrement(&g_obs_count);
             LeaveCriticalSection(&g_cs_clients);
-            uint32_t ver = VTI_PROTO_VERSION, st0 = 0;
-            send_msg(c, VTIMSG_STATE, &st0, 4, NULL, 0);
-            send_msg(c, VTIMSG_OBSERVE_REPLY, &ver, 4, NULL, 0);
+            LeaveCriticalSection(&g_cs_pre);
             blog("client is an observer (read-only)");
             break;
         }
@@ -695,7 +721,6 @@ static DWORD WINAPI client_thread(LPVOID arg)
                 EnterCriticalSection(&g_cs_dev);
                 int r = g_dev ? vti_write(g_dev, buf[0], buf + 1, h.len - 1) : -1;
                 LeaveCriticalSection(&g_cs_dev);
-                obs_traffic(0, buf[0], buf + 1, h.len - 1, NULL, 0);
                 if (g_verbose || r)
                     blog("write ep%02x %d bytes -> %d", buf[0], h.len - 1, r);
             }
@@ -721,14 +746,15 @@ static DWORD WINAPI client_thread(LPVOID arg)
                 if (!ok)
                     blog("refused control request %02x %02x (only standard reads pass, rule 2)", s[0], s[1]);
                 EnterCriticalSection(&g_cs_dev);
-                int32_t r = g_dev && !waits && ok
-                                ? vti_control(g_dev, s[0], s[1], s[2] | s[3] << 8, s[4] | s[5] << 8, data, wl)
-                                : -1;
+                const int sent = g_dev && !waits && ok;
+                int32_t r = sent ? vti_control(g_dev, s[0], s[1], s[2] | s[3] << 8, s[4] | s[5] << 8, data, wl) : -1;
                 LeaveCriticalSection(&g_cs_dev);
-                uint8_t rec[12];
-                memcpy(rec, s, 8);
-                memcpy(rec + 8, &r, 4);
-                obs_traffic(2, 0, rec, 12, data, (s[0] & 0x80) ? (r > 0 ? r : 0) : wl);
+                if (!sent) { // a sent one went through the tap; a refused one is worth seeing too
+                    uint8_t rec[12];
+                    memcpy(rec, s, 8);
+                    memcpy(rec + 8, &r, 4);
+                    obs_traffic(2, 0, rec, 12, data, (s[0] & 0x80) ? 0 : wl);
+                }
                 uint8_t hdr[8];
                 memcpy(hdr, &seq, 4);
                 memcpy(hdr + 4, &r, 4);
@@ -801,6 +827,8 @@ int main(int argc, char **argv)
     g_t0 = GetTickCount64();
     InitializeCriticalSection(&g_cs_log);
     InitializeCriticalSection(&g_cs_dev);
+    InitializeCriticalSection(&g_cs_pre);
+    vti_set_tap(obs_traffic); // everything to the Virus, the broker's own writes and control requests included
     InitializeCriticalSection(&g_cs_clients);
     InitializeCriticalSection(&g_cs_audio);
     InitializeCriticalSection(&g_cs_audio_ctl);

@@ -32,6 +32,12 @@ struct libusb_context;
 struct libusb_device_handle;
 void vti_libusb(vti *v, struct libusb_context **ctx, struct libusb_device_handle **h);
 
+// Everything sent to the Virus through this file, whoever asked: a client, the broker's own handshake and note-offs, a
+// control request of any origin (a, alen then b, blen make the record; kind 0 = write, 2 = control: setup[8], i32 result,
+// data). Nerd mode and the capture see it. Implemented by the libusb and the WinUSB backend; set before vti_open.
+typedef void (*vti_tap_cb)(uint8_t kind, uint8_t ep, const void *a, int alen, const void *b, int blen);
+void vti_set_tap(vti_tap_cb cb);
+
 // Interrupt OUT of raw bytes, split into wMaxPacketSize chunks. Returns 0 on success.
 int vti_write(vti *v, uint8_t ep, const uint8_t *data, int len);
 

@@ -170,7 +170,16 @@ void TrafficDecoder::feed(const uint8_t *p, size_t len, const std::function<void
         return;
     }
     base.dir = kind ? 1 : 0;
-    (void)ep;
+    base.ep = ep;
+    // raw on EP 0x05, not USB-MIDI (spec 3): read as packets it would be a pitch bend on cable 4
+    static const uint8_t kHandshake[4] = {0x4E, 0x73, 0x52, 0x01};
+    if (kind == 0 && ep == 0x05 && n == 4 && !memcmp(d, kHandshake, 4)) {
+        base.kind = "control";
+        base.text = "Handshake 4E 73 52 01";
+        base.bytes.assign(d, d + 4);
+        out(std::move(base));
+        return;
+    }
     // USB-MIDI event packets: byte 0 = cable << 4 | CIN
     for (size_t i = 0; i + 4 <= n; i += 4) {
         uint8_t cin = d[i] & 0x0F, cable = d[i] >> 4;
@@ -196,6 +205,7 @@ void TrafficDecoder::feed(const uint8_t *p, size_t len, const std::function<void
             if (!sysex_end)
                 continue;
             TrafficLine l = base;
+            l.cable = cable;
             l.text = "c" + std::to_string(cable) + " " + describe(sx, l.kind);
             l.bytes = std::move(sx);
             out(std::move(l));
@@ -204,6 +214,7 @@ void TrafficDecoder::feed(const uint8_t *p, size_t len, const std::function<void
         }
         std::vector<uint8_t> msg(d + i + 1, d + i + 1 + bytes);
         TrafficLine l = base;
+        l.cable = cable;
         l.text = "c" + std::to_string(cable) + " " + describe(msg, l.kind);
         l.bytes = std::move(msg);
         out(std::move(l));

@@ -42,8 +42,13 @@ The questions, and what each answer changes. The request to the reporter is in t
 | Exact Local warning text | C | README note | - |
 | TI1 same as TI2? Polar same as Keyboard? | same test, other owners | one code path | model-specific handling; TI1 image not read |
 
-Limit of the test: `tirevive-cc watch` shows direction, not endpoint or cable, because the decoder drops them (decode.cpp).
-Add both to its output for rc2 so the next round proves EP 0x85 cable 1. Today's logs prove only "from the Virus".
+Tool: `tirevive-cc capture` (rc2, also Record in Nerd mode, `cc/capture.h`): every transfer to and from the Virus, raw and
+decoded with endpoint and cable, the broker's own handshake and note-offs and control requests included (tap in `vti_write`
+and `vti_control`), plus a pre-roll of what happened before it connected (`trafficring.h`), losses marked where they happen.
+Not in it: the isochronous audio stream, and the rate's SET_CUR (`vtiusbaudio*.c`, log lines only).
+
+The reporter's unit: bcdDevice 1.00 (#29), by E099 a TI or Snow, so most likely a first-generation TI Keyboard. E392 read only
+the TI2 image.
 
 ## What we check ourselves first
 
@@ -59,7 +64,7 @@ On our Desktop, before asking for more. Rule 2: persistent writes on our own Vir
 
 Each with a failing test first.
 
-1. **`tirevive-cc watch` with endpoint and cable.** Read-only.
+1. **Capture:** built (see above), hardware test open.
 2. **Filter, shared code:** from EP 0x85 cable 1 pass notes, pressure, bend, controllers; never SysEx (bank replies use this
    cable outside a session, protocol.md), never clock or Active Sensing. Unit tests on captured frames.
 3. **macOS port in the broker:** CoreMIDI source "Virus TI Synth" with a stable unique ID (DAWs remember ports by it). The

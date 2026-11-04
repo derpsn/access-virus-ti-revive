@@ -197,3 +197,32 @@ TEST(decode_packet_kinds)
     l = run(d, {2, 0, 0, 0, 0, 0, 0x80, 6});
     CHECK(l.size() == 1 && l[0].dir == 2 && l[0].kind == "control" && l[0].text.empty());
 }
+
+TEST(decode_line_knows_endpoint_and_cable)
+{
+    TrafficDecoder d;
+    std::vector<uint8_t> p = {1, 0x85, 1, 0, 0, 0, 0x19, 0x90, 60, 100};
+    auto l = run(d, p);
+    CHECK(l.size() == 1 && l[0].ep == 0x85 && l[0].cable == 1);
+    // a SysEx too: the reply to the handshake, across packets
+    p = {1, 0x85, 1, 0, 0, 0, 0x14, 0xF0, 0x00, 0x20, 0x14, 0x33, 0x01, 0x10, 0x14, 0x73, 0x40, 0x40, 0x16, 0x00, 0xF7, 0};
+    l = run(d, p);
+    CHECK(l.size() == 1 && l[0].ep == 0x85 && l[0].cable == 1 && l[0].bytes.size() == 11);
+    // a control request has neither
+    p = {2, 0, 1, 0, 0, 0, 0x80, 6, 0, 1, 0, 0, 18, 0, 18, 0, 0, 0};
+    l = run(d, p);
+    CHECK(l.size() == 1 && l[0].ep == 0 && l[0].cable == -1);
+}
+
+TEST(decode_handshake_is_not_a_pitch_bend)
+{
+    TrafficDecoder d;
+    // raw on EP 0x05, not USB-MIDI: read as packets it would be a pitch bend on cable 4
+    std::vector<uint8_t> p = {0, 0x05, 1, 0, 0, 0, 0x4E, 0x73, 0x52, 0x01};
+    auto l = run(d, p);
+    CHECK(l.size() == 1 && l[0].text == "Handshake 4E 73 52 01" && l[0].kind == "control" && l[0].dir == 0 && l[0].cable == -1);
+    // the same bytes on another endpoint are ordinary packets
+    p[1] = 0x06;
+    l = run(d, p);
+    CHECK(l.size() == 1 && l[0].text.rfind("c4 ", 0) == 0);
+}

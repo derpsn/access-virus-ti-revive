@@ -13,7 +13,7 @@ $(OUT)/linux/vtiprobe: vtiprobe.c vticore.c $(SRC_MIDI) vticore.h resetguard.h g
 		$(shell pkg-config --libs libusb-1.0) -lpthread
 
 # Broker for macOS / Linux on libusb (vtibroker_posix.c); on macOS: make -C src/broker mac (needs libusb from Homebrew)
-$(OUT)/linux/vtibroker: vtibroker_posix.c vticore.c vtiusbaudio_libusb.c $(SRC_MIDI) vticore.h vtiproto.h brokerinfo.h ctrlguard.h owner.h pktstat.h resetguard.h giveback.h ratesw.h ratelever.h \
+$(OUT)/linux/vtibroker: vtibroker_posix.c vticore.c vtiusbaudio_libusb.c $(SRC_MIDI) vticore.h trafficring.h vtiproto.h brokerinfo.h ctrlguard.h owner.h pktstat.h resetguard.h giveback.h ratesw.h ratelever.h \
 		vtiaudioshm.h vtiusbaudio_libusb.h
 	mkdir -p $(OUT)/linux
 	$(CC) $(CFLAGS) $(VDEF) $(shell pkg-config --cflags libusb-1.0) -o $@ vtibroker_posix.c vticore.c vtiusbaudio_libusb.c \
@@ -37,7 +37,7 @@ $(OUT)/vtiflash.exe: vtiflash.c vticore_winusb.c $(SRC_MIDI) vticore.h
 	x86_64-w64-mingw32-gcc $(CFLAGS) -o $@ vtiflash.c vticore_winusb.c $(SRC_MIDI) -lwinusb -lsetupapi -static -lpthread
 
 # Broker (owns WinUSB) and a probe that goes through the broker instead of WinUSB
-$(OUT)/vtibroker.exe: vtibroker.c vticore_winusb.c $(SRC_MIDI) vticore.h vtiproto.h brokerinfo.h ctrlguard.h owner.h pktstat.h ratelever.h ratesw.h vtiaudioshm.h vtiusbaudio.c vtiusbaudio.h
+$(OUT)/vtibroker.exe: vtibroker.c vticore_winusb.c $(SRC_MIDI) vticore.h trafficring.h vtiproto.h brokerinfo.h ctrlguard.h owner.h pktstat.h ratelever.h ratesw.h vtiaudioshm.h vtiusbaudio.c vtiusbaudio.h
 	mkdir -p $(OUT)
 	x86_64-w64-mingw32-gcc $(CFLAGS) $(VDEF) -o $@ vtibroker.c vticore_winusb.c $(SRC_MIDI) vtiusbaudio.c -lwinusb -lsetupapi -static -lpthread
 
@@ -55,7 +55,7 @@ $(OUT)/vtiaudiotest.exe: vtiaudiotest.c vticore_pipe.c $(SRC_MIDI) vticore.h vti
 
 # macOS (run on the Mac): native broker (a separate process, so arm64 is fine; only our libVirusUSB.dylib
 # replacement must be x86_64 for the Rosetta DAW); libusb from Homebrew (brew install libusb pkg-config)
-mac: vtibroker_posix.c vtimidi_mac.c vticore.c $(SRC_MIDI) vticore.h vtiproto.h brokerinfo.h ctrlguard.h owner.h vtimidi_mac.h
+mac: vtibroker_posix.c vtimidi_mac.c vticore.c $(SRC_MIDI) vticore.h trafficring.h vtiproto.h brokerinfo.h ctrlguard.h owner.h vtimidi_mac.h
 	mkdir -p $(OUT)/mac
 	clang $(CFLAGS) $(VDEF) $$(pkg-config --cflags libusb-1.0) -o $(OUT)/mac/vtibroker vtibroker_posix.c vtimidi_mac.c vticore.c \
 		$(SRC_MIDI) $$(pkg-config --libs libusb-1.0) -lpthread -framework CoreFoundation

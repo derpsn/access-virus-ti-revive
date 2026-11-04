@@ -209,8 +209,23 @@ static int write_packet(void *ctx, const uint8_t *data, int n, int *done)
     return r;
 }
 
+static vti_tap_cb g_tap;
+void vti_set_tap(vti_tap_cb cb) { g_tap = cb; }
+
+// a control request as the tap's record: setup[8], i32 result, then the data that went or came
+static void tap_control(uint8_t rt, uint8_t req, uint16_t val, uint16_t idx, uint16_t len, int32_t r, const uint8_t *data)
+{
+    if (!g_tap)
+        return;
+    uint8_t rec[12] = {rt, req, (uint8_t)val, (uint8_t)(val >> 8), (uint8_t)idx, (uint8_t)(idx >> 8), (uint8_t)len, (uint8_t)(len >> 8)};
+    memcpy(rec + 8, &r, 4);
+    g_tap(2, 0, rec, 12, data, (rt & 0x80) ? (r > 0 ? r : 0) : len);
+}
+
 int vti_write(vti *v, uint8_t ep, const uint8_t *data, int len)
 {
+    if (g_tap) // before the transfer: the order on the wire
+        g_tap(0, ep, data, len, NULL, 0);
     int max = ep == VTI_EP_MI03_OUT ? 8 : 32; // wMaxPacketSize (lsusb -v)
     struct write_ctx c = {v, ep, 0};
     int timeouts = 0;
@@ -230,6 +245,7 @@ int vti_control(vti *v, uint8_t bmRequestType, uint8_t bRequest, uint16_t wValue
     if (r < 0)
         vti_log("vti: control %02x/%02x wIndex %04x: %s\n", bmRequestType, bRequest, wIndex,
                 libusb_error_name(r));
+    tap_control(bmRequestType, bRequest, wValue, wIndex, len, r < 0 ? -1 : r, data);
     return r < 0 ? -1 : r;
 }
 

@@ -17,6 +17,8 @@ namespace vti::cc {
 struct TrafficLine {
     uint32_t ms = 0;    // broker time
     int dir = 0;        // 0 to the Virus, 1 from the Virus, 2 USB control request
+    int ep = 0;         // USB endpoint (0 for a control request)
+    int cable = -1;     // USB-MIDI cable, -1 when the data is not USB-MIDI
     std::string kind;   // "note", "cc", "sysex", "param", "dump", "clock", "control", "other"
     std::string text;
     std::vector<uint8_t> bytes; // the complete MIDI message (empty for control requests)
