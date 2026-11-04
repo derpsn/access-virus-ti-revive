@@ -1,5 +1,6 @@
 #include "cc/capture.h"
 #include <cstdio>
+#include <cstdlib>
 #include <cstring>
 
 namespace vti::cc {
