@@ -101,14 +101,20 @@ DeviceOut::DeviceOut() : worker_([this] { run(); }) {}
 
 DeviceOut::~DeviceOut()
 {
+    stop_worker();
+    release_owner(); // a waiting instance takes over within ~2 s (start-up messages, state, a new sync ping)
+}
+
+void DeviceOut::stop_worker()
+{
     stop_ = true;
     cv_.notify_all();
     broker_.close(); // wakes a worker stuck in a write to a broker that stopped reading (review 2026-10-19 M6)
-    worker_.join();
+    if (worker_.joinable())
+        worker_.join();
     // again: the worker may have reconnected in between. The reader thread calls panel_, reply_ and reads audio_,
     // which are destroyed before broker_ (members go in reverse order), so it stops here (review M5)
     broker_.close();
-    release_owner(); // a waiting instance takes over within ~2 s (start-up messages, state, a new sync ping)
 }
 
 // The original's close (closeseq.h, E391). Only the instance that talks to the Virus, and only if it did: a host's scan or a
@@ -122,6 +128,13 @@ void DeviceOut::leave_virus()
     }
     log("Virus TI native: close sequence (cables 1, Mode SINGLE)\n");
     abandon_dump_ = true; // a dump on its way must not hold up the close, and it is not wanted any more
+    {
+        // nor what is still queued (the state of a session closed right after it started): behind it the close would
+        // never go out
+        std::lock_guard<std::mutex> lk(mu_);
+        queued_ -= (int)queue_.size();
+        queue_.clear();
+    }
     cv_.notify_all();
     auto sent = [this](int ms) {
         for (int i = 0; i < ms && queued_.load() > 0; i += 5)
@@ -129,7 +142,7 @@ void DeviceOut::leave_virus()
     };
     for (auto &m : close_messages_first())
         send(m);
-    sent(500);
+    sent(1000); // right after a multi dump the Virus is given time first (queue_hold_until_); usually at once
     std::this_thread::sleep_for(std::chrono::milliseconds(CLOSE_WAIT_MS));
     send(close_message_last());
     sent(200);
@@ -1110,8 +1123,12 @@ tresult PLUGIN_API VirusPlugin::terminate()
         if (reconnect_thread_.joinable())
             reconnect_thread_.join();
     }
-    if (out_)
+    if (out_) {
         out_->leave_virus();
+        // before out_ turns null: the worker's callbacks use it, and unique_ptr::reset nulls it before the destructor
+        // runs (a close while the Virus reported present: SIGSEGV in the on_state lambda, found 2026-11-04)
+        out_->stop_worker();
+    }
     out_.reset();
     return SingleComponentEffect::terminate();
 }

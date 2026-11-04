@@ -279,7 +279,7 @@ jobs:
           native plug-in **"TI Revive Virus Control"**: looks and works like the original Virus Control and runs
           natively on Windows, macOS (Apple Silicon and Intel) and Linux - no Rosetta, Wine or yabridge.
 
-          **New in 0.8.38: the Virus TI Snow on Linux (issue #26, pull request #27 by @vmunoz82).**
+          **New in 0.8.38: the Virus TI Snow on Linux (issue #26, pull request #27 by @vmunoz82); macOS: a MIDI input "Virus TI Synth" for the keys of a Keyboard or Polar (#29, not yet tested on a Virus with keys); a full traffic log (tirevive-cc capture, Record in Nerd mode); the Virus leaves remote mode when the plug-in closes, as with the original; a crash when the plug-in closes while the Virus connects is fixed; the numbers 100 to 127 in the browser no longer touch the names (#28).**
 
           - The Snow's MIDI endpoints are bulk endpoints, the TI and TI2 ones interrupt endpoints. The broker always
             used interrupt transfers, which Linux refuses on a bulk endpoint, so it could not read from a Snow there. The

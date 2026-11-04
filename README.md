@@ -378,7 +378,7 @@ plug-in and the Control Center share the Virus (only plug-ins of two programs do
 such a backup and converts libraries between `.mid` and `.syx`. **Nerd mode** (button or *View > Nerd mode*) shows live what goes between
 TI Revive and the Virus (decoded: notes, parameter changes by name, dumps, bank sync), which programs use the Virus,
 the plug-in's and the broker's logs; it switches the plug-in log on and off and saves all logs for a bug report in
-one file. It only watches: it never sends anything to the Virus. Its *Options...* menu switches a few things for
+one file. **Record...** writes all traffic to and from the Virus to a file (raw and decoded, with endpoint and cable, from the Virus' first reply on), for bug reports; the audio stream is not in it. It only watches: it never sends anything to the Virus. Its *Options...* menu switches a few things for
 comparisons with the original: the output delays only on change instead of at every Play/Stop, and the timing as
 before 0.8.35 (from the next start of the plug-in).
 
@@ -417,9 +417,10 @@ the Virus' flash and can brick it. Details: [native/docs/controlcenter.md](nativ
   (as with the old Access driver), so "Line (Virus TI)" / "Speakers (Virus TI)" no longer appear in Windows;
   use the ASIO device in your DAW. When you update from TI Revive 0.2.x, the audio part of the Virus switches to
   WinUSB automatically; if the Virus audio does not work afterwards, unplug and replug the Virus once.
-- **Windows MIDI ports** ("Virus TI MIDI"/"Virus TI Synth") of the old driver are not provided.
+- **Windows MIDI ports** ("Virus TI MIDI"/"Virus TI Synth") of the old driver are not provided, so on Windows the keys of a Keyboard or Polar cannot be recorded in a DAW yet.
 
 **macOS**
+- **The keys of a Keyboard or Polar** (since 0.8.38): TI Revive offers a MIDI input "Virus TI Synth", as the Access driver did. Choose it as the MIDI input of the track with the plug-in and arm it: the keys, wheels and pedals reach the DAW, and you can record them. The Virus plays them through the track, because Local is off while it works with a plug-in, as with the original. The port exists while the plug-in or the Control Center is open. Virus to DAW only: no other program can send to the Virus this way. Not yet tested on a Virus with keys.
 
 - **Microphone permission** for your DAW is required (see above); without it the plug-in stays silent.
 - **One DAW at a time** uses the Virus (as with the Access driver): the plug-in in a second DAW or GarageBand next

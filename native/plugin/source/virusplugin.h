@@ -128,7 +128,8 @@ public:
     std::atomic<int> generation{0}; // +1 on every return of the Virus (process() re-anchors its timeline)
     StallWatch stall_;              // worker: the stream stood still and runs on (sleep) -> generation + 1
     bool connected() const { return broker_.device_present(); }
-    void leave_virus(); // what the Virus is left with when the plug-in closes (closeseq.h); blocks up to ~1 s
+    void stop_worker(); // the worker and the broker's reader have ended when it returns; the destructor does it too
+    void leave_virus(); // what the Virus is left with when the plug-in closes (closeseq.h); blocks 350 ms, up to ~1.5 s
     // read outside the worker only while holding an AudioGate::Use of audio_gate() (it may be unmapped otherwise)
     AudioIn &audio() { return audio_; }
     AudioGate &audio_gate() { return audio_gate_; }

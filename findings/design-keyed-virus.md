@@ -60,17 +60,17 @@ On our Desktop, before asking for more. Rule 2: persistent writes on our own Vir
 4. Close sequence on our Virus: cables and Mode after it, audio and sync on the next start, written up as evidence.
 5. A MIDI keyboard on DIN In, if at hand: firmware says it goes to USB in REMOTE, the closest we can get to keys.
 
-## Implementation plan (after test A)
+## Implementation plan (user 2026-11-04: all of it in rc2, before test A)
 
 Each with a failing test first.
 
 1. **Capture:** built (see above), hardware test open.
-2. **Filter, shared code:** from EP 0x85 cable 1 pass notes, pressure, bend, controllers; never SysEx (bank replies use this
+2. **Filter, shared code (keyport.h, done):** from EP 0x85 cable 1 pass notes, pressure, bend, controllers; never SysEx (bank replies use this
    cable outside a session, protocol.md), never clock or Active Sensing. Unit tests on captured frames.
-3. **macOS port in the broker:** CoreMIDI source "Virus TI Synth" with a stable unique ID (DAWs remember ports by it). The
+3. **macOS port in the broker (vtikeyport_mac.c, written, first compile in CI):** CoreMIDI source "Virus TI Synth" with a stable unique ID (DAWs remember ports by it). The
    broker already starts in the GUI session (broker.cpp). Virus to DAW only: no destination, so no new route for unknown
    SysEx into the Virus (rule 2). The port exists only while the broker runs: document it, check how Live reconnects.
-4. **Close sequence as the original,** if test B or our check 4 supports it: only the owning instance, once, not on a crash.
+4. **Close sequence as the original:** done (closeseq.h, E395), on the wire on our Virus; only the owning instance, once, not on a crash. What it changes on a keyed Virus is test B's question.
 5. **Docs:** README and site, "tested on" only with what a tester reported.
 
 Open design points: "Virus TI MIDI" (DIN In) too, or only Synth at first; double notes if a user keeps Local on and monitors
