@@ -2,6 +2,8 @@
 
 ## START HERE (2026-11-03, later): round 0.8.38 on branch `round-0.8.38`, 0.8.38-rc1 for the #26/#27 Snow tester
 
+**TOMORROW (user went to bed 2026-11-04):** check run 41914724788: mac job was cancelled (capacity), up to 8 reruns of it running in the background; if still cancelled, the user restarts it. If the mac job fails, that is the first real compile of vtikeyport_mac.c: fix, new tag rc3. When the pre-release exists: update work/issue29-reply2.md (link, drop the Local text question, E396) and post it only with the user's OK. Left as is: dev plug-in + broker on Linux, plug-in log ON (tirevive-cc debug off when done), win10ref running, Virus attached to Linux. Local commit d428bfb not pushed.
+
 **#29 update posted (2026-11-04, user asked, work/issue29-update3.md):** cause, rc2 coming, link + test list follow; v0.8.38-rc2 tagged on 943e324, CI 41914724788. E396 (sbostock76, Polar). work/issue29-reply2.md still to post with the link; its part C can drop the question about the Local message text.
 
 **0.8.38-rc2 decided (2026-11-04, user: 'release rc2 and ask the users to help us testing if the keys now work'):** dropouts: user's judgment 'virus ran out of voices and the density was too high' (~25 note-ons/s); logs agree the path was clean (2nd run: no audio drops during play, filled 0, over-block 0), voice exhaustion itself NOT measured. Odd first run: not explained, not reproduced. Knob messages from the Virus: not tested (no knob turned in either recording). After CI: post work/issue29-reply2.md with the link (user OK to name jwalkermed + sbostock76).
