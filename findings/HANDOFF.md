@@ -23,6 +23,8 @@ Evidence of today: E399-E410 in findings/evidence.md. Read E400, E401, E402, E40
 
 **Simulator project (user, 2026-11-05):** private repo github.com/derpsn/virus-ti-sim, local /home/datoml/virus-ti-sim: full simulated TI2 running the real firmware (AGENTS.md there: rules, milestones M1-M4; docs/STATUS.md, QUESTIONS.md, FINDINGS.md to talk). A background agent of this session works on M1 (8051 + TUSB3200A, DSPs stubbed, replay of our captures, one number) and stops at that go/no-go. It ends with the session: a new session restarts it from that repo. Check docs/QUESTIONS.md there; check its FINDINGS before taking them into evidence.md. Nothing Access in that repo.
 
+**Probe build 2 (2026-11-05 ~21:45):** run 42099865340 (latency-probe e381a77) green, pushed unpacked to ~/Downloads/TI-Revive-probe2-mac on the Mac with both install helpers plus ktest and Test MIDI port.command (pkg sha f79228c60194a008, same as CI). Not installed yet: the user runs it. noteprobe.on set, dualsched.on absent. Whether regions play again is not tested yet. Reach the Mac only with scripts/mac.sh run '...'.
+
 **Board chips from a photo (E414):** DSPB56367, uPSD3212CV as host CPU candidate, TUSB3200AC, CS42516; passed to the simulator agent. Probably a first-generation TI. A real TI2 Polar photo (E415) shows the same DSP type and speed grade (DSPB56367AG150) and Alliance AS7C34096A RAM; E416: straight-on first-generation board gives the place of each chip; the TI2 photo matches it in the visible part and probably has the CS42516 too. USB chip and host CPU of a TI2 still not seen.
 
 **Waiting for the user**
