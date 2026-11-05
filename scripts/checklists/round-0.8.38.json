@@ -22,13 +22,12 @@
      "id": "M1",
      "title": "The MIDI input appears and nothing breaks (gate for the testers)",
      "steps": [
-      "Open Audio MIDI Setup, Window, Show MIDI Studio.",
       "Start Ableton Live 12 with an empty project and load TI Revive Virus Control on a MIDI track. Wait until it is ready and play a few notes from the plug-in's track.",
-      "Look for \"Virus TI Synth\" in MIDI Studio and in the track's MIDI From list. Choose it and arm the track.",
+      "Look for \"Virus TI Synth\" in the track's MIDI From list and in Live's Settings, Link, Tempo and MIDI. Choose it and arm the track.",
       "Play a clip or notes from the DAW again.",
-      "Quit Live and watch MIDI Studio for a minute."
+      "Quit Live. Claude checks in the broker log and CoreMIDI's source list that the input went away."
      ],
-     "expect": "The input is listed in both places, Live does not crash, the plug-in connects and sounds as usual, with the input chosen too. After quitting, the input goes away within about 30 s, when the broker exits. Note what you see: this has never run before."
+     "expect": "Live lists the input, does not crash, and the plug-in connects and sounds as usual, with the input chosen too. It is a virtual source, so it does not show in Audio MIDI Setup's MIDI Studio; do not add it there with +. After quitting, it goes away within about 30 s, when the broker exits. Note what you see: this has never run before."
     },
     {
      "id": "M2",
