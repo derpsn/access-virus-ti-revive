@@ -154,6 +154,7 @@ On close the original resets globals (73 00 3B/3A/3C/7A).
   F4 are dropped before the wire (sendguard.h, rule 2). The 2026-10-13 stress hang (Linux, audio silent, MIDI
   alive) is not explained by the queue; its mechanism is open.
 - The original reports a plug-in latency of 3840 + block size (4352 at 512, 4096 at 256; vtihost prints it).
+  Formula and live path: E400 (3072 + 2X + 256 + block; notes played live skip the lead, Live button = no lead and no F5).
   Experiments with the sync ping (S=5000, M=6441 = the original's F2 offset): ping stamped 3072 like the original ->
   honoured in 3/3 runs (K 10752-11322, ~6000 frames after sending); ping stamped on our timeline -> honoured 3/3, K
   10368-12568; without ping -> 1/3 honoured. The ping makes the Virus honour the stamps but K still varies per
