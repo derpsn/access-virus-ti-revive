@@ -19,6 +19,8 @@ Evidence of today: E399-E410 in findings/evidence.md. Read E400, E401, E402, E40
 
 **#30 new (E412):** reporter on 0.8.37, Range Small, keyboard over USB; cannot route to analog outs through the plug-in; wants channels to parts and 3 USB outs as in the original. My part-scope lead is REFUTED: Multi-timbral with 4 parts works with our TI AU in Logic (user). Open: the Snow AU, 3 USB outs in Logic, analog routing on his Snow. Reply work/issue30-reply2.md POSTED (user's order): asks how he made the track, which plug-in, what happens with the analog outs; promises we test the 3 USB outs in Logic.
 
+**Virtual hardware idea (user; E413):** Gearmulator is no drop-in: it stops at the DSP host port. Proposal after 0.8.38: a private DSP-only harness, separate repo (GPL), pinned commit. Decision open. Probe build 2: dev-mac run 42073755821 cancelled 10 attempts, no artifact.
+
 **Waiting for the user**
 1. Step B ANSWERED: YES, the armed track recorded the scale as MIDI (E411). NEXT for #29: the same with TI Revive (VST3) on that track, as the reporter has it: load the plug-in first, then Test MIDI port.command (the broker makes a port of the same name too, so the list may show it twice), then grep noteprobe in diag.log. The installed probe build 1 is fine for this: its fault is in the AU only.
 2. Setup page paths: Logic's three CONFIRMED by the user. Live's Plug-In Buffer Size tip REMOVED: no such setting in Live 12.4 (user). Live's Delay Compensation: Ableton's FAQ says Options menu, on by default; the user does not find it in the German Live 12 menus, so the tip names no place now. Not checked: the FL Studio tip.
