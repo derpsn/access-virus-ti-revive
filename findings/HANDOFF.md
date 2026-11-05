@@ -23,6 +23,8 @@ Evidence of today: E399-E410 in findings/evidence.md. Read E400, E401, E402, E40
 
 **Simulator project (user, 2026-11-05):** private repo github.com/derpsn/virus-ti-sim, local /home/datoml/virus-ti-sim: full simulated TI2 running the real firmware (AGENTS.md there: rules, milestones M1-M4; docs/STATUS.md, QUESTIONS.md, FINDINGS.md to talk). A background agent of this session works on M1 (8051 + TUSB3200A, DSPs stubbed, replay of our captures, one number) and stops at that go/no-go. It ends with the session: a new session restarts it from that repo. Check docs/QUESTIONS.md there; check its FINDINGS before taking them into evidence.md. Nothing Access in that repo.
 
+**Board chips from a photo (E414):** DSPB56367, uPSD3212CV as host CPU candidate, TUSB3200AC, CS42516; passed to the simulator agent. Probably a first-generation TI: a TI2 photo would settle it.
+
 **Waiting for the user**
 1. Step B ANSWERED: YES, the armed track recorded the scale as MIDI (E411). NEXT for #29: the same with TI Revive (VST3) on that track, as the reporter has it: load the plug-in first, then Test MIDI port.command (the broker makes a port of the same name too, so the list may show it twice), then grep noteprobe in diag.log. The installed probe build 1 is fine for this: its fault is in the AU only.
 2. Setup page paths: Logic's three CONFIRMED by the user. Live's Plug-In Buffer Size tip REMOVED: no such setting in Live 12.4 (user). Live's Delay Compensation: Ableton's FAQ says Options menu, on by default; the user does not find it in the German Live 12 menus, so the tip names no place now. Not checked: the FL Studio tip.
