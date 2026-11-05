@@ -3,6 +3,18 @@
 ## START HERE (2026-11-05 evening): round 0.8.38, branch `round-0.8.38`, on the way to rc3
 
 Everything below this block is the older log of the same day and before; where it differs, this block is right.
+
+**END OF DAY 2026-11-05 (read this first; where it differs from the lines below, this is right)**
+- `round-0.8.38` head is this commit: 38 commits ahead of origin/round-0.8.38, NOT pushed, working tree clean except `native/external/vst3sdk` (leave it). `latency-probe` e381a77 pushed.
+- Mac: probe build 2 is INSTALLED (version shows 0.8.18-dev, that is only the dev build's name), regions play. `noteprobe.on` set, `dualsched.on` absent. Logic: Plug-in Latency Compensation now ON (prefs 1), it was Off through most of today's Logic listening. Reach the Mac only with `scripts/mac.sh run '...'` (`ssh mac` is wrong). Back to rc2: /Users/datoml/Downloads/TI-Revive-0.8.38-mac/Install test build.command. When the probe is over: remove noteprobe.on and ~/kpm-test. The Virus is at the Mac.
+- Simulator: agent STOPPED at the user's request. virus-ti-sim main pushed, its docs/STATUS.md says where it is (boots the firmware, partial replay numbers, M1 number not reached). Restart it only when the user asks, with a new agent pointed at that repo's AGENTS.md and STATUS.md. Agents do not outlive a session.
+- Today's new evidence: E414-E416 (board photos; TI2 Polar has 2x DSPB56367AG150 and Alliance RAM; first-generation layout, TI2 USB chip and host CPU not seen), E417 (probe 2 in Logic), E418-E420 (the 100 ms gap against Alchemy was Logic's compensation Off; with it on, a panned offline export is median 0.00 ms apart, largest 0.42 ms, playback in sync by ear).
+- No answers still owed by the user except: did the region sound clear selected and unselected. Pasted hardware summary (DSP56321 etc.) judged unsourced and not recorded.
+
+**NEXT, in order**
+1. Probe 2 with the user: property 40 toggle (compensation Off, 5 s, On, 5 s, twice; then `grep 'set property 40'` in diag.log; E419's lead, could become a warning in the plug-in, needs an AU change, next round unless the user wants it in rc3). Live notes while Logic plays, on a pitch other than C3 with the C3 region muted. Range Large. Multi-timbral. 3 USB outs (promised on #30). Live with Test MIDI port.command (#29).
+2. Rc3: #29 keyport hardening, release notes (installer really removes the Access packages, replug, setup page), risk.py, hil.sh (Virus must be back on Linux), CI `gh workflow run build.yml --ref round-0.8.38 -f version=...`. Push first with `git push origin round-0.8.38:refs/heads/round-0.8.38`. README line ~96, site, screenshot, tirevive-site-check at final.
+3. When rc3 is out, drafts to the user first: #29, #31, #26; #30 with the compensation question (ask the reporter whether it is on).
 Evidence of today: E399-E410 in findings/evidence.md. Read E400, E401, E402, E403, E405, E408 before touching latency.
 
 **Where things are**
