@@ -377,12 +377,14 @@ def page_landing(latest, releases, sums):
           <td class="st no">no report yet</td></tr>
         <tr><th>Polar</th><td class="st no">no report yet</td><td class="st rep">works for users</td>
           <td class="st no">no report yet</td></tr>
-        <tr><th>Desktop (TI1), Keyboard</th><td class="st no">no report yet</td><td class="st no">no report yet</td>
+        <tr><th>Desktop (TI1), Keyboard</th><td class="st no">no report yet</td><td class="st rep">works for users</td>
           <td class="st no">no report yet</td></tr>
       </tbody>
     </table>
     <ul class="limits">
       <li>The installers are not signed, so Windows and macOS ask once before they run them.</li>
+      <li>The keys of a Keyboard or Polar cannot be recorded in a DAW yet. The plug-in switches Local off, as the
+      original does, so the keys and wheels are silent until you set Local to On in CONFIG on the Virus.</li>
     </ul>
     <div class="testing">
       <div><h3>Automated tests</h3><p>{TESTS} unit tests run with every release build on Windows and Linux. They
@@ -580,7 +582,7 @@ def features_section():
         patch in a browser list, then Up and Down step to the next or previous patch, Left and Right to the next or
         previous column, and load it into the selected part. Holding a key runs through the list, and the patch it
         stops on is loaded. Up and Down tested on Linux (REAPER), Windows 11 (VM, Ableton Live 11) and macOS (Ableton
-        Live 12), and by a user on macOS (Logic Pro); Left and Right on Linux (REAPER).</li>
+        Live 12), and by a user on macOS (Logic Pro); Left and Right on Linux (REAPER) and by a user on macOS.</li>
         <li>Patch libraries from the original's three places, each its own menu (since 0.8.29): Personal Libraries (your Documents folder), User Libraries and Public Libraries. On the Mac the factory libraries that Access installs in /Library/Application Support appear under Public Libraries. On Linux only Personal Libraries. To add a library, drop its .mid or .syx file from Explorer, Finder or your file manager onto the browser (since 0.8.35, our own addition: the original takes no file drops). It is copied into Access Music/Virus TI/Patches in your Documents folder, never over an existing file, and the browser shows it at once; a .syx is saved as a .mid so the original finds it too. Copying the file into that folder yourself works as well; it shows up the next time the plug-in is loaded. Damaged patches in a library (dumps of the wrong length) are left out, as in the original; since 0.8.35 the plug-in's log names the library and how many.</li>
         <li><strong>RAM backup.</strong> Before TI Revive writes patches into the Virus' RAM banks (SAVE, a drop, swap, rename or sort in the browser, Undo last operation), it saves the patches that would be overwritten in a library of the day, "RAM Backup 2026-10-31" in Personal Libraries (since 0.8.36, our own addition). To get a patch back, drag it from that library onto a RAM slot. If the backup cannot be written, nothing is written to the Virus. The backup knows what the plug-in's bank cache knows: a patch you stored on the Virus itself since the last sync is not in it. Tested on Linux with a TI2 Desktop: the backup and the drag back restored the slot byte for byte; the backup and the restore also on Windows 11 (VM, Ableton Live 11) and macOS (Ableton Live 12).</li>
       </ul>
@@ -683,8 +685,8 @@ def features_section():
         <tbody>
           <tr><th>Linux, REAPER (0.8.27)</th><td>63 / 63</td><td>0.16 ms</td><td>-72 ppm</td></tr>
           <tr><th>macOS, Ableton 12 (M3, 0.8.31)</th><td>256 / 256</td><td>0.01 ms</td><td>0 ppm</td></tr>
-          <tr><th>Windows 11, Ableton Live</th><td>480 / 480</td><td>0.04 ms</td><td>0 ppm</td></tr>
-          <tr><th>Windows 11, Ableton Live 11 (0.8.24)</th><td>256 / 256</td><td>0.33 ms</td><td>-1 ppm</td></tr>
+          <tr><th>Windows 11 PC, Ableton Live 11 (0.8.23)</th><td>480 / 480</td><td>0.04 ms</td><td>0 ppm</td></tr>
+          <tr><th>Windows 11 PC, Ableton Live 11 (0.8.24)</th><td>256 / 256</td><td>0.33 ms</td><td>-1 ppm</td></tr>
           <tr class="old"><th>Classic plug-in 0.7.x</th><td>first late, second missing</td><td>0.06 ms</td><td>n/a</td></tr>
         </tbody>
       </table>

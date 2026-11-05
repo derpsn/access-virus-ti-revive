@@ -29,10 +29,10 @@ on Windows, macOS (Apple Silicon and Intel) and Linux, without the old Access dr
 reads the skin, the parameter descriptions and the ROM banks from your own Access installer at runtime; TI Revive
 contains no Access material. No kernel code of its own is installed.
 
-> **Testers wanted.** TI Revive is tested on a TI2 Desktop with Ableton Live, REAPER and GarageBand. Help us
+> **Testers wanted.** TI Revive is tested on a TI2 Desktop with Ableton Live, REAPER, GarageBand and Logic Pro. Help us
 > cover more: **Virus TI Snow** (first reports: it works with the plug-in - your test results help us make it
 > official),
-> **Polar and Keyboard** models, other DAWs (**Logic Pro**, Cubase, Bitwig, FL Studio, Studio One), **Intel Macs**,
+> **Polar and Keyboard** models, other DAWs (Cubase, Bitwig, FL Studio, Studio One), **Intel Macs**,
 > other **Linux** distributions and **Windows 10**. No coding needed: follow the
 > [testing guide](.claude/skills/tirevive-test/SKILL.md) and post a
 > [test report](https://github.com/derpsn/access-virus-ti-revive/issues/new?template=test_report.yml) - partial
@@ -285,25 +285,17 @@ same with Access' own driver.
 
 **All systems**
 
-- **Editor size:** right-click on an empty spot of the editor (or of the Control Center's Access look; there also
-  *View > Size*) and choose 100 % to 200 %; the plug-in also follows Windows' display scaling. The original images
-  are made for 100 %: at larger sizes and on high-resolution screens (Retina) the plug-in enlarges each image once
-  with a sharp filter, in memory only, so they stay crisp (the first visit of a page takes a moment longer). The
-  Control Center's Access look still stretches them.
-- **REMOTE page** (since 0.8.22): the Virus' remote templates with their names, knob names and MIDI strings, the
-  original's knob template list, template files to load and save, sent to the Virus like the original.
-- **Menus, reworked:** since 0.8.22 the plug-in's menus are reworked and modernized, and they work the same on
-  Windows, macOS and Linux. Every menu (value lists, LOAD and SAVE, banks, libraries) is a window of its own, like the
-  original's menus on Windows: it can reach beyond the plug-in window and use the whole screen, with the original's
-  columns (the Wavetable list: 4 columns of 25). A submenu opens when the pointer rests on its entry for a moment, so
-  you can move across other entries into an open submenu, for example from RAM A to its patches past RAM B. Arrow
-  keys, Return and Esc work; a click elsewhere or switching to another window closes the menu. Since 0.8.25 they also
-  look like the original's on Windows 10: menus with one column in Windows' modern look, menus with columns in the
-  older one. Since 0.8.26 they open on the monitor they belong to on Linux, also with several monitors of different sizes.
+#### Projects and export
+
 - **Projects made with the original plug-in:** projects with its VST3 version open with "TI Revive Virus Control"
   (since 0.8.25: the plug-in list also shows it as "TI Revive Virus Control (original projects)", which has the
   original's plug-in ID; tested in Ableton Live 11 and 12, also a Windows project on the Mac); the saved state is byte
   for byte the same. Projects with the original's VST2 version do not open: TI Revive is VST3 only.
+- **Export, freeze and offline bounce** work without a real-time render setting or a live recording: the plug-in
+  renders at the pace of the Virus. The original refused offline renders.
+
+#### Patches and libraries
+
 - **LOAD menu:** the original's "Revert to" (back to the patch before the last load, edits included) and "Recently
   Used" (the last 10 patches of each part); "Create Empty Library" is in the SAVE menu's Personal Libraries, as in the
   original (since 0.8.25; until 0.8.28 also in LOAD and the browser). Since 0.8.35 the LOAD menu also has "Init
@@ -327,34 +319,54 @@ same with Access' own driver.
   Live 11) and macOS (Ableton Live 12); on Linux the patches read from the Virus were byte for byte those of the
   Access installer. Works for a user with a TI2 Polar whose ROM A-Z hold their own banks and a TI2 Desktop with their
   own banks in ROM A-L (macOS, Logic Pro): their names in the browser, their sounds on the Virus.
-- **Arrow keys in the browser** (since 0.8.37, [issue #23](https://github.com/derpsn/access-virus-ti-
-  revive/issues/23), our own addition): click a patch in a browser list, then Up and Down step to the next or
+- **Arrow keys in the browser** (since 0.8.37, [issue #23](https://github.com/derpsn/access-virus-ti-revive/issues/23), our own addition): click a patch in a browser list, then Up and Down step to the next or
   previous patch, Left and Right to the next or previous column, and load it into the selected part. Holding a key
   runs through the list, and the patch it stops on is loaded. Up and Down tested on Linux (REAPER), Windows 11 (VM,
-  Ableton Live 11) and macOS (Ableton Live 12), and by a user on macOS (Logic Pro); Left and Right on Linux (REAPER).
-- **Library folders like the original's** (since 0.8.29): Patch libraries from the original's three places, each its own menu (since 0.8.29): Personal Libraries (your Documents folder), User Libraries and Public Libraries. On the Mac the factory libraries that Access installs in /Library/Application Support appear under Public Libraries. On Linux only Personal Libraries. To add a library, drop its .mid or .syx file from Explorer, Finder or your file manager onto the browser (since 0.8.35, our own addition: the original takes no file drops). It is copied into Access Music/Virus TI/Patches in your Documents folder, never over an existing file, and the browser shows it at once; a .syx is saved as a .mid so the original finds it too. Copying the file into that folder yourself works as well; it shows up the next time the plug-in is loaded. Damaged patches in a library (dumps of the wrong length) are left out, as in the original; since 0.8.35 the plug-in's log names the library and how many.
-- **The LCD shows the control under the mouse** (since 0.8.34), as in the original: its name, its value, the value stored in the patch in brackets, and the part.
+  Ableton Live 11) and macOS (Ableton Live 12), and by a user on macOS (Logic Pro); Left and Right on Linux (REAPER) and by a user on macOS.
+- **Library folders like the original's** (since 0.8.29): Patch libraries from the original's three places, each its own menu: Personal Libraries (your Documents folder), User Libraries and Public Libraries. On the Mac the factory libraries that Access installs in /Library/Application Support appear under Public Libraries. On Linux only Personal Libraries. To add a library, drop its .mid or .syx file from Explorer, Finder or your file manager onto the browser (since 0.8.35, our own addition: the original takes no file drops). It is copied into Access Music/Virus TI/Patches in your Documents folder, never over an existing file, and the browser shows it at once; a .syx is saved as a .mid so the original finds it too. Copying the file into that folder yourself works as well; it shows up the next time the plug-in is loaded. Damaged patches in a library (dumps of the wrong length) are left out, as in the original; since 0.8.35 the plug-in's log names the library and how many.
+- **Bank sync** takes about one second per preset — the synth itself sends dumps at that speed. It runs once (then
+  only changed presets are fetched), and you can play while it runs.
+
+#### On the Virus and in the DAW
+
 - **Presets, soft knobs and the part selected on the Virus itself** are followed, as in the original (the part since
   0.8.33).
+- **Knobs on the Virus reach your DAW:** knobs you turn on the Virus reach your DAW like the plug-in's own knobs while the plug-in window is open (since 0.8.29, [issue #10](https://github.com/derpsn/access-virus-ti-revive/issues/10)): Ableton Live's Configure mode adds them and automation records them. Tested in Ableton Live 11 (Windows 11, VM), Ableton Live 12 (macOS) and REAPER (Linux).
 - **Three stereo outputs over USB, plus the analog outputs of the Virus.** Parts on the analog outputs stay in time
   with the USB parts: like the original, the Virus holds them back by the USB latency (since 0.8.33).
-- **Knobs on the Virus reach your DAW:** knobs you turn on the Virus reach your DAW like the plug-in's own knobs while the plug-in window is open (since 0.8.29, [issue #10](https://github.com/derpsn/access-virus-ti-revive/issues/10)): Ableton Live's Configure mode adds them and automation records them. Tested in Ableton Live 11 (Windows 11, VM), Ableton Live 12 (macOS) and REAPER (Linux).
+- **Hearing the Virus**: with a part output set to *USB*, the audio comes through the plug-in track.
+- **REMOTE page** (since 0.8.22): the Virus' remote templates with their names, knob names and MIDI strings, the
+  original's knob template list, template files to load and save, sent to the Virus like the original.
+- **The original's sync error message**, shown when the Virus reports late notes while your DAW plays.
+- **One plug-in instance per synth.** Virus Control is designed that way (it controls all 16 parts);
+  a second instance shows "Virus unavailable" and takes over when the first one is removed.
+
+#### In the editor
+
+- **The LCD shows the control under the mouse** (since 0.8.34), as in the original: its name, its value, the value stored in the patch in brackets, and the part.
+- **The original's start-up page**: "Starting up" with its filling ring while a project opens; "Syncing memory with
+  Virus" only when the plug-in really reads banks from the Virus (since 0.8.27).
+- **Editor size:** right-click on an empty spot of the editor (or of the Control Center's Access look; there also
+  *View > Size*) and choose 100 % to 200 %; the plug-in also follows Windows' display scaling. The original images
+  are made for 100 %: at larger sizes and on high-resolution screens (Retina) the plug-in enlarges each image once
+  with a sharp filter, in memory only, so they stay crisp (the first visit of a page takes a moment longer). The
+  Control Center's Access look still stretches them.
+- **Menus, reworked:** since 0.8.22 the plug-in's menus are reworked and modernized, and they work the same on
+  Windows, macOS and Linux. Every menu (value lists, LOAD and SAVE, banks, libraries) is a window of its own, like the
+  original's menus on Windows: it can reach beyond the plug-in window and use the whole screen, with the original's
+  columns (the Wavetable list: 4 columns of 25). A submenu opens when the pointer rests on its entry for a moment, so
+  you can move across other entries into an open submenu, for example from RAM A to its patches past RAM B. Arrow
+  keys, Return and Esc work; a click elsewhere or switching to another window closes the menu. Since 0.8.25 they also
+  look like the original's on Windows 10: menus with one column in Windows' modern look, menus with columns in the
+  older one. Since 0.8.26 they open on the monitor they belong to on Linux, also with several monitors of different sizes.
 
 <p align="center">
   <img src="docs/images/plugin-menus.png" alt="The LOAD menu: the device entry, the bank list and RAM A's 128 patches in columns, beyond the plug-in window" width="680"><br>
   <sub>The LOAD menu reaching beyond the plug-in window (Linux), drawn from your own Access installer. TI Revive is not affiliated with Access Music or Kemper.</sub>
 </p>
 
-- **Export, freeze and offline bounce** work without a real-time render setting or a live recording: the plug-in
-  renders at the pace of the Virus. The original refused offline renders.
-- **The original's sync error message**, shown when the Virus reports late notes while your DAW plays.
-- **The original's start-up page**: "Starting up" with its filling ring while a project opens; "Syncing memory with
-  Virus" only when the plug-in really reads banks from the Virus (since 0.8.27).
-- **One plug-in instance per synth.** Virus Control is designed that way (it controls all 16 parts);
-  a second instance shows "Virus in use by another instance" and takes over when the first one is removed.
-- **Hearing the Virus**: with a part output set to *USB*, the audio comes through the plug-in track.
-- **Bank sync** takes about one second per preset — the synth itself sends dumps at that speed. It runs once (then
-  only changed presets are fetched), and you can play while it runs.
+#### Logs and firmware
+
 - **Logs for bug reports:** create an empty file `diag.on` in the plug-in's folder (Windows
   `%LOCALAPPDATA%\virus-ti-native`, macOS `~/Library/Application Support/virus-ti-native`, Linux
   `~/.local/share/virus-ti-native`), reproduce the problem and attach `diag.log` from there (see CONTRIBUTING.md).
@@ -768,7 +780,7 @@ first on Linux with libusb, then on Windows 10 and Windows 11 VMs, and on a MacB
 the macOS version. For 0.8.0 the plug-in itself was rewritten (`native/`): its UI is drawn from the original's layout
 and skin files at runtime, every protocol detail was measured on the synth (timing with recorded test patterns,
 read-backs of the Virus' memory), and parts that were first ported from the analysis were rewritten from documented
-behaviour with golden tests. `findings/evidence.md` lists 145 numbered observations, including the wrong turns and
+behaviour with golden tests. `findings/evidence.md` lists almost 400 numbered observations, including the wrong turns and
 their corrections.
 
 The reverse engineering and the code were done by derpsn together with Claude (Anthropic) as an
