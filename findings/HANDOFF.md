@@ -1,6 +1,44 @@
 # HANDOFF
 
-## START HERE (2026-11-05): round 0.8.38 on branch `round-0.8.38`, rc2 out, first keyed report in (E399)
+## START HERE (2026-11-05 evening): round 0.8.38, branch `round-0.8.38`, on the way to rc3
+
+Everything below this block is the older log of the same day and before; where it differs, this block is right.
+Evidence of today: E399-E410 in findings/evidence.md. Read E400, E401, E402, E403, E405, E408 before touching latency.
+
+**Where things are**
+- `round-0.8.38`: local, 18 commits ahead of origin/round-0.8.38, NOT pushed. origin/main 788acec. Plain `git push` here would go to main (push.default=upstream): push with `git push origin round-0.8.38:refs/heads/round-0.8.38` when wanted. `native/external/vst3sdk` always shows as modified (x11dragging patch): leave it.
+- `latency-probe` (e381a77, pushed): round head of the afternoon + NoteProbe + dual scheduling in the AU. NOT for 0.8.38. Live path = NEXT round (user). Its HANDOFF lines are older than this block.
+- Machines: all VMs off; win11 back as it was. Broker socket active on Linux, plug-in log (diag.on) on. The Virus is at the Mac (not on Linux USB), so no hil.sh here until it is back. Mac (last known, it did not answer at the time of writing): probe build 1 (c425a4c) INSTALLED, package says 0.8.18-dev: REGIONS DO NOT PLAY IN LOGIC with it. Restore rc2: /Users/datoml/Downloads/TI-Revive-0.8.38-mac/Install test build.command. To remove on the Mac after the tests: noteprobe.on in ~/Library/Application Support/virus-ti-native, ~/kpm-test.
+- CI: dev-mac run 42073755821 for probe build 2 (e381a77): GitHub keeps cancelling the job (no runner, no compile error). A background retry loop ran in the old session and dies with it. Check `gh run view 42073755821`, retry with `gh run rerun 42073755821 --failed`. When green: `gh run download`, unzip, add INSTALL-COMMAND.txt + Install test build.command, `scripts/mac.sh push` to ~/Downloads/TI-Revive-probe2-mac; the user installs.
+- Replies POSTED today (user's order): #29 issuecomment-6663675959, #30 -6663676472, #31 -6665300658. Posting works with `gh issue comment N --repo derpsn/access-virus-ti-revive --body-file F` once the user says so in a message; the older lines saying 'blocked' are out of date. Issues only together with the user. Always the short AI note.
+
+**rc3 contents**
+- DONE in the tree: setup page (E408: native/src/editor/setuptips.h, ? menu, opens by itself; tested on Linux only, 560 unit tests + Xvfb shots, no real DAW, Windows and Mac never compiled it). #31 fix (E410: tirevive-driver.ps1, package level tested in win11, device binding is the reporter's run).
+- TO DO: #29 keyport hardening promised in the post (src/broker/vtikeyport_mac.c: aligned packet buffer, check MIDIReceived, counters in the log; E404; compile check on the Mac needs `-isysroot /Library/Developer/CommandLineTools/SDKs/MacOSX26.sdk`, the 27 SDK's stubs fail with its linker). Whatever the Logic test demands. Release notes in build.yml: the installer now really removes the Access driver packages (the original stops working on that PC until the Access software is reinstalled), replug the Virus after installing, setup page. README line 96 area + site, identical texts, screenshot of the page, tirevive-site-check: at the final. Run risk.py, hil.sh on the Virus before CI.
+- WHEN rc3 IS OUT, drafts shown to the user first: #29 (test version; thank for the answers; the port is input only and the plug-in sends the clock itself, their question about a MIDI output for tempo), #31 (rc3 is out, does it work without their patch), #26 (answer to the Snow report, user wants it with rc3, below), #30 (test build if it has something for them).
+
+**Waiting for the user**
+1. Step B: did the armed track in Live record the scale from /Users/datoml/Downloads/TI-Revive-probe-mac/Test MIDI port.command? Live's log shows the port arrives; recording it cannot show. This now decides #29. If yes: repeat with TI Revive on that track, as the reporter has it.
+2. Are the Mac menu paths on the setup page right: Logic Settings > Audio > Devices (Process Buffer Range), Audio > General (Plug-in Latency Compensation), General > Cycle (Smooth Cycle); Live Settings > Plug-Ins (Plug-In Buffer Size)? Fix setuptips.h if not.
+3. With probe build 2: step C in Logic WITHOUT dualsched.on: keys stopped and playing, region with its track selected and with another selected, Process Buffer Range Small then Large, Multi-timbral with 2 parts (for #30, and the page's tip). Quit, then step D in Live with the VST3: same notes, stopped, playing, a clip. The user has set all the manual's Logic settings. Then read diag.log on the Mac: `grep noteprobe "$HOME/Library/Application Support/virus-ti-native/diag.log"` (scripts/mac.sh run). 'set property' lines show what Logic sets. 'largest' per Range tells whether the page's advice holds.
+
+**#29 in short (keys of a keyed Virus into the DAW, macOS)**
+Keys reach the broker on EP 0x85 and pass the filter (E399). The port's own code delivers 30 of 30 to a second program on the Mac (E404). Live picks up a port that appears late and has Track on by default in 12.4.16 (E407, user's warm-broker idea ruled out). The reporter: port listed, chosen under MIDI From, armed, Live's MIDI In light blinks with the keys, Local off silent (E409). But their clip stays empty and no note comes back on EP 0x06. NOT explained. Live's light proves arrival in Live, not on the track.
+
+**#30 and the latency work in short**
+- Original (E400-E403): reports lead 3072 + 2X + 256 + block. X = 128 with the real Access driver (3584 + block, measured), 256 under our emulation (3840 + block, the old value). Notes flagged live skip the lead: on one USB path under Wine sequenced 88-99 ms, live 29-43 ms. In the VM 25-30 ms gain only (audio in about 32 ms URBs). TI Revive now: 90 ms up to block 256, 97 ms at 512; with VTI_NATIVE_A=0 38-42 ms at 64-256, an upper bound, not a feature (no start at 32 and 512). Sequenced notes of both land on what they report.
+- Logic (E405): sets property 1013 (Apple's dual scheduling) when offered; played notes then arrive flagged live with real offsets, BUT regions stop playing: 142 MIDI events, all live, 0 scheduled, 0 on the other entries. Reason unknown, web and manuals give nothing (E406). So do NOT ship the offer; build 2 offers it only with dualsched.on. Without it the AU cannot tell live from sequenced except by the original's offset rule, and live offsets were real (44, 101, 173), which that rule would miss. Step C shows what Logic sends without the mode.
+- Design notes for the live path (next round): StampFloor blocks it as written; wheels and CC must go with the notes (the original lets them inherit the last F5); note-off order; the output ring still costs base, TI Revive's read position never below 896; stamprule.h's comment still wrong; the original drops the note's offset, so one block of jitter. D button and Live button still do nothing. Analog outs are NOT proven fast here (hold-back E344): do not advise them. Live button unmeasured (not a VST3 parameter, one click in the VM).
+- Measuring: scripts/latency-orig.sh (win10ref, always --play-at, pitfall in E402), latency-wine.sh (needs work/latency/flash-reads.txt, makes it from a capture; runs its own broker once with VTI_BROKER_TCP=1), latency-native.sh, latency_measure.py + tests; vtihost VTI_LIVE, VTI_STOPPED, VTI_PLAY_AT, nativehost --live, --tips.
+- On the setup page: tips marked 'Access' advice for the original' are untested with us; compensation and Low Latency Mode untested too.
+
+**#26 (Snow on Linux, vmunoz82, rc2, E409), reply owed with rc3:** bulk endpoints fine, connects, notes, parameters both ways. Sync reports with clicks in every session (184 in 40 min at 44.1; 141 and 1054 in 3-4 min at 48 kHz), one run with no sync marker and about 40 audio blocks dropped per second, raw peaks 32768 on channels 1/2, a 48 to 44.1 switch about 9 s after the start, notes keep sounding after Stop. Their own setup: 8.4 ms note to audio, plain MIDI, no stamps. Their guess: stamp and marker side on the Snow. No Snow here: only logs. Their full comment and diag.log are on the issue.
+
+**Decided today (user):** live path next round; setup page and #31 in 0.8.38; #26 reply when rc3 is ready; comparing every menu of the original under Wine against ours is a good later project (answer given: it covers what reaches the Virus, needs a recording mode or a hard block of store and firmware paths, measure N of M instead of claiming 99 %), not started.
+
+**Still from before:** the original with the three-channel load in win10ref, before the final (E398). Final needs CMakeLists version bump, TESTS count, site check. Quiet issues #20, #14 reach 14 days around Nov 11-12, close only with the user.
+
+## Older log: 2026-11-05 day, round 0.8.38, rc2 out, first keyed report in (E399)
 
 **#31 reply POSTED 2026-11-05 ~18:58 (user's order), issuecomment-6665300658.** It promises a post at rc3 and an answer on #26 (Snow report): that reply is OWED, the user wants it when rc3 is ready, together with the post on #31 and the test version for #29.
 
