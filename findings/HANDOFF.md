@@ -2,7 +2,7 @@
 
 ## START HERE (2026-11-05): round 0.8.38 on branch `round-0.8.38`, rc2 out, first keyed report in (E399)
 
-**#31 reply POSTED 2026-11-05 ~18:58 (user's order), issuecomment-6665300658.** It promises a post at rc3 and an answer on #26 (Snow report): that reply is OWED and not drafted yet.
+**#31 reply POSTED 2026-11-05 ~18:58 (user's order), issuecomment-6665300658.** It promises a post at rc3 and an answer on #26 (Snow report): that reply is OWED, the user wants it when rc3 is ready, together with the post on #31 and the test version for #29.
 
 **#31 FIX IN THE TREE 2026-11-05 ~19:15 (user: into rc3; E410):** tested at package level in win11, VM reverted to as it was and off, its snapshot deleted. Draft reply work/issue31-reply1.md, NOT posted, waits for the user. RC3 CONTENTS so far: setup page (E408), #31. Still for rc3: keyport hardening (E404), notes in build.yml: the installer really removes the Access packages, replug after installing. README line 96 area + site text (identical) for the same at the final. Probe build rerun still open.
 
