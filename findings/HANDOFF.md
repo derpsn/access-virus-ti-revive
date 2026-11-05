@@ -19,7 +19,7 @@ Evidence of today: E399-E410 in findings/evidence.md. Read E400, E401, E402, E40
 
 **Waiting for the user**
 1. Step B ANSWERED: YES, the armed track recorded the scale as MIDI (E411). NEXT for #29: the same with TI Revive (VST3) on that track, as the reporter has it: load the plug-in first, then Test MIDI port.command (the broker makes a port of the same name too, so the list may show it twice), then grep noteprobe in diag.log. The installed probe build 1 is fine for this: its fault is in the AU only.
-2. Setup page paths: Logic's three CONFIRMED by the user. Live's Settings > Plug-Ins (Plug-In Buffer Size) still open: fix or drop it in setuptips.h if it is not there.
+2. Setup page paths: Logic's three CONFIRMED by the user. Live's Plug-In Buffer Size tip REMOVED: no such setting in Live 12.4 (user). Not checked on a real page yet: Live's Options menu Delay Compensation, the FL Studio tip.
 3. With probe build 2: step C in Logic WITHOUT dualsched.on: keys stopped and playing, region with its track selected and with another selected, Process Buffer Range Small then Large, Multi-timbral with 2 parts (for #30, and the page's tip). Quit, then step D in Live with the VST3: same notes, stopped, playing, a clip. The user has set all the manual's Logic settings. Then read diag.log on the Mac: `grep noteprobe "$HOME/Library/Application Support/virus-ti-native/diag.log"` (scripts/mac.sh run). 'set property' lines show what Logic sets. 'largest' per Range tells whether the page's advice holds.
 
 **#29 in short (keys of a keyed Virus into the DAW, macOS)**

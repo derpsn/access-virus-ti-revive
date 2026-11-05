@@ -109,7 +109,6 @@ inline TipsPage setup_tips(const TipsFacts &f)
     case TipsHost::Live:
         add("compensation", "Options menu: Delay Compensation on, or the Virus sounds " + delay + " late against other tracks.");
         add("live-parts", "Several parts: one instance plays them all. Point other MIDI tracks at its track with MIDI To, one channel each, and arm them to play.");
-        add("live-plugin-buffer", "Settings > Plug-Ins: Plug-In Buffer Size As Audio Buffer (Access' advice for the original).");
         if (f.mac)
             add("live-keys", "A Virus with keys: choose the MIDI input Virus TI Synth under MIDI From on an armed track.");
         break;

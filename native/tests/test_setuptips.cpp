@@ -92,6 +92,7 @@ TEST(setuptips_live_points)
     CHECK(contains(tip(p, "compensation")->text, "Delay Compensation"));
     CHECK(has_key(p, "live-parts"));
     CHECK(!has_key(p, "logic-range"));
+    CHECK(!has_key(p, "live-plugin-buffer")); // Live 12.4 has no such setting (user, on the Mac)
 }
 
 TEST(setuptips_the_midi_input_is_only_named_where_it_exists)
