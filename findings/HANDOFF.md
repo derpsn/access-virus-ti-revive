@@ -2,6 +2,8 @@
 
 ## START HERE (2026-11-05): round 0.8.38 on branch `round-0.8.38`, rc2 out, first keyed report in (E399)
 
+**#31 reply POSTED 2026-11-05 ~18:58 (user's order), issuecomment-6665300658.** It promises a post at rc3 and an answer on #26 (Snow report): that reply is OWED and not drafted yet.
+
 **#31 FIX IN THE TREE 2026-11-05 ~19:15 (user: into rc3; E410):** tested at package level in win11, VM reverted to as it was and off, its snapshot deleted. Draft reply work/issue31-reply1.md, NOT posted, waits for the user. RC3 CONTENTS so far: setup page (E408), #31. Still for rc3: keyport hardening (E404), notes in build.yml: the installer really removes the Access packages, replug after installing. README line 96 area + site text (identical) for the same at the final. Probe build rerun still open.
 
 **Issues read with the user 2026-11-05 ~19:00 (E409), nothing posted, nothing changed:** #31 NEW: real bug in tirevive-driver.ps1 (Access package never removed), small fix offered and tested by vmunoz82; decision pending: into rc3, test in a win11 snapshot with the Access software first. #29: answers in, notes reach Live (light blinks), armed track still empty: not explained; user's step B answer now decides. #26: rc2 on a Snow: connects, but sync reports, no marker in one run, hanging notes after Stop. No Snow here.
