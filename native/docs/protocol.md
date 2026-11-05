@@ -154,7 +154,7 @@ On close the original resets globals (73 00 3B/3A/3C/7A).
   F4 are dropped before the wire (sendguard.h, rule 2). The 2026-10-13 stress hang (Linux, audio silent, MIDI
   alive) is not explained by the queue; its mechanism is open.
 - The original reports a plug-in latency of 3584 + block size with the real Access driver (3616 at 32, 4096 at 512, measured in win10ref, E402;
-  an older note here said 3840 + block, the driver stack of that value is not known).
+  3840 + block is the value under Wine with our driver emulation, X = 256, E403).
   Formula and live path: E400, E401 (3072 + 2X + 256 + block, X = 128; notes played live skip the lead and sound 25-30 ms earlier in that setup, Live button = no lead and no F5).
   Experiments with the sync ping (S=5000, M=6441 = the original's F2 offset): ping stamped 3072 like the original ->
   honoured in 3/3 runs (K 10752-11322, ~6000 frames after sending); ping stamped on our timeline -> honoured 3/3, K

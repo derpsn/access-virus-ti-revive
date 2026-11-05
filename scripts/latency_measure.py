@@ -108,6 +108,32 @@ def stamp_classes(notes, first, period, classes=2, rate=44100, first_index=0):
     return out
 
 
+def flash_reads(lines):
+    """usbdecode.py lines -> [(address hex, 16 bytes hex)]: what the original read from the flash at open (E026, E040),
+    each address once. scripts/latency-wine.sh answers these reads from this table under Wine (E403)."""
+    out, seen, addr = [], set(), None
+    for line in lines:
+        m = re.search(r"setup (0x[0-9a-f]+) req=(\d+) wV=\S+ wI=(\d+) wL=(\d+) ([0-9a-f]*)\s*$", line)
+        if not m:
+            continue
+        rt, req, wi, wl, data = m.group(1), int(m.group(2)), int(m.group(3)), int(m.group(4)), m.group(5)
+        if rt in ("0x41", "0x40") and req == 1 and wi == 0x12 and wl == 3 and len(data) == 6:
+            addr = data
+        elif rt in ("0xc1", "0xc0") and req == 0x81 and wi == 0x30 and len(data) == 32 and addr is not None:
+            if addr not in seen:
+                seen.add(addr)
+                out.append((addr, data))
+            addr = None
+    return out
+
+
+def cmd_flash(a):
+    decoder = os.path.join(os.path.dirname(os.path.abspath(__file__)), "usbdecode.py")
+    text = subprocess.run([sys.executable, "-I", decoder, a.file, a.addr], capture_output=True, text=True).stdout
+    for addr, data in flash_reads(text.splitlines()):
+        print(addr, data)
+
+
 def read_wav(path):
     """Loudest channel per frame, 0..1, and the rate. 16-bit PCM, what both test hosts write."""
     with wave.open(path, "rb") as w:
@@ -171,8 +197,11 @@ def main():
         q.add_argument("--first", type=int, required=True)
         q.add_argument("--period", type=int, default=44100)
         q.add_argument("--classes", type=int, default=2)
+    f = sub.add_parser("flash", help="the table for VTI_FLASH_REPLAY, on stdout")
+    f.add_argument("file")
+    f.add_argument("addr")
     a = p.parse_args()
-    (cmd_wav if a.mode == "wav" else cmd_usb)(a)
+    {"wav": cmd_wav, "usb": cmd_usb, "flash": cmd_flash}[a.mode](a)
 
 
 if __name__ == "__main__":

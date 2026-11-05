@@ -113,5 +113,31 @@ class Stamps(unittest.TestCase):
         self.assertEqual(lm.stamp_classes(notes, 11025, 44100, classes=2), {0: None, 1: None})
 
 
+class FlashReads(unittest.TestCase):
+    # usbdecode.py lines of the original's reads at open (E026): address out, status polls, 16 bytes back
+    LINES = [
+        " 2.400000 ep=0x00  st=0    setup 0x41 req=1 wV=0x0000 wI=18 wL=3 ff7fc0",
+        " 2.410000 ep=0x80  st=0    setup 0xc1 req=129 wV=0x0000 wI=1 wL=1 10",
+        " 2.413521 ep=0x80  st=-32  setup 0xc1 req=129 wV=0x0000 wI=34 wL=16 ",
+        " 2.745461 ep=0x80  st=0    setup 0xc1 req=129 wV=0x0000 wI=48 wL=16 464c5348323030383031303130303030",
+        " 3.000000 ep=0x00  st=0    setup 0x41 req=1 wV=0x0000 wI=18 wL=3 800040",
+        " 3.010000 ep=0x80  st=0    setup 0xc1 req=129 wV=0x0000 wI=48 wL=16 000000021bdbc26022ffff023288ffff",
+    ]
+
+    def test_each_address_gets_the_data_that_followed_it(self):
+        self.assertEqual(lm.flash_reads(self.LINES), [("ff7fc0", "464c5348323030383031303130303030"),
+                                                      ("800040", "000000021bdbc26022ffff023288ffff")])
+
+    def test_a_read_without_an_address_is_ignored(self):
+        self.assertEqual(lm.flash_reads(self.LINES[3:4]), [])
+
+    def test_the_same_address_twice_keeps_one_entry(self):
+        self.assertEqual(len(lm.flash_reads(self.LINES[:4] + self.LINES[:4])), 1)
+
+    def test_other_transfers_do_not_disturb_it(self):
+        lines = [" 1.0 ep=0x80  st=0    setup 0x80 req=6 wV=0x0100 wI=0 wL=18 12011001"] + self.LINES[:4]
+        self.assertEqual(len(lm.flash_reads(lines)), 1)
+
+
 if __name__ == "__main__":
     unittest.main()
