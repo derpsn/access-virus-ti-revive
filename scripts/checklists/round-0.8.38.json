@@ -1,7 +1,7 @@
 {
  "round": "0.8.38",
  "core": "core.json",
- "core_items": ["LC4", "WC4", "MC4", "MC5"],
+ "core_items": ["LC4", "MC4", "MC5"],
  "lead": "Test of 0.8.38-rc2 (CI run 41914724788, the published pre-release). risk.py: class C on all three systems, so from the core list the automated runs (hil) plus Virus off/on, and sleep on Windows and the Mac. The round's own items: the macOS MIDI input \"Virus TI Synth\" (compiled but never run before this), the traffic capture, the close sequence and the browser numbers. Mac first: the testers get their request only after M1 and M2. Our Virus has no keys, so the keys themselves stay for the testers. Mark each item and add a note where something looks different; Claude reads the marks from this page.",
  "rules": [
   "Order: Mac first, as decided, then Linux, then the Windows VM. Close the DAW before the Virus moves.",
@@ -108,6 +108,14 @@
       "Close REAPER and look at the Virus' display and panel."
      ],
      "expect": "The numbers no longer touch the name before them. Normal display, and the panel works."
+    },
+    {
+     "id": "L5",
+     "title": "Sleep, automated (only you can run this one)",
+     "steps": [
+      "No DAW open. In a terminal: <code>/home/datoml/virus-ti-re/scripts/hil.sh --sleep</code>. It asks for your password once (rtcwake) and suspends this PC for 45 s."
+     ],
+     "expect": "The summary says ALL PASS, including H5."
     }
    ]
   },
@@ -116,7 +124,8 @@
    "title": "Windows 11 VM",
    "where": "win11 VM, Ableton Live 11, published 0.8.38-rc2 (installed silently by Claude, version checked)",
    "prep": [
-    "Close REAPER on Linux. Claude attaches the Virus to the VM and copies the hil-windows kit."
+    "Close REAPER on Linux. Claude attaches the Virus to the VM and copies the hil-windows kit.",
+    "Virus off and on (WC4) is left out on purpose: risk.py asks for it, but the rule above forbids it in the VM. Windows power-cycling is therefore not tested in this round."
    ],
    "items": [
     {
