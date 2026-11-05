@@ -22,15 +22,19 @@ namespace Vst {
 class TIReviveAU : public AUWrapper
 {
 public:
-	TIReviveAU (ComponentInstanceRecord* ci) : AUWrapper (ci) { probeLine ("audio unit opened"); }
+	TIReviveAU (ComponentInstanceRecord* ci) : AUWrapper (ci), offerDual (probeFile ("dualsched.on"))
+	{
+		probeLine (offerDual ? "audio unit opened, dual scheduling offered" : "audio unit opened, dual scheduling not offered");
+	}
 	~TIReviveAU () override { probeCounts ("audio unit closed"); }
 
 	// Apple's dual scheduling mode (src/device/dualsched.h, E401): offering it lets the host tell us which notes are
 	// played right now. The wrapper knows nothing of it, so the frame value is taken apart here, before it gets there.
+	// Offered only with dualsched.on next to diag.on, for tests: Logic sets it and then its regions do not play (E405).
 	OSStatus GetPropertyInfo (AudioUnitPropertyID inID, AudioUnitScope inScope, AudioUnitElement inElement,
 	                          UInt32& outDataSize, bool& outWritable) override
 	{
-		if (inID == vti::DUAL_SCHEDULING_PROPERTY)
+		if (inID == vti::DUAL_SCHEDULING_PROPERTY && offerDual)
 		{
 			if (inScope != kAudioUnitScope_Global)
 				return kAudioUnitErr_InvalidScope;
@@ -44,7 +48,7 @@ public:
 	ComponentResult GetProperty (AudioUnitPropertyID inID, AudioUnitScope inScope, AudioUnitElement inElement,
 	                             void* outData) override
 	{
-		if (inID == vti::DUAL_SCHEDULING_PROPERTY)
+		if (inID == vti::DUAL_SCHEDULING_PROPERTY && offerDual)
 		{
 			if (inScope != kAudioUnitScope_Global)
 				return kAudioUnitErr_InvalidScope;
@@ -57,7 +61,8 @@ public:
 	ComponentResult SetProperty (AudioUnitPropertyID inID, AudioUnitScope inScope, AudioUnitElement inElement,
 	                             const void* inData, UInt32 inDataSize) override
 	{
-		if (inID == vti::DUAL_SCHEDULING_PROPERTY)
+		probeSet (inID, inScope, inElement, inData, inDataSize);
+		if (inID == vti::DUAL_SCHEDULING_PROPERTY && offerDual)
 		{
 			if (inScope != kAudioUnitScope_Global)
 				return kAudioUnitErr_InvalidScope;
@@ -141,6 +146,8 @@ public:
 	}
 
 private:
+	const bool offerDual;
+	int probeSets = 0;
 	std::atomic<bool> dualMode {false};
 	std::atomic<uint32> midiEvents {0}, eventListCalls {0}, startStopCalls {0}, liveEvents {0}, scheduledEvents {0};
 
@@ -173,12 +180,32 @@ private:
 		return home ? std::string (home) + "/Library/Application Support/virus-ti-native" : std::string ();
 	}
 
-	static bool probeOn ()
+	static bool probeFile (const char* name)
 	{
 		struct stat st;
 		const std::string dir = probeDir ();
-		return !dir.empty () && stat ((dir + "/diag.on").c_str (), &st) == 0 &&
-		       stat ((dir + "/noteprobe.on").c_str (), &st) == 0;
+		return !dir.empty () && stat ((dir + "/" + name).c_str (), &st) == 0;
+	}
+
+	static bool probeOn () { return probeFile ("diag.on") && probeFile ("noteprobe.on"); }
+
+	// what the host sets on us, to see how it treats the unit (control calls only; the first 60 of an instance)
+	void probeSet (AudioUnitPropertyID id, AudioUnitScope scope, AudioUnitElement element, const void* data, UInt32 size)
+	{
+		if (probeSets >= 60 || !probeOn ())
+			return;
+		probeSets++;
+		char b[120];
+		if (data && size == sizeof (UInt32))
+			snprintf (b, sizeof b, "set property %u scope %u element %u = %u", (unsigned)id, (unsigned)scope, (unsigned)element,
+			          (unsigned)*static_cast<const UInt32*> (data));
+		else if (data && size == sizeof (Float64))
+			snprintf (b, sizeof b, "set property %u scope %u element %u = %.3f", (unsigned)id, (unsigned)scope, (unsigned)element,
+			          *static_cast<const Float64*> (data));
+		else
+			snprintf (b, sizeof b, "set property %u scope %u element %u, %u bytes", (unsigned)id, (unsigned)scope, (unsigned)element,
+			          (unsigned)size);
+		probeLine (b);
 	}
 
 	static void probeLine (const char* text)
