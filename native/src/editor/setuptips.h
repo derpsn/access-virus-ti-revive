@@ -107,7 +107,7 @@ inline TipsPage setup_tips(const TipsFacts &f)
         add("compensation", "TI Revive tells GarageBand about its delay; GarageBand has no setting for this.");
         break;
     case TipsHost::Live:
-        add("compensation", "Options menu: Delay Compensation on, or the Virus sounds " + delay + " late against other tracks.");
+        add("compensation", "Keep Live's Delay Compensation on (it is on by default), or the Virus sounds " + delay + " late against other tracks.");
         add("live-parts", "Several parts: one instance plays them all. Point other MIDI tracks at its track with MIDI To, one channel each, and arm them to play.");
         if (f.mac)
             add("live-keys", "A Virus with keys: choose the MIDI input Virus TI Synth under MIDI From on an armed track.");
