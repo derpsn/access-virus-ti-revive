@@ -1,0 +1,143 @@
+{
+ "round": "0.8.38",
+ "core": "core.json",
+ "core_items": ["LC4", "WC4", "MC4", "MC5"],
+ "lead": "Test of 0.8.38-rc2 (CI run 41914724788, the published pre-release). risk.py: class C on all three systems, so from the core list the automated runs (hil) plus Virus off/on, and sleep on Windows and the Mac. The round's own items: the macOS MIDI input \"Virus TI Synth\" (compiled but never run before this), the traffic capture, the close sequence and the browser numbers. Mac first: the testers get their request only after M1 and M2. Our Virus has no keys, so the keys themselves stay for the testers. Mark each item and add a note where something looks different; Claude reads the marks from this page.",
+ "rules": [
+  "Order: Mac first, as decided, then Linux, then the Windows VM. Close the DAW before the Virus moves.",
+  "Never power-cycle the Virus while it is attached to the VM; switch it off and on only while it is on Linux or the Mac.",
+  "Use a disposable project. Nothing in this round stores to the Virus."
+ ],
+ "sections": [
+  {
+   "id": "mac",
+   "title": "macOS",
+   "where": "MacBook Air M3, Ableton Live 12 and Logic Pro, published 0.8.38-rc2 (you install the package; Claude pushed it)",
+   "prep": [
+    "Quit Logic Pro and any other DAW, then double-click <code>Install test build.command</code> in <code>~/Downloads/TI-Revive-0.8.38-mac</code>, or paste: <code>sudo installer -pkg \"$HOME/Downloads/TI-Revive-0.8.38-mac/TI Revive.pkg\" -target /</code>",
+    "Move the Virus' USB cable to the Mac and switch it on if needed. Claude checks the installed version with pkgutil before trusting a result."
+   ],
+   "items": [
+    {
+     "id": "M1",
+     "title": "The MIDI input appears and nothing breaks (gate for the testers)",
+     "steps": [
+      "Open Audio MIDI Setup, Window, Show MIDI Studio.",
+      "Start Ableton Live 12 with an empty project and load TI Revive Virus Control on a MIDI track. Wait until it is ready and play a few notes from the plug-in's track.",
+      "Look for \"Virus TI Synth\" in MIDI Studio and in the track's MIDI From list. Choose it and arm the track.",
+      "Play a clip or notes from the DAW again.",
+      "Quit Live and watch MIDI Studio for a minute."
+     ],
+     "expect": "The input is listed in both places, Live does not crash, the plug-in connects and sounds as usual, with the input chosen too. After quitting, the input goes away within about 30 s, when the broker exits. Note what you see: this has never run before."
+    },
+    {
+     "id": "M2",
+     "title": "The capture command from the tester reply",
+     "steps": [
+      "In Terminal: <code>\"/Library/Application Support/TI Revive/tirevive-cc\" capture --seconds 120 --out ~/Desktop/virus-keys-A.txt</code>",
+      "While it runs, start Live with the plug-in, play a few notes from the track and turn one knob on the Virus.",
+      "Wait for the prompt, then open the file. Claude reads it too."
+     ],
+     "expect": "The command runs without an error, ends by itself and the file shows the notes and the Virus' replies, with endpoint and cable. Live plays as usual during the capture."
+    },
+    {
+     "id": "M3",
+     "title": "hil-mac on rc2",
+     "steps": [
+      "Quit the DAW. Double-click <code>hil-mac.command</code> in <code>~/Downloads/hil-mac-0.8.38-rc2</code>; allow Microphone access for Terminal if asked."
+     ],
+     "expect": "The summary says ALL PASS (cold start, reopen, export, broker killed while playing)."
+    },
+    {
+     "id": "M4",
+     "title": "Logic Pro with the input",
+     "steps": [
+      "Open Logic Pro with an empty project and the Audio Unit on an instrument track.",
+      "Check whether \"Virus TI Synth\" shows up under MIDI inputs, play notes from the track.",
+      "Turn one knob on the Virus and watch Logic's MIDI activity display."
+     ],
+     "expect": "Logic does not crash and plays as usual, and the input is available. What the Virus' knob does here is unknown (not tested yet): note what you see."
+    },
+    {
+     "id": "M5",
+     "title": "Closing, and the browser's numbers",
+     "steps": [
+      "Open the plug-in's browser and look at patches 100 to 127 in a RAM bank.",
+      "Quit the DAW and look at the Virus' display and panel."
+     ],
+     "expect": "The numbers 100 to 127 no longer touch the name before them. After closing, the Virus shows its normal display and its panel works."
+    }
+   ]
+  },
+  {
+   "id": "linux",
+   "title": "Linux",
+   "where": "REAPER, Virus on this PC, published 0.8.38-rc2 (installed by Claude with install.sh)",
+   "prep": [
+    "Move the Virus' USB cable back to this PC. Claude runs hil.sh first. The plug-in log stays on until L2 is done, because the odd first run is still open."
+   ],
+   "items": [
+    {
+     "id": "L1",
+     "title": "hil.sh on rc2",
+     "steps": ["Claude runs it; nothing to do while it runs. Do not open a DAW until Claude says it is finished."],
+     "expect": "ALL PASS. Claude marks this item."
+    },
+    {
+     "id": "L2",
+     "title": "First run after hil, and your dense project",
+     "steps": [
+      "Right after hil, open REAPER with the project that sounded odd on 2026-11-04, at 48 kHz. Listen to the first run.",
+      "Play the dense part (about 25 notes per second)."
+     ],
+     "expect": "No odd sound on the first run and no dropouts. If it sounds odd again, say so before restarting anything: the logs show that first run only until it is replaced. Dropouts in the dense part may be the Virus running out of voices (your judgment, not measured): thin the notes to tell."
+    },
+    {
+     "id": "L3",
+     "title": "Record in Nerd mode",
+     "steps": [
+      "Control Center, Nerd mode, press Record... and choose a file. Play a few notes and turn one knob on the Virus, then stop.",
+      "Open the file."
+     ],
+     "expect": "Notes and replies are in the file, raw and decoded. The knob's messages are the open question from the smoke test: note whether they appear."
+    },
+    {
+     "id": "L4",
+     "title": "Closing, and the browser's numbers",
+     "steps": [
+      "Look at patches 100 to 127 in the browser.",
+      "Close REAPER and look at the Virus' display and panel."
+     ],
+     "expect": "The numbers no longer touch the name before them. Normal display, and the panel works."
+    }
+   ]
+  },
+  {
+   "id": "vm",
+   "title": "Windows 11 VM",
+   "where": "win11 VM, Ableton Live 11, published 0.8.38-rc2 (installed silently by Claude, version checked)",
+   "prep": [
+    "Close REAPER on Linux. Claude attaches the Virus to the VM and copies the hil-windows kit."
+   ],
+   "items": [
+    {
+     "id": "W1",
+     "title": "hil-win on rc2",
+     "steps": ["Claude starts it, or you run <code>hil-win.cmd</code> from the kit on the VM's desktop."],
+     "expect": "ALL PASS (cold start, reopen, export)."
+    },
+    {
+     "id": "W2",
+     "title": "Live 11, Record in Nerd mode, closing, the browser's numbers",
+     "steps": [
+      "Open Live 11 with the plug-in and play notes.",
+      "Control Center, Nerd mode, Record... for a few notes, then stop and open the file.",
+      "Look at patches 100 to 127 in the browser.",
+      "Quit Live and look at the Virus' display and panel."
+     ],
+     "expect": "Plays as usual (the known VM audio artefacts aside). The file holds the notes, raw and decoded. The numbers no longer touch the name before them. Normal display, and the panel works."
+    }
+   ]
+  }
+ ]
+}
