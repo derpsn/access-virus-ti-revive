@@ -220,6 +220,9 @@ static std::vector<uint8_t> get_state(IComponent *c)
 
 int main(int argc, char **argv)
 {
+#ifndef _WIN32
+    setenv("VTI_NO_SETUP_TIPS", "1", 0); // scripted clicks must reach the editor; --tips turns this off
+#endif
     if (argc < 2) {
         fprintf(stderr, "usage: nativehost <plugin.vst3> [--state FILE] [--param ID=NORM]... [--save FILE] [--seconds N]\n");
         return 2;
@@ -276,6 +279,10 @@ int main(int argc, char **argv)
             loop_bars = atof(argv[++i]);
         else if (!strcmp(argv[i], "--notes"))
             notes = true;
+#ifndef _WIN32
+        else if (!strcmp(argv[i], "--tips")) // the setup page may open by itself, as in a DAW; else it never does here
+            unsetenv("VTI_NO_SETUP_TIPS");
+#endif
         else if (!strcmp(argv[i], "--notes-off") && i + 1 < argc)
             sscanf(argv[++i], "%lf:%lf", &notes_off_from, &notes_off_to);
         else if (!strcmp(argv[i], "--hold") && i + 1 < argc)

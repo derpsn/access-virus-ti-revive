@@ -1078,6 +1078,7 @@ public:
             keep_runloop(); // a new instance's setHostContext may have replaced it (E183)
 #endif
             plugin_->diag_report();
+            tick_tips();
             plugin_->tick_gestures(); // knob moves on the Virus -> host edits (E304)
             if (int kb, kp; key_load_.due(now_ms(), kb, kp)) // Up/Down in the browser stopped
                 plugin_->load_patch_remembered(kb, kp, plugin_->ui_value(plugin_->layout().frame_parameter, -1));
@@ -1188,6 +1189,7 @@ public:
             f->registerKeyboardHook(this);
             f->registerMouseObserver(this); // hover (LCD, help mode): views get moves only while a button is down
         }
+        tips_seen_ = plugin_->tips_seen();
         return ok;
     }
     bool removed(CView *parent) override
@@ -1217,6 +1219,11 @@ public:
     }
     void onKeyboardEvent(KeyboardEvent &event, CFrame *frame) override
     {
+        if (tips_ && event.type == EventType::KeyDown && event.virt == VirtualKey::Escape) {
+            close_tips();
+            event.consumed = true;
+            return;
+        }
         if (help_ && event.type == EventType::KeyDown && event.virt == VirtualKey::Escape) {
             set_help(false);
             event.consumed = true;
@@ -1382,6 +1389,8 @@ public:
         }
         if (help_)
             draw_help(ctx);
+        if (tips_)
+            draw_tips(ctx);
         {
             long us = (long)std::chrono::duration_cast<std::chrono::microseconds>(std::chrono::steady_clock::now() - t0).count();
             plugin_->diag.draw_us += us;
@@ -1401,6 +1410,11 @@ public:
 
     void onMouseDownEvent(MouseDownEvent &event) override
     {
+        if (tips_) { // any click closes the setup page and does nothing else
+            close_tips();
+            event.consumed = true;
+            return;
+        }
         Hit h = renderer_.hit_test((int)event.mousePosition.x, (int)event.mousePosition.y);
         // a handle of a filter / envelope display wins over the control drawn above it (the cutoff knob, #19)
         if (Hit g = renderer_.graph_hit_test((int)event.mousePosition.x, (int)event.mousePosition.y); g.element && !help_)
@@ -1939,6 +1953,83 @@ private:
         help_ = on;
         help_hit_ = help_pin_ = {};
         invalid();
+    }
+    // the setup page (setuptips.h): over the editor, any click or Esc closes it, and what it showed counts as read
+    bool tips_ = false;
+    vti::TipsPage tips_page_;
+    void open_tips()
+    {
+        tips_page_ = vti::setup_tips(plugin_->tips_facts());
+        tips_ = true;
+        invalid();
+    }
+    void close_tips()
+    {
+        tips_ = false;
+        tips_seen_ = vti::tips_seen_after(tips_page_, tips_seen_);
+        plugin_->tips_save_seen(tips_seen_);
+        invalid();
+    }
+    // Once a second. The page follows this setup: a DAW may tell its block size and rate only after the editor opened, and
+    // Logic's Process Buffer Range can change them later. It opens the first time for this DAW and for a new warning.
+    std::vector<std::string> tips_seen_;
+    int64_t tips_next_ms_ = 0;
+    void tick_tips()
+    {
+        const int64_t now = now_ms();
+        if (now < tips_next_ms_)
+            return;
+        tips_next_ms_ = now + 1000;
+        vti::TipsPage page = vti::setup_tips(plugin_->tips_facts());
+        if (tips_) {
+            tips_page_ = std::move(page);
+            invalid();
+        } else if (!help_ && !getenv("VTI_NO_SETUP_TIPS") && vti::tips_open_at_start(page, tips_seen_)) {
+            tips_page_ = std::move(page);
+            tips_ = true;
+            invalid();
+        }
+    }
+    void draw_tips(CDrawContext *ctx)
+    {
+        const CRect view(0, 0, getViewSize().getWidth(), getViewSize().getHeight());
+        SharedPointer<CFontDesc> font = makeOwned<CFontDesc>(*kNormalFontSmall);
+        SharedPointer<CFontDesc> bold = makeOwned<CFontDesc>(*kNormalFontSmall);
+        bold->setStyle(kBoldFace);
+        const double w = std::min<double>(640, view.getWidth() - 40), pad = 14, lh = 15, gap = 6;
+        ctx->setFont(font);
+        std::vector<std::vector<std::string>> texts;
+        double h = pad + lh + gap * 2 + lh + pad; // title, closing hint
+        for (const vti::Tip &t : tips_page_.tips) {
+            texts.push_back(wrap(ctx, t.text, w - 2 * pad));
+            h += texts.back().size() * lh + gap;
+        }
+        const double x = view.left + (view.getWidth() - w) / 2, y0 = std::max<double>(10, (view.getHeight() - h) / 2);
+        const CRect panel(x, y0, x + w, y0 + h);
+        ctx->setDrawMode(kAntiAliasing);
+        ctx->setFillColor(CColor(20, 22, 28, 245));
+        ctx->drawRect(panel, kDrawFilled);
+        ctx->setLineWidth(1);
+        ctx->setFrameColor(CColor(120, 190, 255, 255));
+        ctx->drawRect(panel, kDrawStroked);
+        double y = y0 + pad;
+        ctx->setFont(bold);
+        ctx->setFontColor(CColor(255, 255, 255, 255));
+        ctx->drawString(tips_page_.title.c_str(), CRect(x + pad, y, x + w - pad, y + lh), kLeftText);
+        y += lh + gap;
+        for (size_t i = 0; i < texts.size(); i++) {
+            const bool warn = tips_page_.tips[i].warn;
+            ctx->setFont(warn ? bold : font);
+            ctx->setFontColor(warn ? CColor(255, 190, 90, 255) : CColor(220, 230, 240, 255));
+            for (const std::string &line : texts[i]) {
+                ctx->drawString(line.c_str(), CRect(x + pad, y, x + w - pad, y + lh), kLeftText);
+                y += lh;
+            }
+            y += gap;
+        }
+        ctx->setFont(font);
+        ctx->setFontColor(CColor(150, 165, 180, 255));
+        ctx->drawString("Click or press Esc to close. This page is in the ? menu.", CRect(x + pad, y, x + w - pad, y + lh), kLeftText);
     }
     // the note follows the mouse; a pinned (clicked) one stays while the mouse is over no explained control
     // the LCD shows the control under the mouse like the original (E353); the plug-in only hears of a new one
@@ -2765,6 +2856,9 @@ private:
         switch (a) {
         case vti::MenuAction::HelpMode:
             set_help(true);
+            break;
+        case vti::MenuAction::SetupTips:
+            open_tips();
             break;
         case vti::MenuAction::Website:
             open_url(vti::website_url());

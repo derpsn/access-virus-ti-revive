@@ -2,6 +2,8 @@
 
 ## START HERE (2026-11-05): round 0.8.38 on branch `round-0.8.38`, rc2 out, first keyed report in (E399)
 
+**SETUP PAGE BUILT 2026-11-05 ~18:50 (E408; user moved it INTO 0.8.38):** in the tree, tested on Linux only (560 unit tests, Xvfb shots). Goes out with rc3 together with the #29 keyport hardening (aligned buffer, MIDIReceived result, counters; E404) and whatever the Logic test demands. For the final: README + site lines (identical) and a screenshot, risk.py (editor: class C), tirevive-site-check. Ask the user to confirm the Mac menu paths. Own check: when the page opens by itself the host's name must be right in Logic (getprogname) and Live. Probe build: dev-mac rerun of 42073755821 running (first attempt cancelled by GitHub, runner shortage).
+
 **Idea from the user 2026-11-05 ~18:35, for the NEXT round, nothing built:** a setup help page in the plug-in with hints per DAW, shown at start and in the ? menu. Deeper look first: every requirement in the manuals (E406) checked against TI Revive, so we only tell what is true for us (example: the manuals say offline bounce is not supported, TI Revive paces it). The plug-in can see host name, block size, largest block (Logic's Process Buffer Range); it cannot see Low Latency Mode or compensation. The original shows its warnings once with a do-not-show-again (E401 7). Late port and Track default are ruled out in Live 12.4.16 (E407). User has set all the manual's Logic settings on the Mac.
 
 **Manuals read 2026-11-05 ~18:35 (user asked; E406):** nothing on dual scheduling. Add to the next Logic run: Low Latency Mode off, compensation not Off, Process Buffer Range Small. Late port appearing is a new angle on #29. Not advising analog outs yet: hold-back, E344.

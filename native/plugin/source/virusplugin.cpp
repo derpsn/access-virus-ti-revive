@@ -872,6 +872,12 @@ tresult PLUGIN_API VirusPlugin::initialize(FUnknown *context)
     tresult r = SingleComponentEffect::initialize(context);
     if (r != kResultOk)
         return r;
+    if (FUnknownPtr<IHostApplication> app(context); app) { // the DAW's name, for the setup page
+        String128 name{};
+        if (app->getName(name) == kResultOk)
+            for (int i = 0; i < 128 && name[i]; i++)
+                host_name_ += name[i] < 128 ? (char)name[i] : '?';
+    }
     // buses as the original: audio in "Dummy In" + "Sidechain", event in "Midi In" 16 ch, audio out "Out 1".."Out 3"
     addAudioInput(STR16("Dummy In"), SpeakerArr::kStereo);
     addAudioInput(STR16("Sidechain"), SpeakerArr::kStereo, BusTypes::kAux, 0);
@@ -1325,6 +1331,48 @@ void VirusPlugin::set_part_value(int part, const std::string &path, int value)
 }
 
 static std::string own_cache_dir();
+
+vti::TipsFacts VirusPlugin::tips_facts() const
+{
+    vti::TipsFacts f;
+#ifdef __APPLE__
+    f.host = vti::tips_host(host_name_, getprogname()); // an Audio Unit only sees Steinberg's wrapper as its host
+    f.mac = true;
+#else
+    f.host = vti::tips_host(host_name_, "");
+#endif
+    if (const char *h = getenv("VTI_TIPS_HOST")) // tests: the page of another DAW
+        f.host = vti::tips_host(h, "");
+    f.host_rate = rate_;
+    f.virus_rate = virus_rate();
+    f.largest_block = block_;
+    f.delay_ms = latency_frames() * 1000.0 / f.virus_rate;
+    return f;
+}
+
+std::vector<std::string> VirusPlugin::tips_seen() const
+{
+    std::string text;
+    if (FILE *f = fopen((own_cache_dir() + "/../setup-tips.seen").c_str(), "rb")) {
+        char b[1024];
+        size_t n;
+        while ((n = fread(b, 1, sizeof b, f)) > 0)
+            text.append(b, n);
+        fclose(f);
+    }
+    return vti::tips_seen_parse(text);
+}
+
+void VirusPlugin::tips_save_seen(const std::vector<std::string> &seen) const
+{
+    std::error_code ec;
+    std::filesystem::create_directories(own_cache_dir() + "/..", ec);
+    if (FILE *f = fopen((own_cache_dir() + "/../setup-tips.seen").c_str(), "wb")) {
+        const std::string text = vti::tips_seen_text(seen);
+        fwrite(text.data(), 1, text.size(), f);
+        fclose(f);
+    }
+}
 
 bool VirusPlugin::diag_enabled()
 {
