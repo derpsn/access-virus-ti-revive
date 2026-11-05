@@ -11,6 +11,7 @@
 #include "device/broker.h"
 #include "device/keepalive.h"
 #include "device/memsync.h"
+#include "device/noteprobe.h"
 #include "device/sendbudget.h"
 #include "device/cablerule.h"
 #include "device/dumppacer.h"
@@ -518,6 +519,11 @@ public:
     std::atomic<int64_t> diag_next_ms_{0}; // diag_report: when the next line is due
     bool diag_enabled();
     void diag_report(); // editor timer and device worker
+    // what the host really sends for a note (noteprobe.on next to diag.on, off by default, #30)
+    NoteProbe note_probe_;
+    bool note_probe_on_ = false;
+    std::mutex note_probe_mu_; // diag_report and terminate may both drain
+    void note_probe_flush();
     // MIDI activity meters of the part strips (note-on velocity per MIDI channel, like the original's
     // "ShowMIDIActivityMeters"): tick_meters() decays them and returns the channels whose shown value changed (bits)
     int tick_meters(int step);

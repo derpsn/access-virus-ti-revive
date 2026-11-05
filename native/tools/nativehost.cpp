@@ -230,6 +230,7 @@ int main(int argc, char **argv)
     const char *state = nullptr, *save = nullptr, *wav = nullptr;
     std::string cid; // --cid: the class to load, else the first audio class
     int wav_bus = 0; // the output bus that is measured and written (0 = Out 1)
+    int live_notes = 0; // --live: Event::kIsLive on the --notes
     bool notes = false, editor = false, editor2 = false, stress = false, stress_notes = true, stress_params = true, scan = false;
     double stress_stop = 1e9;
     double transport_at = -1, loop_bars = 0; // --transport / --loop: a playing DAW transport for process()
@@ -276,6 +277,8 @@ int main(int argc, char **argv)
             loop_bars = atof(argv[++i]);
         else if (!strcmp(argv[i], "--notes"))
             notes = true;
+        else if (!strcmp(argv[i], "--live") && i + 1 < argc) // the --notes flagged as played live: "alt" odd seconds, "all"
+            live_notes = !strcmp(argv[++i], "all") ? 2 : 1;
         else if (!strcmp(argv[i], "--notes-off") && i + 1 < argc)
             sscanf(argv[++i], "%lf:%lf", &notes_off_from, &notes_off_to);
         else if (!strcmp(argv[i], "--hold") && i + 1 < argc)
@@ -584,6 +587,8 @@ int main(int argc, char **argv)
                 if (t >= f0 && !(t >= notes_off_from * rate && t < notes_off_to * rate)) {
                     Event e{};
                     e.sampleOffset = (int32)(t - f0);
+                    if (live_notes == 2 || (live_notes == 1 && (t / rate) % 2 == 1))
+                        e.flags = Event::kIsLive;
                     if ((t / (rate / 2)) % 2 == 0) {
                         e.type = Event::kNoteOnEvent;
                         e.noteOn = {0, 60, 0, 0.8f, 0, -1};
