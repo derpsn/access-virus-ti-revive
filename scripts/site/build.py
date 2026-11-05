@@ -238,6 +238,7 @@ def page_landing(latest, releases, sums):
     return notice_section() + f"""
 <section class="hero">
   <div class="wrap">
+    <div class="hero-grid">
     <div class="hero-text">
     <h1>TI Revive</h1>
     <p class="tagline">Like meeting an old best friend again.</p>
@@ -247,16 +248,17 @@ def page_landing(latest, releases, sums):
     <p class="actions"><a class="button" href="#download">Download {v}</a>
     <a class="second" href="#news">What's new</a></p>
     <p class="facts-line">Free &middot; open source &middot; VST3 and Audio Unit &middot; released {when}</p>
-    <p class="thanks">&#9749; <strong>Free, and it will stay free.</strong> Every change is tested on the real synth
-    on Windows, macOS and Linux, often back and forth between the three, and that takes a lot of evenings. If TI Revive
-    gives your Virus a second life and you'd like to say thanks, you can <a href="https://buymeacoffee.com/callmederpsn">buy me a coffee</a>.
-    It is entirely optional; every feature works the same either way. A test report or a kind word helps just as much.</p>
     </div>
     <figure class="shot">
       <img src="plugin-filter.png" width="1280" height="724"
       alt="TI Revive Virus Control, the plug-in's filter page, drawn from the user's own Access files">
       <figcaption>TI Revive is not affiliated with Access Music or Kemper and contains no Access files.</figcaption>
     </figure>
+    </div>
+    <p class="thanks">&#9749; <strong>Free, and it will stay free.</strong> Every change is tested on the real synth
+    on Windows, macOS and Linux, often back and forth between the three, and that takes a lot of evenings. If TI Revive
+    gives your Virus a second life and you'd like to say thanks, you can <a href="https://buymeacoffee.com/callmederpsn">buy me a coffee</a>.
+    It is entirely optional; every feature works the same either way. A test report or a kind word helps just as much.</p>
   </div>
 </section>
 
@@ -310,13 +312,13 @@ def page_landing(latest, releases, sums):
           not tested hubs.</li>
         </ul>
       </div>
-      <div>
+      <div class="stick">
         <h3>What to report</h3>
         <p>Hanging notes, sync errors, crashes, projects that did not open, the preset browser, automation, timing.
         If you only remember it roughly, say so. One we could not test: Cubase on Windows opening a project while the
         Virus is switched on, where the original crashed
         (<a href="https://forums.steinberg.net/t/virus-ti-plugin-crashes-cubase/159521">Steinberg forum</a>).</p>
-        <p class="actions"><a class="button" href="{GH}/issues/new?template=original_problem.yml">Report a problem in
+        <p class="actions"><a class="second" href="{GH}/issues/new?template=original_problem.yml">Report a problem in
         the original plug-in</a> <a class="second" href="{GH}/issues?q=label%3Aoriginal">Reports so far</a></p>
       </div>
     </div>
@@ -501,7 +503,7 @@ def page_landing(latest, releases, sums):
       <div><h3>Without code</h3><p>Test reports, reports about problems in the original, and help with reading
       someone's logs are as useful as pull requests.</p></div>
     </div>
-    <p class="actions contribute-actions"><a class="button" href="{GH}/blob/main/CONTRIBUTING.md">How to
+    <p class="actions contribute-actions"><a class="second" href="{GH}/blob/main/CONTRIBUTING.md">How to
     contribute</a> <a class="second" href="{GH}">Open the repository</a></p>
   </div>
 </section>
@@ -530,14 +532,26 @@ def features_section():
     <a href="{GH}/blob/main/native/docs/status.md">development log</a>).</p>
 
     <div class="feature">
-      <div><h3>The plug-in</h3>
+      <div class="stick"><h3>The plug-in</h3>
       <p><strong>TI Revive Virus Control</strong> is written from scratch and looks and works like the original Access plug-in, Virus Control. It draws its look from your own Access installer at runtime.</p></div>
+      <div>
+      <h4>What it covers</h4>
       <ul>
         <li>All 16 parts, every parameter, the preset browser, RAM and ROM banks, patch libraries.</li>
+        <li>VST3 on Windows, macOS and Linux; Audio Unit for Logic and GarageBand. Native on Apple Silicon.</li>
+      </ul>
+      <h4>Projects and export</h4>
+      <ul>
         <li>Projects made with the original plug-in's VST3 version open with it (since 0.8.25: the plug-in list also
         shows it as "TI Revive Virus Control (original projects)", which has the original's plug-in ID; tested in Ableton
         Live 11 and 12, also a Windows project on the Mac); the saved state is byte for byte the same. Projects with the
         original's VST2 version do not open: TI Revive is VST3 only.</li>
+        <li>Projects bring back every patch setting of all 16 parts.</li>
+        <li>Export, freeze and offline bounce work without a real-time render setting or a live recording: the plug-in
+        renders at the pace of the Virus. The original refused offline renders.</li>
+      </ul>
+      <h4>Patches and libraries</h4>
+      <ul>
         <li>The LOAD menu has the original's "Revert to" (back to the patch before the last load, edits included) and
         "Recently Used" (the last 10 patches of each part); "Create Empty Library" is in the SAVE menu's Personal
         Libraries, as in the original (since 0.8.25; until 0.8.28 also in LOAD and the browser). Since 0.8.35 the LOAD
@@ -568,24 +582,27 @@ def features_section():
         stops on is loaded. Up and Down tested on Linux (REAPER), Windows 11 (VM, Ableton Live 11) and macOS (Ableton
         Live 12), and by a user on macOS (Logic Pro); Left and Right on Linux (REAPER).</li>
         <li>Patch libraries from the original's three places, each its own menu (since 0.8.29): Personal Libraries (your Documents folder), User Libraries and Public Libraries. On the Mac the factory libraries that Access installs in /Library/Application Support appear under Public Libraries. On Linux only Personal Libraries. To add a library, drop its .mid or .syx file from Explorer, Finder or your file manager onto the browser (since 0.8.35, our own addition: the original takes no file drops). It is copied into Access Music/Virus TI/Patches in your Documents folder, never over an existing file, and the browser shows it at once; a .syx is saved as a .mid so the original finds it too. Copying the file into that folder yourself works as well; it shows up the next time the plug-in is loaded. Damaged patches in a library (dumps of the wrong length) are left out, as in the original; since 0.8.35 the plug-in's log names the library and how many.</li>
-        <li>The LCD shows the control under the mouse (since 0.8.34), as in the original: its name, its value, the value stored in the patch in brackets, and the part.</li>
+        <li><strong>RAM backup.</strong> Before TI Revive writes patches into the Virus' RAM banks (SAVE, a drop, swap, rename or sort in the browser, Undo last operation), it saves the patches that would be overwritten in a library of the day, "RAM Backup 2026-10-31" in Personal Libraries (since 0.8.36, our own addition). To get a patch back, drag it from that library onto a RAM slot. If the backup cannot be written, nothing is written to the Virus. The backup knows what the plug-in's bank cache knows: a patch you stored on the Virus itself since the last sync is not in it. Tested on Linux with a TI2 Desktop: the backup and the drag back restored the slot byte for byte; the backup and the restore also on Windows 11 (VM, Ableton Live 11) and macOS (Ableton Live 12).</li>
+      </ul>
+      <h4>On the Virus and in the DAW</h4>
+      <ul>
         <li>Presets, soft knobs and the part selected on the Virus itself are followed, as in the original (the part since 0.8.33).</li>
         <li>Knobs you turn on the Virus reach your DAW like the plug-in's own knobs while the plug-in window is open (since 0.8.29, <a href="{GH}/issues/10">issue #10</a>): Ableton Live's Configure mode adds them and automation records them. Tested in Ableton Live 11 (Windows 11, VM), Ableton Live 12 (macOS) and REAPER (Linux).</li>
         <li>Three stereo outputs over USB, plus the analog outputs of the Virus. Parts on the analog outputs stay in time with the USB parts: like the original, the Virus holds them back by the USB latency (since 0.8.33).</li>
         <li>Audio from your DAW through the filters and effects of the Virus (sidechain input), as in the original.</li>
+        <li>The REMOTE page (since 0.8.22): the Virus' remote templates with their names, knob names and MIDI strings, the original's knob template list, template files to load and save, sent to the Virus like the original.</li>
+        <li>The original's sync error message, shown when the Virus reports late notes while your DAW plays.</li>
+      </ul>
+      <h4>In the editor</h4>
+      <ul>
+        <li>The LCD shows the control under the mouse (since 0.8.34), as in the original: its name, its value, the value stored in the patch in brackets, and the part.</li>
         <li>A help mode: the ? menu's Explain the Controls explains every control, and why a greyed-out one is inactive.</li>
         <li><strong>The ? menu.</strong> Since 0.8.36 the ? at the bottom right opens a menu (the original's lists its manuals): Explain the Controls (the help mode above), the TI Revive website, Report a Problem (the GitHub issues), Save Logs for a Bug Report (one text file with the system, the versions and the ends of the plug-in and broker logs, home folder and user name replaced), the detailed log for the next start, and Panic, which sends sustain off and all notes off on all 16 channels.</li>
-        <li><strong>RAM backup.</strong> Before TI Revive writes patches into the Virus' RAM banks (SAVE, a drop, swap, rename or sort in the browser, Undo last operation), it saves the patches that would be overwritten in a library of the day, "RAM Backup 2026-10-31" in Personal Libraries (since 0.8.36, our own addition). To get a patch back, drag it from that library onto a RAM slot. If the backup cannot be written, nothing is written to the Virus. The backup knows what the plug-in's bank cache knows: a patch you stored on the Virus itself since the last sync is not in it. Tested on Linux with a TI2 Desktop: the backup and the drag back restored the slot byte for byte; the backup and the restore also on Windows 11 (VM, Ableton Live 11) and macOS (Ableton Live 12).</li>
-        <li>The REMOTE page (since 0.8.22): the Virus' remote templates with their names, knob names and MIDI strings, the original's knob template list, template files to load and save, sent to the Virus like the original.</li>
-        <li>Projects bring back every patch setting of all 16 parts.</li>
-        <li>Export, freeze and offline bounce work without a real-time render setting or a live recording: the plug-in
-        renders at the pace of the Virus. The original refused offline renders.</li>
-        <li>The original's sync error message, shown when the Virus reports late notes while your DAW plays.</li>
         <li>The original's start-up page, &ldquo;Starting up&rdquo; with its filling ring, while a project opens; &ldquo;Syncing memory with Virus&rdquo; only when the plug-in really reads banks from the Virus (since 0.8.27).</li>
-        <li>VST3 on Windows, macOS and Linux; Audio Unit for Logic and GarageBand. Native on Apple Silicon.</li>
         <li>Editor sizes from 100 to 200 %. On larger sizes and Retina screens each image is enlarged once with a
         sharp filter, in memory only.</li>
       </ul>
+      </div>
     </div>
 
     <div class="feature">
@@ -634,13 +651,14 @@ def features_section():
     </div>
 
     <div class="feature">
-      <div><h3>Help mode</h3>
+      <div class="stick"><h3>Help mode</h3>
       <p>Click the ? at the bottom right of the editor and choose Explain the Controls: every control gets a short note
       on what it does. Point at a control to read it, click to keep its note on screen: it stays while you point at
       other controls, whose notes show on top (since 0.8.36), and the filter and envelope displays have their own
       notes. Clicks do not change values in this mode, and the page tabs still work. Esc or ? ends it. The notes are written for TI Revive, not taken from the Access manual. A greyed-out
       control says why, for example &ldquo;Inactive now: Chorus Type is Off.&rdquo; or &ldquo;depends on Input Mode,
       Input Atomizer.&rdquo;</p></div>
+      <div>
       <figure class="shot"><img loading="lazy" src="plugin-help-mode.png" width="1360" height="769"
       alt="The plug-in's help mode: a note explains the sub oscillator knob">
       <figcaption>Help mode, drawn from your own Access installer. TI Revive is not affiliated with Access Music or
@@ -652,6 +670,7 @@ def features_section():
       <figure class="shot"><img loading="lazy" src="plugin-help-menu.png" width="1149" height="645"
       alt="The ? menu: Explain the Controls, website, Report a Problem, Save Logs, Detailed Log, Panic">
       <figcaption>The ? menu (Linux), drawn from your own Access installer. TI Revive is not affiliated with Access Music or Kemper.</figcaption></figure>
+      </div>
     </div>
 
     <div class="feature">
@@ -704,7 +723,7 @@ def features_section():
     </div>
 
     <div class="feature">
-      <div><h3>Problems found on the hardware</h3>
+      <div class="stick"><h3>Problems found on the hardware</h3>
       <p>Behaviour of the Virus that is not documented anywhere, found by testing and, since 0.8.26, by reading its own firmware.</p></div>
       <ul>
         <li>A flood of parameter changes can hang the audio of the Virus until it is switched off. Automation is limited to
@@ -805,17 +824,7 @@ TESTS = 516 # unit tests in native/tests (vtitests), as of 2026-11-01 (0.8.37 ro
 
 # Important information shown at the top of the page, newest first (empty list = no box). The README starts with the
 # same text ("Important" block), keep both identical. Remove an entry when it no longer matters to users.
-NOTICES = [
-    ("Windows: update with your Access .msi at hand (0.8.33)",
-     "Setups of TI Revive 0.8.32 and older could copy the 32-bit <code>Virus Control.dll</code> from your Access "
-     "installer instead of the 64-bit one; with it, old Virus A, B and C patch libraries loaded empty. Since 0.8.33 "
-     "TI Revive reads only the 64-bit file, and with the 32-bit one the plug-in shows no editor. When you update, put "
-     "the Access &ldquo;Virus TI Software Suite&rdquo; 64-bit <code>.msi</code> next to the setup (or in Downloads) and "
-     "keep &ldquo;Set up the Access Virus TI files now&rdquo; checked on the last page: the setup replaces the file. "
-     "Already updated without it: <em>Start, TI Revive, Set up Access Virus TI files</em>. Linux: run "
-     "<code>./install.sh</code> again with the <code>.msi</code>. The TI Revive Control Center says when it finds the "
-     "32-bit file. macOS is not affected."),
-]
+NOTICES = []
 
 
 def notice_section():
