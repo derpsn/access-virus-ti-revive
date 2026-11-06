@@ -6,3 +6,4 @@
 
 void vti_keyport_start(void);                     // in the background; a failure is only logged
 void vti_keyport_send(const uint8_t *msg, int n); // one complete channel message, from the USB reader thread
+void vti_keyport_log_counts(void);                // what went to macOS, for the log when the broker exits

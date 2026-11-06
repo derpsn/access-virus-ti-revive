@@ -873,6 +873,9 @@ static void *device_thread(void *unused)
             last_busy = time(NULL);
         else if (!g_stay && time(NULL) - last_busy > IDLE_EXIT_S) {
             blog("no clients for %d s: exiting", IDLE_EXIT_S);
+#ifdef __APPLE__
+            vti_keyport_log_counts();
+#endif
             pthread_mutex_lock(&g_cs_dev);
             audio_stop();
             if (g_dev)

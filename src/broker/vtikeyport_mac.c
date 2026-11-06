@@ -3,6 +3,7 @@
 #include "vticore.h"
 #include <CoreFoundation/CoreFoundation.h>
 #include <CoreMIDI/CoreMIDI.h>
+#include <mach/mach_time.h>
 #include <pthread.h>
 #include <stdatomic.h>
 #include <stdio.h>
@@ -12,6 +13,7 @@
 #define KEYPORT_UNIQUE_ID 0x56544931
 
 static _Atomic(MIDIEndpointRef) g_source;
+static atomic_uint g_sent, g_failed; // for the log: did the keys get as far as macOS (#29)
 
 #pragma clang diagnostic push
 #pragma clang diagnostic ignored "-Wdeprecated-declarations" // MIDI 1.0 calls: the port speaks MIDI 1.0, macOS 10.x and up
@@ -54,12 +56,24 @@ void vti_keyport_send(const uint8_t *msg, int n)
     const MIDIEndpointRef src = atomic_load(&g_source);
     if (!src)
         return;
-    Byte buf[64];
+    _Alignas(MIDIPacketList) Byte buf[64];
     MIDIPacketList *list = (MIDIPacketList *)buf;
     MIDIPacket *pkt = MIDIPacketListInit(list);
-    pkt = MIDIPacketListAdd(list, sizeof buf, pkt, 0, (ByteCount)n, msg); // 0 = now
-    if (pkt)
-        MIDIReceived(src, list);
+    // A real time stamp, not 0: with 0 Live's MIDI In light blinks but the notes never reach the track (#29, E423)
+    pkt = MIDIPacketListAdd(list, sizeof buf, pkt, mach_absolute_time(), (ByteCount)n, msg);
+    const OSStatus st = pkt ? MIDIReceived(src, list) : (OSStatus)-1;
+    if (st == noErr) {
+        if (atomic_fetch_add(&g_sent, 1) == 0)
+            vti_log("MIDI port: first message handed to macOS\n");
+    } else if (atomic_fetch_add(&g_failed, 1) == 0) { // once: this runs per key on the USB reader thread
+        vti_log("MIDI port: message not handed to macOS (%d)\n", (int)st);
+    }
+}
+
+void vti_keyport_log_counts(void)
+{
+    if (atomic_load(&g_source))
+        vti_log("MIDI port: %u messages handed to macOS, %u failed\n", atomic_load(&g_sent), atomic_load(&g_failed));
 }
 
 #pragma clang diagnostic pop
