@@ -1341,6 +1341,9 @@ vti::TipsFacts VirusPlugin::tips_facts() const
 #else
     f.host = vti::tips_host(host_name_, "");
 #endif
+#ifdef __linux__
+    f.on_linux = true;
+#endif
     if (const char *h = getenv("VTI_TIPS_HOST")) // tests: the page of another DAW
         f.host = vti::tips_host(h, "");
     f.host_rate = rate_;

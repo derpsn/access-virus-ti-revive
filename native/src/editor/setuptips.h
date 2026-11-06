@@ -47,6 +47,7 @@ struct TipsFacts {
     int largest_block = 256; // what the host announced; in an Audio Unit MaximumFramesPerSlice, not the I/O buffer (E401)
     double delay_ms = 0;     // the plug-in latency it reports now
     bool mac = false;        // the MIDI input "Virus TI Synth" exists only there
+    bool on_linux = false;   // REAPER's buffer may be PipeWire's there (E427)
 };
 
 struct Tip {
@@ -111,6 +112,14 @@ inline TipsPage setup_tips(const TipsFacts &f)
         add("live-parts", "Several parts: one instance plays them all. Point other MIDI tracks at its track with MIDI To, one channel each, and arm them to play.");
         if (f.mac)
             add("live-keys", "A Virus with keys: choose the MIDI input Virus TI Synth under MIDI From on an armed track.");
+        break;
+    case TipsHost::Reaper:
+        add("compensation", "Keep plug-in delay compensation on, or the Virus sounds " + delay + " late against other tracks.");
+        add("parts", "Several parts: one instance plays them all. Send each part's notes on its own MIDI channel.");
+        if (f.on_linux)
+            add("reaper-buffer", "The audio buffer is under Options > Preferences > Audio > Device. With JACK under PipeWire, PipeWire sets it and REAPER's setting does not apply: pw-metadata -n settings 0 clock.force-quantum 256 sets it for all programs, the same with 0 takes it back.");
+        else
+            add("reaper-buffer", "The audio buffer is under Options > Preferences > Audio > Device.");
         break;
     case TipsHost::FlStudio:
         add("compensation", "Keep plug-in delay compensation on, or the Virus sounds " + delay + " late against other tracks.");

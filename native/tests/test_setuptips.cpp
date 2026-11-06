@@ -104,6 +104,29 @@ TEST(setuptips_the_midi_input_is_only_named_where_it_exists)
     CHECK(contains(tip(setup_tips(f), "live-keys")->text, "Virus TI Synth"));
 }
 
+TEST(setuptips_reaper_says_where_the_buffer_is)
+{
+    TipsFacts f = facts(TipsHost::Reaper);
+    const TipsPage p = setup_tips(f);
+    const Tip *t = tip(p, "reaper-buffer");
+    CHECK(t != nullptr);
+    CHECK(contains(t->text, "Options > Preferences > Audio > Device"));
+    CHECK(!contains(t->text, "PipeWire")); // not on Windows or macOS
+    CHECK(!has_key(setup_tips(facts(TipsHost::Live)), "reaper-buffer"));
+}
+
+TEST(setuptips_reaper_on_linux_names_pipewire)
+{
+    // under pw-jack PipeWire sets the block, REAPER's own setting does not apply (E427)
+    TipsFacts f = facts(TipsHost::Reaper);
+    f.on_linux = true;
+    const TipsPage p = setup_tips(f);
+    const Tip *t = tip(p, "reaper-buffer");
+    CHECK(t != nullptr);
+    CHECK(contains(t->text, "PipeWire"));
+    CHECK(contains(t->text, "clock.force-quantum 256"));
+}
+
 TEST(setuptips_delay_shows_the_real_number)
 {
     TipsFacts f = facts(TipsHost::Other);
