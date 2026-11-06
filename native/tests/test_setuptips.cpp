@@ -122,7 +122,8 @@ TEST(setuptips_a_large_block_is_a_warning_with_its_cost)
 {
     TipsFacts f = facts(TipsHost::Logic, 2048);
     f.host_rate = f.virus_rate = 48000;
-    const Tip *t = tip(setup_tips(f), "large-block");
+    const TipsPage p = setup_tips(f); // tip() points into the page: it has to outlive the checks
+    const Tip *t = tip(p, "large-block");
     CHECK(t != nullptr);
     CHECK(t->warn);
     CHECK(contains(t->text, "2048"));
@@ -132,7 +133,8 @@ TEST(setuptips_a_large_block_is_a_warning_with_its_cost)
 
 TEST(setuptips_a_large_block_elsewhere_names_the_buffer)
 {
-    const Tip *t = tip(setup_tips(facts(TipsHost::Reaper, 1024)), "large-block");
+    const TipsPage p = setup_tips(facts(TipsHost::Reaper, 1024));
+    const Tip *t = tip(p, "large-block");
     CHECK(t != nullptr);
     CHECK(contains(t->text, "buffer"));
     CHECK(!contains(t->text, "Process Buffer Range"));
@@ -149,7 +151,8 @@ TEST(setuptips_a_rate_the_virus_cannot_run_is_a_warning)
     TipsFacts f = facts(TipsHost::Other);
     f.host_rate = 96000;
     f.virus_rate = 48000;
-    const Tip *t = tip(setup_tips(f), "rate");
+    const TipsPage p = setup_tips(f);
+    const Tip *t = tip(p, "rate");
     CHECK(t != nullptr);
     CHECK(t->warn);
     CHECK(contains(t->text, "96000"));
