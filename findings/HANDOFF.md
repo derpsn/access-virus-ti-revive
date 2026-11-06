@@ -12,7 +12,7 @@ Everything below this block is the older log of the same day and before; where i
 - No answers still owed by the user except: did the region sound clear selected and unselected. Pasted hardware summary (DSP56321 etc.) judged unsourced and not recorded.
 
 **NEXT, in order**
-1. Probe 2 with the user: property 40 toggle (compensation Off, 5 s, On, 5 s, twice; then `grep 'set property 40'` in diag.log; E419's lead, could become a warning in the plug-in, needs an AU change, next round unless the user wants it in rc3). Live notes while Logic plays, on a pitch other than C3 with the C3 region muted. Range Large. Multi-timbral. 3 USB outs (promised on #30). Live with Test MIDI port.command (#29).
+1. Probe 2 with the user (E422, 2026-11-06): DONE by the user: property 40 toggle, live notes while Logic plays, Range Large, Multi-timbral, regions clear. OPEN: 3 USB outs (promised on #30). Live with Test MIDI port.command (#29): two ports, no notes reported in Live; which port was selected is being asked ("Port 2" is probably the test tool, the plain one is the broker's and silent without keys).
 2. Rc3: #29 keyport hardening, release notes (installer really removes the Access packages, replug, setup page), risk.py, hil.sh (Virus must be back on Linux), CI `gh workflow run build.yml --ref round-0.8.38 -f version=...`. Push first with `git push origin round-0.8.38:refs/heads/round-0.8.38`. README line ~96, site, screenshot, tirevive-site-check at final.
 3. When rc3 is out, drafts to the user first: #29, #31, #26; #30 with the compensation question (ask the reporter whether it is on).
 Evidence of today: E399-E410 in findings/evidence.md. Read E400, E401, E402, E403, E405, E408 before touching latency.
