@@ -385,6 +385,7 @@ def page_landing(latest, releases, sums):
       <li>The installers are not signed, so Windows and macOS ask once before they run them.</li>
       <li>On Windows and Linux the keys of a Keyboard or Polar cannot be recorded in a DAW yet. On macOS they can, through the MIDI input &ldquo;Virus TI Synth&rdquo; (since 0.8.38; by user reports, our Desktop has no keys). The plug-in switches Local off, as the
       original does; without that input the keys and wheels are silent until you set Local to On in CONFIG on the Virus.</li>
+      <li>On macOS the Virus may show &ldquo;Audio clock changed&rdquo; twice when the plug-in starts, because the plug-in corrects a wrong sample rate by switching away and back. Wait until this has finished; then it plays normally. In a few of our sessions in Ableton Live the sound hung once or the sync marker stayed missing after it. Cause not known, on our list for the next round.</li>
       <li>Dense projects: with one patch (Main LD) on three channels, turning the filter down made notes drop out; muting the other tracks clears it. Cause not known, not compared with the original yet.</li>
     </ul>
     <div class="testing">

@@ -536,6 +536,7 @@ hardware (TI2 Desktop) - details and raw numbers in [`findings/evidence.md`](fin
 - **Automation rate limit** (250 messages/s, coalesced per parameter): unthrottled parameter floods hung the Virus'
   audio until a power cycle within 4 minutes; with the limit a 4-minute full-load test (16 channels of notes + 32
   automation lanes) passes. One extreme note flood in a test of ours hung it too.
+- **macOS, at the start of the plug-in:** On macOS the Virus may show Audio clock changed twice when the plug-in starts, because the plug-in corrects a wrong sample rate by switching away and back. Wait until this has finished; then it plays normally. In a few of our sessions in Ableton Live the sound hung once or the sync marker stayed missing after it. Cause not known, on our list for the next round.
 - **Dense projects:** with one patch (Main LD) on three channels, turning the filter down made notes drop out; muting the other tracks clears it. Cause not known, not compared with the original yet.
 - Checked with ThreadSanitizer and AddressSanitizer (one race in the broker connection found and fixed); 572 unit
   tests run with every release build on Windows and Linux, plus two end-to-end tests on Linux in a virtual display
