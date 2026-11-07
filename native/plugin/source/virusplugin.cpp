@@ -987,6 +987,7 @@ tresult PLUGIN_API VirusPlugin::initialize(FUnknown *context)
     {
         std::error_code tec;
         timing_classic_ = std::filesystem::exists(own_cache_dir() + "/../timing-classic.on", tec);
+        note_probe_on_ = diag_enabled() && std::filesystem::exists(own_cache_dir() + "/../noteprobe.on", tec);
         // the output delays only on change, not at every Play/Stop (Control Center option, outputdelay.h resend_all)
         od_changes_only_ = std::filesystem::exists(own_cache_dir() + "/../outdelay-changes.on", tec);
 #ifdef _WIN32
@@ -1112,6 +1113,7 @@ std::vector<std::vector<uint8_t>> VirusPlugin::startup_messages() const
 
 tresult PLUGIN_API VirusPlugin::terminate()
 {
+    note_probe_flush();
     stop_warm_ = true;
     if (sync_)
         sync_->cancel(); // a request in flight ends now, not after its timeout (review 2026-10-19 M6)
@@ -1387,6 +1389,21 @@ bool VirusPlugin::diag_enabled()
     return on == 1;
 }
 
+void VirusPlugin::note_probe_flush()
+{
+    if (!note_probe_on_)
+        return;
+    std::lock_guard<std::mutex> lock(note_probe_mu_);
+    FILE *f = fopen((own_cache_dir() + "/../diag.log").c_str(), "a");
+    if (!f)
+        return;
+    const int largest = block_;
+    note_probe_.drain([&](const NoteProbe::Rec &r) { fprintf(f, "noteprobe: %s\n", noteprobe_line(r, largest).c_str()); });
+    if (const uint32_t lost = note_probe_.dropped())
+        fprintf(f, "noteprobe: %u records dropped so far\n", (unsigned)lost);
+    fclose(f);
+}
+
 void VirusPlugin::diag_report()
 {
     // called by the editor's timer and the device worker: one of them writes every 10 s
@@ -1394,6 +1411,7 @@ void VirusPlugin::diag_report()
     int64_t due = diag_next_ms_.load();
     if (!diag_enabled() || now < due || !diag_next_ms_.compare_exchange_strong(due, now + 10000))
         return;
+    note_probe_flush();
     long long drops = -1; // the editor's timer or the worker: read under the audio gate (audiogate.h)
     if (out_)
         if (AudioGate::Use ring(out_->audio_gate()); ring)
@@ -1636,6 +1654,18 @@ tresult PLUGIN_API VirusPlugin::process(ProcessData &data)
             Event e;
             if (data.inputEvents->getEvent(i, e) != kResultOk)
                 continue;
+            if (note_probe_on_ && (e.type == Event::kNoteOnEvent || e.type == Event::kNoteOffEvent)) {
+                const bool on = e.type == Event::kNoteOnEvent;
+                NoteProbe::Rec r{};
+                r.on = on;
+                r.channel = (uint8_t)((on ? e.noteOn.channel : e.noteOff.channel) & 15);
+                r.pitch = (uint8_t)(on ? e.noteOn.pitch : e.noteOff.pitch);
+                r.flags = e.flags;
+                r.offset = e.sampleOffset;
+                r.frames = data.numSamples;
+                r.playing = host_playing_.load(std::memory_order_relaxed);
+                note_probe_.push(r);
+            }
             if (e.type == Event::kNoteOnEvent && starting_.load(std::memory_order_relaxed))
                 continue; // the Virus is still busy with the start-up messages and the state (notes would be late)
             if (e.type == Event::kNoteOnEvent) {
