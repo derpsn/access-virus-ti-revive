@@ -68,6 +68,29 @@ inline int64_t live_stamp(int64_t newest, int64_t marker, double ratio)
     return newest - marker + (int64_t)(-1.0 * ratio) - 0x400;
 }
 
+// Our one difference from the original's live path, by the user's word 2026-11-07: a flagged note-off goes at once only
+// when the last note-on of that key went at once. The original goes by the flag alone, so a flagged note-off of a clip
+// note still waiting on its lead lands first and the note hangs (simulator S065 C4, from about 35 ms before its due;
+// not seen on a real unit). The note-on side stays the original's. Audio thread: fixed table, no allocation.
+class LiveNoteGuard {
+public:
+    bool note_on(int channel, int key, bool flagged)
+    {
+        live_[channel & 15][key & 127] = flagged;
+        return flagged;
+    }
+    bool note_off(int channel, int key, bool flagged)
+    {
+        bool &l = live_[channel & 15][key & 127];
+        const bool now = flagged && l;
+        l = false;
+        return now;
+    }
+
+private:
+    bool live_[16][128] = {};
+};
+
 // With the live path the controllers go as in the original: CC, aftertouch, program, pressure, bend have no stamp of their
 // own and inherit the last F5 (0x1800a8452): at once behind a live note, waiting with a sequenced one.
 inline bool inherits_stamp(bool option, uint8_t status)

@@ -15,6 +15,43 @@ TEST(live_note_needs_the_option_and_the_flag)
     CHECK(is_live_note(true, kIsLive | 0x4000)); // other flag bits do not matter
 }
 
+TEST(live_guard_note_off_never_passes_a_waiting_note_on)
+{
+    // our one difference from the original, by the user's word 2026-11-07: a flagged note-off of a clip note still
+    // waiting on its lead would land first and leave that note hanging (simulator S065 C4: from 35 ms before its due)
+    LiveNoteGuard g;
+    CHECK(!g.note_on(3, 60, false));
+    CHECK(!g.note_off(3, 60, true)); // waits with its note-on
+    // a played note goes at once, on and off, as in the original
+    CHECK(g.note_on(3, 60, true));
+    CHECK(g.note_off(3, 60, true));
+    // the last note-on of that key decides
+    CHECK(g.note_on(4, 62, true));
+    CHECK(!g.note_on(4, 62, false));
+    CHECK(!g.note_off(4, 62, true));
+    // channels and keys apart
+    CHECK(g.note_on(5, 64, true));
+    CHECK(!g.note_on(6, 64, false));
+    CHECK(g.note_off(5, 64, true));
+    CHECK(!g.note_off(6, 64, true));
+}
+
+TEST(live_guard_unflagged_note_off_stays_unflagged)
+{
+    LiveNoteGuard g;
+    CHECK(g.note_on(0, 60, true));
+    CHECK(!g.note_off(0, 60, false)); // a note-off the host did not flag keeps its lead, as in the original
+}
+
+TEST(live_guard_range_is_safe)
+{
+    LiveNoteGuard g;
+    CHECK(g.note_on(15, 127, true));
+    CHECK(g.note_off(15, 127, true));
+    CHECK(g.note_on(31, 255, true)); // masked like the bytes that go to the Virus: channel 15, key 127
+    CHECK(g.note_off(15, 127, true));
+}
+
 TEST(live_stamp_is_the_originals)
 {
     // device position - anchor, offset -1 x the rate ratio, truncated, then 0x400 behind (0x1800a8420, E449)

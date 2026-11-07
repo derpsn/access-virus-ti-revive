@@ -1002,7 +1002,7 @@ tresult PLUGIN_API VirusPlugin::initialize(FUnknown *context)
         note_probe_on_ = diag_enabled() && std::filesystem::exists(own_cache_dir() + "/../noteprobe.on", tec);
         // the output delays only on change, not at every Play/Stop (Control Center option, outputdelay.h resend_all)
         od_changes_only_ = std::filesystem::exists(own_cache_dir() + "/../outdelay-changes.on", tec);
-        live_notes_ = std::filesystem::exists(own_cache_dir() + "/../live-notes.on", tec);
+        live_notes_ = vti::cc::plugin_option("live-notes"); // the plug-in folder itself: no cache folder needed (S065 C9)
 #ifdef _WIN32
         timing_a_ = timing_lead(timing_classic_, true);
 #else
@@ -1015,10 +1015,10 @@ tresult PLUGIN_API VirusPlugin::initialize(FUnknown *context)
     out_->lead = lead();
     out_->stamp_floor = !timing_classic_;
     out_->live_notes = live_notes_;
-    if (live_notes_)
-        out_->log("Virus TI native: live notes on (live-notes.on): notes flagged as played go without the lead\n");
     if (diag_enabled())
         out_->set_diag_path(own_cache_dir() + "/../diag.log");
+    if (live_notes_) // after set_diag_path, or the line never reaches diag.log
+        out_->log("Virus TI native: live notes on (live-notes.on): notes flagged as played go without the lead\n");
     out_->log("Virus TI native: timing: lead %d frames, safety net %s%s\n", timing_a_, timing_classic_ ? "off" : "on",
               timing_classic_ ? " (timing-classic.on)" : "");
     if (od_changes_only_)
@@ -1690,7 +1690,7 @@ tresult PLUGIN_API VirusPlugin::process(ProcessData &data)
                 last_note_ms_.store(now_ms(), std::memory_order_relaxed);
                 uint8_t m[3] = {(uint8_t)(0x90 | (e.noteOn.channel & 15)), note7(e.noteOn.pitch),
                                 std::max<uint8_t>(1, data7(e.noteOn.velocity))};
-                evs.add(at(e.sampleOffset), m, 3, is_live_note(live_notes_, e.flags));
+                evs.add(at(e.sampleOffset), m, 3, live_guard_.note_on(m[0] & 15, m[1], is_live_note(live_notes_, e.flags)));
                 held_notes_.note_on(m[0] & 15, m[1]);
                 auto &mt = meter_[e.noteOn.channel & 15]; // MIDI activity meter: the highest velocity, decays in tick_meters
                 if (mt.load(std::memory_order_relaxed) < m[2])
@@ -1698,7 +1698,7 @@ tresult PLUGIN_API VirusPlugin::process(ProcessData &data)
             } else if (e.type == Event::kNoteOffEvent) {
                 uint8_t m[3] = {(uint8_t)(0x80 | (e.noteOff.channel & 15)), note7(e.noteOff.pitch),
                                 data7(e.noteOff.velocity)};
-                evs.add(at(e.sampleOffset), m, 3, is_live_note(live_notes_, e.flags));
+                evs.add(at(e.sampleOffset), m, 3, live_guard_.note_off(m[0] & 15, m[1], is_live_note(live_notes_, e.flags)));
                 held_notes_.note_off(m[0] & 15, m[1]);
             }
         }

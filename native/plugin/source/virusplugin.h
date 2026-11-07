@@ -806,6 +806,7 @@ private:
     OutputDelay out_delay_;
     bool od_ready_seen_ = false, od_playing_seen_ = false;
     bool live_notes_ = false; // live-notes.on: notes flagged as played live skip the lead (stamprule.h)
+    LiveNoteGuard live_guard_; // audio thread only: a played note-off never passes a waiting note-on
     bool od_changes_only_ = false; // outdelay-changes.on: not all 16 at every Play/Stop (E373)
     HeldNotes held_notes_;          // process() records, setActive(false) releases (heldnotes.h)
     std::chrono::steady_clock::time_point od_next_{};
