@@ -178,6 +178,7 @@ private:
     std::vector<std::string> inactive_inputs(const std::string &param, int part) const;
     bool hit(const Element &e, int ox, int oy, int inherited, int px, int py, Hit &out, bool include_disabled = false,
              const std::string &cond = std::string(), bool menus_only = false, int slack = 0) const;
+    void browser_numbers(Canvas &c, const Element &e, int x, int y);
     void patch_browser(Canvas &c, const Element &e, int x, int y, int bank, int pane);
     void remote_browser(Canvas &c, const Element &e, int x, int y, int selected);
     struct EnvGeom { // the ADSTR display's stage points (envelope())

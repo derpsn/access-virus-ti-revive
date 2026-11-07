@@ -7,7 +7,7 @@ Control, and the TI Revive broker (a small native Linux program) talks to the Vi
 the Virus' USB audio.
 
 You need
-- an Access Virus TI on USB (tested: TI2 Desktop; the Virus TI Snow is not supported yet)
+- an Access Virus TI on USB (tested: TI2 Desktop; Virus TI Snow: one user report, with problems, not tested by us)
 - a Linux DAW that hosts VST3 plug-ins (REAPER, Bitwig Studio, Ardour, ...), x86_64, Ubuntu 22.04 / Debian 12 or newer
 - your own copy of the Access installer "Virus TI Software Suite 5.1.7.00 64-bit.msi" (not included): the plug-in
   reads the Virus skin, the parameter descriptions and the ROM banks from it. To unpack it, install msitools

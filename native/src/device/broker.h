@@ -48,7 +48,8 @@ public:
     // Become a read-only observer (after open): the broker refuses our writes and sends a copy of the traffic,
     // its log lines and a status line once a second to `h`. False if the broker does not confirm (older than
     // protocol 4: it would have kept us as the owner of the Virus, so the connection is closed).
-    bool observe(ObserveHandler h, std::string &error);
+    // `replay`: first the newest traffic the broker kept from before this moment (a broker older than 0.8.38 ignores it).
+    bool observe(ObserveHandler h, std::string &error, bool replay = false);
 
     void on_rx(RxHandler h) { rx_ = std::move(h); }
     void on_state(StateHandler h) { state_ = std::move(h); }

@@ -7,6 +7,7 @@
 #include "device/audioin.h"
 #include "editor/editormodel.h"
 #include "editor/lcdhover.h"
+#include "editor/setuptips.h"
 #include "device/automation.h"
 #include "device/broker.h"
 #include "device/keepalive.h"
@@ -128,6 +129,8 @@ public:
     std::atomic<int> generation{0}; // +1 on every return of the Virus (process() re-anchors its timeline)
     StallWatch stall_;              // worker: the stream stood still and runs on (sleep) -> generation + 1
     bool connected() const { return broker_.device_present(); }
+    void stop_worker(); // the worker and the broker's reader have ended when it returns; the destructor does it too
+    void leave_virus(); // what the Virus is left with when the plug-in closes (closeseq.h); blocks 350 ms, up to ~1.5 s
     // read outside the worker only while holding an AudioGate::Use of audio_gate() (it may be unmapped otherwise)
     AudioIn &audio() { return audio_; }
     AudioGate &audio_gate() { return audio_gate_; }
@@ -217,7 +220,7 @@ private:
     // runs in the same process), so the guard lives here; macOS/Linux brokers also give it to one client only.
     bool claim_owner();
     void release_owner();
-    bool owner_ = false;         // worker: this instance holds the process-wide claim
+    std::atomic<bool> owner_{false}; // this instance holds the process-wide claim (worker writes, leave_virus reads)
     std::atomic<bool> wait_reported_{false}; // waiting for the other instance (set by the worker)
     int present_seen_ = -1; // worker: last device presence handled (-1 = unknown)
     vti::PresenceWatch presence_; // worker: gone / back / gone and back between two looks (E212)
@@ -271,7 +274,8 @@ private:
     int ev_lost_logged_ = 0;
     int blocked_logged_ = 0;
     std::atomic<bool> stop_{false};
-    bool open_ = false;
+    std::atomic<bool> open_{false};
+    std::atomic<bool> abandon_dump_{false}; // leave_virus: the worker drops a dump on its way
     AudioIn audio_;
     AudioGate audio_gate_; // open while audio_ is mapped; closed (waiting for readers) before it is unmapped
     bool audio_ok() const { return audio_gate_.is_open(); }
@@ -360,7 +364,11 @@ public:
     void set_locks(int part, const std::vector<std::pair<std::string, int>> &values); // menu: one part
     void unlock_all_parts();
     bool part_locked(int part);  // any section of the part (the part strip's indicator)
-    bool any_part_locked();      // the padlock next to "?" (Global Section Lock Indicator)
+    // the setup page (setuptips.h): this DAW and this setup; which points were read, in setup-tips.seen
+    vti::TipsFacts tips_facts() const;
+    std::vector<std::string> tips_seen() const;
+    void tips_save_seen(const std::vector<std::string> &seen) const;
+    bool any_part_locked();      // the padlock next to "?" (Global Section LockIndicator)
     // the ARP page's pattern actions (buttons + context menu, #19, E371): order of ARP_ACTIONS; false if unknown
     enum ArpAction { ARP_SHIFT_LEFT, ARP_SHIFT_RIGHT, ARP_RANDOM_PATTERN, ARP_RANDOM_VELOCITY, ARP_RANDOM_LENGTH,
                      ARP_RESET, ARP_FILL_UP, ARP_ACTION_COUNT };
@@ -735,6 +743,7 @@ public:
     }
 private:
     double rate_ = 44100;
+    std::string host_name_; // IHostApplication::getName; in an Audio Unit only "VST3-AU Wrapper"
     // the Virus timeline (docs/protocol.md "timing"): frames of the synth, stamped on every clock tick and event
     int64_t tl_ = 0;
     bool tl_valid_ = false, anchored_ = false;

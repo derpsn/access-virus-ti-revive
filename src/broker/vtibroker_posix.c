@@ -14,6 +14,8 @@
 #include "flashinfo.h"
 #include "ctrlguard.h"
 #include "owner.h"
+#include "trafficring.h"
+#include "keyport.h"
 #include "ratelever.h"
 #include <errno.h>
 #include <pthread.h>
@@ -32,6 +34,7 @@
 #include <unistd.h>
 #ifdef __APPLE__
 #include "vtimidi_mac.h"
+#include "vtikeyport_mac.h"
 #include <launch.h>
 #endif
 #ifdef __linux__
@@ -244,6 +247,12 @@ typedef struct obsq {
     client *c;
     pthread_t th;
 } obsq;
+// The pre-roll (trafficring.h): always filled, so that a capture also gets what happened before it connected. A few
+// memcpys per USB transfer; g_cs_pre is taken before g_cs_obs and makes "replay + attach" atomic against new traffic.
+#define PREROLL_BYTES (128 * 1024)
+static uint8_t g_pre_mem[PREROLL_BYTES];
+static vti_trafring g_pre = {g_pre_mem, PREROLL_BYTES, 0, 0, 0};
+static pthread_mutex_t g_cs_pre = PTHREAD_MUTEX_INITIALIZER;
 static obsq *g_obs[MAX_CLIENTS]; // g_cs_obs
 static int g_obs_count;          // g_cs_obs (read without it as a quick check)
 static pthread_mutex_t g_cs_obs = PTHREAD_MUTEX_INITIALIZER;
@@ -266,38 +275,38 @@ static void ring_put(obsq *q, const void *p, size_t n) // q->mu held, room check
     q->len += n;
 }
 
-// queues one message for every observer
-static void obs_push(uint16_t type, const void *a, int alen, const void *b, int blen)
+static void obsq_put(obsq *q, uint16_t type, const void *a, int alen, const void *b, int blen)
 {
     if (alen + blen > VTIMSG_MAX)
         blen = VTIMSG_MAX - alen;
     vtimsg h = {type, (uint16_t)(alen + blen)};
-    pthread_mutex_lock(&g_cs_obs);
-    for (int i = 0; i < MAX_CLIENTS; i++) {
-        obsq *q = g_obs[i];
-        if (!q)
-            continue;
-        pthread_mutex_lock(&q->mu);
-        if (q->len + sizeof h + h.len > OBS_RING) {
-            q->dropped++;
-        } else {
-            ring_put(q, &h, sizeof h);
-            if (alen)
-                ring_put(q, a, (size_t)alen);
-            if (blen > 0)
-                ring_put(q, b, (size_t)blen);
-            pthread_cond_signal(&q->cv);
-        }
-        pthread_mutex_unlock(&q->mu);
+    pthread_mutex_lock(&q->mu);
+    if (q->len + sizeof h + h.len > OBS_RING) {
+        q->dropped++;
+    } else {
+        ring_put(q, &h, sizeof h);
+        if (alen)
+            ring_put(q, a, (size_t)alen);
+        if (blen > 0)
+            ring_put(q, b, (size_t)blen);
+        pthread_cond_signal(&q->cv);
     }
+    pthread_mutex_unlock(&q->mu);
+}
+
+// queues one message for every observer
+static void obs_push(uint16_t type, const void *a, int alen, const void *b, int blen)
+{
+    pthread_mutex_lock(&g_cs_obs);
+    for (int i = 0; i < MAX_CLIENTS; i++)
+        if (g_obs[i])
+            obsq_put(g_obs[i], type, a, alen, b, blen);
     pthread_mutex_unlock(&g_cs_obs);
 }
 
 static void obs_traffic(uint8_t kind, uint8_t ep, const void *a, int alen, const void *b, int blen)
 {
     __atomic_add_fetch(kind == 0 ? &g_cnt_out : kind == 1 ? &g_cnt_in : &g_cnt_ctl, 1, __ATOMIC_RELAXED);
-    if (!__atomic_load_n(&g_obs_count, __ATOMIC_RELAXED))
-        return;
     uint8_t hdr[6] = {kind, ep};
     uint32_t t = uptime_ms();
     memcpy(hdr + 2, &t, 4);
@@ -306,7 +315,16 @@ static void obs_traffic(uint8_t kind, uint8_t ep, const void *a, int alen, const
     memcpy(body, a, (size_t)n);
     if (blen > 0 && n + blen <= (int)sizeof body)
         memcpy(body + n, b, (size_t)blen), n += blen;
-    obs_push(VTIMSG_OBS_TRAFFIC, hdr, 6, body, n);
+    pthread_mutex_lock(&g_cs_pre);
+    vti_trafring_push(&g_pre, hdr, body, n, NULL, 0);
+    if (__atomic_load_n(&g_obs_count, __ATOMIC_RELAXED))
+        obs_push(VTIMSG_OBS_TRAFFIC, hdr, 6, body, n);
+    pthread_mutex_unlock(&g_cs_pre);
+}
+
+static void preroll_to_queue(void *user, const uint8_t *hdr, const uint8_t *body, int n)
+{
+    obsq_put(user, VTIMSG_OBS_TRAFFIC, hdr, 6, body, n);
 }
 
 static void *obs_writer(void *arg) // sends the queued bytes; any byte range of the stream may go at once
@@ -391,7 +409,7 @@ static void obs_status(int dev_open)
     pthread_mutex_unlock(&g_cs_obs);
 }
 
-static void obs_attach(client *c)
+static void obs_attach(client *c, int replay)
 {
     obsq *q = calloc(1, sizeof *q);
     q->ring = malloc(OBS_RING);
@@ -400,6 +418,16 @@ static void obs_attach(client *c)
     pthread_cond_init(&q->cv, NULL);
     c->q = q;
     pthread_create(&q->th, NULL, obs_writer, q);
+    pthread_mutex_lock(&g_cs_pre); // nothing new between the replay and the attach, nothing twice
+    if (replay) {
+        if (g_pre.lost) {
+            char note[96];
+            int n = snprintf(note, sizeof note, "pre-roll: %llu older records were overwritten before this capture started",
+                             (unsigned long long)g_pre.lost);
+            obsq_put(q, VTIMSG_OBS_LOG, note, n, NULL, 0);
+        }
+        vti_trafring_each(&g_pre, preroll_to_queue, q);
+    }
     pthread_mutex_lock(&g_cs_obs);
     for (int i = 0; i < MAX_CLIENTS; i++)
         if (!g_obs[i]) {
@@ -408,6 +436,7 @@ static void obs_attach(client *c)
             break;
         }
     pthread_mutex_unlock(&g_cs_obs);
+    pthread_mutex_unlock(&g_cs_pre);
 }
 
 static void obs_detach(client *c)
@@ -472,6 +501,14 @@ static void f5_second(void);
 
 static volatile int g_rate_lever; // a recovery switch ran (E331): log the Virus' report of the rate's global (E257)
 
+#ifdef __APPLE__
+static void keyport_out(void *user, const uint8_t *msg, int n)
+{
+    (void)user;
+    vti_keyport_send(msg, n);
+}
+#endif
+
 static void on_rx(void *user, uint8_t ep, const uint8_t *data, int len)
 {
     (void)user;
@@ -484,6 +521,7 @@ static void on_rx(void *user, uint8_t ep, const uint8_t *data, int len)
 #ifdef __APPLE__
     if (ep == VTI_EP_MI04_IN)
         vtimidi_rx(data, len);
+    vti_keyport_filter(ep, data, (int)len, keyport_out, NULL); // the Virus keys to the DAW (#29)
 #endif
     pthread_mutex_lock(&g_cs_clients); // the owner and every sharing client
     for (int i = 0; i < MAX_CLIENTS; i++)
@@ -809,7 +847,6 @@ static int64_t trace_frame(void) { return -1; }
 #ifdef __APPLE__
 static int midi_write(const uint8_t *data, int len) // pump thread: plug-in channel packets from the MDW ring
 {
-    trace_rec(0, VTI_EP_MI04_OUT, data, len, NULL, 0);
     pthread_mutex_lock(&g_cs_dev);
     int r = g_dev ? vti_write(g_dev, VTI_EP_MI04_OUT, data, len) : -1;
     pthread_mutex_unlock(&g_cs_dev);
@@ -836,6 +873,9 @@ static void *device_thread(void *unused)
             last_busy = time(NULL);
         else if (!g_stay && time(NULL) - last_busy > IDLE_EXIT_S) {
             blog("no clients for %d s: exiting", IDLE_EXIT_S);
+#ifdef __APPLE__
+            vti_keyport_log_counts();
+#endif
             pthread_mutex_lock(&g_cs_dev);
             audio_stop();
             if (g_dev)
@@ -1056,7 +1096,7 @@ static void *client_thread(void *arg)
             uint32_t ver = VTI_PROTO_VERSION, st0 = 0;
             send_msg(c, VTIMSG_STATE, &st0, 4, NULL, 0); // an observer has no device
             send_msg(c, VTIMSG_OBSERVE_REPLY, &ver, 4, NULL, 0);
-            obs_attach(c); // from here on everything goes through the queue
+            obs_attach(c, h.len >= 1 && (buf[0] & 1)); // from here on everything goes through the queue
             blog("client is an observer (read-only)");
             break;
         }
@@ -1067,7 +1107,6 @@ static void *client_thread(void *arg)
                 pthread_mutex_lock(&g_cs_dev);
                 int r = g_dev ? vti_write(g_dev, buf[0], buf + 1, h.len - 1) : -1;
                 pthread_mutex_unlock(&g_cs_dev);
-                trace_rec(0, buf[0], buf + 1, h.len - 1, NULL, 0);
 #ifdef __linux__
                 if (g_verbose && buf[0] == VTI_EP_MI04_OUT)
                     f5_note(buf + 1, h.len - 1);
@@ -1109,11 +1148,12 @@ static void *client_thread(void *arg)
                 if (!ok)
                     blog("refused control request %02x %02x (only standard reads pass, rule 2)", s[0], s[1]);
                 pthread_mutex_lock(&g_cs_dev);
-                int32_t r = g_dev && owner && ok ? vti_control(g_dev, s[0], s[1], (uint16_t)(s[2] | s[3] << 8),
+                const int sent = g_dev && owner && ok;
+                int32_t r = sent ? vti_control(g_dev, s[0], s[1], (uint16_t)(s[2] | s[3] << 8),
                                                 (uint16_t)(s[4] | s[5] << 8), data, wl)
                                   : -1;
                 pthread_mutex_unlock(&g_cs_dev);
-                { // trace file and observers
+                if (!sent) { // a sent one went through the tap; a refused one is worth seeing too
                     uint8_t rec[8 + 4];
                     memcpy(rec, s, 8);
                     memcpy(rec + 8, &r, 4);
@@ -1198,6 +1238,7 @@ int main(int argc, char **argv)
     }
     signal(SIGPIPE, SIG_IGN);
     clock_gettime(CLOCK_MONOTONIC, &g_t0);
+    vti_set_tap(trace_rec); // everything to the Virus, the broker's own writes and control requests included
     static sigset_t sigs; // handled by signal_thread; blocked in every thread created after this
     sigemptyset(&sigs);
     sigaddset(&sigs, SIGINT);
@@ -1281,6 +1322,8 @@ int main(int argc, char **argv)
 #ifdef __APPLE__
     // stand-in for Access' MIDI driver towards the original Virus Control (E100): only the classic path of 0.7.x
     // (bridge + Rosetta helper, src/mac) used it; the native plug-in talks to the broker directly. Opt-in.
+    if (!getenv("VTI_NO_MIDI_PORT")) // a test switch; the port is read-only and harmless when nothing listens
+        vti_keyport_start();
     if (getenv("VTI_BROKER_MIDISHIM") && atoi(getenv("VTI_BROKER_MIDISHIM")) == 1) {
         if (vtimidi_start(midi_write))
             blog("MIDI slot memory could not be created");

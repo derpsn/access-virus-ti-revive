@@ -10,6 +10,7 @@
 #include "access/library.h"
 #include "cc/diag.h"
 #include "base/source/fstreamer.h"
+#include "device/closeseq.h"
 #include "device/usbmidi.h"
 #include "model/state.h"
 #include "ratesw.h"
@@ -100,14 +101,51 @@ DeviceOut::DeviceOut() : worker_([this] { run(); }) {}
 
 DeviceOut::~DeviceOut()
 {
+    stop_worker();
+    release_owner(); // a waiting instance takes over within ~2 s (start-up messages, state, a new sync ping)
+}
+
+void DeviceOut::stop_worker()
+{
     stop_ = true;
     cv_.notify_all();
     broker_.close(); // wakes a worker stuck in a write to a broker that stopped reading (review 2026-10-19 M6)
-    worker_.join();
+    if (worker_.joinable())
+        worker_.join();
     // again: the worker may have reconnected in between. The reader thread calls panel_, reply_ and reads audio_,
     // which are destroyed before broker_ (members go in reverse order), so it stops here (review M5)
     broker_.close();
-    release_owner(); // a waiting instance takes over within ~2 s (start-up messages, state, a new sync ping)
+}
+
+// The original's close (closeseq.h, E391). Only the instance that talks to the Virus, and only if it did: a host's scan or a
+// waiting instance sends nothing. A waiting instance that takes over sends its own start-up (Mode back to REMOTE).
+void DeviceOut::leave_virus()
+{
+    if (!owner_ || !open_ || !broker_.device_present()) {
+        log("Virus TI native: closing without the close sequence (owner %d, open %d, present %d)\n", (int)owner_.load(),
+            (int)open_.load(), (int)broker_.device_present());
+        return;
+    }
+    log("Virus TI native: close sequence (cables 1, Mode SINGLE)\n");
+    abandon_dump_ = true; // a dump on its way must not hold up the close, and it is not wanted any more
+    {
+        // nor what is still queued (the state of a session closed right after it started): behind it the close would
+        // never go out
+        std::lock_guard<std::mutex> lk(mu_);
+        queued_ -= (int)queue_.size();
+        queue_.clear();
+    }
+    cv_.notify_all();
+    auto sent = [this](int ms) {
+        for (int i = 0; i < ms && queued_.load() > 0; i += 5)
+            std::this_thread::sleep_for(std::chrono::milliseconds(5));
+    };
+    for (auto &m : close_messages_first())
+        send(m);
+    sent(1000); // right after a multi dump the Virus is given time first (queue_hold_until_); usually at once
+    std::this_thread::sleep_for(std::chrono::milliseconds(CLOSE_WAIT_MS));
+    send(close_message_last());
+    sent(200);
 }
 
 static std::mutex g_owner_mu;
@@ -449,6 +487,8 @@ void DeviceOut::run()
     if (const char *e = getenv("VTI_NATIVE_MIDI_RATE")) // bytes/s of stamped traffic, 0 = unlimited (tests only)
         budget_.rate = atof(e);
     while (!stop_) {
+        if (abandon_dump_.exchange(false))
+            drop_dump();
         if (!open_) {
             std::string err;
             if (!rx_set_) {
@@ -832,6 +872,12 @@ tresult PLUGIN_API VirusPlugin::initialize(FUnknown *context)
     tresult r = SingleComponentEffect::initialize(context);
     if (r != kResultOk)
         return r;
+    if (FUnknownPtr<IHostApplication> app(context); app) { // the DAW's name, for the setup page
+        String128 name{};
+        if (app->getName(name) == kResultOk)
+            for (int i = 0; i < 128 && name[i]; i++)
+                host_name_ += name[i] < 128 ? (char)name[i] : '?';
+    }
     // buses as the original: audio in "Dummy In" + "Sidechain", event in "Midi In" 16 ch, audio out "Out 1".."Out 3"
     addAudioInput(STR16("Dummy In"), SpeakerArr::kStereo);
     addAudioInput(STR16("Sidechain"), SpeakerArr::kStereo, BusTypes::kAux, 0);
@@ -1083,6 +1129,12 @@ tresult PLUGIN_API VirusPlugin::terminate()
         if (reconnect_thread_.joinable())
             reconnect_thread_.join();
     }
+    if (out_) {
+        out_->leave_virus();
+        // before out_ turns null: the worker's callbacks use it, and unique_ptr::reset nulls it before the destructor
+        // runs (a close while the Virus reported present: SIGSEGV in the on_state lambda, found 2026-11-04)
+        out_->stop_worker();
+    }
     out_.reset();
     return SingleComponentEffect::terminate();
 }
@@ -1279,6 +1331,51 @@ void VirusPlugin::set_part_value(int part, const std::string &path, int value)
 }
 
 static std::string own_cache_dir();
+
+vti::TipsFacts VirusPlugin::tips_facts() const
+{
+    vti::TipsFacts f;
+#ifdef __APPLE__
+    f.host = vti::tips_host(host_name_, getprogname()); // an Audio Unit only sees Steinberg's wrapper as its host
+    f.mac = true;
+#else
+    f.host = vti::tips_host(host_name_, "");
+#endif
+#ifdef __linux__
+    f.on_linux = true;
+#endif
+    if (const char *h = getenv("VTI_TIPS_HOST")) // tests: the page of another DAW
+        f.host = vti::tips_host(h, "");
+    f.host_rate = rate_;
+    f.virus_rate = virus_rate();
+    f.largest_block = block_;
+    f.delay_ms = latency_frames() * 1000.0 / f.virus_rate;
+    return f;
+}
+
+std::vector<std::string> VirusPlugin::tips_seen() const
+{
+    std::string text;
+    if (FILE *f = fopen((own_cache_dir() + "/../setup-tips.seen").c_str(), "rb")) {
+        char b[1024];
+        size_t n;
+        while ((n = fread(b, 1, sizeof b, f)) > 0)
+            text.append(b, n);
+        fclose(f);
+    }
+    return vti::tips_seen_parse(text);
+}
+
+void VirusPlugin::tips_save_seen(const std::vector<std::string> &seen) const
+{
+    std::error_code ec;
+    std::filesystem::create_directories(own_cache_dir() + "/..", ec);
+    if (FILE *f = fopen((own_cache_dir() + "/../setup-tips.seen").c_str(), "wb")) {
+        const std::string text = vti::tips_seen_text(seen);
+        fwrite(text.data(), 1, text.size(), f);
+        fclose(f);
+    }
+}
 
 bool VirusPlugin::diag_enabled()
 {

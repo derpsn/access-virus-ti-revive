@@ -334,6 +334,66 @@ static BOOL replay(DWORD code, void *in, void *out, DWORD outsz, LPDWORD ret)
     return reply(out, outsz, ret, NULL, 0, outsz);
 }
 
+// Test switch, set only by scripts/latency-wine.sh (E403): the broker refuses every vendor request (ctrlguard.h, rule 2),
+// so the original's flash reads at open (E026, E040) are answered from a table captured earlier from the same Virus,
+// "aabbcc <32 hex digits>" per line. Nothing reaches the device; any other vendor request stays refused by the broker.
+static struct {
+    char addr[7];
+    uint8_t data[16];
+} g_flash[64];
+static int g_flash_n = -1; // -1 not loaded, 0 switch off or empty
+static char g_flash_addr[7];
+
+static void flash_load(void)
+{
+    char path[MAX_PATH], line[128], a[8], d[40];
+    g_flash_n = 0;
+    if (!GetEnvironmentVariableA("VTI_FLASH_REPLAY", path, sizeof path))
+        return;
+    FILE *f = fopen(path, "r");
+    if (!f)
+        return;
+    while (g_flash_n < 64 && fgets(line, sizeof line, f))
+        if (sscanf(line, "%6s %32s", a, d) == 2 && strlen(a) == 6 && strlen(d) == 32) {
+            memcpy(g_flash[g_flash_n].addr, a, 7);
+            for (int i = 0; i < 16; i++) {
+                unsigned v = 0;
+                sscanf(d + 2 * i, "%2x", &v);
+                g_flash[g_flash_n].data[i] = (uint8_t)v;
+            }
+            g_flash_n++;
+        }
+    fclose(f);
+}
+
+// the result of the request, or -2: not for the table
+static int flash_replay(uint8_t rt, uint8_t req, uint16_t wi, uint8_t *buf, uint16_t n)
+{
+    if (g_flash_n < 0)
+        flash_load();
+    if (!g_flash_n)
+        return -2;
+    if (!(rt & 0x80) && req == 1 && wi == 0x12 && n == 3) { // the address of the next read
+        snprintf(g_flash_addr, sizeof g_flash_addr, "%02x%02x%02x", buf[0], buf[1], buf[2]);
+        return 3;
+    }
+    if ((rt & 0x80) && req == 0x81) {
+        if (wi == 1 && n >= 1) { // status: 0x10 = ready (E040)
+            buf[0] = 0x10;
+            return 1;
+        }
+        if (wi == 0x30 && n >= 16) {
+            memset(buf, 0xff, 16);
+            for (int i = 0; i < g_flash_n; i++)
+                if (!strcmp(g_flash[i].addr, g_flash_addr))
+                    memcpy(buf, g_flash[i].data, 16);
+            return 16;
+        }
+        return -1; // wIndex 0x22 stalls on the real device too (E026)
+    }
+    return -2;
+}
+
 // 0x220008 PGIOCTL_STD_VENDOR_REQUEST: 8-byte setup (bmRequestType, bRequest, wValue, wIndex, wLength) + data.
 static BOOL vendor_request(void *in, DWORD insz, void *out, DWORD outsz, LPDWORD ret)
 {
@@ -352,7 +412,9 @@ static BOOL vendor_request(void *in, DWORD insz, void *out, DWORD outsz, LPDWORD
     if (!(rt & 0x80))
         memcpy(buf, s + 8, n);
     vti *dev = dev_get();
-    int r = dev ? vti_control(dev, rt_dev, req, wv, wi, buf, n) : -1;
+    int r = flash_replay(rt, req, wi, buf, n);
+    if (r == -2)
+        r = dev ? vti_control(dev, rt_dev, req, wv, wi, buf, n) : -1;
     if (rt & 0x80) {
         memcpy(out, s, 8 < outsz ? 8 : outsz);
         if (r > 0 && outsz > 8)

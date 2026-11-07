@@ -7,7 +7,8 @@
 //                                             STATE    {connected}         (on connect and on change)
 //   AUDIO    {on, event name, rate}           AUDIO_REPLY {result}         (protocol 2, vtiaudioshm.h; rate: 5)
 //                                             AUDIO_TICK {in_frames}       (protocol 3, Linux: per received block)
-//   OBSERVE  {}                               OBSERVE_REPLY {version}      (protocol 4: read-only observer)
+//   OBSERVE  {[u8 flags]}                     OBSERVE_REPLY {version}      (protocol 4: read-only observer;
+//                                                                           flags bit 0: first the pre-roll, trafficring.h)
 //                                             INFO {"version=..."}         (after HELLO, brokerinfo.h)
 //                                             OBS_TRAFFIC / OBS_LOG / OBS_STATUS (to observers only)
 //

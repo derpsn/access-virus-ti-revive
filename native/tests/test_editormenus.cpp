@@ -20,7 +20,7 @@ TEST(editormenus_help_menu_entries_in_order)
     s.connected = true;
     BuiltMenu m = help_menu(s);
     CHECK(m.items.size() == m.actions.size());
-    const MenuAction order[] = {MenuAction::HelpMode, MenuAction::Website, MenuAction::Report, MenuAction::SaveLogs,
+    const MenuAction order[] = {MenuAction::HelpMode, MenuAction::SetupTips, MenuAction::Website, MenuAction::Report, MenuAction::SaveLogs,
                                 MenuAction::DiagLog, MenuAction::Panic};
     int last = -1;
     for (MenuAction a : order) {

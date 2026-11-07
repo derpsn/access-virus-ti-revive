@@ -279,13 +279,20 @@ jobs:
           native plug-in **"TI Revive Virus Control"**: looks and works like the original Virus Control and runs
           natively on Windows, macOS (Apple Silicon and Intel) and Linux - no Rosetta, Wine or yabridge.
 
-          **New in 0.8.38: the Virus TI Snow on Linux (issue #26, pull request #27 by @vmunoz82).**
+          **New in 0.8.38: the Virus TI Snow on Linux (issue #26, pull request #27 by @vmunoz82); macOS: a MIDI input "Virus TI Synth" for the keys of a Keyboard or Polar (#29); a setup page with tips for your DAW; a full traffic log (tirevive-cc capture, Record in Nerd mode); the Virus leaves remote mode when the plug-in closes, as with the original; a crash when the plug-in closes while the Virus connects is fixed; the numbers 100 to 127 in the browser no longer touch the names (#28); Windows: the installer now really removes the Access driver packages (#31).**
 
+          - **Windows, please read before installing:** the installer now really removes the Access driver packages, as it was always meant to. Before, a bug left them in place and Windows could put the Virus back on the old driver. After installing, the original Access software no longer works on that PC until you reinstall it. Unplug and replug the Virus after installing. Checked at package level in a Windows 11 test machine; binding the Virus to the driver on a PC that had the Access software is what we would like to hear about.
+          - **The MIDI input on macOS:** since 0.8.38-rc3 its notes carry real time stamps. With time stamp 0, Ableton Live 12 on our Mac blinked its MIDI In light but no note reached the track. With real stamps a test program (no keys) was heard through the plug-in and recorded, and at up to 389 messages per second nothing was lost on the way to macOS. One tester recorded notes, pitch bend and mod wheel on a TI2 Polar with rc2. Real keys with the new stamps work by one user report on rc3 (a TI1 Keyboard); we own a Desktop without keys. The input exists on macOS only, while the plug-in or the Control Center is open.
+          - **Linux: a delay that grew in long sessions is fixed.** From clock drift, the broker added 30 ms about every 22 minutes, and notes stayed that much later until the plug-in was restarted. Proven on our TI2 past that point. Linux only: macOS and Windows take their timing from the device, by reading the code.
+          - **Bank sync:** one bad reply no longer ends the sync: a bank info of the wrong size or a dump that does not match it is asked for again, up to 3 times. The retry is covered by unit tests; on our Virus only the normal sync has run with it.
+          - **3 USB outs in Logic:** checked on our TI2 Desktop with the Audio Unit. Insert the plug-in as Multi-Output, set "3 Outs / No Input" in Preferences, and add the extra channel strips with the + in the Mixer.
+          - **Known issue, macOS:** On macOS the Virus may show Audio clock changed twice when the plug-in starts, because the plug-in corrects a wrong sample rate by switching away and back. Wait until this has finished; then it plays normally. In a few of our sessions in Ableton Live the sound hung once or the sync marker stayed missing after it. Cause not known, on our list for the next round.
+          - **The setup page** ("Setup Tips for Your DAW" in the ? menu) opens by itself the first time for a DAW and for a point not read before. The page itself has been tested on Linux only so far, in REAPER.
           - The Snow's MIDI endpoints are bulk endpoints, the TI and TI2 ones interrupt endpoints. The broker always
             used interrupt transfers, which Linux refuses on a bulk endpoint, so it could not read from a Snow there. The
             broker now takes the transfer type from the Snow's USB descriptor, and drops the idle packets a Snow
             sends on its MIDI input.
-          - Tested by the contributor on their Snow (Linux). On our TI2 (Linux) nothing changes: it keeps its
+          - Tested by the contributor on their Snow (Linux), who also reports sync messages with clicks, one session with no sync marker and notes that sound on after Stop. On our TI2 (Linux) nothing changes: it keeps its
             interrupt transfers, checked with our automated hardware run. Not tested on a Snow under macOS (the USB
             layer there picks the transfer type itself) or Windows (not affected).
 

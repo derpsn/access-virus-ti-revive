@@ -7,6 +7,8 @@
 //   tirevive-cc restore A|B|C|D FILE [--yes]  RAM bank from a library (e.g. a backup's "RAM B.mid"): only the
 //                                             programs that differ, single dumps into RAM like the plug-in's browser,
 //                                             read back; asks first unless --yes (never flash, E313)
+//   tirevive-cc capture [--seconds N] [--out FILE]
+//                                             all traffic to and from the Virus in a file, raw and decoded (read-only)
 //   tirevive-cc list FILE                     patch names in a library (.mid or .syx), no Virus needed
 //   tirevive-cc export FILE OUT.syx|OUT.mid   convert a library, no Virus needed
 //   tirevive-cc logs [--out FILE]             plug-in + broker logs in one file for a bug report (anonymized)
@@ -19,6 +21,7 @@
 #include "../src/access/accessfiles.h"
 #include "../src/access/library.h"
 #include "../src/cc/controlcenter.h"
+#include "../src/cc/capture.h"
 #include "../src/cc/decode.h"
 #include "../src/cc/diag.h"
 #include "../src/model/remotedevice.h"
@@ -28,6 +31,8 @@
 #include <cstdio>
 #include <algorithm>
 #include <chrono>
+#include <csignal>
+#include <ctime>
 #include <mutex>
 #include <thread>
 #include <cstring>
@@ -47,6 +52,7 @@ static int usage()
                     "       tirevive-cc debug on|off\n"
                     "       tirevive-cc option [NAME on|off]\n"
                     "       tirevive-cc watch [--seconds N]\n"
+                    "       tirevive-cc capture [--seconds N] [--out FILE]\n"
                     "Only restore writes to the Virus (RAM, never flash). Close the TI Revive plug-in (or your DAW)\n"
                     "first: the Virus serves one program at a time.\n");
     return 2;
@@ -338,7 +344,10 @@ static int watch(int argc, char **argv)
         } else if (type == VTIMSG_OBS_TRAFFIC) {
             dec.feed(d, n, [](vti::cc::TrafficLine &&t) {
                 static const char *dir[] = {"-> Virus", "<- Virus", "USB ctl "};
-                printf("%4u.%03u %s %s\n", t.ms / 1000, t.ms % 1000, dir[t.dir], t.text.c_str());
+                char ep[8] = "";
+                if (t.dir != 2)
+                    snprintf(ep, sizeof ep, "ep%02x ", t.ep);
+                printf("%4u.%03u %s %s%s\n", t.ms / 1000, t.ms % 1000, dir[t.dir], ep, t.text.c_str());
             });
         }
         fflush(stdout);
@@ -355,11 +364,78 @@ static int watch(int argc, char **argv)
     return 0;
 }
 
+static volatile sig_atomic_t g_stop_capture;
+
+// The full traffic log in a file, like a USB sniffer on the MIDI interfaces (cc/capture.h): read-only, it starts with
+// what the broker kept from before it connected (the handshake and the Virus' reply to it)
+static int capture(int argc, char **argv)
+{
+    int secs = 0;
+    char stamp[32];
+    time_t now = time(nullptr);
+    strftime(stamp, sizeof stamp, "%Y-%m-%d-%H%M%S", localtime(&now));
+    std::string path = std::string("TI-Revive-capture-") + stamp + ".txt";
+    for (int i = 2; i < argc; i++) {
+        if (!strcmp(argv[i], "--seconds") && i + 1 < argc)
+            secs = atoi(argv[++i]);
+        else if (!strcmp(argv[i], "--out") && i + 1 < argc)
+            path = argv[++i];
+        else
+            return usage();
+    }
+    FILE *f = fopen(path.c_str(), "w");
+    if (!f) {
+        fprintf(stderr, "tirevive-cc: cannot write %s\n", path.c_str());
+        return 1;
+    }
+    std::string err;
+    auto files = vti::AccessFiles::open("", err);
+    vti::RemoteDevice model;
+    bool have_model = files && model.load(files->get("remotedevice.xml"), err);
+    std::mutex mu;
+    vti::cc::CaptureLog cap(have_model ? &model : nullptr, [f](const std::string &l) {
+        fprintf(f, "%s\n", l.c_str());
+        fflush(f); // a crash or a pulled cable must not cost the last lines
+    });
+    fprintf(f, "TI Revive capture, tirevive-cc %s, started %s. Not in it: the USB audio stream.\n", TIREVIVE_VERSION, stamp);
+    vti::Broker broker;
+    broker.set_name("tirevive-cc capture");
+    if (!broker.open(err) || !broker.observe([&](uint16_t type, const uint8_t *d, size_t n) {
+            std::lock_guard<std::mutex> l(mu);
+            if (type == VTIMSG_OBS_TRAFFIC)
+                cap.traffic(d, n);
+            else if (type == VTIMSG_OBS_LOG)
+                cap.log(std::string((const char *)d, n));
+            else if (type == VTIMSG_OBS_STATUS)
+                cap.status(std::string((const char *)d, n));
+        }, err, true)) {
+        fprintf(stderr, "tirevive-cc: %s\n", err.c_str());
+        fclose(f);
+        return 1;
+    }
+    printf("Recording all traffic to and from the Virus (read-only) to %s\n%s\n", path.c_str(),
+           secs ? "It stops by itself." : "Ctrl+C ends.");
+    fflush(stdout);
+    signal(SIGINT, [](int) { g_stop_capture = 1; });
+    for (int i = 0; !g_stop_capture && (secs == 0 || i < secs * 10); i++)
+        std::this_thread::sleep_for(std::chrono::milliseconds(100));
+    broker.close();
+    {
+        std::lock_guard<std::mutex> l(mu);
+        cap.summary();
+        printf("Done: %s (%llu messages lost)\n", path.c_str(), (unsigned long long)cap.lost());
+    }
+    fclose(f);
+    return 0;
+}
+
 int main(int argc, char **argv)
 {
     if (argc < 2)
         return usage();
     std::string cmd = argv[1];
+    if (cmd == "capture")
+        return capture(argc, argv);
     if (cmd == "info" && (argc == 2 || (argc == 3 && !strcmp(argv[2], "--raw"))))
         return info(argc == 3);
     if (cmd == "backup")

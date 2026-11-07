@@ -172,8 +172,23 @@ static int write_packet(void *ctx, const uint8_t *data, int n, int *done)
     return -1;
 }
 
+static vti_tap_cb g_tap;
+void vti_set_tap(vti_tap_cb cb) { g_tap = cb; }
+
+// a control request as the tap's record: setup[8], i32 result, then the data that went or came
+static void tap_control(uint8_t rt, uint8_t req, uint16_t val, uint16_t idx, uint16_t len, int32_t r, const uint8_t *data)
+{
+    if (!g_tap)
+        return;
+    uint8_t rec[12] = {rt, req, (uint8_t)val, (uint8_t)(val >> 8), (uint8_t)idx, (uint8_t)(idx >> 8), (uint8_t)len, (uint8_t)(len >> 8)};
+    memcpy(rec + 8, &r, 4);
+    g_tap(2, 0, rec, 12, data, (rt & 0x80) ? (r > 0 ? r : 0) : len);
+}
+
 int vti_write(vti *v, uint8_t ep, const uint8_t *data, int len)
 {
+    if (g_tap) // before the transfer: the order on the wire
+        g_tap(0, ep, data, len, NULL, 0);
     struct write_ctx c = {iface_for(v, ep), ep, 0};
     int timeouts = 0;
     // a timed-out packet was NAKed, never taken (the link is lossless, E239): try again, up to 5 s in a row
@@ -194,8 +209,10 @@ int vti_control(vti *v, uint8_t bmRequestType, uint8_t bRequest, uint16_t wValue
     if (!WinUsb_ControlTransfer(v->mi[1].usb, sp, data, len, &done, NULL)) {
         vti_log("vti: control %02x/%02x wIndex %04x: error %lu\n", bmRequestType, bRequest, wIndex,
                 GetLastError());
+        tap_control(bmRequestType, bRequest, wValue, wIndex, len, -1, data);
         return -1;
     }
+    tap_control(bmRequestType, bRequest, wValue, wIndex, len, (int32_t)done, data);
     return (int)done;
 }
 

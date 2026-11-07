@@ -1,6 +1,6 @@
 # virus-ti-native - native rewrite of the Access Virus TI plug-in (docs/plan.md)
 cmake_minimum_required(VERSION 3.25)
-project(virus-ti-native VERSION 0.8.37 LANGUAGES C CXX) # = the TI Revive release it ships with
+project(virus-ti-native VERSION 0.8.38 LANGUAGES C CXX) # = the TI Revive release it ships with
 set(CMAKE_CXX_STANDARD 17)
 set(CMAKE_CXX_STANDARD_REQUIRED ON)
 # Windows: static C/C++ runtime, so the plug-in and the ASIO driver run without the VC++ redistributable
@@ -41,7 +41,7 @@ FetchContent_Declare(pugixml GIT_REPOSITORY https://github.com/zeux/pugixml.git 
 FetchContent_MakeAvailable(pugixml)
 
 # core library: Access files + device model (no Access material in this repo; loaded at runtime)
-add_library(vticore STATIC src/access/accessfiles.cpp src/model/remotedevice.cpp src/model/state.cpp src/device/broker.cpp src/device/memsync.cpp src/device/audioin.cpp src/device/sidechain.cpp src/editor/editormodel.cpp src/editor/editorrender.cpp src/access/firmware.cpp src/access/library.cpp src/cc/controlcenter.cpp src/cc/diag.cpp src/cc/decode.cpp src/cc/ccskin.cpp src/model/panelfollow.cpp src/editor/upscale.cpp src/editor/helptext.cpp src/model/sysinfo.cpp src/model/remotetemplates.cpp src/editor/popupmenu.cpp)
+add_library(vticore STATIC src/access/accessfiles.cpp src/model/remotedevice.cpp src/model/state.cpp src/device/broker.cpp src/device/memsync.cpp src/device/audioin.cpp src/device/sidechain.cpp src/editor/editormodel.cpp src/editor/editorrender.cpp src/access/firmware.cpp src/access/library.cpp src/cc/controlcenter.cpp src/cc/diag.cpp src/cc/decode.cpp src/cc/capture.cpp src/cc/ccskin.cpp src/model/panelfollow.cpp src/editor/upscale.cpp src/editor/helptext.cpp src/model/sysinfo.cpp src/model/remotetemplates.cpp src/editor/popupmenu.cpp)
 # TI Revive's broker headers (vtiproto.h, vtiaudioshm.h) from the repository's src/broker
 target_include_directories(vticore PUBLIC src ${CMAKE_CURRENT_SOURCE_DIR}/../src/broker)
 find_package(Threads REQUIRED)
@@ -156,12 +156,12 @@ endif()
 # unit tests (no Virus needed; tests on the Access files skip without them): ctest --test-dir build
 enable_testing()
 add_executable(vtitests tests/main.cpp tests/test_usbmidi.cpp tests/test_state.cpp tests/test_model.cpp
-               tests/test_access.cpp tests/test_automation.cpp tests/test_upgrade.cpp tests/test_resampler.cpp tests/test_sidechain.cpp tests/test_helptext.cpp tests/test_devicestatus.cpp $<$<PLATFORM_ID:Linux>:tests/test_resetguard.cpp> tests/test_giveback.cpp tests/test_ccrestore.cpp
+               tests/test_access.cpp tests/test_automation.cpp tests/test_upgrade.cpp tests/test_resampler.cpp tests/test_sidechain.cpp tests/test_helptext.cpp tests/test_devicestatus.cpp $<$<PLATFORM_ID:Linux>:tests/test_resetguard.cpp> tests/test_giveback.cpp tests/test_stallfill.cpp tests/test_ccrestore.cpp
                tests/test_library.cpp tests/test_decode.cpp tests/test_ccskin.cpp tests/test_memsync.cpp
                tests/test_cc.cpp tests/test_arpactions.cpp tests/test_broker.cpp tests/test_audioin.cpp tests/test_panelfollow.cpp tests/test_editor.cpp
                tests/test_accessfiles.cpp tests/test_firmware.cpp tests/test_diag.cpp tests/test_virusrate.cpp
                tests/test_protocol.cpp tests/test_upscale.cpp tests/test_ctrlguard.cpp tests/test_pktstat.cpp tests/test_owner.cpp tests/test_sysinfo.cpp tests/test_flashinfo.cpp tests/test_remotetemplates.cpp tests/test_popupmenu.cpp tests/test_workarea.cpp
-               tests/test_offlinepace.cpp tests/test_syncalert.cpp tests/test_patchhistory.cpp tests/test_stallwatch.cpp
+               tests/test_offlinepace.cpp tests/test_syncalert.cpp tests/test_patchhistory.cpp tests/test_stallwatch.cpp tests/test_setuptips.cpp
                tests/test_presencewatch.cpp tests/test_keepalive.cpp tests/test_sendbudget.cpp tests/test_writeretry.cpp
                tests/test_stamprule.cpp tests/test_hostclock.cpp tests/test_sendguard.cpp tests/test_cablerule.cpp tests/test_dumppacer.cpp tests/test_startprogress.cpp tests/test_userrom.cpp tests/test_transport.cpp
                tests/test_gapfill.cpp tests/test_audiogate.cpp tests/test_dragsend.cpp tests/test_hostmidi.cpp tests/test_textfield.cpp
@@ -169,7 +169,7 @@ add_executable(vtitests tests/main.cpp tests/test_usbmidi.cpp tests/test_state.c
                tests/test_blockevents.cpp tests/test_outputdelay.cpp tests/test_lcdhover.cpp
                tests/test_heldnotes.cpp tests/test_factoryorder.cpp tests/test_ratemeter.cpp tests/test_sectionlock.cpp
                tests/test_editormenus.cpp tests/test_rambackup.cpp tests/test_undohistory.cpp
-               tests/test_comparestate.cpp tests/test_randomizer.cpp)
+               tests/test_comparestate.cpp tests/test_randomizer.cpp tests/test_trafficring.cpp tests/test_capture.cpp tests/test_keyport.cpp tests/test_closeseq.cpp)
 target_link_libraries(vtitests PRIVATE vticore)
 add_test(NAME vtitests COMMAND vtitests)
 

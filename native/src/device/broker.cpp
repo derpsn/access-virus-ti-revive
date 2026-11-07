@@ -402,10 +402,11 @@ int Broker::audio(bool on, int timeout_ms, uint32_t rate)
     return audio_reply_;
 }
 
-bool Broker::observe(ObserveHandler h, std::string &error)
+bool Broker::observe(ObserveHandler h, std::string &error, bool replay)
 {
     observe_ = std::move(h); // set before the request: messages follow the reply at once
-    if (!send(VTIMSG_OBSERVE, nullptr, 0)) {
+    const uint8_t flags = 1;
+    if (!send(VTIMSG_OBSERVE, replay ? &flags : nullptr, replay ? 1 : 0)) {
         error = "broker connection lost";
         return false;
     }

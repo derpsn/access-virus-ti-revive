@@ -348,6 +348,48 @@ TEST(editor_render_displays)
     CHECK(cx == 5 + 1 + 2 * 20 && bottom == 130 + 130 - 1);
 }
 
+// #28: the skin's numbers 100..127 start right after the previous name (0 px) and end 10 px before their own: moved 5 px
+// to the right, from the page's own bitmap in memory, before the translucent table is drawn over them
+TEST(editor_render_browser_moves_the_three_digit_numbers)
+{
+    Rig g;
+    g.r->bank_patch = [](int bank, int program) { return "B" + std::to_string(bank) + "P" + std::to_string(program); };
+    g.r->render(g.canvas);
+    auto of_bg = [&] {
+        std::vector<RecCanvas::Blit> v;
+        for (auto &b : g.canvas.blits)
+            if (b.img == "BG_Page_Browser.png")
+                v.push_back(b);
+        return v;
+    };
+    CHECK(of_bg().empty()); // a skin without that page: nothing to move
+    g.canvas.clear();
+    g.canvas.imgs["BG_Page_Browser.png"] = {715, 426};
+    g.r->render(g.canvas);
+    auto v = of_bg();
+    CHECK_EQ(v.size(), 56u); // 28 numbers: the digits, then what they leave behind
+    size_t digits = 0, erase = 0;
+    for (auto &b : v) {
+        if (b.w == 15 && b.h == 5 && b.dx - b.sx == 5 && b.dy == b.sy)
+            digits++;
+        if (b.w == 5 && b.h == 5 && b.dx - b.sx == -15 && b.dy == b.sy) // a clean part next to the number, onto its left end
+            erase++;
+    }
+    CHECK(digits == 28 && erase == 28);
+    // number 100, the first: column 6 (x 21 + 6 * 84 = 525), row 4 (y 265 + 1 + 44 = 310), digits at x - 25 (the flag of the 1), y + 4
+    CHECK(v.size() >= 2 && v[0].sx == 500 && v[0].sy == 314 && v[0].dx == 505 && v[0].dy == 314);
+    CHECK(v.size() >= 2 && v[1].sx == 515 && v[1].sy == 314 && v[1].dx == 500 && v[1].dy == 314);
+    // before the names: the numbers lie under them
+    size_t last_font = 0, last_bg = 0;
+    for (size_t i = 0; i < g.canvas.blits.size(); i++) {
+        if (g.canvas.blits[i].img == "BG_Page_Browser.png")
+            last_bg = i;
+        if (g.canvas.blits[i].img == "font.png")
+            last_font = i;
+    }
+    CHECK(last_bg < last_font);
+}
+
 // E318: the original fills a selected entry in the selection blue while its list has the focus (the pane clicked last),
 // else it only frames it (user, 2026-10-26: "the selected has a complete blue background and not only the border")
 TEST(editor_render_browser_focus_fills)

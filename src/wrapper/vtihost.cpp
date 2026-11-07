@@ -9,6 +9,9 @@
 //      VTI_PARAMS="id=normalized@seconds,..." (scripted parameter changes through process(), e.g. automation tests)
 //      VTI_SAVESTATE=<file> (component + controller state at the end), VTI_LOADSTATE=<file> (restore before activation;
 //      file: "VTISTATE" u32 n + component state, u32 n + controller state)
+//      VTI_LIVE=alt|all (the C4 of every odd second, or all of them, flagged Event::kIsLive: played live, E400),
+//      VTI_STOPPED=1 (transport stopped, the C4 still plays and is recorded: playing in with the sequencer stopped)
+//      VTI_PLAY_AT=<s> (stopped until s, then Play from 0, the C4 going on all the time: what a DAW does at Play)
 // build: make -C src/wrapper (x86_64-w64-mingw32-g++, VST3 pluginterfaces from work/vst3sdk, MIT)
 #include <windows.h>
 #include <algorithm>
@@ -158,6 +161,9 @@ static void wav_header(FILE *f, uint32_t frames)
 
 static int g_block = 512; // VTI_BLOCK=64/128/256/512
 static long g_stop_frames = -1; // VTI_TRANSPORT=<s>: stopped for s seconds, then Play from 0 with 16ths at 120 BPM
+static int g_live = 0;          // VTI_LIVE: 0 no note flagged, 1 odd seconds (alt), 2 all
+static bool g_stopped = false;  // VTI_STOPPED=1: the transport never plays, the second grid and the WAV go on
+static long g_play_frames = -1; // VTI_PLAY_AT=<s>: stopped until s, then Play from 0; the second grid and the WAV go on
 
 struct Run {
     IAudioProcessor *proc;
@@ -201,8 +207,12 @@ static DWORD WINAPI process_thread(LPVOID arg)
     uint32_t wav_frames = 0;
     for (long i = 0; i < blocks; i++) {
         events.ev.clear();
-        bool playing = true;
+        bool playing = !g_stopped;
         int64_t pos = (int64_t)i * block; // project position of this block
+        if (g_play_frames >= 0) {
+            playing = pos >= g_play_frames;
+            pos = playing ? pos - g_play_frames : 0;
+        }
         if (g_stop_frames >= 0) { // transport test: stopped, then Play from 0; 16th notes (5512.5 frames), 50 % long
             playing = pos >= g_stop_frames;
             pos = playing ? pos - g_stop_frames : 0;
@@ -235,6 +245,8 @@ static DWORD WINAPI process_thread(LPVOID arg)
             Event e{};
             e.busIndex = 0;
             e.sampleOffset = (int32)(at - first);
+            if (g_live == 2 || (g_live == 1 && (at / 44100) & 1))
+                e.flags = Event::kIsLive;
             if (on) {
                 e.type = Event::kNoteOnEvent;
                 e.noteOn = {0, 60, 0.f, 0.8f, 0, -1};
@@ -286,7 +298,7 @@ static DWORD WINAPI process_thread(LPVOID arg)
                     x = x > 1 ? 1 : x < -1 ? -1 : x;
                     pcm[k * 2 + c] = (int16_t)lrintf(x * 32767);
                 }
-            if (r.wav && playing)
+            if (r.wav && (playing || g_stopped || g_play_frames >= 0))
                 fwrite(pcm.data(), 4, block, r.wav), wav_frames += block;
         }
         if ((i + 1) % per_sec == 0) {
@@ -604,6 +616,11 @@ int main(int argc, char **argv)
         g_stop_frames = (long)(atof(getenv("VTI_TRANSPORT")) * 44100);
     if (getenv("VTI_BLOCK"))
         g_block = atoi(getenv("VTI_BLOCK"));
+    if (const char *lv = getenv("VTI_LIVE"))
+        g_live = !strcmp(lv, "all") ? 2 : !strcmp(lv, "alt") ? 1 : 0;
+    g_stopped = getenv("VTI_STOPPED") != nullptr;
+    if (getenv("VTI_PLAY_AT"))
+        g_play_frames = (long)(atof(getenv("VTI_PLAY_AT")) * 44100);
     if (const char *ls = getenv("VTI_LOADSTATE"))
         load_state(comp, ctl, ls);
     ProcessSetup ps{kRealtime, kSample32, g_block, 44100};
