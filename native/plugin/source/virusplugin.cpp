@@ -1300,7 +1300,7 @@ void VirusPlugin::set_part_value(int part, const std::string &path, int value)
     // message of this parameter, else add one - otherwise a patch load or project reload brought the old value back
     // (user test: part 3 selected, load a patch -> back on part 1)
     auto msg = dev_.encode(path, value, part < 0 ? 0 : part);
-    if (msg.empty())
+    if (msg.empty() || is_system_clock_global(msg)) // the Virus' report of its rate is not the project's (E445)
         return;
     // index (path, part) -> record, rebuilt when the record list was replaced or grew (patch / project load); a
     // linear decode of all ~240 records per change cost ~45 us - with automation thousands of times per second
@@ -4584,6 +4584,10 @@ tresult PLUGIN_API VirusPlugin::setState(IBStream *state)
                   part1_name(recs).c_str());
     if (recs.empty())
         return kResultFalse;
+    // a project saved by 0.8.38 or older may hold the Virus' report of its rate: sent back it switched the Virus' clock
+    // at every load (E445). Gone here, so the next save is clean too
+    if (int clock = drop_system_clock_globals(recs); clock && out_)
+        out_->log("Virus TI native: %d System Clock setting(s) in the project ignored\n", clock);
     {
         std::lock_guard<std::mutex> lk(undo_mu_);
         undo_.clear(); // another project: the steps belong to the one before

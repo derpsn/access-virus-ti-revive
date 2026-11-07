@@ -1,5 +1,6 @@
 // state.cpp - the plug-in's project state records and the meta parameter value mapping (see state.h)
 #include "model/state.h"
+#include <algorithm>
 #include <cmath>
 #include <cstring>
 
@@ -39,6 +40,19 @@ std::vector<uint8_t> build_container(const std::vector<std::vector<uint8_t>> &re
     for (int i = 0; i < 4; i++)
         d[4 + i] = (uint8_t)(n >> (24 - 8 * i));
     return d;
+}
+
+bool is_system_clock_global(const std::vector<uint8_t> &m)
+{
+    static const uint8_t head[7] = {0xF0, 0x00, 0x20, 0x33, 0x01, 0x10, 0x73};
+    return m.size() == 11 && !memcmp(m.data(), head, sizeof head) && m[8] >= 0x0F && m[8] <= 0x11 && m[10] == 0xF7;
+}
+
+int drop_system_clock_globals(std::vector<std::vector<uint8_t>> &recs)
+{
+    const size_t before = recs.size();
+    recs.erase(std::remove_if(recs.begin(), recs.end(), is_system_clock_global), recs.end());
+    return (int)(before - recs.size());
 }
 
 int upgrade_state_dumps(std::vector<std::vector<uint8_t>> &recs)

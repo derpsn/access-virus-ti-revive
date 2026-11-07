@@ -69,6 +69,45 @@ TEST(meta_mapping)
     CHECK(!client_to_meta(flat, 5, mv)); // not invertible
 }
 
+TEST(state_system_clock_globals_never_kept)
+{
+    // E445: a report of System Clock/Frequency saved with a project went back to the Virus at every load, its USB chip
+    // switched clock behind Core Audio's back. The original sends none of the three (E327)
+    const auto global = [](uint8_t part, uint8_t id, uint8_t v) {
+        return Bytes{0xF0, 0x00, 0x20, 0x33, 0x01, 0x10, 0x73, part, id, v, 0xF7};
+    };
+    CHECK(is_system_clock_global(global(0x00, 0x0F, 1))); // SA Freq
+    CHECK(is_system_clock_global(global(0x00, 0x10, 0))); // Frequency, what the project of E445 held
+    CHECK(is_system_clock_global(global(0x00, 0x11, 1))); // Mode
+    CHECK(is_system_clock_global(global(0x40, 0x10, 1))); // the same, as the Virus reports it with another part byte
+    // the neighbours and look-alikes stay
+    CHECK(!is_system_clock_global(global(0x00, 0x0E, 0)));
+    CHECK(!is_system_clock_global(global(0x00, 0x12, 0)));
+    CHECK(!is_system_clock_global(global(0x00, 0x40, 0))); // Local On
+    CHECK(!is_system_clock_global(global(0x00, 0x09, 1))); // USB IO configuration
+    Bytes multi = global(0x00, 0x10, 0);
+    multi[6] = 0x72; // page 0x72: a multi parameter with the same number
+    CHECK(!is_system_clock_global(multi));
+    const Bytes longer = {0xF0, 0x00, 0x20, 0x33, 0x01, 0x10, 0x73, 0x00, 0x10, 0x00, 0x00, 0xF7};
+    CHECK(!is_system_clock_global(longer));
+    Bytes other_maker = global(0x00, 0x10, 0);
+    other_maker[1] = 0x7D;
+    CHECK(!is_system_clock_global(other_maker));
+    CHECK(!is_system_clock_global({}));
+    CHECK(!is_system_clock_global({0xB0, 0x10, 0}));
+
+    // an old project: those records go, everything else stays in its order
+    const Bytes keep1 = global(0x00, 0x40, 0), keep2 = {0xB0, 7, 100}, keep3 = Bytes(524, 0x55);
+    std::vector<Bytes> recs = {keep1, global(0x00, 0x10, 0), keep2, global(0x00, 0x0F, 1), {}, keep3};
+    CHECK(drop_system_clock_globals(recs) == 2);
+    CHECK((recs == std::vector<Bytes>{keep1, keep2, {}, keep3}));
+    CHECK(drop_system_clock_globals(recs) == 0);
+    // through the container, as a saved project comes back
+    auto saved = parse_container(build_container({keep1, global(0x00, 0x10, 0)}));
+    CHECK(drop_system_clock_globals(saved) == 1);
+    CHECK((saved == std::vector<Bytes>{keep1}));
+}
+
 TEST(state_part_dumps_upgraded)
 {
     // E174: the Virus converts a version-9 part dump itself and resets the newer fields (Input Mode, unison,
