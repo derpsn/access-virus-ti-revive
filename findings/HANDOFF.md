@@ -1,8 +1,10 @@
 # HANDOFF
 
-## START HERE (2026-11-07 ~23:10, end of the day): round 0.8.39, branch `round-0.8.39`
+## START HERE (2026-11-07 ~23:30, end of the day): round 0.8.39, branch `round-0.8.39`
 
-Read this block first; where the paragraphs below differ, this is right. Pushed up to 9ca64a0; this HANDOFF and E452 local, push with `git push origin round-0.8.39:refs/heads/round-0.8.39`. origin/main unchanged at d906db7.
+Read this block first; where the paragraphs below differ, this is right. Everything PUSHED to origin/round-0.8.39 (this commit included), origin/main unchanged at d906db7. User: continue tomorrow.
+
+**First things tomorrow:** ask the user the open points below (Live Mode by ear is the quickest), then by the user's choice: Plugin Latency as a Control Center option, as the original most likely keeps it (E453), after fixing timing_mode so that N = 0 only drops the extra lead and keeps the stamps (failing test first); or a win10ref run of the original for the wire numbers (E453's open points, sync report after a Live Mode switch). REA: the user updated rea-agents to 6.8.0; Claude Code's registration still pins 6.7.0, Node is 24.21.0 (6.8.0 wants 24.22.1+), skill copy stale: the user may run `nvm install 24`, `npm install --global rea-agents@6.8.0`, `rea setup --client claude_code --skill-client claude_code --skill` and restart Claude Code; check REA works before the next static job.
 
 **Done today, all on the real Virus at the Mac:** E442 fixed (a project kept and resent System Clock/Frequency, E445-E447, Live and Logic); the live path behind the Control Center option `live-notes` (played notes 28-32 ms against 83-88, clips unchanged, E450); the note-off guard (E451); the `D` button (E451); Live Mode (E452, log only).
 
