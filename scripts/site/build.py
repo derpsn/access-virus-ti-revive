@@ -214,11 +214,11 @@ def page_landing(latest, releases, sums):
                          "<code>.msi</code>. Also when updating from 0.8.32 or older: TI Revive now reads only the "
                          "64-bit <code>Virus Control.dll</code>, and the setup replaces the 32-bit one older setups could copy.",
                          "Run it. It is not code-signed: <em>More info <span class='sep'>&rsaquo;</span> Run anyway</em>. Your Access installer "
-                         "is only unpacked, not installed.",
+                         "is only unpacked, not installed. Since 0.8.38 the installer really removes the Access driver packages, so the original Access software no longer works on that PC until you reinstall it. Unplug and replug the Virus after installing.",
                          "Connect the Virus, rescan plug-ins in your DAW and load <strong>TI Revive Virus "
                          "Control</strong>. The ASIO device <strong>TI Revive Virus Audio</strong> makes the Virus a "
                          "sound card."])
-    mac = os_card("macOS", "macOS 14.4 or newer, Apple Silicon and Intel", asset(latest, "-mac.zip"), None, sums,
+    mac = os_card("macOS", "macOS 14.4 or newer, Apple Silicon and Intel (no test on an Intel Mac so far)", asset(latest, "-mac.zip"), None, sums,
                   ["Unpack the zip and open <code>TI Revive.pkg</code> (not signed: right-click <span class='sep'>&rsaquo;</span> "
                    "<em>Open</em>).",
                    "Put your Access <code>.pkg</code> next to <code>Set up Access Virus TI files.command</code> and "
@@ -255,8 +255,8 @@ def page_landing(latest, releases, sums):
       <figcaption>TI Revive is not affiliated with Access Music or Kemper and contains no Access files.</figcaption>
     </figure>
     </div>
-    <p class="thanks">&#9749; <strong>Free, and it will stay free.</strong> Every change is tested on the real synth
-    on Windows, macOS and Linux, often back and forth between the three, and that takes a lot of evenings. If TI Revive
+    <p class="thanks">&#9749; <strong>Free, and it will stay free.</strong> Changes that touch the Virus are tested on the real synth,
+    on the systems the release notes name, often back and forth between the three, and that takes a lot of evenings. If TI Revive
     gives your Virus a second life and you'd like to say thanks, you can <a href="https://buymeacoffee.com/callmederpsn">buy me a coffee</a>.
     It is entirely optional; every feature works the same either way. A test report or a kind word helps just as much.</p>
   </div>
@@ -276,11 +276,11 @@ def page_landing(latest, releases, sums):
           notes on the grid.</li>
           <li>While it starts up or syncs banks, the original plug-in drops the notes you play and sends &ldquo;All Notes
           Off&rdquo;. TI Revive holds the notes back at start-up and pauses its bank sync while you play.</li>
-          <li>Owners reported drifting notes, a delay through the plug-in and sync errors over USB
+          <li>Owners reported drifting notes and sync errors over USB
           (<a href="https://gearspace.com/threads/fixing-access-virus-sync-issues.839737/">Gearspace</a>,
           <a href="https://forum.ableton.com/viewtopic.php?p=938076">Ableton forum</a>). TI Revive stamps every note
           on the Virus' own clock and reports its latency to the DAW: in our tests every note lands on the grid, within
-          0.01 to 0.33 ms (standard deviation).</li>
+          0.01 to 0.33 ms (standard deviation). The delay itself remains: about 90 ms at 44.1 kHz and 83 ms at 48 kHz at buffers up to 256 samples, 96 and 88 ms at 512 (measured on Linux). The DAW lines up what it plays from the timeline; notes you play live are heard with that delay.</li>
           <li>The original cannot export or freeze a Virus track faster than real time and shows a warning that
           offline rendering is not supported (<a href="https://www.kvraudio.com/forum/viewtopic.php?p=1599326">KVR</a>,
           <a href="https://zynewave.com/topic/realtime-bounce/">Zynewave forum</a>). TI Revive notices an offline
@@ -338,7 +338,7 @@ def page_landing(latest, releases, sums):
     {downloads_line(releases)}
     <div class="needs">
       <div><b>Synth</b><span>Virus TI and TI2: Desktop, Polar, Keyboard, and the TI Snow</span></div>
-      <div><b>DAW</b><span>Any VST3 host; Audio Unit for Logic and GarageBand</span></div>
+      <div><b>DAW</b><span>VST3 hosts; Audio Unit for Logic and GarageBand. Tested by us: Ableton Live, REAPER, Logic Pro, GarageBand</span></div>
       <div><b>Outputs</b><span>USB 1 and 2, USB 3 if you switch it on in PATCH UTILITY <span class='sep'>&rsaquo;</span> Preferences</span></div>
       <div><b>Not included</b><span>Firmware or OS updates for the Virus, or anything else that writes its flash.
       On purpose.</span></div>
@@ -349,7 +349,7 @@ def page_landing(latest, releases, sums):
 <section class="block" id="how">
   <div class="wrap">
     <h2>How it works</h2>
-    <p class="intro">The plug-in talks to the Virus directly over USB, so there is no MIDI port to set up and no Access driver left on your system.</p>
+    <p class="intro">The plug-in talks to the Virus directly over USB, so the plug-in needs no MIDI port and no Access driver.</p>
     <div class="steps">
       <div><h3>Install TI Revive</h3><p>One installer per system. It sets up the USB access and puts the plug-in where
       your DAW looks for it.</p></div>
@@ -374,7 +374,7 @@ def page_landing(latest, releases, sums):
       <tbody>
         <tr><th>TI2 Desktop</th><td class="st ok">tested</td><td class="st ok">tested</td><td class="st ok">tested</td></tr>
         <tr><th>TI Snow</th><td class="st no">no report yet</td><td class="st rep">works for users</td>
-          <td class="st no">no report yet</td></tr>
+          <td class="st rep">one report, with problems</td></tr>
         <tr><th>Polar</th><td class="st no">no report yet</td><td class="st rep">works for users</td>
           <td class="st no">no report yet</td></tr>
         <tr><th>Desktop (TI1), Keyboard</th><td class="st no">no report yet</td><td class="st rep">works for users</td>
@@ -383,18 +383,18 @@ def page_landing(latest, releases, sums):
     </table>
     <ul class="limits">
       <li>The installers are not signed, so Windows and macOS ask once before they run them.</li>
-      <li>The keys of a Keyboard or Polar cannot be recorded in a DAW yet. The plug-in switches Local off, as the
-      original does, so the keys and wheels are silent until you set Local to On in CONFIG on the Virus.</li>
+      <li>On Windows and Linux the keys of a Keyboard or Polar cannot be recorded in a DAW yet. On macOS they can, through the MIDI input &ldquo;Virus TI Synth&rdquo; (since 0.8.38; by user reports, our Desktop has no keys). The plug-in switches Local off, as the
+      original does; without that input the keys and wheels are silent until you set Local to On in CONFIG on the Virus.</li>
+      <li>Dense projects: with one patch (Main LD) on three channels, turning the filter down made notes drop out; muting the other tracks clears it. Cause not known, not compared with the original yet.</li>
     </ul>
     <div class="testing">
       <div><h3>Automated tests</h3><p>{TESTS} unit tests run with every release build on Windows and Linux. They
-      cover {COVERAGE} of the lines of the core library: the USB protocol, the device access, the editor and the reader
-      for the Access files (measured {COVERAGE_DATE}).</p></div>
+      covered {COVERAGE} of the lines of the core library when last measured, on {COVERAGE_DATE}, with fewer tests than today: the USB protocol, the device access, the editor and the reader
+      for the Access files.</p></div>
       <div><h3>On the synth</h3><p>Changes that touch the Virus are tried on our TI2 Desktop before a release; the
       release notes say on which systems and in which DAWs.</p></div>
       <div><h3>Your reports</h3><p>The soft knobs (0.8.7, 0.8.8), the third USB output (0.8.9), knobs on the Virus in
-      Ableton's Configure mode (0.8.29) and the missing mod matrix destinations (0.8.30) were fixed after a user's
-      report. <a href="#support">Bug reports</a> and <a href="{GH}/issues/new?template=test_report.yml">test
+      Ableton's Configure mode (0.8.29) the missing mod matrix destinations (0.8.30), and the Snow on Linux, the MIDI input on macOS and the driver removal (0.8.38) came from users' reports. <a href="#support">Bug reports</a> and <a href="{GH}/issues/new?template=test_report.yml">test
       reports</a> from other setups show us what to fix next.</p></div>
     </div>
   </div>
@@ -427,7 +427,7 @@ def page_landing(latest, releases, sums):
       <details><summary>Three separate outputs (USB 3)</summary>
       <p>PATCH UTILITY <span class='sep'>&rsaquo;</span> Preferences <span class='sep'>&rsaquo;</span> &ldquo;Input and Output Configuration&rdquo; = &ldquo;3 Outs / No
       Input&rdquo;. Then a part's output can be &ldquo;USB3 L+R&rdquo; and its sound comes out of the plug-in's Out 3.
-      In Ableton: an audio track with <em>Audio From</em> = the Virus track, <em>Out 3</em>, <em>Monitor In</em>.</p>
+      In Ableton: an audio track with <em>Audio From</em> = the Virus track, <em>Out 3</em>, <em>Monitor In</em>. In Logic: insert the plug-in as Multi-Output, set &ldquo;3 Outs / No Input&rdquo;, and add the extra channel strips with the + in the Mixer. Checked on rc3 with a TI2 Desktop and the Audio Unit, by ear and Logic's meters; not on a Snow.</p>
       </details>
       <details><summary>Process audio through the Virus (sidechain input)</summary>
       <p>Like the original, the plug-in can send audio from your DAW into the Virus: set &ldquo;Input and Output Configuration&rdquo; to &ldquo;3 Outs / 1 Input&rdquo;, and on the FX 1 page set a part's Input Mode to Static (always on) or Dynamic (played with notes) and Select to L + R. Then send an audio track to the plug-in's sidechain input; the part's filters and effects process it. In REAPER, give the Virus track 4 channels and send the audio to channels 3/4 (check in the pin connector that they feed Sidechain 1/2). In Ableton Live, pick the audio track in the device's Sidechain section. In this mode the Virus does not work as a sound card for your computer. Tested on Linux (REAPER), macOS (Ableton Live 12) and Windows 11 (Ableton Live, in a VM and on a real PC).</p></details>
@@ -594,12 +594,20 @@ def features_section():
         <li>Audio from your DAW through the filters and effects of the Virus (sidechain input), as in the original.</li>
         <li>The REMOTE page (since 0.8.22): the Virus' remote templates with their names, knob names and MIDI strings, the original's knob template list, template files to load and save, sent to the Virus like the original.</li>
         <li>The original's sync error message, shown when the Virus reports late notes while your DAW plays.</li>
+        <li>The keys of a Keyboard or Polar on macOS (since 0.8.38): TI Revive offers a MIDI input &ldquo;Virus TI Synth&rdquo; while the plug-in or the Control Center is open. Choose it as the MIDI input of the track and arm it. Not tested by us: our TI2 Desktop has no keys. By user reports: notes, pitch bend and mod wheel recorded on a TI1 Keyboard (Ableton Live 12.3.7) and a TI2 Polar.</li>
+        <li>Setup Tips for Your DAW in the ? menu (since 0.8.38): opens by itself the first time for a DAW and for a point not read before. Seen in REAPER on Linux; no test on Windows or macOS on record yet.</li>
+        <li>In Logic, Plug-in Latency Compensation must be on. With it off, TI Revive and a Logic instrument played about 100 ms apart; with it on they were in sync by ear, and an export measured at most 0.42 ms apart. Logic warns when you turn it off.</li>
+        <li>The Virus leaves remote mode when the plug-in closes, as with the original (since 0.8.38). Tested on Linux with a TI2 Desktop; the effect on a Virus with keys is not tested.</li>
+        <li>One bad reply no longer ends a bank sync (since 0.8.38): a bank info of the wrong size or a dump that does not match it is asked for again, up to 3 times. The retry is covered by unit tests; on our TI2 Desktop only the normal sync has run with it.</li>
+        <li>Linux: notes no longer get later in long sessions (since 0.8.38). From clock drift, the broker added 30 ms about every 22 minutes on our TI2, and notes stayed late until the plug-in restarted. Measured with the fix past that point. Linux only: macOS and Windows take their timing from the device, by reading the code.</li>
+        <li>A crash when the plug-in closes just as the Virus connects is fixed (since 0.8.38): 3 hits before, 25 of 25 clean after, on Linux.</li>
+        <li>The numbers 100 to 127 in the browser no longer touch the names (since 0.8.38, issue #28).</li>
       </ul>
       <h4>In the editor</h4>
       <ul>
         <li>The LCD shows the control under the mouse (since 0.8.34), as in the original: its name, its value, the value stored in the patch in brackets, and the part.</li>
         <li>A help mode: the ? menu's Explain the Controls explains every control, and why a greyed-out one is inactive.</li>
-        <li><strong>The ? menu.</strong> Since 0.8.36 the ? at the bottom right opens a menu (the original's lists its manuals): Explain the Controls (the help mode above), the TI Revive website, Report a Problem (the GitHub issues), Save Logs for a Bug Report (one text file with the system, the versions and the ends of the plug-in and broker logs, home folder and user name replaced), the detailed log for the next start, and Panic, which sends sustain off and all notes off on all 16 channels.</li>
+        <li><strong>The ? menu.</strong> Since 0.8.36 the ? at the bottom right opens a menu (the original's lists its manuals): Explain the Controls (the help mode above), Setup Tips for Your DAW (since 0.8.38), the TI Revive website, Report a Problem (the GitHub issues), Save Logs for a Bug Report (one text file with the system, the versions and the ends of the plug-in and broker logs, home folder and user name replaced), the detailed log for the next start, and Panic, which sends sustain off and all notes off on all 16 channels.</li>
         <li>The original's start-up page, &ldquo;Starting up&rdquo; with its filling ring, while a project opens; &ldquo;Syncing memory with Virus&rdquo; only when the plug-in really reads banks from the Virus (since 0.8.27).</li>
         <li>Editor sizes from 100 to 200 %. On larger sizes and Retina screens each image is enlarged once with a
         sharp filter, in memory only.</li>
@@ -728,7 +736,7 @@ def features_section():
       <div class="stick"><h3>Problems found on the hardware</h3>
       <p>Behaviour of the Virus that is not documented anywhere, found by testing and, since 0.8.26, by reading its own firmware.</p></div>
       <ul>
-        <li>A flood of parameter changes can hang the audio of the Virus until it is switched off. Automation is limited to
+        <li>A flood of parameter changes can hang the audio of the Virus until it is switched off, and so did one extreme note flood in a test of ours. Automation is limited to
         250 messages per second and merged per parameter; a 4-minute full-load test passes.</li>
         <li>The Virus releases every sounding note about a second after the last Active Sensing message it received. Since 0.8.26 the plug-in sends one every 300 ms, like the original; before, it sent one at the start only.</li>
         <li>The Virus keeps time-stamped MIDI in a small buffer without an overflow check. Since 0.8.26 the plug-in keeps its time-stamped MIDI well under that buffer's limit; normal playing and automation never come near it.</li>
@@ -822,7 +830,7 @@ def page_changelog_landing(releases):
 SHARED_IMAGES = ["control-center.png", "control-center-nerd-mode.png", "plugin-help-mode.png", "plugin-help-inactive.png",
                  "plugin-menus.png", "plugin-library-drop.png",
                  "plugin-section-lock.png", "plugin-edit-menu.png", "plugin-help-menu.png"]
-TESTS = 516 # unit tests in native/tests (vtitests), as of 2026-11-01 (0.8.37 round)
+TESTS = 572 # unit tests in native/tests (vtitests), as of 2026-11-07 (0.8.38 round)
 
 # Important information shown at the top of the page, newest first (empty list = no box). The README starts with the
 # same text ("Important" block), keep both identical. Remove an entry when it no longer matters to users.

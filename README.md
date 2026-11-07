@@ -6,7 +6,7 @@
 
 Website with downloads, features and help: **[derpsn.github.io/access-virus-ti-revive](https://derpsn.github.io/access-virus-ti-revive/)**
 
-> ☕ **Free, and it will stay free.** Every change is tested on the real synth on Windows, macOS and Linux, often
+> ☕ **Free, and it will stay free.** Changes that touch the Virus are tested on the real synth, on the systems the release notes name, often
 > back and forth between the three, and that takes a lot of evenings. If TI Revive gives your Virus a second life and
 > you'd like to say thanks, you can [buy me a coffee](https://buymeacoffee.com/callmederpsn). It is entirely
 > optional; every feature works the same either way. A test report or a kind word helps just as much.
@@ -65,7 +65,7 @@ contains no Access material. No kernel code of its own is installed.
 - **Coming from 0.7.x:** the classic plug-in "Virus TI (TI Revive)" (the original Access plug-in in a wrapper) is
   replaced. Projects saved with it open with "TI Revive Virus Control" (same plug-in ID). The Access software that
   earlier versions installed is offered for removal; the files the plug-in needs stay.
-- **Virus TI Snow:** works with the native plug-in according to user reports (macOS, 0.8.3 and later:
+- **Virus TI Snow:** on Linux since 0.8.38 ([issue #26](https://github.com/derpsn/access-virus-ti-revive/issues/26), pull request #27), one owner's Snow connects, plays notes and syncs parameters, on a release candidate; they also report sync messages with clicks, one session with no sync marker and notes that sound on after Stop. Otherwise it works with the native plug-in according to user reports (macOS, 0.8.3 and later:
   sound, both USB outputs, parameters; with 0.8.20 also USB 3 and the soft knobs); not tested by us - we have no
   Snow. Since 0.8.35 there is also a Snow plug-in, "TI Revive Virus Control (Snow)": like the original's own Snow
   plug-in it shows the Snow's editor with its 4 parts and uses the Snow's files from your Access installer, as VST3
@@ -93,13 +93,13 @@ contains no Access material. No kernel code of its own is installed.
 
 ### Windows 11
 
-Requirements: Windows 11 x64 (TI Revive also runs on Windows 10, but there the original Access drivers still
-work and are the simpler choice), an Access Virus TI on USB, your own **Access "Virus TI Software Suite"
+Requirements: Windows 11 x64 (TI Revive also runs on Windows 10. The original Access drivers still work there
+and are the simpler choice, but installing TI Revive removes them, see below), an Access Virus TI on USB, your own **Access "Virus TI Software Suite"
 64-bit installer** (`.msi`, e.g. 5.1.7), a VST3 host.
 
 1. You do **not** need to install the Access software: TI Revive only unpacks the files its plug-in needs. If the
    Access software is already installed (TI Revive 0.7 installed it), that is fine - TI Revive offers to remove
-   it and keeps those files.
+   it and keeps those files. Since 0.8.38 the installer really removes the Access driver packages, so the original Access software no longer works on that PC until you reinstall it. Unplug and replug the Virus after installing.
 2. Put `TI-Revive-<version>-setup.exe` and the Access `.msi` in the same folder (or in *Downloads*).
    The `.msi` of the same release is the identical installer without the `setup.exe` wrapper; use either one
    (if double-clicking an `.msi` does nothing on your PC, take the `setup.exe`).
@@ -119,7 +119,7 @@ shortcuts). Your patch libraries and the Access files stay.
 
 ### macOS
 
-Requirements: macOS 14.4 or newer (Apple Silicon or Intel), an Access Virus TI on USB, your own **Access "Virus TI
+Requirements: macOS 14.4 or newer (Apple Silicon or Intel; no test on an Intel Mac so far), an Access Virus TI on USB, your own **Access "Virus TI
 Software Suite" installer** (`.pkg`, e.g. 5.1.7) and a VST3 or Audio Unit host. No Rosetta needed: the plug-in "TI
 Revive Virus Control" runs natively as VST3 and as Audio Unit.
 
@@ -203,7 +203,7 @@ CC reset overrides*, or switch the reset on stop off (the override is tested wit
 it: in the plug-in, open PATCH UTILITY → Preferences and set "Input and Output Configuration" to "3 Outs / No Input".
 Then a part's output can be "USB3 L+R" (greyed out before), and its sound comes out of the plug-in's **Out 3**. The
 setting is kept for this computer and sent to the Virus at every start; "2 Outs / No Input" switches it back.
-"3 Outs / 1 Input" gives USB 3 as well and sends the plug-in's sidechain input into the Virus (below).
+"3 Outs / 1 Input" gives USB 3 as well and sends the plug-in's sidechain input into the Virus (below). In Logic: insert the plug-in as Multi-Output, set "3 Outs / No Input", and add the extra channel strips with the + in the Mixer. Checked on rc3 with a TI2 Desktop and the Audio Unit, by ear and Logic's meters; not on a Snow.
 
 **Process audio through the Virus (sidechain input).** Like the original, the plug-in can send audio from your DAW
 into the Virus: set "Input and Output Configuration" to "3 Outs / 1 Input", and on the FX 1 page set a part's Input
@@ -231,7 +231,7 @@ control says why, for example "Inactive now: Chorus Type is Off." or "depends on
 
 **Libraries by drag and drop.** Drag a library's .mid or .syx file from Explorer, Finder or your file manager onto one of the two browser panes (since 0.8.35, our own addition: the original takes no file drops). While you drag, the LCD says "Drop to add a library". The file is copied into Personal Libraries (Access Music/Virus TI/Patches in your Documents folder), never over an existing file, and the pane you dropped it on shows it at once; a .syx is saved as a .mid so the original finds it too. Dropping the same library again only shows it. Tested on Linux (REAPER) and Windows 11 (VM, Ableton Live 11); not tested on macOS yet.
 
-**The ? menu.** Since 0.8.36 the ? at the bottom right opens a menu (the original's lists its manuals): Explain the Controls (the help mode above), the TI Revive website, Report a Problem (the GitHub issues), Save Logs for a Bug Report (one text file with the system, the versions and the ends of the plug-in and broker logs, home folder and user name replaced), the detailed log for the next start, and Panic, which sends sustain off and all notes off on all 16 channels.
+**The ? menu.** Since 0.8.36 the ? at the bottom right opens a menu (the original's lists its manuals): Explain the Controls (the help mode above), Setup Tips for Your DAW (since 0.8.38), the TI Revive website, Report a Problem (the GitHub issues), Save Logs for a Bug Report (one text file with the system, the versions and the ends of the plug-in and broker logs, home folder and user name replaced), the detailed log for the next start, and Panic, which sends sustain off and all notes off on all 16 channels.
 
 <p align="center">
   <img src="docs/images/plugin-help-menu.png" alt="The ? menu: Explain the Controls, website, Report a Problem, Save Logs, Detailed Log, Panic" width="680"><br>
@@ -338,6 +338,13 @@ same with Access' own driver.
 - **REMOTE page** (since 0.8.22): the Virus' remote templates with their names, knob names and MIDI strings, the
   original's knob template list, template files to load and save, sent to the Virus like the original.
 - **The original's sync error message**, shown when the Virus reports late notes while your DAW plays.
+- Setup Tips for Your DAW in the ? menu (since 0.8.38): opens by itself the first time for a DAW and for a point not read before. Seen in REAPER on Linux; no test on Windows or macOS on record yet.
+- In Logic, Plug-in Latency Compensation must be on. With it off, TI Revive and a Logic instrument played about 100 ms apart; with it on they were in sync by ear, and an export measured at most 0.42 ms apart. Logic warns when you turn it off.
+- The Virus leaves remote mode when the plug-in closes, as with the original (since 0.8.38). Tested on Linux with a TI2 Desktop; the effect on a Virus with keys is not tested.
+- One bad reply no longer ends a bank sync (since 0.8.38): a bank info of the wrong size or a dump that does not match it is asked for again, up to 3 times. The retry is covered by unit tests; on our TI2 Desktop only the normal sync has run with it.
+- Linux: notes no longer get later in long sessions (since 0.8.38). From clock drift, the broker added 30 ms about every 22 minutes on our TI2, and notes stayed late until the plug-in restarted. Measured with the fix past that point. Linux only: macOS and Windows take their timing from the device, by reading the code.
+- A crash when the plug-in closes just as the Virus connects is fixed (since 0.8.38): 3 hits before, 25 of 25 clean after, on Linux.
+- The numbers 100 to 127 in the browser no longer touch the names (since 0.8.38, issue #28).
 - **One plug-in instance per synth.** Virus Control is designed that way (it controls all 16 parts);
   a second instance shows "Virus unavailable" and takes over when the first one is removed.
 
@@ -424,7 +431,7 @@ the Virus' flash and can brick it. Details: [native/docs/controlcenter.md](nativ
 - **Windows MIDI ports** ("Virus TI MIDI"/"Virus TI Synth") of the old driver are not provided, so on Windows the keys of a Keyboard or Polar cannot be recorded in a DAW yet.
 
 **macOS**
-- **The keys of a Keyboard or Polar** (since 0.8.38): TI Revive offers a MIDI input "Virus TI Synth", as the Access driver did. Choose it as the MIDI input of the track with the plug-in and arm it: the keys, wheels and pedals reach the DAW, and you can record them. The Virus plays them through the track, because Local is off while it works with a plug-in, as with the original. The port exists while the plug-in or the Control Center is open. Virus to DAW only: no other program can send to the Virus this way. Not yet tested on a Virus with keys.
+- **The keys of a Keyboard or Polar** (since 0.8.38): TI Revive offers a MIDI input "Virus TI Synth", as the Access driver did. Choose it as the MIDI input of the track with the plug-in and arm it: the keys, wheels and pedals reach the DAW, and you can record them. The Virus plays them through the track, because Local is off while it works with a plug-in, as with the original. The port exists while the plug-in or the Control Center is open. Virus to DAW only: no other program can send to the Virus this way. Not tested by us: our TI2 Desktop has no keys. By user reports: notes, pitch bend and mod wheel recorded on a TI1 Keyboard (Ableton Live 12.3.7) and a TI2 Polar.
 
 - **Microphone permission** for your DAW is required (see above); without it the plug-in stays silent.
 - **One DAW at a time** uses the Virus (as with the Access driver): the plug-in in a second DAW or GarageBand next
@@ -450,11 +457,11 @@ Revive rebuilds that plug-in, and we want to fix its problems instead of copying
   notes on the grid.
 - While it starts up or syncs banks, the original plug-in drops the notes you play and sends "All Notes Off". TI
   Revive holds the notes back at start-up and pauses its bank sync while you play.
-- Owners reported drifting notes, a delay through the plug-in and sync errors over USB
+- Owners reported drifting notes and sync errors over USB
   ([Gearspace](https://gearspace.com/threads/fixing-access-virus-sync-issues.839737/),
   [Ableton forum](https://forum.ableton.com/viewtopic.php?p=938076)). TI Revive stamps every note on the Virus' own
   clock and reports its latency to the DAW: in our tests every note lands on the grid, within 0.01 to 0.33 ms
-  (standard deviation).
+  (standard deviation). The delay itself remains: about 90 ms at 44.1 kHz and 83 ms at 48 kHz at buffers up to 256 samples, 96 and 88 ms at 512 (measured on Linux). The DAW lines up what it plays from the timeline; notes you play live are heard with that delay.
 - The original cannot export or freeze a Virus track faster than real time and shows a warning that offline rendering
   is not supported ([KVR](https://www.kvraudio.com/forum/viewtopic.php?p=1599326),
   [Zynewave forum](https://zynewave.com/topic/realtime-bounce/)). TI Revive notices an offline render and runs it at
@@ -528,8 +535,9 @@ hardware (TI2 Desktop) - details and raw numbers in [`findings/evidence.md`](fin
   no note hangs.
 - **Automation rate limit** (250 messages/s, coalesced per parameter): unthrottled parameter floods hung the Virus'
   audio until a power cycle within 4 minutes; with the limit a 4-minute full-load test (16 channels of notes + 32
-  automation lanes) passes.
-- Checked with ThreadSanitizer and AddressSanitizer (one race in the broker connection found and fixed); 516 unit
+  automation lanes) passes. One extreme note flood in a test of ours hung it too.
+- **Dense projects:** with one patch (Main LD) on three channels, turning the filter down made notes drop out; muting the other tracks clears it. Cause not known, not compared with the original yet.
+- Checked with ThreadSanitizer and AddressSanitizer (one race in the broker connection found and fixed); 572 unit
   tests run with every release build on Windows and Linux, plus two end-to-end tests on Linux in a virtual display
   (two editors of a duplicated track; the Control Center's window and close button).
 
@@ -704,10 +712,11 @@ measurements: [`findings/design-linux.md`](findings/design-linux.md), evidence E
 | Timing: sample-accurate, latency reported to the DAW, any sample rate | done: 0.01-0.33 ms jitter, drift -72 to 0 ppm (E139-E143, E209, E216, E278, E289, E308, E319) |
 | ASIO sound card "TI Revive Virus Audio" (Windows, 6 in / 2 out, no Access driver) | done: clean on a real PC |
 | Installers: Access software only unpacked (Windows/Linux), clean-up of earlier versions | done |
-| Virus TI Snow | works per user reports (macOS, 0.8.3+; USB 3 and soft knobs with 0.8.20); not tested by us |
+| Virus TI Snow | works per user reports (macOS, 0.8.3+; USB 3 and soft knobs with 0.8.20); Linux since 0.8.38: one report, with problems; not tested by us |
 | Audio Unit (AUv2) of the native plug-in, with the classic Audio Unit's codes (its Logic / GarageBand projects open) | done: passes `auval`, tested in GarageBand |
 | Control Center app + command line `tirevive-cc` (device info, backup, restore into RAM, library export) | done: CLI tested on macOS (M3), app on Linux, both with a TI2 |
 | Control Center: restore into RAM | done in 0.8.30: RAM only, tested with a TI2 on Linux, Windows 11 (VM) and macOS (E313, E314); flash functions and OS update: never |
+| MIDI input for the keys, macOS | done in 0.8.38: by user reports, not tested by us |
 | Windows MIDI ports | open |
 | **Windows** | |
 | WinUSB driver package, broker with USB audio, unplug recovery, Windows 11 with memory integrity (HVCI) | done |
@@ -780,7 +789,7 @@ first on Linux with libusb, then on Windows 10 and Windows 11 VMs, and on a MacB
 the macOS version. For 0.8.0 the plug-in itself was rewritten (`native/`): its UI is drawn from the original's layout
 and skin files at runtime, every protocol detail was measured on the synth (timing with recorded test patterns,
 read-backs of the Virus' memory), and parts that were first ported from the analysis were rewritten from documented
-behaviour with golden tests. `findings/evidence.md` lists almost 400 numbered observations, including the wrong turns and
+behaviour with golden tests. `findings/evidence.md` lists more than 430 numbered observations, including the wrong turns and
 their corrections.
 
 The reverse engineering and the code were done by derpsn together with Claude (Anthropic) as an
