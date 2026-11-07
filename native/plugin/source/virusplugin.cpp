@@ -70,6 +70,7 @@ static bool env_no_ping() // R5 test: the old stamping without sync ping / marke
 
 static const char *const USB_IO_PATH = "Global USB/Virus Control USB IO Configuration";
 static const std::string DM_PATH = "VirusControl/Direct Monitoring"; // the D button (directmon.h)
+static const std::string LIVE_MODE_PATH = "VirusControl/Live Mode", PLUGIN_LATENCY_PATH = "VirusControl/Plugin Latency";
 static const char *const SYNC_INFO_PATH = "Global USB/Sync Information Event"; // global 0x54 from the Virus (E205)
 
 // the USB IO configuration of this computer: VTI_IO_CONFIG (tests), else <plug-in folder>/usb-io, else 0
@@ -798,7 +799,8 @@ void DeviceOut::run()
                 st = audio_.newest_frame();
             int64_t raw = st;
             bool ping = m.size() == 11 && m[6] == 0x73 && m[8] == 0x22;
-            const bool inherits = !m.empty() && inherits_stamp(live_notes.load(std::memory_order_relaxed), m[0]);
+            const bool inherits = !m.empty() && !ping && (no_stamps.load(std::memory_order_relaxed) ||
+                                                          inherits_stamp(live_notes.load(std::memory_order_relaxed), m[0]));
             bool live_stamped = false; // a real live stamp, not "no stamp yet"
             if (int64_t mk = marker.load(); st >= 0 && mk >= 0 && !ping && !inherits) {
                 if (is_live && audio_ok()) { // no lead, no safety net (stamprule.h)
@@ -1011,6 +1013,7 @@ tresult PLUGIN_API VirusPlugin::initialize(FUnknown *context)
 #endif
         if (const char *a = getenv("VTI_NATIVE_A"))
             timing_a_ = atoi(a);
+        a_now_ = timing_a_;
     }
     out_ = std::make_unique<DeviceOut>();
     out_->lead = lead();
@@ -1291,6 +1294,31 @@ int VirusPlugin::state_part(const std::string &path, int part) const
 {
     const Parameter *p = dev_.find(path);
     return part > 15 || (p && p->part == "none") ? -1 : part;
+}
+
+// Live Mode / Plugin Latency in force (stamprule.h timing_mode): the lead and the F5s change, the host gets the new
+// latency, and the Virus gets B0 78 00 as from the original at every switch (E449). Only while the transport is
+// stopped by the editor's condition, as in the original; a latency change moves the read position, so it clicks once
+void VirusPlugin::apply_timing_mode()
+{
+    const bool live = ui_value(LIVE_MODE_PATH, -1) == 1;
+    int n = ui_value(PLUGIN_LATENCY_PATH, -1);
+    if (n < 0 || n > 3)
+        n = 3;
+    const TimingMode m = timing_mode(live, n, timing_a_);
+    if (m.a == a_now_.load() && m.stamps == stamps_now_)
+        return;
+    a_now_ = m.a;
+    stamps_now_ = m.stamps;
+    if (out_) {
+        out_->lead = lead();
+        out_->no_stamps = !m.stamps;
+        out_->send({0xB0, 0x78, 0x00});
+        out_->log("Virus TI native: timing: lead %d frames, %s (Live Mode %s, Plugin Latency %d)\n", m.a,
+                  m.stamps ? "time stamps" : "no time stamps", live ? "on" : "off", n);
+    }
+    if (componentHandler)
+        componentHandler->restartComponent(kLatencyChanged);
 }
 
 // "Output Select Control2" (which 0) or "Control3" (1) as this model names it: the Snow has "pr" names (E449)
@@ -2432,6 +2460,17 @@ void VirusPlugin::ui_set(const std::string &path, int part, int value)
                 arp_action(part, b.second);
             return;
         }
+    if (path == LIVE_MODE_PATH || path == PLUGIN_LATENCY_PATH) { // the original's timing switches (stamprule.h)
+        // Live Mode only while stopped, as the original's editor allows it: enforced here too, not only by greying
+        if (path == LIVE_MODE_PATH && host_playing_.load(std::memory_order_relaxed)) {
+            ui_dirty_ = true;
+            return;
+        }
+        ui_state_set(path, value);
+        ui_dirty_ = true;
+        apply_timing_mode();
+        return;
+    }
     if (path == DM_PATH) { // the D button: the part's outputs to Out1 L+R and back, nothing of its own (directmon.h)
         direct_monitoring(part, value != 0);
         return;

@@ -98,6 +98,25 @@ inline bool inherits_stamp(bool option, uint8_t status)
     return option && status >= 0xA0 && status < 0xF0;
 }
 
+// Live Mode and Plugin Latency, the original's switches (0x18002e170, E449). Plugin Latency N = 0..3 sets the lead to
+// N x 1024 frames, 3 (the default) being the 3072 we use anyway. Live Mode on, or N = 0, sends no lead and no F5 at all,
+// sequenced notes too, and the original then reports only 2X; we report what an unstamped note really takes instead
+// (LIVE_A: about 512 frames from send to the ring, measured E450), so the host's alignment stays true (the user's
+// choice, 2026-11-07). Plugin Latency counts only with Live Mode off, as in the original (0x18002e2ca).
+constexpr int LIVE_A = 512;
+struct TimingMode {
+    int a;       // the lead A in frames
+    bool stamps; // F5 time stamps sent
+};
+inline TimingMode timing_mode(bool live_mode, int plugin_latency, int base_a)
+{
+    if (live_mode || plugin_latency == 0)
+        return {LIVE_A, false};
+    if (plugin_latency == 1 || plugin_latency == 2)
+        return {plugin_latency * 1024, true};
+    return {base_a, true};
+}
+
 // The lead A (frames from the newest ring frame to a note's sound): the original uses 3072 on every host (E364:
 // forced at every start, = its reported latency). Before 0.8.35 TI Revive used 1024 on Linux/macOS, which Logic's
 // uneven block timing overran (late notes, the sync error, E363); 'classic' keeps that for comparison.

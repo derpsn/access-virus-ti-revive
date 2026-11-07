@@ -77,7 +77,8 @@ const Entry ENTRIES[] = {
      "settings when you load another patch, in the browser or on the Virus. Right-click for more: all sections, all "
      "parts and presets per page. Locks are not saved with the project, like in the original."},
     {"LockView/Part Lock Indicator", "Lock indicator", "This part has locked sections."},
-    {"VirusControl/Live Mode", nullptr, "A switch of the original Virus Control. Not used by TI Revive yet."},
+    {"VirusControl/Live Mode", "Live mode", "For playing live: every note goes to the Virus at once, without the plug-in's lead, sequenced notes too, so they are no longer exact to the sample. The plug-in reports the smaller latency to your DAW. Only while the transport is stopped."},
+    {"VirusControl/Plugin Latency", "Latency", "How far ahead the plug-in sends notes to the Virus: the default is the safest. Smaller values lower the latency for everything, Minimal works like live mode. Takes effect with live mode off."},
     {"VirusControl/Direct Monitoring", "Direct monitoring", "Puts this part on the Virus' analog output Out1 L+R, so you hear it there; off gives the part its outputs back. One part at a time. Choosing another output for the part ends it. Not saved with the project, like in the original."},
     {"VirusControl/Access Website", nullptr, "A link to the manufacturer's website (not used by TI Revive)."},
     {"VirusControl/Display Parameter", "Display", "The display shows the parameter you touched last, its value and the part. It changes when you move a knob here or on the Virus."},

@@ -104,3 +104,44 @@ TEST(blockevents_keeps_the_live_mark_through_the_sort)
     CHECK(!e.ev[1].live);
     CHECK(!e.ev[2].live);
 }
+
+TEST(timing_mode_normal_keeps_the_lead_and_stamps)
+{
+    // Plugin Latency 3 (the default) = the lead we use today, with stamps
+    const TimingMode m = timing_mode(false, 3, 3072);
+    CHECK_EQ(m.a, 3072);
+    CHECK(m.stamps);
+    CHECK_EQ(timing_mode(false, 3, 1024).a, 1024); // timing-classic or VTI_NATIVE_A stay the base
+}
+
+TEST(timing_mode_plugin_latency_is_n_times_1024)
+{
+    // the original: N x 1024 frames (0x18002e170, E449)
+    CHECK_EQ(timing_mode(false, 1, 3072).a, 1024);
+    CHECK(timing_mode(false, 1, 3072).stamps);
+    CHECK_EQ(timing_mode(false, 2, 3072).a, 2048);
+    CHECK(timing_mode(false, 2, 3072).stamps);
+}
+
+TEST(timing_mode_live_and_minimal_send_no_stamps)
+{
+    // Live Mode on, or Plugin Latency 0 (Minimal): no lead and no F5, as in the original; A = what an unstamped note
+    // really takes to sound, measured (E450), so the reported latency stays true (user's choice A, 2026-11-07)
+    for (const TimingMode m : {timing_mode(true, 3, 3072), timing_mode(true, 1, 3072), timing_mode(false, 0, 3072)}) {
+        CHECK_EQ(m.a, LIVE_A);
+        CHECK(!m.stamps);
+    }
+    CHECK_EQ(LIVE_A, 512);
+}
+
+TEST(timing_mode_plugin_latency_only_counts_with_live_off)
+{
+    // the original applies Plugin Latency only with Live Mode off (0x18002e2ca)
+    CHECK_EQ(timing_mode(true, 2, 3072).a, timing_mode(true, 3, 3072).a);
+}
+
+TEST(timing_mode_out_of_range_is_the_default)
+{
+    CHECK_EQ(timing_mode(false, -1, 3072).a, 3072);
+    CHECK_EQ(timing_mode(false, 7, 3072).a, 3072);
+}

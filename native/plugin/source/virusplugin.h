@@ -163,6 +163,7 @@ public:
     std::atomic<bool> stamp_floor{true};
     // the live path (stamprule.h, Control Center option live-notes, off by default)
     std::atomic<bool> live_notes{false};
+    std::atomic<bool> no_stamps{false}; // Live Mode / Plugin Latency Minimal: no F5 at all (stamprule.h timing_mode)
     std::atomic<double> live_ratio{1.0}; // Virus frames per host frame, for a live stamp
     static constexpr int64_t floor_min = 1024;
     // the newest ring frame that had sound on USB 1 / USB 2 (the ping waits for 1 s of silence, like the original)
@@ -733,7 +734,11 @@ private:
     // timing-classic.on next to diag.on gives the old A and no safety net, to compare; VTI_NATIVE_A overrides
     int timing_a_ = 3072; // set in initialize()
     bool timing_classic_ = false;
-    int timing_a() const { return timing_a_; }
+    // the lead in force: timing_a_, or what Live Mode / Plugin Latency make of it (stamprule.h timing_mode)
+    std::atomic<int> a_now_{3072};
+    bool stamps_now_ = true;
+    void apply_timing_mode();
+    int timing_a() const { return a_now_.load(std::memory_order_relaxed); }
     static int timing_s() { static const int s = getenv("VTI_NATIVE_S") ? atoi(getenv("VTI_NATIVE_S")) : 5000; return s; }
     int64_t lead() const { return timing_s() + timing_a(); }
     // the read position stays block + 640 - |timeline jitter (<= ~400)| behind the newest frame
