@@ -137,13 +137,20 @@ bool MemorySync::was_cancelled()
 
 std::vector<int> MemorySync::bank_info(int bank)
 {
-    Dump r = transact({0xF0, 0x00, 0x20, 0x33, 0x01, (uint8_t)dev_, 0x39, (uint8_t)bank, 0xF7}, {0x14, (uint8_t)bank});
-    if (r.size() != BANKINFO_SIZE)
-        return {};
-    std::vector<int> v(128);
-    for (int p = 0; p < 128; p++)
-        v[p] = r[9 + 2 * p] | r[10 + 2 * p] << 7;
-    return v;
+    // a reply of the wrong size is a packet lost on the way: ask again as single() does, one lost packet must not end
+    // the whole sync
+    for (int t = 0; t < 3; t++) {
+        Dump r = transact({0xF0, 0x00, 0x20, 0x33, 0x01, (uint8_t)dev_, 0x39, (uint8_t)bank, 0xF7}, {0x14, (uint8_t)bank});
+        if (r.size() == BANKINFO_SIZE) {
+            std::vector<int> v(128);
+            for (int p = 0; p < 128; p++)
+                v[p] = r[9 + 2 * p] | r[10 + 2 * p] << 7;
+            return v;
+        }
+        if (r.empty())
+            break;
+    }
+    return {};
 }
 
 Dump MemorySync::single(int bank, int program)
@@ -178,11 +185,19 @@ int MemorySync::sync_bank(int bank, Bank &cache, const std::function<void(int, b
         if (stale) {
             if (before_request && !before_request())
                 return -2;
-            Dump d = single(bank, p);
-            if (d.empty() && was_cancelled())
-                return -2;
-            if (d.empty() || RemoteDevice::single_fingerprint(d) != info[p])
-                return -1;
+            // a dump of the right size that does not match the bank info: ask again before giving up, bounded. A wrong
+            // dump is never cached.
+            Dump d;
+            for (int t = 0; t < 3; t++) {
+                if (t > 0 && before_request && !before_request())
+                    return -2;
+                d = single(bank, p);
+                if (d.empty() || RemoteDevice::single_fingerprint(d) == info[p])
+                    break;
+                d.clear();
+            }
+            if (d.empty())
+                return was_cancelled() ? -2 : -1;
             cache[p] = std::move(d);
             fetched++;
         }

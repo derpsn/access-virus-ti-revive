@@ -30,6 +30,8 @@ struct FakeVirus {
     MemorySync *sync = nullptr;
     std::vector<Bytes> requests;
     int corrupt = -1; // this program's dump comes back with a different fingerprint than bank info says
+    int corrupt_times = -1; // how many times it does; -1: always
+    int short_info = 0;     // this many bank info replies come back cut short (a packet lost on the way); -1: always
     std::function<bool(const Bytes &)> send()
     {
         return [this](const Bytes &m) {
@@ -38,6 +40,12 @@ struct FakeVirus {
                 return true;
             int bank = m[7];
             if (m[6] == 0x39) {
+                if (short_info != 0) {
+                    if (short_info > 0)
+                        short_info--;
+                    sync->feed({0xF0, 0x00, 0x20, 0x33, 0x01, 0x10, 0x14, (uint8_t)bank, 0x00, 0x01, 0xF7});
+                    return true;
+                }
                 Bytes r = {0xF0, 0x00, 0x20, 0x33, 0x01, 0x10, 0x14, (uint8_t)bank, 0x00};
                 for (int p = 0; p < 128; p++) {
                     int fp = RemoteDevice::single_fingerprint(ram[bank][p]);
@@ -49,7 +57,10 @@ struct FakeVirus {
                 sync->feed(r);
             } else if (m[6] == 0x30) {
                 int p = m[8];
-                sync->feed(p == corrupt ? fake_single(bank, p, 999) : ram[bank][p]);
+                const bool bad = p == corrupt && corrupt_times != 0;
+                if (bad && corrupt_times > 0)
+                    corrupt_times--;
+                sync->feed(bad ? fake_single(bank, p, 999) : ram[bank][p]);
             }
             return true;
         };
@@ -176,6 +187,76 @@ TEST(memsync_sync_bank_cancel_and_errors)
     v.corrupt = 2; // a reply that does not match the bank info: the sync stops instead of caching it
     CHECK_EQ(sync.sync_bank(1, cache), -1);
     CHECK(cache[2].empty());
+}
+
+// One lost packet must not end a sync: seen on the simulator's bridge (S048), not reported on a real unit. single()
+// already retried a dump of the wrong size; bank info did not, and a dump with the wrong fingerprint ended the sync.
+TEST(memsync_bank_info_retries_a_wrong_size_reply)
+{
+    FakeVirus v;
+    MemorySync sync(v.send());
+    v.sync = &sync;
+    v.short_info = 1;
+    CHECK_EQ(sync.bank_info(2).size(), 128u);
+    CHECK_EQ(v.requests.size(), 2u);
+}
+
+TEST(memsync_bank_info_gives_up_on_wrong_sizes)
+{
+    FakeVirus v;
+    MemorySync sync(v.send());
+    v.sync = &sync;
+    v.short_info = -1;
+    CHECK(sync.bank_info(2).empty());
+    CHECK_EQ(v.requests.size(), 3u); // bounded, like single()
+}
+
+TEST(memsync_sync_bank_survives_one_wrong_size_bank_info)
+{
+    FakeVirus v;
+    MemorySync sync(v.send());
+    v.sync = &sync;
+    Bank cache;
+    for (int p = 0; p < 128; p++)
+        cache[p] = v.ram[1][p] = fake_single(1, p, p);
+    v.short_info = 1;
+    CHECK_EQ(sync.sync_bank(1, cache), 0);
+}
+
+TEST(memsync_sync_bank_retries_a_wrong_fingerprint)
+{
+    FakeVirus v;
+    MemorySync sync(v.send());
+    v.sync = &sync;
+    for (int p = 0; p < 128; p++)
+        v.ram[1][p] = fake_single(1, p, p);
+    Bank cache;
+    for (int p = 0; p < 128; p++)
+        cache[p] = v.ram[1][p];
+    cache[2] = fake_single(1, 2, 500); // only this one is stale
+    v.corrupt = 2;
+    v.corrupt_times = 1;
+    CHECK_EQ(sync.sync_bank(1, cache), 1);
+    CHECK(cache[2] == v.ram[1][2]);
+    CHECK_EQ(v.requests.size(), 4u); // display message + bank info + the dump twice
+}
+
+TEST(memsync_sync_bank_gives_up_on_a_wrong_fingerprint)
+{
+    FakeVirus v;
+    MemorySync sync(v.send());
+    v.sync = &sync;
+    for (int p = 0; p < 128; p++)
+        v.ram[1][p] = fake_single(1, p, p);
+    Bank cache;
+    for (int p = 0; p < 128; p++)
+        cache[p] = v.ram[1][p];
+    const Dump old = fake_single(1, 2, 500);
+    cache[2] = old;
+    v.corrupt = 2; // always: never cached
+    CHECK_EQ(sync.sync_bank(1, cache), -1);
+    CHECK(cache[2] == old);
+    CHECK_EQ(v.requests.size(), 5u); // display message + bank info + 3 tries, bounded
 }
 
 TEST(memsync_bank_file_round_trip)
