@@ -69,6 +69,7 @@ static bool env_no_ping() // R5 test: the old stamping without sync ping / marke
 }
 
 static const char *const USB_IO_PATH = "Global USB/Virus Control USB IO Configuration";
+static const std::string DM_PATH = "VirusControl/Direct Monitoring"; // the D button (directmon.h)
 static const char *const SYNC_INFO_PATH = "Global USB/Sync Information Event"; // global 0x54 from the Virus (E205)
 
 // the USB IO configuration of this computer: VTI_IO_CONFIG (tests), else <plug-in folder>/usb-io, else 0
@@ -1292,8 +1293,53 @@ int VirusPlugin::state_part(const std::string &path, int part) const
     return part > 15 || (p && p->part == "none") ? -1 : part;
 }
 
+// "Output Select Control2" (which 0) or "Control3" (1) as this model names it: the Snow has "pr" names (E449)
+std::string VirusPlugin::dm_output_path(int which) const
+{
+    const std::string n = which ? "Output Select Control3" : "Output Select Control2";
+    for (const char *f : {"Multi Part Parameter/", "Multi Part Parameter/pr "})
+        if (dev_.find(f + n))
+            return f + n;
+    return std::string();
+}
+
+// the D button (directmon.h): from the editor's click; the outputs go the normal way of a part parameter, so the Virus,
+// the project and the output delays (E344) follow; the button itself is not stored, like the original
+void VirusPlugin::direct_monitoring(int part, bool on)
+{
+    const std::string p2 = dm_output_path(0), p3 = dm_output_path(1);
+    if (p2.empty() || p3.empty() || part < 0 || part > 15)
+        return;
+    const int out2 = ui_value(p2, part), out3 = ui_value(p3, part);
+    std::vector<DirectMonitor::Set> sets;
+    int before, after;
+    {
+        std::lock_guard<std::mutex> lk(dm_mu_);
+        before = dm_.part();
+        sets = on ? dm_.on(part, out2, out3) : dm_.off(part);
+        after = dm_.part();
+        dm_part_ = after;
+    }
+    if (before >= 0 && before != after)
+        set_editor_value(DM_PATH, before, 0, false);
+    set_editor_value(DM_PATH, part, after == part ? 1 : 0, false);
+    for (auto &s : sets)
+        ui_set(s.which ? p3 : p2, s.part, s.value);
+}
+
 void VirusPlugin::set_part_value(int part, const std::string &path, int value)
 {
+    // the D button's part: a change of its outputs by hand ends it and keeps that choice (directmon.h)
+    if (part >= 0 && part == dm_part_.load(std::memory_order_relaxed) && path.find("Output Select Control") != std::string::npos) {
+        bool ended;
+        {
+            std::lock_guard<std::mutex> lk(dm_mu_);
+            ended = dm_.changed(part, path.back() == '3', value);
+            dm_part_ = dm_.part();
+        }
+        if (ended)
+            set_editor_value(DM_PATH, part, 0, false);
+    }
     {
         std::lock_guard<std::mutex> lk(values_mu_);
         part_values_[part][path] = value;
@@ -2386,6 +2432,10 @@ void VirusPlugin::ui_set(const std::string &path, int part, int value)
                 arp_action(part, b.second);
             return;
         }
+    if (path == DM_PATH) { // the D button: the part's outputs to Out1 L+R and back, nothing of its own (directmon.h)
+        direct_monitoring(part, value != 0);
+        return;
+    }
     if (path == USB_IO_PATH) { // a hardware setting of this computer (original: registry), sent at once
         set_usb_io(value, true);
         if (out_)

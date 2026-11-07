@@ -37,6 +37,7 @@
 #include "model/syncalert.h"
 #include "device/resampler.h"
 #include "device/sidechain.h"
+#include "device/directmon.h"
 #include "model/devicestatus.h"
 #include "model/otherdrivers.h"
 #include "model/arpactions.h"
@@ -807,6 +808,12 @@ private:
     bool od_ready_seen_ = false, od_playing_seen_ = false;
     bool live_notes_ = false; // live-notes.on: notes flagged as played live skip the lead (stamprule.h)
     LiveNoteGuard live_guard_; // audio thread only: a played note-off never passes a waiting note-on
+    // the parts section's D button (directmon.h): its state, the part as a quick check for set_part_value
+    DirectMonitor dm_;
+    std::mutex dm_mu_;
+    std::atomic<int> dm_part_{-1};
+    void direct_monitoring(int part, bool on);
+    std::string dm_output_path(int which) const;
     bool od_changes_only_ = false; // outdelay-changes.on: not all 16 at every Play/Stop (E373)
     HeldNotes held_notes_;          // process() records, setActive(false) releases (heldnotes.h)
     std::chrono::steady_clock::time_point od_next_{};

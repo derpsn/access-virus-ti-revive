@@ -78,7 +78,7 @@ const Entry ENTRIES[] = {
      "parts and presets per page. Locks are not saved with the project, like in the original."},
     {"LockView/Part Lock Indicator", "Lock indicator", "This part has locked sections."},
     {"VirusControl/Live Mode", nullptr, "A switch of the original Virus Control. Not used by TI Revive yet."},
-    {"VirusControl/Direct Monitoring", nullptr, "A switch of the original Virus Control. Not used by TI Revive yet."},
+    {"VirusControl/Direct Monitoring", "Direct monitoring", "Puts this part on the Virus' analog output Out1 L+R, so you hear it there; off gives the part its outputs back. One part at a time. Choosing another output for the part ends it. Not saved with the project, like in the original."},
     {"VirusControl/Access Website", nullptr, "A link to the manufacturer's website (not used by TI Revive)."},
     {"VirusControl/Display Parameter", "Display", "The display shows the parameter you touched last, its value and the part. It changes when you move a knob here or on the Virus."},
     {"VirusControl/Display Value", "Display", "The display shows the parameter you touched last, its value and the part. It changes when you move a knob here or on the Virus."},
