@@ -4,18 +4,19 @@
 # with --a (VTI_NATIVE_A, a developer switch that stays in this process): --a 0 shows what a note costs without the
 # lead, which is the floor for a live path, while nothing in the plug-in has to change for it.
 #
-#   scripts/latency-native.sh [--blocks "32 64 128 256 512"] [--seconds 30] [--a N] [--tag TEXT] [--out DIR]
+#   scripts/latency-native.sh [--blocks "32 64 128 256 512"] [--seconds 30] [--a N] [--rate 44100|48000] [--tag TEXT] [--out DIR]
 set -uo pipefail
 repo=$(cd "$(dirname "$0")/.." && pwd)
 plugin="$HOME/.vst3/TI Revive Virus Control.vst3"
 host="$repo/build-native/bin/Release/nativehost"
-blocks="32 64 128 256 512"; seconds=30; a=3072; tag=""; override=0
+blocks="32 64 128 256 512"; seconds=30; a=3072; tag=""; override=0; rate=44100
 out="$repo/work/latency/native-$(date +%Y%m%d-%H%M%S)"
 while [ $# -gt 0 ]; do
     case "$1" in
         --blocks) blocks=$2; shift 2 ;;
         --seconds) seconds=$2; shift 2 ;;
         --a) a=$2; override=1; shift 2 ;;
+        --rate) rate=$2; shift 2 ;;
         --tag) tag=-$2; shift 2 ;;
         --out) out=$2; shift 2 ;;
         *) echo "unknown: $1" >&2; exit 2 ;;
@@ -29,12 +30,12 @@ for block in $blocks; do
     keep=$(( block > 256 ? block : 256 ))
     reported=$(( a + keep + 640 ))
     if [ "$override" = 1 ]; then
-        VTI_NATIVE_A=$a timeout $((seconds + 60)) "$host" "$plugin" --notes --block "$block" --seconds "$seconds" --wav "$out/$name.wav" >"$out/$name.out" 2>"$out/$name.err"
+        VTI_NATIVE_A=$a timeout $((seconds + 60)) "$host" "$plugin" --notes --block "$block" --rate "$rate" --seconds "$seconds" --wav "$out/$name.wav" >"$out/$name.out" 2>"$out/$name.err"
     else
-        timeout $((seconds + 60)) "$host" "$plugin" --notes --block "$block" --seconds "$seconds" --wav "$out/$name.wav" >"$out/$name.out" 2>"$out/$name.err"
+        timeout $((seconds + 60)) "$host" "$plugin" --notes --block "$block" --rate "$rate" --seconds "$seconds" --wav "$out/$name.wav" >"$out/$name.out" 2>"$out/$name.err"
     fi
     echo "=== block $block, A=$a: reported $reported frames"
-    python3 -I "$repo/scripts/latency_measure.py" wav "$out/$name.wav" --first 0 --classes 1 --skip 10 --reported "$reported" \
+    python3 -I "$repo/scripts/latency_measure.py" wav "$out/$name.wav" --first 0 --period "$rate" --classes 1 --skip 10 --reported "$reported" \
         | tee "$out/$name.wav.txt" | grep '^class'
     sleep 3 # the broker's idle exit is not looped here: one client after the other (E394)
 done
