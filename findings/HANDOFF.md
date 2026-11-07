@@ -1,6 +1,26 @@
 # HANDOFF
 
-## START HERE (2026-11-05 evening): round 0.8.38, branch `round-0.8.38`, on the way to rc3
+## START HERE (2026-11-07 evening): round 0.8.39, branch `round-0.8.39`, from main at v0.8.38
+
+Everything below this block is older; where it differs, this block is right. User's goal for this round: "work on all the issues we found".
+
+**State:** v0.8.38 RELEASED 2026-11-07 ~18:00 UTC: tag on main ad0c4ee (merge -F, parents 788acec + a2dcc0e, tree = round), release CI 42398587549 all green, site deployed by run 42399125768. Release on Linux (install.sh, plug-in ea271ff2a0dedc03, broker 687a2148f565b105) and win11 (setup.exe /quiet, exit 0, TI Revive 0.8.38). Mac: release package unpacked in ~/Downloads/TI-Revive-0.8.38-release-mac with the install helpers, NOT installed: the user runs it. Branch `round-0.8.39` is local until pushed: `git push origin round-0.8.39:refs/heads/round-0.8.39`. Plain `git push` may go to main (push.default=upstream), so never use it here.
+
+**Work list, in this order unless the user says otherwise. Nothing started.**
+1. **Mac start, E442, first job.** Live at 48 kHz: Virus display shows `Audio clock changed` + `configure` twice, 1 s apart, because the E377 recovery switches away and back; each start, a power cycle does not clear it; 7-16 drops; in 2 of 4 CI sessions no sync marker followed, once the sound hung with a full set-up. rc3 does the same, so it is in the code since before today. User: the original never shows it twice. Do: usbmon capture of the original starting at 48 kHz on win10ref against ours; find why the Virus is at the other rate at each start (E331's chip-side writers: link-up, auto-detect; the give-back reset is Linux only); same test in Logic, which had no recovery before the Virus' trip to Linux; why no marker follows; what a marker-less session does to note timing. Goal: one clock change at start.
+2. **Live-note path, #30, #29.** See the START HERE below and the design notes under "#30 and the latency work". Lead 1088 holds at blocks up to 128, not at 256 and up; dense, unison, DAW untested. #30 was told: direction, not a promise; a build will be posted. No default changes before real tests.
+3. **Bank sync, simulator S059, not on a real unit, not yet in evidence.md:** (1) fetched dumps lost when a sync fails, virusplugin.cpp:3131 saves only on -2, measured; (2) a failed sync looks finished, ~3197, read; (3) no second try until reload, `sync_started_` :1170, measured; (4) short dumps retried with no pause, `single()`, only bench evidence for three in a row; (5) a late reply answers the retry, `transact()`, real captures back the mechanism at MED (S016); (6) bytes outside the fingerprint unchecked, `read_bank` and `read_missing` have no check at all, low; (7) bank info never asked again, so a wrong fingerprint or a store during a first sync still ends it, 7de05da. Tests first, then a real run.
+4. **Dense load:** Main LD on three channels: user 2026-11-07: no crackling, but some notes silent at high density, muted MIDI 2 and 3; E427 said crackling too. Compare in the original on win10ref, three-channel load (E398).
+5. **Smaller:** Linux give-back reset, about 1 in 60 left the Virus off the bus (E436, E312), a decision of its own; a 300 ms pause left +81 ms once in 5 (E439); note 1398 reading 4928; hil_check's 44.1 kHz floor (E434); sporadic `read ep 85/86: LIBUSB_ERROR_IO` on the Mac.
+6. **Docs:** Multi-Output tip on the setup page (asked, not answered, proposed); new ? menu screenshot with the setup item; README and site differences from the 0.8.38 site check (two programs at once, first notes after Play, tables, README's long dashes); one report of keys silent after closing the DAW until a replug (E428, LOW); analog outs, S052's 160 ms arithmetic against E344's ear test, open on the real unit. User's impression to compare: metallic part at the start of playback gone on Linux with the 0.8.38 dev build, one session, cause not known.
+
+**Simulator (virus-ti-sim-3b, a separate session, find with ListAgents):** on three hunts by the user's word. Hunt 1 done, S059. Hunt 2 (dense, unison) running, hunt 3 (S052's Play burst, overlaps E351, whose fix the user dropped 2026-10-25) next; it reports to the main session by SendMessage and stops after hunt 3. A new main session must tell it where to report if messages do not arrive. Tell it to hold heavy jobs during timed runs on the real Virus and release it afterwards. Rule: a fix found with it needs a failing test here and a real run. Not for choosing a lead (E440). Take S059 and later into evidence.md after checking them.
+
+**Machines:** Virus at the Mac. Linux: the release installed, `clock.force-quantum 256` still set, back with `pw-metadata -n settings 0 clock.force-quantum 0`. Mac: CI build of fa6282b installed until the release is pushed, screenshots over SSH work because the user allowed sshd-keygen-wrapper under Screen Recording, may be switched off; noteprobe.on and ~/kpm-test still there, delete refused by the permission check, harmless, the user decides. win11 running with the release. Issues #14, #20 reach 14 days around Nov 11-12: close only together with the user.
+
+**Older log, round 0.8.38:**
+
+### (previous START HERE) (2026-11-05 evening): round 0.8.38, branch `round-0.8.38`, on the way to rc3
 
 Everything below this block is the older log of the same day and before; where it differs, this block is right.
 
