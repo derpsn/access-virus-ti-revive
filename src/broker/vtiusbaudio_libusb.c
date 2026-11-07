@@ -10,6 +10,7 @@
 // Rate following (design-rate.md step 3): the stream runs at 44.1 or 48 kHz; vla_switch_rate() changes it in the
 // driver's order (ratesw.h) without releasing the interfaces (a release would hand them back to snd-usb-audio).
 #include "vtiusbaudio_libusb.h"
+#include "stallfill.h"
 #include "pktstat.h"
 #include "ratesw.h"
 #include <libusb.h>
@@ -46,7 +47,7 @@ static struct {
     uint32_t rate;         // the wanted rate (SET_CUR), 44100 or 48000
     unsigned pattern;      // nominal pattern position (44/45 at 44.1 kHz, 48 at 48 kHz)
     volatile int rate_lost; // a run of the other rate's packets was reported (E241); read and cleared by vla_rate_lost()
-    double t0_ms;          // monotonic time of the first IN completion
+    vti_stallfill stall;   // what is really lost, against drift (stallfill.h)
     uint64_t delivered_ms; // USB frames (ms) delivered so far (packets + filled gaps)
     uint64_t frames, errs, gaps, next_log;
     vti_pktstat ps; // packet sizes as sent, before the repair (E175)
@@ -135,13 +136,9 @@ static void in_cb(struct libusb_transfer *t)
             S.running = 0;
         return;
     }
-    double now = now_ms();
-    if (!S.t0_ms)
-        S.t0_ms = now - NP; // this transfer covered the last NP ms
-    // stall: more ms passed than were delivered (transfers ran dry and the kernel restarted ASAP) -> fill silence
-    double behind = (now - S.t0_ms) - (double)(S.delivered_ms + NP);
-    if (behind > 3 * NP) {
-        uint64_t g = (uint64_t)behind;
+    // frames really lost (transfers ran dry and the kernel restarted ASAP) -> fill silence; not drift or a late thread (E439)
+    uint64_t g = vti_stallfill_step(&S.stall, now_ms(), S.delivered_ms);
+    if (g) {
         if (g > 5000)
             g = 5000;
         S.gaps += g;
@@ -225,7 +222,7 @@ static int set_rate(uint8_t ep, uint32_t rate)
 static int stream_start(void)
 {
     S.running = 1;
-    S.t0_ms = 0;
+    S.stall = (vti_stallfill)VTI_STALLFILL_INIT(NP);
     S.delivered_ms = 0;
     S.pattern = 0;
     S.rate_lost = 0;
