@@ -256,6 +256,7 @@ int main(int argc, char **argv)
     double offline_end = -1; // --offline-end T: back to real time (a DAW's render ends, playback follows)
     std::vector<std::pair<ParamID, double>> changes;
     int chord_size = 1; // --chord N
+    int parts = 1; // --parts N: the chord's notes spread over channels 1..N
     double hold = -1; // --hold: note on at this time, never off
     double notes_off_from = -1, notes_off_to = -1; // --notes-off A:B: no --notes in [A, B) s (a DAW stopped after a render)
     struct TimedChange {
@@ -282,6 +283,8 @@ int main(int argc, char **argv)
             notes = true;
         else if (!strcmp(argv[i], "--chord") && i + 1 < argc) // with --notes: N notes at once, 1 to 8
             chord_size = std::max(1, std::min(8, atoi(argv[++i])));
+        else if (!strcmp(argv[i], "--parts") && i + 1 < argc)
+            parts = std::max(1, std::min(16, atoi(argv[++i])));
 #ifndef _WIN32
         else if (!strcmp(argv[i], "--tips")) // the setup page may open by itself, as in a DAW; else it never does here
             unsetenv("VTI_NO_SETUP_TIPS");
@@ -598,10 +601,10 @@ int main(int argc, char **argv)
                     for (int n = 0; n < chord_size; n++) { // --chord N: C4 and N-1 notes above it, all in one block
                         if ((t / (rate / 2)) % 2 == 0) {
                             e.type = Event::kNoteOnEvent;
-                            e.noteOn = {0, chord_notes[n], 0, 0.8f, 0, -1};
+                            e.noteOn = {(int16)(n % parts), chord_notes[n], 0, 0.8f, 0, -1};
                         } else {
                             e.type = Event::kNoteOffEvent;
-                            e.noteOff = {0, chord_notes[n], 0.f, -1, 0};
+                            e.noteOff = {(int16)(n % parts), chord_notes[n], 0.f, -1, 0};
                         }
                         ev.addEvent(e);
                     }
