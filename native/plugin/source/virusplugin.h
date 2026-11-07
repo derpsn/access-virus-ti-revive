@@ -91,7 +91,7 @@ public:
     int send_state(std::vector<std::vector<uint8_t>> records);
     // from process() only (single producer, lock-free): a message of up to 16 bytes; false if the ring is full
     // `stamp` = frame on the Virus timeline (F5 time stamp before the message), -1 = the latest timeline position
-    bool send_rt(const uint8_t *msg, size_t n, int64_t stamp = -1);
+    bool send_rt(const uint8_t *msg, size_t n, int64_t stamp = -1, bool live = false);
     // events process() could not even collect (more than BlockEvents::MAX in one block): counted and logged by the
     // worker like a full queue; a note-off among them makes the worker send all notes off
     void collect_lost(int n, bool note_off)
@@ -160,6 +160,9 @@ public:
     std::atomic<int64_t> lead{0}; // frames from a timeline position to its sound in the ring (VirusPlugin::lead())
     // the safety net (stamprule.h StampFloor, 0.8.35): stamps keep at least floor_min frames past the newest frame
     std::atomic<bool> stamp_floor{true};
+    // the live path (stamprule.h, Control Center option live-notes, off by default)
+    std::atomic<bool> live_notes{false};
+    std::atomic<double> live_ratio{1.0}; // Virus frames per host frame, for a live stamp
     static constexpr int64_t floor_min = 1024;
     // the newest ring frame that had sound on USB 1 / USB 2 (the ping waits for 1 s of silence, like the original)
     std::atomic<int64_t> last_sound{-1};
@@ -258,6 +261,7 @@ private:
     struct Slot {
         uint8_t len, data[16];
         int64_t stamp;
+        bool live;
     };
     static constexpr size_t RT_SLOTS = 1024;
     Slot rt_[RT_SLOTS];
@@ -801,6 +805,7 @@ private:
     // analog parts held back by the latency like the original (outputdelay.h, E344); worker thread only
     OutputDelay out_delay_;
     bool od_ready_seen_ = false, od_playing_seen_ = false;
+    bool live_notes_ = false; // live-notes.on: notes flagged as played live skip the lead (stamprule.h)
     bool od_changes_only_ = false; // outdelay-changes.on: not all 16 at every Play/Stop (E373)
     HeldNotes held_notes_;          // process() records, setActive(false) releases (heldnotes.h)
     std::chrono::steady_clock::time_point od_next_{};

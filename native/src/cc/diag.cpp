@@ -53,6 +53,7 @@ const std::vector<PluginOption> &plugin_options()
     static const std::vector<PluginOption> opts = {
         {"outdelay-changes", "outdelay-changes.on", "Output delays only on change (not at every Play/Stop)"},
         {"timing-classic", "timing-classic.on", "Timing as before 0.8.35 (lead 1024, no safety net)"},
+        {"live-notes", "live-notes.on", "Notes played live skip the lead, like the original (test, #30)"},
     };
     return opts;
 }

@@ -52,6 +52,29 @@ struct StampRun {
     }
 };
 
+// The live path, like the original (Control Center option live-notes, E400, E449). A note the host flags as played live
+// (Event::kIsLive; Ableton Live flags played notes, not clip notes, E448) gets no lead: the original stamps it from the
+// Virus' position, offset -1 x the rate ratio, 0x400 frames behind (0x1800a8420), which the DSP plays at once (E247).
+// A new, lower F5, nothing clamps it, and by the flag alone for note-on and note-off alike; so the safety net below does
+// not touch it and it does not move the net's memory. In VST3 hosts the flag is the only way in: the original's offset
+// rule is off there (E400 (3)).
+inline bool is_live_note(bool option, int event_flags)
+{
+    return option && (event_flags & 1); // Event::kIsLive
+}
+
+inline int64_t live_stamp(int64_t newest, int64_t marker, double ratio)
+{
+    return newest - marker + (int64_t)(-1.0 * ratio) - 0x400;
+}
+
+// With the live path the controllers go as in the original: CC, aftertouch, program, pressure, bend have no stamp of their
+// own and inherit the last F5 (0x1800a8452): at once behind a live note, waiting with a sequenced one.
+inline bool inherits_stamp(bool option, uint8_t status)
+{
+    return option && status >= 0xA0 && status < 0xF0;
+}
+
 // The lead A (frames from the newest ring frame to a note's sound): the original uses 3072 on every host (E364:
 // forced at every start, = its reported latency). Before 0.8.35 TI Revive used 1024 on Linux/macOS, which Logic's
 // uneven block timing overran (late notes, the sync error, E363); 'classic' keeps that for comparison.

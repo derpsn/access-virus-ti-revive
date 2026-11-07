@@ -257,7 +257,7 @@ int DeviceOut::start_audio()
     return r;
 }
 
-bool DeviceOut::send_rt(const uint8_t *msg, size_t n, int64_t stamp)
+bool DeviceOut::send_rt(const uint8_t *msg, size_t n, int64_t stamp, bool live)
 {
     if (blocked_to_virus(msg, n)) { // rule 2 (sendguard.h); counted here, logged off the audio thread
         blocked_.fetch_add(1, std::memory_order_relaxed);
@@ -275,6 +275,7 @@ bool DeviceOut::send_rt(const uint8_t *msg, size_t n, int64_t stamp)
     Slot &s = rt_[w % RT_SLOTS];
     s.len = (uint8_t)n;
     s.stamp = stamp;
+    s.live = live;
     memcpy(s.data, msg, n);
     rt_w_.store(w + 1, std::memory_order_release);
     return true;
@@ -576,6 +577,7 @@ void DeviceOut::run()
         bool piece_last = false;
         int64_t piece_wait_ns = 0;
         int64_t stamp = -1;
+        bool live = false;
         uint8_t cable = CABLE_PLUGIN; // queued remote template records: 3 (E199)
         {
             std::unique_lock<std::mutex> lk(mu_);
@@ -623,6 +625,7 @@ void DeviceOut::run()
                     const Slot &sl = rt_[r % RT_SLOTS];
                     msg.assign(sl.data, sl.data + sl.len);
                     stamp = sl.stamp;
+                    live = sl.live;
                     rt_r_.store(r + 1, std::memory_order_release);
                     rt_run_.event();
                     cable = dump_.event_cable(CABLE_PLUGIN); // cable 5 while a dump is in pieces (dumppacer.h)
@@ -786,7 +789,7 @@ void DeviceOut::run()
         // other threads use the latest timeline position
         pk_.clear();
         StampRun stamps; // one F5 per stamp value in this write (stamprule.h)
-        auto pack = [&](const std::vector<uint8_t> &m, int64_t st) {
+        auto pack = [&](const std::vector<uint8_t> &m, int64_t st, bool is_live) {
             bool from_process = st >= 0;
             if (st < 0)
                 st = timeline.load();
@@ -794,11 +797,18 @@ void DeviceOut::run()
                 st = audio_.newest_frame();
             int64_t raw = st;
             bool ping = m.size() == 11 && m[6] == 0x73 && m[8] == 0x22;
-            if (int64_t mk = marker.load(); st >= 0 && mk >= 0 && !ping) {
-                int64_t due = st + lead.load(); // the ring frame it sounds at
-                if (stamp_floor.load(std::memory_order_relaxed) && audio_ok()) // never in the past (E364)
-                    due = floor_.apply(due, audio_.newest_frame(), floor_min);
-                st = due - mk; // on the Virus' stamp clock (0 at the marker)
+            const bool inherits = !m.empty() && inherits_stamp(live_notes.load(std::memory_order_relaxed), m[0]);
+            bool live_stamped = false; // a real live stamp, not "no stamp yet"
+            if (int64_t mk = marker.load(); st >= 0 && mk >= 0 && !ping && !inherits) {
+                if (is_live && audio_ok()) { // no lead, no safety net (stamprule.h)
+                    st = live_stamp(audio_.newest_frame(), mk, live_ratio.load(std::memory_order_relaxed));
+                    live_stamped = true;
+                } else {
+                    int64_t due = st + lead.load(); // the ring frame it sounds at
+                    if (stamp_floor.load(std::memory_order_relaxed) && audio_ok()) // never in the past (E364)
+                        due = floor_.apply(due, audio_.newest_frame(), floor_min);
+                    st = due - mk; // on the Virus' stamp clock (0 at the marker)
+                }
             }
             if (env_debug()) {
                 fprintf(stderr, "send %02x stamp %lld newest %lld", m[0], (long long)st,
@@ -807,7 +817,8 @@ void DeviceOut::run()
                     fprintf(stderr, " %02x", m[i]);
                 fprintf(stderr, "\n");
             }
-            if (st >= 0 && needs_stamp(m.data(), m.size(), from_process) && (ping || stamps.fresh(st))) {
+            // a live stamp may lie below 0 right after the marker: it wraps in the F5's 14 bits like any stamp
+            if ((st >= 0 || live_stamped) && !inherits && needs_stamp(m.data(), m.size(), from_process) && (ping || stamps.fresh(st))) {
                 auto t = usbmidi_pack({0xF5, (uint8_t)(st & 0x7F), (uint8_t)((st >> 7) & 0x7F)}, CABLE_TIME);
                 pk_.insert(pk_.end(), t.begin(), t.end());
             }
@@ -816,7 +827,7 @@ void DeviceOut::run()
             if (klog_ && st >= 0 && m.size() == 3 && (m[0] & 0xF0) == 0x90 && m[2] && klog_stamps_.size() < 64)
                 klog_stamps_.push_back({raw, audio_ok() ? audio_.newest_frame() : -1, 0, 0});
         };
-        pack(msg, stamp);
+        pack(msg, stamp, live);
         // the rest of a block's events in the same write (one broker message instead of one per event); the
         // fairness rule stays: after 8 in a row the queue gets its turn in the next round
         if (stamp >= 0 && !pending_send_) {
@@ -832,13 +843,14 @@ void DeviceOut::run()
                 const Slot &sl = rt_[r % RT_SLOTS];
                 msg.assign(sl.data, sl.data + sl.len);
                 int64_t st = sl.stamp;
+                const bool sl_live = sl.live;
                 rt_r_.store(r + 1, std::memory_order_release);
                 rt_run_.event();
                 if (dump_.active() && HeldParams::held(msg.data(), msg.size())) { // automation: after the dump
                     held_.add(msg);
                     continue;
                 }
-                pack(msg, st);
+                pack(msg, st, sl_live);
             }
         }
         bool ok = broker_.write(EP_PLUGIN_OUT, pk_.data(), pk_.size());
@@ -990,6 +1002,7 @@ tresult PLUGIN_API VirusPlugin::initialize(FUnknown *context)
         note_probe_on_ = diag_enabled() && std::filesystem::exists(own_cache_dir() + "/../noteprobe.on", tec);
         // the output delays only on change, not at every Play/Stop (Control Center option, outputdelay.h resend_all)
         od_changes_only_ = std::filesystem::exists(own_cache_dir() + "/../outdelay-changes.on", tec);
+        live_notes_ = std::filesystem::exists(own_cache_dir() + "/../live-notes.on", tec);
 #ifdef _WIN32
         timing_a_ = timing_lead(timing_classic_, true);
 #else
@@ -1001,6 +1014,9 @@ tresult PLUGIN_API VirusPlugin::initialize(FUnknown *context)
     out_ = std::make_unique<DeviceOut>();
     out_->lead = lead();
     out_->stamp_floor = !timing_classic_;
+    out_->live_notes = live_notes_;
+    if (live_notes_)
+        out_->log("Virus TI native: live notes on (live-notes.on): notes flagged as played go without the lead\n");
     if (diag_enabled())
         out_->set_diag_path(own_cache_dir() + "/../diag.log");
     out_->log("Virus TI native: timing: lead %d frames, safety net %s%s\n", timing_a_, timing_classic_ ? "off" : "on",
@@ -1594,6 +1610,8 @@ tresult PLUGIN_API VirusPlugin::process(ProcessData &data)
         fe_.run(tl_ + block_frames, [&](int64_t t) { add(t, &fe, 1); });
     }
     auto at = [&](int32 offset) { return tl_valid_ ? tl_ + (int64_t)std::lround(offset * ratio) : -1; };
+    if (live_notes_ && out_)
+        out_->live_ratio.store(ratio, std::memory_order_relaxed);
     if (data.inputParameterChanges && out_) {
         for (int32 i = 0; i < data.inputParameterChanges->getParameterCount(); i++) {
             IParamValueQueue *q = data.inputParameterChanges->getParameterData(i);
@@ -1672,7 +1690,7 @@ tresult PLUGIN_API VirusPlugin::process(ProcessData &data)
                 last_note_ms_.store(now_ms(), std::memory_order_relaxed);
                 uint8_t m[3] = {(uint8_t)(0x90 | (e.noteOn.channel & 15)), note7(e.noteOn.pitch),
                                 std::max<uint8_t>(1, data7(e.noteOn.velocity))};
-                add(at(e.sampleOffset), m, 3);
+                evs.add(at(e.sampleOffset), m, 3, is_live_note(live_notes_, e.flags));
                 held_notes_.note_on(m[0] & 15, m[1]);
                 auto &mt = meter_[e.noteOn.channel & 15]; // MIDI activity meter: the highest velocity, decays in tick_meters
                 if (mt.load(std::memory_order_relaxed) < m[2])
@@ -1680,7 +1698,7 @@ tresult PLUGIN_API VirusPlugin::process(ProcessData &data)
             } else if (e.type == Event::kNoteOffEvent) {
                 uint8_t m[3] = {(uint8_t)(0x80 | (e.noteOff.channel & 15)), note7(e.noteOff.pitch),
                                 data7(e.noteOff.velocity)};
-                add(at(e.sampleOffset), m, 3);
+                evs.add(at(e.sampleOffset), m, 3, is_live_note(live_notes_, e.flags));
                 held_notes_.note_off(m[0] & 15, m[1]);
             }
         }
@@ -1696,7 +1714,7 @@ tresult PLUGIN_API VirusPlugin::process(ProcessData &data)
     // audio thread, and the events come nearly in order)
     evs.sort();
     for (int i = 0; out_ && i < evs.n; i++)
-        out_->send_rt(evs.ev[i].m, evs.ev[i].n, evs.ev[i].stamp);
+        out_->send_rt(evs.ev[i].m, evs.ev[i].n, evs.ev[i].stamp, evs.ev[i].live);
     if (out_ && evs.n > 0)
         out_->wake_rt();
     if (out_ && evs.dropped > 0)
