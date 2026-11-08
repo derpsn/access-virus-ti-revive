@@ -15,7 +15,7 @@ namespace vti {
 // where bug reports go (the "?" menu's "Report a Problem")
 inline const char *issues_url() { return "https://github.com/derpsn/access-virus-ti-revive/issues"; }
 
-enum class MenuAction { None, HelpMode, SetupTips, Manual, Website, Report, SaveLogs, DiagLog, Panic, Undo, Redo, Compare, Randomize, Size };
+enum class MenuAction { None, HelpMode, SetupTips, Welcome, WhatsNew, Manual, Website, Report, SaveLogs, DiagLog, Panic, Undo, Redo, Compare, Randomize, Size };
 
 // the editor sizes of the right-click menu (the original has no such setting)
 struct EditorSize {
@@ -57,6 +57,8 @@ inline BuiltMenu help_menu(const HelpMenuState &s)
     BuiltMenu m;
     m.add(MenuAction::HelpMode, "Explain the Controls");
     m.add(MenuAction::SetupTips, "Setup Tips for Your DAW");
+    m.add(MenuAction::Welcome, "Welcome Page");
+    m.add(MenuAction::WhatsNew, "What's New in TI Revive");
     if (!s.manuals.empty()) { // the original's "?" lists its manuals; ours opens the user's own copies
         m.line();
         for (int k : s.manuals)

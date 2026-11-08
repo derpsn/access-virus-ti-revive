@@ -1,6 +1,6 @@
 # virus-ti-native - native rewrite of the Access Virus TI plug-in (docs/plan.md)
 cmake_minimum_required(VERSION 3.25)
-project(virus-ti-native VERSION 0.8.38 LANGUAGES C CXX) # = the TI Revive release it ships with
+project(virus-ti-native VERSION 0.8.39 LANGUAGES C CXX) # = the TI Revive release it ships with
 set(CMAKE_CXX_STANDARD 17)
 set(CMAKE_CXX_STANDARD_REQUIRED ON)
 # Windows: static C/C++ runtime, so the plug-in and the ASIO driver run without the VC++ redistributable
@@ -168,7 +168,7 @@ add_executable(vtitests tests/main.cpp tests/test_usbmidi.cpp tests/test_state.c
                tests/test_bankdrop.cpp tests/test_hostgestures.cpp tests/test_ratesw.cpp tests/test_timelinefollow.cpp
                tests/test_blockevents.cpp tests/test_outputdelay.cpp tests/test_lcdhover.cpp
                tests/test_heldnotes.cpp tests/test_factoryorder.cpp tests/test_ratemeter.cpp tests/test_sectionlock.cpp
-               tests/test_editormenus.cpp tests/test_rambackup.cpp tests/test_undohistory.cpp
+               tests/test_editormenus.cpp tests/test_infopage.cpp tests/test_rambackup.cpp tests/test_undohistory.cpp
                tests/test_comparestate.cpp tests/test_randomizer.cpp tests/test_trafficring.cpp tests/test_capture.cpp tests/test_keyport.cpp tests/test_closeseq.cpp)
 target_link_libraries(vtitests PRIVATE vticore)
 add_test(NAME vtitests COMMAND vtitests)

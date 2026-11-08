@@ -7,6 +7,7 @@
 #include "device/audioin.h"
 #include "editor/editormodel.h"
 #include "editor/lcdhover.h"
+#include "editor/infopage.h"
 #include "editor/setuptips.h"
 #include "device/automation.h"
 #include "device/broker.h"
@@ -375,6 +376,11 @@ public:
     vti::TipsFacts tips_facts() const;
     std::vector<std::string> tips_seen() const;
     void tips_save_seen(const std::vector<std::string> &seen) const;
+    // the welcome / What's New pages (infopage.h): what the user chose, in info-page.state; has_history = TI Revive
+    // ran here before (its RAM cache or setup-tips.seen exists), so no state means an update, not a new install
+    vti::InfoState info_state() const;
+    void info_save_state(const vti::InfoState &s) const;
+    bool has_history() const;
     bool any_part_locked();      // the padlock next to "?" (Global Section LockIndicator)
     // the ARP page's pattern actions (buttons + context menu, #19, E371): order of ARP_ACTIONS; false if unknown
     enum ArpAction { ARP_SHIFT_LEFT, ARP_SHIFT_RIGHT, ARP_RANDOM_PATTERN, ARP_RANDOM_VELOCITY, ARP_RANDOM_LENGTH,

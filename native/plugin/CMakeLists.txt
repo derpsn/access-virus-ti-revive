@@ -26,6 +26,7 @@ smtg_add_vst3plugin(VirusTINative PACKAGE_NAME "TI Revive Virus Control"
     ${vst3sdk_SOURCE_DIR}/public.sdk/source/vst/vstsinglecomponenteffect.cpp
 )
 target_link_libraries(VirusTINative PRIVATE sdk vstgui_support vticore)
+target_compile_definitions(VirusTINative PRIVATE TIREVIVE_VERSION="${PROJECT_VERSION}") # welcome / What's New
 # the popup menus' own top-level windows (source/popupwindow.h)
 if(WIN32)
     target_sources(VirusTINative PRIVATE source/popupwindow_win.cpp)

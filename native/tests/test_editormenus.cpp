@@ -150,6 +150,16 @@ TEST(editormenus_help_menu_manuals_when_found)
     CHECK(lines == 3);
 }
 
+// the welcome and What's New pages (infopage.h) can be opened again from the "?" menu, after the setup tips
+TEST(editormenus_help_menu_welcome_and_whats_new)
+{
+    HelpMenuState s;
+    BuiltMenu m = help_menu(s);
+    int w = index_of(m, MenuAction::Welcome), n = index_of(m, MenuAction::WhatsNew);
+    CHECK(w > index_of(m, MenuAction::SetupTips) && n == w + 1);
+    CHECK(m.items[w].text == "Welcome Page" && m.items[n].text == "What's New in TI Revive");
+}
+
 TEST(editormenus_links)
 {
     CHECK(std::string(issues_url()) == "https://github.com/derpsn/access-virus-ti-revive/issues");

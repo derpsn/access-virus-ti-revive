@@ -1469,6 +1469,37 @@ void VirusPlugin::tips_save_seen(const std::vector<std::string> &seen) const
     }
 }
 
+vti::InfoState VirusPlugin::info_state() const
+{
+    std::string text;
+    if (FILE *f = fopen((own_cache_dir() + "/../info-page.state").c_str(), "rb")) {
+        char b[256];
+        size_t n;
+        while ((n = fread(b, 1, sizeof b, f)) > 0)
+            text.append(b, n);
+        fclose(f);
+    }
+    return vti::info_state_parse(text);
+}
+
+void VirusPlugin::info_save_state(const vti::InfoState &s) const
+{
+    std::error_code ec;
+    std::filesystem::create_directories(own_cache_dir() + "/..", ec);
+    if (FILE *f = fopen((own_cache_dir() + "/../info-page.state").c_str(), "wb")) {
+        const std::string text = vti::info_state_text(s);
+        fwrite(text.data(), 1, text.size(), f);
+        fclose(f);
+    }
+}
+
+bool VirusPlugin::has_history() const
+{
+    std::error_code ec;
+    return std::filesystem::exists(own_cache_dir() + "/RAM A", ec) ||
+           std::filesystem::exists(own_cache_dir() + "/../setup-tips.seen", ec);
+}
+
 bool VirusPlugin::diag_enabled()
 {
     static int on = -1;
