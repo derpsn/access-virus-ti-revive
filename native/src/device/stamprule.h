@@ -106,7 +106,10 @@ inline bool inherits_stamp(bool option, uint8_t status)
 // The plug-in's delay in Virus frames, what it reports and where it reads the ring: lead A + the host block + 640
 // (the read position's margin, timeline jitter up to ~400) + the resampler's look-ahead. Like the original's
 // 3584 + block (E402) it follows the block all the way down; until 0.8.39 it never went below a 256-sample block.
-inline int64_t reported_frames(int a, int block, int resample_extra) { return (int64_t)a + block + 640 + resample_extra; }
+inline int64_t reported_frames(int a, int block, int resample_extra, int margin = 640)
+{
+    return (int64_t)a + block + margin + resample_extra;
+}
 
 constexpr int LIVE_A = 512;
 struct TimingMode {

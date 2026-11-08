@@ -106,4 +106,5 @@ TEST(stamp_reported_delay_follows_the_block)
     CHECK(reported_frames(3072, 512, 0) == 3072 + 512 + 640);
     CHECK(reported_frames(1088, 64, 34) == 1088 + 64 + 640 + 34); // the resampler's look-ahead on top
     CHECK(reported_frames(3072, 32, 0) < reported_frames(3072, 64, 0)); // smaller buffer, smaller delay
+    CHECK(reported_frames(3072, 64, 0, 512) == 3072 + 64 + 512); // a smaller read margin (VTI_NATIVE_M)
 }

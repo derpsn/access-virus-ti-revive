@@ -747,11 +747,14 @@ private:
     int timing_a() const { return a_now_.load(std::memory_order_relaxed); }
     static int timing_s() { static const int s = getenv("VTI_NATIVE_S") ? atoi(getenv("VTI_NATIVE_S")) : 5000; return s; }
     int64_t lead() const { return timing_s() + timing_a(); }
+    // the read position's margin behind the newest frame (640; the original's is 2X + 256 = 512, E402); VTI_NATIVE_M
+    // overrides it for measurements, like VTI_NATIVE_A the lead
+    static int timing_m() { static const int m = getenv("VTI_NATIVE_M") ? atoi(getenv("VTI_NATIVE_M")) : 640; return m; }
     // the read position stays block + 640 - |timeline jitter (<= ~400)| behind the newest frame
     // (+ the resampler's look-ahead when the host does not run at the Virus' rate)
     int64_t latency_frames() const
     {
-        return reported_frames(timing_a(), block_, resampling() ? Resampler::HALF + 2 : 0); // stamprule.h
+        return reported_frames(timing_a(), block_, resampling() ? Resampler::HALF + 2 : 0, timing_m()); // stamprule.h
     }
     int virus_rate() const { return out_ ? out_->rate.load(std::memory_order_relaxed) : 44100; }
     bool resampling() const { return std::fabs(rate_ - virus_rate()) > 0.5; }
