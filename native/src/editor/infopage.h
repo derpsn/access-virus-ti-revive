@@ -56,7 +56,10 @@ inline const std::vector<ChangeNote> &changelog()
 {
     static const std::vector<ChangeNote> notes = {
         {"0.8.39",
-         {"The Access manuals in the ? menu: Reference, Quickstart, Atomizer and the tutorials, opened from your own "
+         {"Lower latency, now the same as the original's: TI Revive's delay follows your audio buffer all the way "
+          "down (before, never below 256 samples) and uses the original's smaller safety margin. At 64 samples and "
+          "48 kHz a note now takes 76 ms instead of 82.7 ms.",
+          "The Access manuals in the ? menu: Reference, Quickstart, Atomizer and the tutorials, opened from your own "
           "Access installation.",
           "The start pages work like the original's: \"Starting up\" goes straight to \"Syncing memory with Virus\" "
           "when banks have to be read, without the editor in between.",

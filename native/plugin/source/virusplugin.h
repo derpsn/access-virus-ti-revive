@@ -747,10 +747,11 @@ private:
     int timing_a() const { return a_now_.load(std::memory_order_relaxed); }
     static int timing_s() { static const int s = getenv("VTI_NATIVE_S") ? atoi(getenv("VTI_NATIVE_S")) : 5000; return s; }
     int64_t lead() const { return timing_s() + timing_a(); }
-    // the read position's margin behind the newest frame (640; the original's is 2X + 256 = 512, E402); VTI_NATIVE_MARGIN
+    // the read position's margin behind the newest frame: 512 like the original's 2X + 256 (E402, E465; 640 until
+    // 0.8.39); VTI_NATIVE_MARGIN
     // overrides it for measurements, like VTI_NATIVE_A the lead (not VTI_NATIVE_M: that is the FE/F2 anchor lead)
-    static int timing_m() { static const int m = getenv("VTI_NATIVE_MARGIN") ? atoi(getenv("VTI_NATIVE_MARGIN")) : 640; return m; }
-    // the read position stays block + 640 - |timeline jitter (<= ~400)| behind the newest frame
+    static int timing_m() { static const int m = getenv("VTI_NATIVE_MARGIN") ? atoi(getenv("VTI_NATIVE_MARGIN")) : 512; return m; }
+    // the read position stays block + the margin - |timeline jitter| behind the newest frame
     // (+ the resampler's look-ahead when the host does not run at the Virus' rate)
     int64_t latency_frames() const
     {

@@ -100,11 +100,12 @@ TEST(stamp_lead_by_mode)
 // 2026-11-08: "the same logic the original has")
 TEST(stamp_reported_delay_follows_the_block)
 {
-    CHECK(reported_frames(3072, 256, 0) == 3072 + 256 + 640);
-    CHECK(reported_frames(3072, 64, 0) == 3072 + 64 + 640);
-    CHECK(reported_frames(3072, 32, 0) == 3072 + 32 + 640);
-    CHECK(reported_frames(3072, 512, 0) == 3072 + 512 + 640);
-    CHECK(reported_frames(1088, 64, 34) == 1088 + 64 + 640 + 34); // the resampler's look-ahead on top
+    // since 0.8.39 the read margin is the original's 512 (E465): at lead 3072 exactly its 3584 + block
+    CHECK(reported_frames(3072, 256, 0) == 3584 + 256);
+    CHECK(reported_frames(3072, 64, 0) == 3584 + 64);
+    CHECK(reported_frames(3072, 32, 0) == 3584 + 32);
+    CHECK(reported_frames(3072, 512, 0) == 3584 + 512);
+    CHECK(reported_frames(1088, 64, 34) == 1088 + 64 + 512 + 34); // the resampler's look-ahead on top
+    CHECK(reported_frames(3072, 64, 0, 640) == 3072 + 64 + 640);  // the margin before (VTI_NATIVE_MARGIN=640)
     CHECK(reported_frames(3072, 32, 0) < reported_frames(3072, 64, 0)); // smaller buffer, smaller delay
-    CHECK(reported_frames(3072, 64, 0, 512) == 3072 + 64 + 512); // a smaller read margin (VTI_NATIVE_MARGIN)
 }

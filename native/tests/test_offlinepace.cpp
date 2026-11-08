@@ -114,7 +114,7 @@ TEST(offlinepace_blocks_as_large_as_the_step_wait_as_before)
 
 TEST(offlinepace_early_release_stays_inside_the_read_margin)
 {
-    // the block reads the ring ~770 frames behind its paced position (latency_frames: block + 640 + resampler), so
+    // the block reads the ring ~770 frames behind its paced position (latency_frames: block + 512 + resampler; 640 before 0.8.39), so
     // running early may never reach past what is there: capped at MAX_EARLY whatever the step
     CHECK(OfflinePacer::MAX_EARLY <= 512);
     OfflinePacer p;

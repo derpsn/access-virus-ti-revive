@@ -103,10 +103,11 @@ inline bool inherits_stamp(bool option, uint8_t status)
 // sequenced notes too, and the original then reports only 2X; we report what an unstamped note really takes instead
 // (LIVE_A: about 512 frames from send to the ring, measured E450), so the host's alignment stays true (the user's
 // choice, 2026-11-07). Plugin Latency counts only with Live Mode off, as in the original (0x18002e2ca).
-// The plug-in's delay in Virus frames, what it reports and where it reads the ring: lead A + the host block + 640
-// (the read position's margin, timeline jitter up to ~400) + the resampler's look-ahead. Like the original's
-// 3584 + block (E402) it follows the block all the way down; until 0.8.39 it never went below a 256-sample block.
-inline int64_t reported_frames(int a, int block, int resample_extra, int margin = 640)
+// The plug-in's delay in Virus frames, what it reports and where it reads the ring: lead A + the host block + the
+// read position's margin + the resampler's look-ahead. Since 0.8.39 like the original's 3584 + block (E402): it
+// follows the block all the way down (before, never below a 256-sample block) and the margin is the original's 512
+// (2X + 256; before 640): exact at blocks 32-512, both rates (E461-E465), steady margins 50-150 at blocks 32/64.
+inline int64_t reported_frames(int a, int block, int resample_extra, int margin = 512)
 {
     return (int64_t)a + block + margin + resample_extra;
 }
