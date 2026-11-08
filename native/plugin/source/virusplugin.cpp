@@ -725,6 +725,8 @@ void DeviceOut::run()
                 (long long)(stats_newest_ >= 0 ? newest - stats_newest_ : -1), (long long)anchors.exchange(0),
                 (long long)err_min.exchange(INT64_MAX), (long long)err_max.exchange(INT64_MIN));
             stats_newest_ = newest;
+            if (int n = clamp_reanchors.exchange(0)) // E472: reads pulled back for a second, a new timeline
+                log("Virus TI native: reads ran ahead of the Virus' audio for a second - a new timeline (%d)\n", n);
             int pk[6];
             if (audio_ok() && audio_.raw_peaks(rate.load(), pk)) // the last second per raw channel (0/1 in, 2/3 USB 1, 4/5 USB 2)
                 log("stats: raw peaks %d %d | %d %d | %d %d\n", pk[0], pk[1], pk[2], pk[3], pk[4], pk[5]);
@@ -800,10 +802,13 @@ void DeviceOut::run()
                 st = audio_.newest_frame();
             int64_t raw = st;
             bool ping = m.size() == 11 && m[6] == 0x73 && m[8] == 0x22;
-            const bool inherits = !m.empty() && !ping && (no_stamps.load(std::memory_order_relaxed) ||
-                                                          inherits_stamp(live_notes.load(std::memory_order_relaxed), m[0]));
+            // stamprule.h stamp_plan: queued messages (panic, editor) never inherit and never move the net (E472, S097)
+            const StampPlan plan = stamp_plan(m.data(), m.size(), from_process,
+                                              live_notes.load(std::memory_order_relaxed),
+                                              no_stamps.load(std::memory_order_relaxed));
+            const bool inherits = !m.empty() && !ping && plan.inherits;
             bool live_stamped = false; // a real live stamp, not "no stamp yet"
-            if (int64_t mk = marker.load(); st >= 0 && mk >= 0 && !ping && !inherits) {
+            if (int64_t mk = marker.load(); st >= 0 && mk >= 0 && !ping && !inherits && plan.net) {
                 if (is_live && audio_ok()) { // no lead, no safety net (stamprule.h)
                     st = live_stamp(audio_.newest_frame(), mk, live_ratio.load(std::memory_order_relaxed));
                     live_stamped = true;
@@ -1873,8 +1878,14 @@ tresult PLUGIN_API VirusPlugin::process(ProcessData &data)
         {
             if (tl_valid_ && out_->marker.load() >= 0) { // stamp-aligned: an event of this block sounds latency() later
                 int64_t pos = block_start + lead() - latency_frames();
-                if (pos + data.numSamples > avail) // never read frames that are not there yet (silence, clicks)
+                const bool pulled_back = pos + data.numSamples > avail;
+                if (pulled_back) // never read frames that are not there yet (silence, clicks)
                     pos = avail - data.numSamples;
+                // pulled back in every block for a second: the timeline sits ahead of the audio, start a new one (E472)
+                if (clamp_watch_.update(pulled_back, data.numSamples, virus_rate())) {
+                    out_->clamp_reanchors.fetch_add(1, std::memory_order_relaxed);
+                    out_->generation.fetch_add(1, std::memory_order_relaxed);
+                }
                 out_->audio().read_at(o1[0], o1[1], o2[0], o2[1], data.numSamples, pos, l3, r3);
                 int64_t margin = avail - (pos + data.numSamples); // < 0: frames not there yet (silence)
                 if (margin < out_->read_margin_min.load(std::memory_order_relaxed))

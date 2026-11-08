@@ -44,4 +44,29 @@ private:
     bool running_ = false; // the stream has moved since its first frame
 };
 
+// The plug-in's read position ahead of the Virus' audio in every block for a full second (E472: after a Virus power
+// cycle with the cable in, the Mac's plug-in anchored on a stream not yet steady and every read was pulled back from
+// then on; dropouts that never settled). update() reports it once; the plug-in then starts a new timeline, as after
+// a reconnect. A good read in between clears it: single pulled-back reads are hiccups the margin is there for.
+// Audio thread: no allocation.
+class ClampWatch {
+public:
+    bool update(bool pulled_back, int frames, int rate)
+    {
+        if (!pulled_back) {
+            frames_ = 0;
+            return false;
+        }
+        frames_ += frames;
+        if (rate > 0 && frames_ >= rate) {
+            frames_ = 0;
+            return true;
+        }
+        return false;
+    }
+
+private:
+    int64_t frames_ = 0;
+};
+
 } // namespace vti

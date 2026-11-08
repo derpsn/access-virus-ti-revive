@@ -120,6 +120,25 @@ inline bool inherits_stamp(bool option, uint8_t status)
     return option && status >= 0xA0 && status < 0xF0;
 }
 
+// What one outgoing message gets. from_process = an event of a DAW block (stamped with its block's position); others
+// come from the queue (panic, editor, output delays at Play, start-up): those never inherit the last F5 and never move
+// the safety net unless they are stamped themselves (E472: the panic's CC 123 inherited a stale F5 after a wake;
+// simulator S097: an unstamped queued SysEx moved the net's last stamp, the first note after Play came a block late).
+// no_stamps = Live Mode / Plugin Latency Minimal: nothing stamped, as the original.
+struct StampPlan {
+    bool inherits; // no F5 of its own: the DSP applies the last one
+    bool stamp;    // gets its own F5
+    bool net;      // its stamp goes through the safety net (StampFloor)
+};
+inline StampPlan stamp_plan(const uint8_t *m, size_t n, bool from_process, bool live_option, bool no_stamps)
+{
+    StampPlan p{};
+    p.inherits = no_stamps || (from_process && n > 0 && inherits_stamp(live_option, m[0]));
+    p.stamp = !p.inherits && needs_stamp(m, n, from_process);
+    p.net = p.stamp;
+    return p;
+}
+
 // Live Mode and Plugin Latency, the original's switches (0x18002e170, E449). Plugin Latency N = 0..3 sets the lead to
 // N x 1024 frames, 3 (the default) being the 3072 we use anyway. Live Mode on, or N = 0, sends no lead and no F5 at all,
 // sequenced notes too, and the original then reports only 2X; we report what an unstamped note really takes instead

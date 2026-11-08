@@ -93,3 +93,23 @@ TEST(stallwatch_stream_from_frame_zero_and_the_limit)
     v.update(1441, 10);
     CHECK(!v.update(1882, 10 + 10 + StallWatch::LIMIT_MS - 1)); // 1 ms less: a hiccup
 }
+
+// The read position ahead of the Virus' audio in every block: after a Virus power cycle with the USB cable left in
+// (Mac, E472) the plug-in anchored on a stream not yet running steadily and its reads were pulled back in every block
+// from then on (read margin min 0 in every 10 s window, dropouts that never settled). A full second of nothing but
+// pulled-back reads starts a new timeline, once; a single pulled-back read (a hiccup) does not.
+TEST(clampwatch_a_second_of_pulled_back_reads_reanchors)
+{
+    ClampWatch w;
+    for (int i = 0; i < 100; i++) // 100 blocks of 64 at 48 kHz: 133 ms, not enough
+        CHECK(!w.update(true, 64, 48000));
+    CHECK(!w.update(false, 64, 48000)); // one good read clears it
+    bool fired = false;
+    int blocks = 0;
+    while (!fired && blocks < 2000) {
+        fired = w.update(true, 64, 48000);
+        blocks++;
+    }
+    CHECK(fired && blocks == 750);       // exactly one second of 64-frame blocks
+    CHECK(!w.update(true, 64, 48000));   // once: the next second counts afresh
+}

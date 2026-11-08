@@ -130,6 +130,7 @@ public:
     // another instance has the Virus: in this process (claim_owner) or another program's plug-in (broker state 2)
     bool waiting() const { return wait_reported_.load() || broker_.in_use_elsewhere(); }
     std::atomic<int> generation{0}; // +1 on every return of the Virus (process() re-anchors its timeline)
+    std::atomic<int> clamp_reanchors{0}; // new timelines because every read was pulled back for a second (E472)
     StallWatch stall_;              // worker: the stream stood still and runs on (sleep) -> generation + 1
     bool connected() const { return broker_.device_present(); }
     void stop_worker(); // the worker and the broker's reader have ended when it returns; the destructor does it too
@@ -863,6 +864,7 @@ private:
     double rs_pos_ = 0;
     bool rs_valid_ = false;
     int generation_seen_ = 0; // DeviceOut::generation handled by process()
+    ClampWatch clamp_watch_;  // audio thread: reads pulled back in every block for a second -> new timeline (E472)
     bool device_seen_ = false; // the Virus was present once (worker thread)
     std::set<std::string> dump_paths_; // parameters stored in a part's single dump (the rest: single messages)
     std::unordered_map<std::string, size_t> state_index_; // "path#part" -> state record (state_mu_)

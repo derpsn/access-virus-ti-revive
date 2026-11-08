@@ -109,3 +109,28 @@ TEST(stamp_reported_delay_follows_the_block)
     CHECK(reported_frames(3072, 64, 0, 640) == 3072 + 64 + 640);  // the margin before (VTI_NATIVE_MARGIN=640)
     CHECK(reported_frames(3072, 32, 0) < reported_frames(3072, 64, 0)); // smaller buffer, smaller delay
 }
+
+// Messages not from process() (the panic, the editor, the output delays at Play) are not part of a DAW block: they
+// get their own stamp and never move the safety net. With live-notes on (the default since 0.8.39) the panic's CC 123
+// took over the last F5 (E472), and an unstamped queued SysEx moved the net's last stamp so the first note after Play
+// came a block late under bursting hosts (simulator S097 = S068)
+TEST(stamp_plan_queued_messages_own_stamp_no_net)
+{
+    const uint8_t cc123[3] = {0xB0, 0x7B, 0x00}, note[3] = {0x90, 60, 100};
+    const uint8_t outdelay[11] = {0xF0, 0x00, 0x20, 0x33, 0x01, 0x10, 0x6F, 0x00, 0x7F, 0x00, 0xF7};
+    // from process with live-notes on: a controller inherits the last F5, as the original's live path
+    StampPlan p = stamp_plan(cc123, 3, true, true, false);
+    CHECK(p.inherits && !p.stamp && !p.net);
+    // the same controller from the queue (panic): its own stamp through the net, even with live-notes on
+    p = stamp_plan(cc123, 3, false, true, false);
+    CHECK(!p.inherits && p.stamp && p.net);
+    // a queued SysEx that gets no stamp must not touch the net either
+    p = stamp_plan(outdelay, 11, false, true, false);
+    CHECK(!p.stamp && !p.net);
+    // notes from process: stamped through the net as before
+    p = stamp_plan(note, 3, true, true, false);
+    CHECK(!p.inherits && p.stamp && p.net);
+    // Live Mode (no stamps at all, as the original): nothing stamped, nothing through the net
+    p = stamp_plan(note, 3, true, false, true);
+    CHECK(p.inherits && !p.stamp && !p.net);
+}

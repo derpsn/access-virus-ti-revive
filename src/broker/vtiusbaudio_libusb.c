@@ -11,6 +11,7 @@
 // driver's order (ratesw.h) without releasing the interfaces (a release would hand them back to snd-usb-audio).
 #include "vtiusbaudio_libusb.h"
 #include "stallfill.h"
+#include "firstmute.h"
 #include "pktstat.h"
 #include "ratesw.h"
 #include <libusb.h>
@@ -39,6 +40,7 @@ static struct {
     vla_out_fn out;
     void *user;
     volatile int running, in_flight, out_flight;
+    vti_firstmute first; // S098: mute the stream's first IN transfer
     int ev_started; // the event thread runs (also after an unplug cleared `running`): stream_stop joins it
     struct libusb_transfer *rt[NR], *wt[NW];
     int wfree[NW];
@@ -148,6 +150,7 @@ static void in_cb(struct libusb_transfer *t)
         S.delivered_ms += g;
     }
     uint32_t frames = 0;
+    const int mute = vti_firstmute_take(&S.first); // S098: silence instead of the chip's stale memory, frames kept
     unsigned out_counts[NP];
     int out_silent[NP];
     for (int k = 0; k < t->num_iso_packets; k++) {
@@ -170,7 +173,10 @@ static void in_cb(struct libusb_transfer *t)
             f = nominal;
             memset(S.pcm + frames * IN_CH, 0, f * IN_CH * 2);
         } else {
-            memcpy(S.pcm + frames * IN_CH, libusb_get_iso_packet_buffer_simple(t, (unsigned)k), f * IN_CH * 2);
+            if (mute)
+                memset(S.pcm + frames * IN_CH, 0, f * IN_CH * 2);
+            else
+                memcpy(S.pcm + frames * IN_CH, libusb_get_iso_packet_buffer_simple(t, (unsigned)k), f * IN_CH * 2);
         }
         frames += f;
     }
@@ -223,6 +229,7 @@ static int stream_start(void)
 {
     S.running = 1;
     S.stall = (vti_stallfill)VTI_STALLFILL_INIT(NP);
+    vti_firstmute_start(&S.first); // S098: the stream's first transfer carries stale chip memory
     S.delivered_ms = 0;
     S.pattern = 0;
     S.rate_lost = 0;
