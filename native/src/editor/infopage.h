@@ -69,7 +69,13 @@ inline const std::vector<ChangeNote> &changelog()
           "This welcome page and this What's New page, in the original's style.",
           "The D button (direct monitoring) works: the part plays straight on Out 1.",
           "macOS: a saved project no longer switches the Virus' audio clock at start (the display showed \"Audio "
-          "clock changed\" twice)."}},
+          "clock changed\" twice).",
+          "macOS: when the Virus' audio stands still after the Mac wakes from sleep, TI Revive reconnects the Virus "
+          "by itself, like unplugging and plugging it in (at most once a minute). macOS sometimes leaves the Virus' "
+          "sound with gaps after a sleep until it is plugged in again.",
+          "macOS: the background program that talks to the Virus now also runs on Intel Macs (issue #33); before, "
+          "only the plug-in did.",
+          "Panic and the editor's own messages reach the Virus at once, also with played notes on."}},
     };
     return notes;
 }
