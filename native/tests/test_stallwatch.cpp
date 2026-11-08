@@ -42,6 +42,23 @@ TEST(stallwatch_worker_paused_too)
     CHECK(w.update(1882, 30000));
 }
 
+// the worker itself hung in writes the Virus did not take (it refused MIDI for 8-19 s during the state upload at 44.1
+// kHz, every write waiting 1 s, simulator S089): the stream ran on meanwhile, so its frames are all there - no stall.
+// Reporting one sent the whole state again into the same block and left the session silent (E464)
+TEST(stallwatch_blocked_worker_with_a_running_stream_is_no_stall)
+{
+    StallWatch w;
+    w.update(1000, 0, 44100);
+    w.update(1441, 10, 44100);                             // running
+    CHECK(!w.update(1441 + 88200, 2010, 44100));           // 2 s later, 2 s of frames: the stream ran
+    CHECK(!w.update(1441 + 88200 + 44100 * 16, 18010, 44100)); // 16 s later, all frames there
+    // a real pause in between: 19 s with 0.05 s of frames is still a sleep
+    StallWatch v;
+    v.update(1000, 0, 48000);
+    v.update(1480, 10, 48000);
+    CHECK(v.update(1480 + 2400, 19010, 48000));
+}
+
 TEST(stallwatch_no_stream_resets)
 {
     StallWatch w;
@@ -69,9 +86,10 @@ TEST(stallwatch_stream_from_frame_zero_and_the_limit)
     StallWatch w;
     w.update(0, 0);
     w.update(441, 10);                                      // running from frame 0
-    CHECK(w.update(882, 10 + StallWatch::LIMIT_MS));        // stood still exactly LIMIT_MS: a stall
+    // since S089 the limit counts frames MISSING for that long: 441 frames arrived = 10 ms that are not missing
+    CHECK(w.update(882, 10 + 10 + StallWatch::LIMIT_MS));   // missing exactly LIMIT_MS: a stall
     StallWatch v;
     v.update(1000, 0);
     v.update(1441, 10);
-    CHECK(!v.update(1882, 10 + StallWatch::LIMIT_MS - 1)); // 1 ms less: a hiccup
+    CHECK(!v.update(1882, 10 + 10 + StallWatch::LIMIT_MS - 1)); // 1 ms less: a hiccup
 }

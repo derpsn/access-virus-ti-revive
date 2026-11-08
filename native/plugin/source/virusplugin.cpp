@@ -659,7 +659,8 @@ void DeviceOut::run()
         // reconnect (process() re-anchors on the generation change)
         if (audio_ok() && stall_.update(audio_.newest_frame(),
                                        std::chrono::duration_cast<std::chrono::milliseconds>(
-                                           std::chrono::steady_clock::now().time_since_epoch()).count())) {
+                                           std::chrono::steady_clock::now().time_since_epoch()).count(),
+                                       (int)rate.load(std::memory_order_relaxed))) { // frames, not only time (S089)
             log("Virus TI native: the Virus' audio stood still (sleep?) - set-up, state and a new timeline again\n");
             generation++;
             if (resume_) // after a Windows sleep the Virus answered sync pings but played no notes until this (E210)

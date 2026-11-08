@@ -12,10 +12,12 @@ class StallWatch {
 public:
     static constexpr int64_t LIMIT_MS = 1500; // longer than any hiccup of a busy system, shorter than a sleep
 
-    // `newest` = the ring's newest frame (-1: no stream), `now_ms` = a steady clock; true once when a RUNNING stream
-    // moves again after standing still for LIMIT_MS or longer. A stream that has not moved since its first frame is
-    // starting (a new broker stream shows a frame number seconds before the audio runs, E209), not asleep.
-    bool update(int64_t newest, int64_t now_ms)
+    // `newest` = the ring's newest frame (-1: no stream), `now_ms` = a steady clock, `rate` = the stream's frames per
+    // second; true once when a RUNNING stream moves again after standing still for LIMIT_MS or longer. A stream that
+    // has not moved since its first frame is starting (a new broker stream shows a frame number seconds before the
+    // audio runs, E209), not asleep. Time the caller itself was away (its worker blocked in writes the Virus did not
+    // take, S089) is no stall when the frames for that time arrived: only frames missing for LIMIT_MS count.
+    bool update(int64_t newest, int64_t now_ms, int rate = 44100)
     {
         if (newest < 0) {
             last_ = -1;
@@ -29,7 +31,8 @@ public:
         }
         if (newest == last_)
             return false;
-        const bool resumed = running_ && now_ms - moved_ms_ >= LIMIT_MS;
+        const int64_t frames_ms = rate > 0 ? (newest - last_) * 1000 / rate : 0; // what arrived, in time
+        const bool resumed = running_ && now_ms - moved_ms_ - frames_ms >= LIMIT_MS;
         last_ = newest;
         moved_ms_ = now_ms;
         running_ = true;
