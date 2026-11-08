@@ -1268,6 +1268,7 @@ tresult PLUGIN_API VirusPlugin::setupProcessing(ProcessSetup &setup)
 {
     block_ = setup.maxSamplesPerBlock;
     rate_ = setup.sampleRate;
+    apply_timing_mode(false); // Plugin Latency 1/2 follow the block (3 blocks at least, E477)
     if (out_) // the audio start and setActive ask for it (rate following, design-rate.md step 5)
         out_->want_rate = virus_rate_for(rate_);
     // the Virus runs at 44.1 or 48 kHz (E323); other host rates get its audio resampled. Converters for both Virus
@@ -1313,13 +1314,13 @@ int VirusPlugin::state_part(const std::string &path, int part) const
 // Live Mode / Plugin Latency in force (stamprule.h timing_mode): the lead and the F5s change, the host gets the new
 // latency, and the Virus gets B0 78 00 as from the original at every switch (E449). Only while the transport is
 // stopped by the editor's condition, as in the original; a latency change moves the read position, so it clicks once
-void VirusPlugin::apply_timing_mode()
+void VirusPlugin::apply_timing_mode(bool notify)
 {
     const bool live = ui_value(LIVE_MODE_PATH, -1) == 1;
     int n = ui_value(PLUGIN_LATENCY_PATH, -1);
     if (n < 0 || n > 3)
         n = 3;
-    const TimingMode m = timing_mode(live, n, timing_a_);
+    const TimingMode m = timing_mode(live, n, timing_a_, block_); // Plugin Latency 1/2: 3 blocks at least (E477)
     if (m.a == a_now_.load() && m.stamps == stamps_now_)
         return;
     a_now_ = m.a;
@@ -1331,7 +1332,7 @@ void VirusPlugin::apply_timing_mode()
         out_->log("Virus TI native: timing: lead %d frames, %s (Live Mode %s, Plugin Latency %d)\n", m.a,
                   m.stamps ? "time stamps" : "no time stamps", live ? "on" : "off", n);
     }
-    if (componentHandler)
+    if (notify && componentHandler) // from setupProcessing the host asks for the latency afterwards anyway
         componentHandler->restartComponent(kLatencyChanged);
 }
 

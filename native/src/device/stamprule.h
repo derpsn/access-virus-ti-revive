@@ -158,12 +158,18 @@ struct TimingMode {
     int a;       // the lead A in frames
     bool stamps; // F5 time stamps sent
 };
-inline TimingMode timing_mode(bool live_mode, int plugin_latency, int base_a)
+// Plugin Latency 1 and 2 keep at least three host blocks of lead: at lead 1024 and block 512 the safety net moved
+// every 4th chord 5-7 ms late in half the sessions (E476, E477; the net floors a note at newest + 1024, the
+// simulator puts the clear point near 3 blocks). The default keeps the original's 3072 at every block.
+constexpr int MIN_LEAD_BLOCKS = 3;
+inline TimingMode timing_mode(bool live_mode, int plugin_latency, int base_a, int block = 0)
 {
     if (live_mode || plugin_latency == 0)
         return {LIVE_A, false};
-    if (plugin_latency == 1 || plugin_latency == 2)
-        return {plugin_latency * 1024, true};
+    if (plugin_latency == 1 || plugin_latency == 2) {
+        const int a = plugin_latency * 1024, floor = MIN_LEAD_BLOCKS * (block > 0 ? block : 0);
+        return {a > floor ? a : floor, true};
+    }
     return {base_a, true};
 }
 

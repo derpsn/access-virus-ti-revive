@@ -150,6 +150,24 @@ TEST(timing_mode_plugin_latency_is_n_times_1024)
     CHECK(timing_mode(false, 2, 3072).stamps);
 }
 
+TEST(timing_mode_plugin_latency_keeps_three_blocks_of_lead)
+{
+    // E476/E477: at Plugin Latency 1 (lead 1024) and host block 512 the safety net moved every 4th chord 5-7 ms late
+    // in half the sessions; the simulator puts the clear point near 3 blocks (about 1536 at block 512)
+    CHECK_EQ(timing_mode(false, 1, 3072, 512).a, 1536);
+    CHECK_EQ(timing_mode(false, 1, 3072, 256).a, 1024); // 768 < 1024: the original's value stays
+    CHECK_EQ(timing_mode(false, 1, 3072, 64).a, 1024);
+    CHECK_EQ(timing_mode(false, 2, 3072, 512).a, 2048);
+    CHECK_EQ(timing_mode(false, 2, 3072, 1024).a, 3072);
+    CHECK(timing_mode(false, 1, 3072, 512).stamps);
+    // the default keeps the original's lead at every block (its reported delay stays 3584 + block)
+    CHECK_EQ(timing_mode(false, 3, 3072, 2048).a, 3072);
+    // no stamps, no net: Live Mode and Minimal keep LIVE_A
+    CHECK_EQ(timing_mode(true, 1, 3072, 2048).a, LIVE_A);
+    CHECK_EQ(timing_mode(false, 0, 3072, 2048).a, LIVE_A);
+    CHECK_EQ(timing_mode(false, 1, 3072, 0).a, 1024); // block not known yet
+}
+
 TEST(timing_mode_live_and_minimal_send_no_stamps)
 {
     // Live Mode on, or Plugin Latency 0 (Minimal): no lead and no F5, as in the original; A = what an unstamped note

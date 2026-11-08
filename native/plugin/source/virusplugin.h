@@ -745,7 +745,7 @@ private:
     // the lead in force: timing_a_, or what Live Mode / Plugin Latency make of it (stamprule.h timing_mode)
     std::atomic<int> a_now_{3072};
     bool stamps_now_ = true;
-    void apply_timing_mode();
+    void apply_timing_mode(bool notify = true);
     int timing_a() const { return a_now_.load(std::memory_order_relaxed); }
     static int timing_s() { static const int s = getenv("VTI_NATIVE_S") ? atoi(getenv("VTI_NATIVE_S")) : 5000; return s; }
     int64_t lead() const { return timing_s() + timing_a(); }
