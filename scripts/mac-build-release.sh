@@ -21,18 +21,30 @@ rm -rf "$BUILD" && mkdir -p "$BUILD"
 
 echo "== libusb (static, built for macOS $MACOSX_DEPLOYMENT_TARGET; Homebrew's targets the build machine's macOS)"
 LIBUSB_VER=1.0.30
-LIBUSB="$OUT/libusb-$LIBUSB_VER-macos$MACOSX_DEPLOYMENT_TARGET"
+# universal (arm64 + x86_64): the broker has to run on Intel Macs too (issue #33: it was arm64 only, the plug-in was
+# universal). One build per architecture, joined with lipo: libusb's configure does not take two -arch flags at once.
+LIBUSB="$OUT/libusb-$LIBUSB_VER-macos$MACOSX_DEPLOYMENT_TARGET-universal"
 if [ ! -f "$LIBUSB/lib/libusb-1.0.a" ]; then
     T=$(mktemp -d)
     curl -fsSL "https://github.com/libusb/libusb/releases/download/v$LIBUSB_VER/libusb-$LIBUSB_VER.tar.bz2" -o "$T/libusb.tar.bz2"
-    tar -xjf "$T/libusb.tar.bz2" -C "$T"
-    (cd "$T/libusb-$LIBUSB_VER" && ./configure -q --disable-shared --enable-static --prefix="$LIBUSB" \
-        CFLAGS="-arch arm64 -O2 -mmacosx-version-min=$MACOSX_DEPLOYMENT_TARGET" >/dev/null && make -s -j4 install >/dev/null)
+    for A in arm64 x86_64; do
+        H=$([ "$A" = arm64 ] && echo aarch64 || echo x86_64)-apple-darwin
+        mkdir -p "$T/$A" && tar -xjf "$T/libusb.tar.bz2" -C "$T/$A"
+        (cd "$T/$A/libusb-$LIBUSB_VER" && ./configure -q --disable-shared --enable-static --prefix="$T/$A/prefix" \
+            --host="$H" CFLAGS="-arch $A -O2 -mmacosx-version-min=$MACOSX_DEPLOYMENT_TARGET" >/dev/null &&
+            make -s -j4 install >/dev/null)
+    done
+    mkdir -p "$LIBUSB/lib" && cp -R "$T/arm64/prefix/include" "$LIBUSB/"
+    lipo -create "$T/arm64/prefix/lib/libusb-1.0.a" "$T/x86_64/prefix/lib/libusb-1.0.a" -output "$LIBUSB/lib/libusb-1.0.a"
     rm -rf "$T"
 fi
+lipo -info "$LIBUSB/lib/libusb-1.0.a"
 echo "== broker (static libusb)"
 make -C "$REPO/src/broker" mac-static OUT="$BUILD" LIBUSB_PREFIX="$LIBUSB"
 otool -L "$BUILD/mac/vtibroker" | grep -q libusb && { echo "broker still links a libusb dylib"; exit 1; }
+ARCHS=$(lipo -archs "$BUILD/mac/vtibroker")
+case " $ARCHS " in *" arm64 "*" x86_64 "* | *" x86_64 "*" arm64 "*) echo "broker: $ARCHS" ;;
+*) echo "broker is not universal (has: $ARCHS; issue #33)"; exit 1 ;; esac
 codesign --force --sign - "$BUILD/mac/vtibroker"
 
 echo "== plug-in TI Revive Virus Control: VST3 + Audio Unit (arm64 + x86_64)"
