@@ -776,7 +776,9 @@ int main(int argc, char **argv)
             fflush(stdout);
             peak = 0;
         }
-        t_next += std::chrono::microseconds((long long)block * 1000000 / clk.rate); // real time at the host rate
+        // real time at the host rate, in nanoseconds: whole microseconds rounded the period down, 0.1 % fast at 32
+        // frames / 48 kHz (666 instead of 666.667 us), which the plug-in then steered out in lumps (simulator S082)
+        t_next += std::chrono::nanoseconds(std::llround(block * 1e9 / clk.rate));
         for (auto &ah : aheads)
             if (ah.second > 0 && clk.seconds(b) >= ah.first) {
                 t_next -= std::chrono::microseconds((long long)(ah.second * 1000));
