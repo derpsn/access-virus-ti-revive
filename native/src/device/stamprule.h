@@ -71,24 +71,38 @@ inline int64_t live_stamp(int64_t newest, int64_t marker, double ratio)
 // Our one difference from the original's live path, by the user's word 2026-11-07: a flagged note-off goes at once only
 // when the last note-on of that key went at once. The original goes by the flag alone, so a flagged note-off of a clip
 // note still waiting on its lead lands first and the note hangs (simulator S065 C4, from about 35 ms before its due;
-// not seen on a real unit). The note-on side stays the original's. Audio thread: fixed table, no allocation.
+// not seen on a real unit). Second difference, user's word 2026-11-08: a flagged note-on of a key whose sequenced
+// note-off still waits for its stamp goes stamped behind that off; at once it would be cut by it (E456: from 15 ms
+// before the off's stamp, measured on the real unit). Late in that rare case, never silent. pos = the event's
+// timeline position, window = how long a sequenced note-off can still wait (the lead difference of the two paths).
+// Audio thread: fixed tables, no allocation.
 class LiveNoteGuard {
 public:
-    bool note_on(int channel, int key, bool flagged)
+    bool note_on(int channel, int key, bool flagged, int64_t pos = 0, int64_t window = 0)
     {
-        live_[channel & 15][key & 127] = flagged;
+        const int c = channel & 15, k = key & 127;
+        if (flagged && window > 0 && off_set_[c][k] && pos - off_pos_[c][k] < window)
+            flagged = false; // a clip note-off of this key is still on its way: play after it
+        live_[c][k] = flagged;
         return flagged;
     }
-    bool note_off(int channel, int key, bool flagged)
+    bool note_off(int channel, int key, bool flagged, int64_t pos = 0)
     {
-        bool &l = live_[channel & 15][key & 127];
+        const int c = channel & 15, k = key & 127;
+        bool &l = live_[c][k];
         const bool now = flagged && l;
         l = false;
+        if (!now) { // goes with the lead: may still be waiting when this key is played next
+            off_pos_[c][k] = pos;
+            off_set_[c][k] = true;
+        }
         return now;
     }
 
 private:
     bool live_[16][128] = {};
+    bool off_set_[16][128] = {};
+    int64_t off_pos_[16][128] = {};
 };
 
 // With the live path the controllers go as in the original: CC, aftertouch, program, pressure, bend have no stamp of their

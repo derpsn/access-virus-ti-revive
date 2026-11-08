@@ -36,6 +36,24 @@ TEST(live_guard_note_off_never_passes_a_waiting_note_on)
     CHECK(!g.note_off(6, 64, true));
 }
 
+// a played note-on of a key whose sequenced note-off still waits for its stamp would be cut by that off (E456: from
+// 15 ms before the off's stamp, on the real unit); it goes stamped behind the off instead, late in that rare case and
+// never silent; its note-off follows it (the last note-on decides). pos = timeline position, window = how far back a
+// sequenced note-off can still be waiting (the lead difference between the two paths)
+TEST(live_guard_played_note_waits_behind_a_pending_clip_off)
+{
+    LiveNoteGuard g;
+    CHECK(!g.note_on(0, 60, false, 0, 4096));
+    CHECK(!g.note_off(0, 60, false, 24000));        // the clip's note-off, stamped with the lead
+    CHECK(!g.note_on(0, 60, true, 24000 + 672, 4096)); // played 14 ms later: would be cut, so it waits
+    CHECK(!g.note_off(0, 60, true, 24000 + 15072));    // its off follows it
+    CHECK(g.note_on(0, 60, true, 24000 + 5472 + 24000, 4096)); // long after: at once, as in the original
+    CHECK(!g.note_off(1, 62, false, 50000));
+    CHECK(g.note_on(1, 62, true, 50000 + 4096, 4096)); // the window has passed: at once
+    CHECK(g.note_on(2, 62, true, 50001, 4096));        // another channel: no pending off there
+    CHECK(g.note_on(1, 63, true, 50001, 4096));        // another key: none either
+}
+
 TEST(live_guard_unflagged_note_off_stays_unflagged)
 {
     LiveNoteGuard g;

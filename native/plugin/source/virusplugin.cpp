@@ -1795,7 +1795,9 @@ tresult PLUGIN_API VirusPlugin::process(ProcessData &data)
                 last_note_ms_.store(now_ms(), std::memory_order_relaxed);
                 uint8_t m[3] = {(uint8_t)(0x90 | (e.noteOn.channel & 15)), note7(e.noteOn.pitch),
                                 std::max<uint8_t>(1, data7(e.noteOn.velocity))};
-                evs.add(at(e.sampleOffset), m, 3, live_guard_.note_on(m[0] & 15, m[1], is_live_note(live_notes_, e.flags)));
+                evs.add(at(e.sampleOffset), m, 3,
+                        live_guard_.note_on(m[0] & 15, m[1], is_live_note(live_notes_, e.flags), at(e.sampleOffset),
+                                            timing_a() + 0x400)); // E456: never cut by a waiting clip off
                 held_notes_.note_on(m[0] & 15, m[1]);
                 auto &mt = meter_[e.noteOn.channel & 15]; // MIDI activity meter: the highest velocity, decays in tick_meters
                 if (mt.load(std::memory_order_relaxed) < m[2])
@@ -1803,7 +1805,8 @@ tresult PLUGIN_API VirusPlugin::process(ProcessData &data)
             } else if (e.type == Event::kNoteOffEvent) {
                 uint8_t m[3] = {(uint8_t)(0x80 | (e.noteOff.channel & 15)), note7(e.noteOff.pitch),
                                 data7(e.noteOff.velocity)};
-                evs.add(at(e.sampleOffset), m, 3, live_guard_.note_off(m[0] & 15, m[1], is_live_note(live_notes_, e.flags)));
+                evs.add(at(e.sampleOffset), m, 3,
+                        live_guard_.note_off(m[0] & 15, m[1], is_live_note(live_notes_, e.flags), at(e.sampleOffset)));
                 held_notes_.note_off(m[0] & 15, m[1]);
             }
         }
