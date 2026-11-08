@@ -130,7 +130,7 @@ inline TipsPage setup_tips(const TipsFacts &f)
         add("parts", "Several parts: one instance plays them all. Send each part's notes on its own MIDI channel.");
         break;
     }
-    add("buffer", "An audio buffer of 128 or 256 samples works well. Below 256 only your DAW's own part gets shorter, TI Revive's does not.");
+    add("buffer", "Any audio buffer from 32 to 512 samples works. Smaller buffers make your DAW react faster; TI Revive's own delay is the same for every buffer up to 256 samples and grows above that.");
     add("start", "Leave the first bar empty: a note right at the start of playback can come late.");
     return p;
 }

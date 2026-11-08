@@ -2001,8 +2001,9 @@ private:
         if (tips_) {
             tips_page_ = std::move(page);
             invalid();
-        } else if (!help_ && info_ == vti::InfoStart::None && !getenv("VTI_NO_SETUP_TIPS") &&
-                   vti::tips_open_at_start(page, tips_seen_)) {
+        } else if (!help_ && start_pages_done() && info_checked_ && info_ == vti::InfoStart::None &&
+                   !getenv("VTI_NO_SETUP_TIPS") && vti::tips_open_at_start(page, tips_seen_)) {
+            // one page after the other: the start pages, then the welcome / What's New page, then these tips
             tips_page_ = std::move(page);
             tips_ = true;
             invalid();
@@ -2047,9 +2048,15 @@ private:
             s.last_version = tirevive_version();
             plugin_->info_save_state(s);
         }
+        if (tips_) // the open setup page goes away as if read (from the menu over it), so it does not come back
+            close_tips();
         info_ = which;
-        tips_ = false;
         invalid();
+    }
+    bool start_pages_done() const
+    {
+        return plugin_->ui_value("VirusControl/RecallProgress", -1) >= 127 &&
+               plugin_->ui_value("VirusControl/InitialSyncProgress", -1) >= 127;
     }
     void close_info(bool dont_show_again)
     {
@@ -2066,8 +2073,7 @@ private:
     {
         if (info_checked_ || getenv("VTI_NO_SETUP_TIPS")) // test hosts: as the setup page
             return;
-        if (plugin_->ui_value("VirusControl/RecallProgress", -1) < 127 ||
-            plugin_->ui_value("VirusControl/InitialSyncProgress", -1) < 127)
+        if (!start_pages_done())
             return; // after the start pages, as the original's welcome lies under them
         info_checked_ = true;
         const vti::InfoStart which = vti::info_at_start(plugin_->info_state(), tirevive_version(), plugin_->has_history());
