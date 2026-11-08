@@ -856,7 +856,7 @@ COVERAGE, COVERAGE_DATE = "94 %", "16 Oct 2026"
 # the site: one page plus the changelog archive (file name, title and description for search results and link
 # previews, content)
 PAGES = [("index", "TI Revive: the Access Virus TI on Windows 11, macOS and Linux",
-          "The Access Virus TI on Windows 11, macOS (Apple Silicon and Intel; Intel since 0.8.39, not tested on an Intel Mac yet) and Linux without the old drivers: "
+          "The Access Virus TI on Windows 11, macOS (Apple Silicon and Intel) and Linux without the old drivers: "
           "a free, open-source plug-in that looks and works like Virus Control.",
           lambda latest, releases, sums: page_landing(latest, releases, sums)),
          ("changelog", "TI Revive changelog: every version",
