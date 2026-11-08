@@ -3117,10 +3117,9 @@ void VirusPlugin::wait_virus_ready()
     const int64_t tm = now_ms();
     while (!stop_warm_ && out_->marker.load() < 0 && now_ms() - tm < 3000)
         std::this_thread::sleep_for(std::chrono::milliseconds(20));
-    if (sync_expected_)
-        set_start_pages(127, 0); // straight to "Syncing memory"
-    else
-        set_recall_progress(127);
+    // the full ring stays until sync_banks knows whether it reads (user ROM programs are only known after
+    // load_rom_banks, which needs the ready Virus); it then switches both pages in one step, without the editor
+    set_recall_progress(126);
 }
 
 bool VirusPlugin::probe_virus_ready()
@@ -3194,12 +3193,11 @@ void VirusPlugin::sync_banks()
                 sync_expected = true;
         }
     }
-    sync_expected_ = sync_expected; // wait_virus_ready switches from "Starting up" to "Syncing" in one step
     wait_virus_ready();
     starting_ = false;
     if (stop_warm_ || !out_ || !out_->connected()) { // no Virus: no sync, the editor as usual
         syncing_ = false;
-        set_sync_progress(127);
+        set_start_pages(127, 127);
         return;
     }
     std::string dir = own_cache_dir();
@@ -3208,6 +3206,8 @@ void VirusPlugin::sync_banks()
         std::filesystem::create_directories(dir, ec);
     }
     const int rom_missing = load_rom_banks();
+    // "Starting up" ends here: straight to "Syncing memory" when a read is certain (as the original), else the editor
+    set_start_pages(127, sync_page_at_start(sync_expected, rom_missing) ? 0 : 127);
     sync_->before_request = [this] { return wait_until_quiet(); };
     const int64_t sync_t0 = now_ms();
     // like the original: its page "Syncing memory with Virus" (VirusControl/InitialSyncProgress 0..126) covers the

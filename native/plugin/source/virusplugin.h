@@ -712,7 +712,6 @@ private:
     std::atomic<bool> downloading_{false}; // download_bank's thread is reading a bank
     std::thread download_thread_;
     std::mutex download_mu_; // starting / joining download_thread_
-    std::atomic<bool> sync_expected_{false}; // a RAM bank has no cache file: the start-up reads it (sync page early)
     std::atomic<bool> starting_{false}; // start-up messages + state on their way: note-ons are held back
     // the Virus answered the readiness probe (wait_virus_ready): it has worked through the start-up messages and the
     // state, so the timeline may anchor and send the sync ping
