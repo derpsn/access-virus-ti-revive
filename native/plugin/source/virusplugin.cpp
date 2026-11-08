@@ -3217,7 +3217,7 @@ void VirusPlugin::sync_banks()
     SyncPage page;
     int result = 0; // the last bank's sync_bank result: < 0 = the sync stopped there
     page.total = 512 + rom_missing; // user ROM banks are read after RAM D (the page shows once their reading starts)
-    if (sync_expected)
+    if (sync_page_at_start(sync_expected, rom_missing)) // a read is certain: the page follows "Starting up" directly
         page.expect();
     std::atomic<bool> rise{true}, fetching{page.shown()};
     std::thread riser([this, &rise, &fetching] {

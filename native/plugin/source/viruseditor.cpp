@@ -2842,12 +2842,27 @@ private:
         vti::HelpMenuState st;
         st.connected = plugin_->virus_connected();
         st.diag_log = vti::cc::plugin_log_enabled();
+        st.snow = plugin_->is_snow();
+        manual_paths_.assign(vti::kManualCount, std::string());
+        const char *x86 = getenv("ProgramFiles(x86)");
+        const auto dirs = vti::manual_dirs(plugin_->files().source(), x86 ? x86 : "");
+        for (int k = 0; k < vti::kManualCount; k++) { // only the PDFs the user's Access setup put on disk
+            manual_paths_[(size_t)k] = vti::find_manual(dirs, k, st.snow, [](const std::string &p) {
+                std::error_code ec;
+                return std::filesystem::is_regular_file(std::filesystem::u8path(p), ec);
+            });
+            if (!manual_paths_[(size_t)k].empty())
+                st.manuals.push_back(k);
+        }
         vti::BuiltMenu m = vti::help_menu(st);
         const int checked = m.checked;
-        show_list(std::move(m.items), checked, 0, where, [this, actions = std::move(m.actions)](int i) {
-            menu_action(i >= 0 && i < (int)actions.size() ? actions[(size_t)i] : vti::MenuAction::None, 0);
-        });
+        show_list(std::move(m.items), checked, 0, where,
+                  [this, actions = std::move(m.actions), args = std::move(m.args)](int i) {
+                      const bool in = i >= 0 && i < (int)actions.size();
+                      menu_action(in ? actions[(size_t)i] : vti::MenuAction::None, in ? args[(size_t)i] : 0);
+                  });
     }
+    std::vector<std::string> manual_paths_; // the manuals found when the "?" menu last opened, by kManual*
 
     // what a TI Revive menu entry does (editormenus.h); `arg`: the entry's argument (Size: index in kEditorSizes)
     void menu_action(vti::MenuAction a, int arg)
@@ -2859,6 +2874,10 @@ private:
             break;
         case vti::MenuAction::SetupTips:
             open_tips();
+            break;
+        case vti::MenuAction::Manual: // the system's PDF viewer, as for a link
+            if (arg >= 0 && arg < (int)manual_paths_.size() && !manual_paths_[(size_t)arg].empty())
+                open_url(manual_paths_[(size_t)arg].c_str());
             break;
         case vti::MenuAction::Website:
             open_url(vti::website_url());

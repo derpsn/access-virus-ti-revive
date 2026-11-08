@@ -40,6 +40,11 @@ struct SyncPage {
     }
 };
 
+// whether the page shows from the start, straight after "Starting up": only when the sync will certainly read - a RAM
+// bank without a cache file, or user ROM programs not cached yet (known before the RAM check, e.g. a bank burned in
+// the Control Center). A changed RAM bank shows only during the check: the page then comes with its first patch.
+inline bool sync_page_at_start(bool ram_bank_missing, int rom_missing) { return ram_bank_missing || rom_missing > 0; }
+
 // how the bank sync ended, for the log: it stops at the first bank that fails (-1, a request without an answer) or
 // is cancelled (-2, closed while syncing); "bank sync done" after such a stop read like a full sync (E289)
 inline const char *sync_end(int result) { return result == -1 ? "failed" : result == -2 ? "stopped" : "done"; }

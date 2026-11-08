@@ -4,6 +4,7 @@
 // control (Undo/Redo, Compare, Randomize, Panic and the editor's size). Each entry stands for one MenuAction (and an argument); the
 // editor carries the action out. Header only, no drawing.
 #pragma once
+#include "editor/manuals.h"
 #include "editor/popupmenu.h"
 #include "model/randomizer.h"
 #include <string>
@@ -14,7 +15,7 @@ namespace vti {
 // where bug reports go (the "?" menu's "Report a Problem")
 inline const char *issues_url() { return "https://github.com/derpsn/access-virus-ti-revive/issues"; }
 
-enum class MenuAction { None, HelpMode, SetupTips, Website, Report, SaveLogs, DiagLog, Panic, Undo, Redo, Compare, Randomize, Size };
+enum class MenuAction { None, HelpMode, SetupTips, Manual, Website, Report, SaveLogs, DiagLog, Panic, Undo, Redo, Compare, Randomize, Size };
 
 // the editor sizes of the right-click menu (the original has no such setting)
 struct EditorSize {
@@ -45,8 +46,10 @@ struct BuiltMenu {
 };
 
 struct HelpMenuState {
-    bool connected = false; // the Virus is there: Panic can reach it
-    bool diag_log = false;  // diag.on exists: the detailed log is written from the next start
+    bool connected = false;   // the Virus is there: Panic can reach it
+    bool diag_log = false;    // diag.on exists: the detailed log is written from the next start
+    std::vector<int> manuals; // the Access manuals found (manuals.h kManual*), in menu order; none: no group
+    bool snow = false;        // a Snow: its own manuals' names
 };
 
 inline BuiltMenu help_menu(const HelpMenuState &s)
@@ -54,6 +57,11 @@ inline BuiltMenu help_menu(const HelpMenuState &s)
     BuiltMenu m;
     m.add(MenuAction::HelpMode, "Explain the Controls");
     m.add(MenuAction::SetupTips, "Setup Tips for Your DAW");
+    if (!s.manuals.empty()) { // the original's "?" lists its manuals; ours opens the user's own copies
+        m.line();
+        for (int k : s.manuals)
+            m.add(MenuAction::Manual, manual_title(k, s.snow), true, k);
+    }
     m.line();
     m.add(MenuAction::Website, "TI Revive Website and Manual");
     m.add(MenuAction::Report, "Report a Problem (GitHub)");

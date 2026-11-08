@@ -500,6 +500,7 @@ public:
         auto b = banks_.find(LIB_BASE + i);
         return b == banks_.end() ? 0 : (int)b->second.size();
     }
+    bool is_snow() const { return type_ == DeviceType::Snow || model_ == 2; } // the Snow plug-in or a Snow connected
     std::string device_name() const // as the original shows it in the browser and the menus
     {
         return model_ == 1 ? "Virus TI (Virus TI Desktop)" : model_ == 2 ? "Virus TI Snow (Virus TI Snow)"
