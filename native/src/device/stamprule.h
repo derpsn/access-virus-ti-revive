@@ -158,9 +158,10 @@ struct TimingMode {
     int a;       // the lead A in frames
     bool stamps; // F5 time stamps sent
 };
-// Plugin Latency 1 and 2 keep at least three host blocks of lead: at lead 1024 and block 512 the safety net moved
-// every 4th chord 5-7 ms late in half the sessions (E476, E477; the net floors a note at newest + 1024, the
-// simulator puts the clear point near 3 blocks). The default keeps the original's 3072 at every block.
+// Plugin Latency 1 and 2 keep at least three host blocks of lead: at block 512 the safety net moved every 4th chord
+// 5-7 ms late in about half the sessions at leads 1088 and 1216 (E476, E477; the net floors a note at newest +
+// 1024), exact at 1536 (E479). The default keeps the original's 3072 at every block. Users cannot pick Plugin
+// Latency in 0.8.39 (the original's layout has no control for it, E452, E468): groundwork for a lower-lead option.
 constexpr int MIN_LEAD_BLOCKS = 3;
 inline TimingMode timing_mode(bool live_mode, int plugin_latency, int base_a, int block = 0)
 {

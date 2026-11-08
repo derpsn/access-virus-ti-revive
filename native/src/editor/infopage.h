@@ -75,9 +75,7 @@ inline const std::vector<ChangeNote> &changelog()
           "sound with gaps after a sleep until it is plugged in again.",
           "macOS: the background program that talks to the Virus now also runs on Intel Macs (issue #33); before, "
           "only the plug-in did.",
-          "Panic and the editor's own messages reach the Virus at once, also with played notes on.",
-          "Plugin Latency 1 and 2 keep a lead of at least three audio buffers, so notes stay on time at large "
-          "buffers (at a buffer of 512, every 4th chord could come 5-7 ms late)."}},
+          "Panic and the editor's own messages reach the Virus at once, also with played notes on."}},
     };
     return notes;
 }
