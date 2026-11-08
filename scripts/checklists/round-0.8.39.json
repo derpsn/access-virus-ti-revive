@@ -1,0 +1,128 @@
+{
+ "round": "0.8.39",
+ "core": "core.json",
+ "core_items": ["MC5"],
+ "lead": "Test of the 0.8.39 CI build (run 42485251399). risk.py: class C on all three systems, so from the core list the automated runs (hil.sh passed on Linux already: cold start, reopen twice, export, broker killed) and sleep on the Mac. The round's own items come from today: the delay now follows the buffer and uses the original's margin (76 ms instead of 82.7 ms at 64 samples / 48 kHz), notes played on a keyboard skip the delay (live-notes, on by default, about 22 ms), the cut-note fix, the welcome / What's New pages, the manuals in the ? menu, and the start-page order. Our Virus has no keys: in Live the computer keyboard counts as played notes. Mark each item and add a note where something looks different; Claude reads the marks from this page.",
+ "rules": [
+  "Order: Linux first (the Virus is there), then the Mac, then the Windows VM. Close the DAW before the Virus moves.",
+  "Never power-cycle the Virus while it is attached to the VM.",
+  "Use a disposable project. Nothing in this round stores to the Virus.",
+  "No game or other heavy program running during the timing items: it changes the results (seen today)."
+ ],
+ "sections": [
+  {
+   "id": "linux",
+   "title": "Linux",
+   "where": "This PC, REAPER, the 0.8.39 CI build (installed by Claude: plug-in 0a4d7357, broker 92f83998)",
+   "prep": [
+    "Nothing to install. Close any game. The Virus is on Linux."
+   ],
+   "items": [
+    {
+     "id": "L1",
+     "title": "Small buffers play cleanly and on time",
+     "steps": [
+      "In a terminal: <code>pw-metadata -n settings 0 clock.force-quantum 64</code>, then start REAPER with a project that has the plug-in and a clip of 16ths.",
+      "Play 30 s. Then the same with <code>clock.force-quantum 32</code>.",
+      "Back to normal afterwards: <code>pw-metadata -n settings 0 clock.force-quantum 0</code>."
+     ],
+     "expect": "No crackle, no dropouts, notes in time with the click. The plug-in's delay in REAPER's performance meter is smaller at 64 and 32 than at 256 (it follows the buffer now)."
+    },
+    {
+     "id": "L2",
+     "title": "The first note after Play",
+     "steps": [
+      "Same project at a normal buffer. Press Play from bar 1 five times, stopping after two bars each time.",
+      "Listen to the first note of each start."
+     ],
+     "expect": "The first note sounds with the others, not late or missing (simulator S068 predicted a late first note with hosts that send blocks in bursts)."
+    },
+    {
+     "id": "L3",
+     "title": "Reopening a project gives no click",
+     "steps": [
+      "With REAPER open and the project playing, close the project (not REAPER) and open it again within 20 s, so the broker keeps running.",
+      "Do it three times, listening at the moment the plug-in starts."
+     ],
+     "expect": "No click or pop when the plug-in starts (simulator S078 saw two stray samples at start when the broker kept running)."
+    },
+    {
+     "id": "L4",
+     "title": "Welcome, What's New, manuals and setup tips",
+     "steps": [
+      "Claude moves <code>info-page.state</code> and <code>setup-tips.seen</code> aside first. Open the plug-in in REAPER.",
+      "Watch the order: Starting up (and Syncing if banks are read), then What's New, then the setup tips.",
+      "Open ? and click a manual."
+     ],
+     "expect": "One page after the other, never over the start pages; OK and Don't Show Again work; the manual opens in the PDF viewer."
+    },
+    {
+     "id": "L5",
+     "title": "No silent start at 44.1 kHz (Claude runs it)",
+     "steps": [
+      "Claude starts 20 sessions at 44.1 kHz with nativehost and a capture, as in E464/E469."
+     ],
+     "expect": "Every session plays. If the Virus blocks MIDI during the start (cancelled writes in the capture), the session still plays after it: that proves the stall fix (E469)."
+    }
+   ]
+  },
+  {
+   "id": "mac",
+   "title": "macOS",
+   "where": "MacBook Air M3, Ableton Live 12 and Logic Pro, the 0.8.39 CI build (you install the package; Claude pushed it)",
+   "prep": [
+    "Quit the DAW, then double-click <code>Install test build.command</code> in <code>~/Downloads/TI-Revive-0.8.39-mac</code>, or paste: <code>sudo installer -pkg \"$HOME/Downloads/TI-Revive-0.8.39-mac/TI Revive.pkg\" -target /</code>",
+    "Move the Virus' USB cable to the Mac and switch it on if needed. Claude checks the installed version with pkgutil before trusting a result.",
+    "Optional: run <code>hil-mac.command</code> from the package for the automated core items (cold start, reopen, export)."
+   ],
+   "items": [
+    {
+     "id": "M1",
+     "title": "Played notes are fast, clips stay exact (Live)",
+     "steps": [
+      "Ableton Live 12, the plug-in on a MIDI track with a clip of 16ths. Turn on Live's computer MIDI keyboard.",
+      "Play notes on the computer keyboard while stopped, then while the clip runs.",
+      "Play the same key as a clip note right after that clip note ends, a few times."
+     ],
+     "expect": "Played notes feel immediate (about 22 ms), the clip stays in time, no hanging notes, and a played note is never cut off by the clip's own note of that key."
+    },
+    {
+     "id": "M2",
+     "title": "Small buffers in Live and Logic",
+     "steps": [
+      "Live: Settings, Audio, buffer 64, play the clip 30 s; then 32 if the Mac offers it.",
+      "Logic: I/O buffer 64, Process Buffer Range Small, play a region 30 s."
+     ],
+     "expect": "No crackle or dropouts, notes in time. Logic plays as before (its Audio Unit marks no notes as played, so no live path there)."
+    },
+    {
+     "id": "M3",
+     "title": "What's New, manuals and setup tips on the Mac",
+     "steps": [
+      "Open the plug-in in Live. Watch the pages after the start, then open ? and click a manual."
+     ],
+     "expect": "What's New shows once after the start pages, then the setup tips; the manual opens in Preview (from /Library/Documentation/Access Music/Virus TI/Manuals)."
+    }
+   ]
+  },
+  {
+   "id": "vm",
+   "title": "Windows (VM)",
+   "where": "win11 VM, Ableton Live, the 0.8.39 CI build (installed by Claude, setup.exe /quiet, exit 0)",
+   "prep": [
+    "Claude passes the Virus through to the VM and can run <code>hil-win</code> for the automated core items."
+   ],
+   "items": [
+    {
+     "id": "W1",
+     "title": "The plug-in starts and plays; What's New and the manuals",
+     "steps": [
+      "Open the plug-in in Ableton Live in the VM, play a clip.",
+      "Watch the pages after the start, then open ? and look at the manual entries."
+     ],
+     "expect": "It plays as before; What's New shows after the start pages; the manuals are listed if the Access software is installed in the VM, and open in the PDF viewer."
+    }
+   ]
+  }
+ ]
+}
