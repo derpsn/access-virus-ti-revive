@@ -1,5 +1,15 @@
 # HANDOFF
 
+## START HERE (2026-11-08 morning): round 0.8.39, branch `round-0.8.39`, Virus on LINUX
+
+User: "virus is on linux and work with it on all open hardware related tasks that needs the TI", together with the simulator session virus-ti-sim-1d (it does prep and analysis, never touches the unit; its S072/S073 read today's files). The open questions of 2026-11-07 below (Live Mode by ear, Plugin Latency as a Control Center option, live-notes default) are still unanswered.
+
+**Run today on the real TI2 at Linux, all normal rates, no --stress (E438), about 46 USB resets, Virus still on the bus:** B = S067, leads 768-960 repeated (E454): late notes below 1088 vary per session; A = S063 at lead 1088 (E455): kept broker 38/40 exact (s12's late chord was inside the skipped first 10 notes, found from the stamps), fresh broker 2 of 10 late at block 512, every late chord late by its stamp; 3 sessions had a lasting stamp step 129-139 frames earlier with no late sound (simulator's S074 C4/C5: the unit's audio shifts, the plug-in corrects); C = S065 C5 (E456): a waiting clip note-off cuts a played note of the same key when the note starts 15 ms or more before the off's stamp, on the local round-0.8.39 build with live-notes; not guarded, the original's behaviour not known. New tool option nativehost --live-after N (in this commit). Scripts and results in work/latency/s067, s063, s065c5 (git-ignored); captures/s067-*, s063-*, s063f-*, s065c5-*-075323/075814; ignore ABORTED-* and s065c5-*-074123/074613 (my invalid first C run: option file put in cache/ instead of the plug-in folder, gap overwritten).
+
+**Machines:** Linux has the 0.8.38 release plug-in back (ea271ff2a0dedc03; backup copy in work/release-0.8.38-linux); ~/.local/share/virus-ti-native/live-notes.on is set (ignored by 0.8.38), diag.on was already there. Mac: unchanged from yesterday.
+
+**NEXT:** D = S071 Q2/Q4 needs the user at win10ref with the original: F5 lead at each Plugin Latency level, and sync reports after a Live Mode switch. Also decide with the user: whether to guard C5 (hold a played note-on until a waiting off of that key has played, or drop that off) before live-notes ships; how the original handles C5 (REA or win10ref). Open from E455: why fresh-broker sessions run late more often (wire stamps, simulator to read with tshark).
+
 ## START HERE (2026-11-07 ~23:30, end of the day): round 0.8.39, branch `round-0.8.39`
 
 Read this block first; where the paragraphs below differ, this is right. Everything PUSHED to origin/round-0.8.39 (this commit included), origin/main unchanged at d906db7. User: continue tomorrow.

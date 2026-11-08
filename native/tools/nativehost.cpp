@@ -8,6 +8,8 @@
 // --offline-end T: real time again from T s on; --notes-off A:B: no --notes in [A, B) s (stopped after the render).
 // --hold T: C4 on at T s and held to the end; --param-at T:ID=NORM: a parameter change at T s (repeatable) - e.g. to
 // hear whether the Virus applies a change to a held note.
+// --live-after N: with --notes, a C4 flagged as played live N frames after each clip note-off, held 300 ms (S065 C5:
+// does the clip's off, sent first but stamped later, cut the played note?).
 // --cid HEX: load that class (e.g. the original Access id D9909FB45F730543AC5397BE8958CD31, E221), else the first.
 // --duplicate T: a second instance runs next to the first from the start (a DAW's duplicated track, issue #6) with
 // the same notes; at T s the first is removed and the second takes over the Virus. --editor2 with it: the
@@ -259,6 +261,7 @@ int main(int argc, char **argv)
     int chord_size = 1; // --chord N
     int parts = 1; // --parts N: the chord's notes spread over channels 1..N
     double hold = -1; // --hold: note on at this time, never off
+    double live_after = -1; // --live-after N: a played C4 N frames after each clip note-off, held 300 ms
     double notes_off_from = -1, notes_off_to = -1; // --notes-off A:B: no --notes in [A, B) s (a DAW stopped after a render)
     struct TimedChange {
         double t;
@@ -296,6 +299,8 @@ int main(int argc, char **argv)
             sscanf(argv[++i], "%lf:%lf", &notes_off_from, &notes_off_to);
         else if (!strcmp(argv[i], "--hold") && i + 1 < argc)
             hold = atof(argv[++i]);
+        else if (!strcmp(argv[i], "--live-after") && i + 1 < argc)
+            live_after = atof(argv[++i]);
         else if (!strcmp(argv[i], "--param-at") && i + 1 < argc) {
             double t = 0, v = 0;
             unsigned id = 0;
@@ -613,6 +618,26 @@ int main(int argc, char **argv)
                         }
                         ev.addEvent(e);
                     }
+                }
+        }
+        if (notes && live_after >= 0) { // --live-after N: after each clip note-off (at the half second) a C4 played
+            // live N frames later, held 300 ms: the DAW sent the clip's off first, so the played note must sound (S065 C5)
+            const long rate = clk.rate, f0 = clk.frame(b), f1 = f0 + block;
+            const long gap = (long)live_after, len = (long)(0.3 * rate);
+            for (long s = (f0 / rate) * rate - rate; s < f1; s += rate)
+                for (int k = 0; k < 2; k++) {
+                    long t = s + rate / 2 + gap + (k ? len : 0);
+                    if (t < f0 || t >= f1)
+                        continue;
+                    Event e{};
+                    e.sampleOffset = (int32)(t - f0);
+                    e.flags = Event::kIsLive;
+                    e.type = k ? Event::kNoteOffEvent : Event::kNoteOnEvent;
+                    if (k)
+                        e.noteOff = {0, 60, 0.f, -1, 0};
+                    else
+                        e.noteOn = {0, 60, 0, 0.8f, 0, -1};
+                    ev.addEvent(e);
                 }
         }
         if (hold >= 0) { // one C4 from `hold` on, released only at the end
