@@ -94,3 +94,16 @@ TEST(stamp_lead_by_mode)
     CHECK(timing_lead(false, false) == 3072 && timing_lead(false, true) == 3072); // like the original, everywhere
     CHECK(timing_lead(true, false) == 1024 && timing_lead(true, true) == 3072);   // classic: as before 0.8.35
 }
+
+// the reported delay follows the host block all the way down, like the original's 3584 + block (E402); until 0.8.39
+// it never went below a 256-sample block (max(block, 256)), which gave away up to 224 frames at small buffers (user,
+// 2026-11-08: "the same logic the original has")
+TEST(stamp_reported_delay_follows_the_block)
+{
+    CHECK(reported_frames(3072, 256, 0) == 3072 + 256 + 640);
+    CHECK(reported_frames(3072, 64, 0) == 3072 + 64 + 640);
+    CHECK(reported_frames(3072, 32, 0) == 3072 + 32 + 640);
+    CHECK(reported_frames(3072, 512, 0) == 3072 + 512 + 640);
+    CHECK(reported_frames(1088, 64, 34) == 1088 + 64 + 640 + 34); // the resampler's look-ahead on top
+    CHECK(reported_frames(3072, 32, 0) < reported_frames(3072, 64, 0)); // smaller buffer, smaller delay
+}

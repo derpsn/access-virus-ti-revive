@@ -751,7 +751,7 @@ private:
     // (+ the resampler's look-ahead when the host does not run at the Virus' rate)
     int64_t latency_frames() const
     {
-        return timing_a() + std::max(block_, 256) + 640 + (resampling() ? Resampler::HALF + 2 : 0);
+        return reported_frames(timing_a(), block_, resampling() ? Resampler::HALF + 2 : 0); // stamprule.h
     }
     int virus_rate() const { return out_ ? out_->rate.load(std::memory_order_relaxed) : 44100; }
     bool resampling() const { return std::fabs(rate_ - virus_rate()) > 0.5; }
