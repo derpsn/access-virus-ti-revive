@@ -54,6 +54,15 @@ TEST(live_guard_played_note_waits_behind_a_pending_clip_off)
     CHECK(g.note_on(1, 63, true, 50001, 4096));        // another key: none either
 }
 
+// the window the plug-in passes: only while the off still has more than 5 ms to its stamp (E456: cut from 15 ms, 1 of
+// 33 at 10 ms, none at 0) - a wider one sent played notes at the clip delay with nothing to protect (simulator S087)
+TEST(live_guard_window_ends_before_the_offs_stamp)
+{
+    CHECK(live_guard_window(3072, 48000) == 3072 - 240);
+    CHECK(live_guard_window(3072, 44100) == 3072 - 220);
+    CHECK(live_guard_window(200, 48000) == 0); // a lead shorter than the margin: nothing can wait, no window
+}
+
 TEST(live_guard_unflagged_note_off_stays_unflagged)
 {
     LiveNoteGuard g;

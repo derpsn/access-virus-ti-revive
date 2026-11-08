@@ -1797,7 +1797,7 @@ tresult PLUGIN_API VirusPlugin::process(ProcessData &data)
                                 std::max<uint8_t>(1, data7(e.noteOn.velocity))};
                 evs.add(at(e.sampleOffset), m, 3,
                         live_guard_.note_on(m[0] & 15, m[1], is_live_note(live_notes_, e.flags), at(e.sampleOffset),
-                                            timing_a() + 0x400)); // E456: never cut by a waiting clip off
+                                            live_guard_window(timing_a(), virus_rate()))); // E456, E466
                 held_notes_.note_on(m[0] & 15, m[1]);
                 auto &mt = meter_[e.noteOn.channel & 15]; // MIDI activity meter: the highest velocity, decays in tick_meters
                 if (mt.load(std::memory_order_relaxed) < m[2])

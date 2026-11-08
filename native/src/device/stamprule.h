@@ -76,6 +76,14 @@ inline int64_t live_stamp(int64_t newest, int64_t marker, double ratio)
 // before the off's stamp, measured on the real unit). Late in that rare case, never silent. pos = the event's
 // timeline position, window = how long a sequenced note-off can still wait (the lead difference of the two paths).
 // Audio thread: fixed tables, no allocation.
+// The window: a sequenced note-off at position p plays at p + A, a played note at once, so it is cut while the off
+// still has more than ~10-15 ms to go (E456). Protected until 5 ms before the off's stamp; outside, played notes go
+// at once (a window of A + 0x400 sent them at the clip delay, about 54 ms later, with nothing to protect, S087).
+inline int64_t live_guard_window(int a, int rate)
+{
+    const int64_t w = (int64_t)a - (int64_t)rate * 5 / 1000;
+    return w > 0 ? w : 0;
+}
 class LiveNoteGuard {
 public:
     bool note_on(int channel, int key, bool flagged, int64_t pos = 0, int64_t window = 0)
