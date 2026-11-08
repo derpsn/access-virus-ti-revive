@@ -43,8 +43,10 @@ echo "== broker (static libusb)"
 make -C "$REPO/src/broker" mac-static OUT="$BUILD" LIBUSB_PREFIX="$LIBUSB"
 otool -L "$BUILD/mac/vtibroker" | grep -q libusb && { echo "broker still links a libusb dylib"; exit 1; }
 ARCHS=$(lipo -archs "$BUILD/mac/vtibroker")
-case " $ARCHS " in *" arm64 "*" x86_64 "* | *" x86_64 "*" arm64 "*) echo "broker: $ARCHS" ;;
-*) echo "broker is not universal (has: $ARCHS; issue #33)"; exit 1 ;; esac
+for A in arm64 x86_64; do
+    case " $ARCHS " in *" $A "*) ;; *) echo "broker is not universal (has: $ARCHS, lacks $A; issue #33)"; exit 1 ;; esac
+done
+echo "broker: $ARCHS"
 codesign --force --sign - "$BUILD/mac/vtibroker"
 
 echo "== plug-in TI Revive Virus Control: VST3 + Audio Unit (arm64 + x86_64)"
