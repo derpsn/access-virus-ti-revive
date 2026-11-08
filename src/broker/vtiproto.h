@@ -33,6 +33,8 @@ enum {
     VTIMSG_OBSERVE = 6,       // client -> broker: become a read-only observer (protocol 4)
     VTIMSG_FLASHINFO = 7,     // client -> broker: the Virus' identification blocks (flashinfo.h; owner only, read once
                               // per device open, then cached)
+    VTIMSG_REENUM = 8,        // client -> broker: macOS software replug after a sleep (E472); owner only, no reply (an
+                              // older broker logs "unknown message" and ignores it)
     VTIMSG_RX = 0x81,         // broker -> client: u8 ep, data...
     VTIMSG_CONTROL_REPLY = 0x83, // broker -> client: u32 seq, i32 result (bytes or -1), IN data...
     VTIMSG_STATE = 0x84,      // broker -> client: u32 connected (1 = device open; 2 = open, but another program's

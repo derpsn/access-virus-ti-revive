@@ -8,6 +8,8 @@
 // --offline-end T: real time again from T s on; --notes-off A:B: no --notes in [A, B) s (stopped after the render).
 // --hold T: C4 on at T s and held to the end; --param-at T:ID=NORM: a parameter change at T s (repeatable) - e.g. to
 // hear whether the Virus applies a change to a held note.
+// --live-after N: with --notes, a C4 flagged as played live N frames after each clip note-off, held 300 ms (S065 C5:
+// does the clip's off, sent first but stamped later, cut the played note?).
 // --cid HEX: load that class (e.g. the original Access id D9909FB45F730543AC5397BE8958CD31, E221), else the first.
 // --duplicate T: a second instance runs next to the first from the start (a DAW's duplicated track, issue #6) with
 // the same notes; at T s the first is removed and the second takes over the Virus. --editor2 with it: the
@@ -233,6 +235,7 @@ int main(int argc, char **argv)
     const char *state = nullptr, *save = nullptr, *wav = nullptr;
     std::string cid; // --cid: the class to load, else the first audio class
     int wav_bus = 0; // the output bus that is measured and written (0 = Out 1)
+    int live_notes = 0; // --live: Event::kIsLive on the --notes
     bool notes = false, editor = false, editor2 = false, stress = false, stress_notes = true, stress_params = true, scan = false;
     double stress_stop = 1e9;
     double transport_at = -1, loop_bars = 0; // --transport / --loop: a playing DAW transport for process()
@@ -258,6 +261,7 @@ int main(int argc, char **argv)
     int chord_size = 1; // --chord N
     int parts = 1; // --parts N: the chord's notes spread over channels 1..N
     double hold = -1; // --hold: note on at this time, never off
+    double live_after = -1; // --live-after N: a played C4 N frames after each clip note-off, held 300 ms
     double notes_off_from = -1, notes_off_to = -1; // --notes-off A:B: no --notes in [A, B) s (a DAW stopped after a render)
     struct TimedChange {
         double t;
@@ -281,6 +285,8 @@ int main(int argc, char **argv)
             loop_bars = atof(argv[++i]);
         else if (!strcmp(argv[i], "--notes"))
             notes = true;
+        else if (!strcmp(argv[i], "--live") && i + 1 < argc) // the --notes flagged as played live: "alt" odd seconds, "all"
+            live_notes = !strcmp(argv[++i], "all") ? 2 : 1;
         else if (!strcmp(argv[i], "--chord") && i + 1 < argc) // with --notes: N notes at once, 1 to 8
             chord_size = std::max(1, std::min(8, atoi(argv[++i])));
         else if (!strcmp(argv[i], "--parts") && i + 1 < argc)
@@ -293,6 +299,8 @@ int main(int argc, char **argv)
             sscanf(argv[++i], "%lf:%lf", &notes_off_from, &notes_off_to);
         else if (!strcmp(argv[i], "--hold") && i + 1 < argc)
             hold = atof(argv[++i]);
+        else if (!strcmp(argv[i], "--live-after") && i + 1 < argc)
+            live_after = atof(argv[++i]);
         else if (!strcmp(argv[i], "--param-at") && i + 1 < argc) {
             double t = 0, v = 0;
             unsigned id = 0;
@@ -597,6 +605,8 @@ int main(int argc, char **argv)
                 if (t >= f0 && !(t >= notes_off_from * rate && t < notes_off_to * rate)) {
                     Event e{};
                     e.sampleOffset = (int32)(t - f0);
+                    if (live_notes == 2 || (live_notes == 1 && (t / rate) % 2 == 1))
+                        e.flags = Event::kIsLive;
                     static const int16 chord_notes[] = {60, 64, 67, 72, 76, 79, 84, 88};
                     for (int n = 0; n < chord_size; n++) { // --chord N: C4 and N-1 notes above it, all in one block
                         if ((t / (rate / 2)) % 2 == 0) {
@@ -608,6 +618,26 @@ int main(int argc, char **argv)
                         }
                         ev.addEvent(e);
                     }
+                }
+        }
+        if (notes && live_after >= 0) { // --live-after N: after each clip note-off (at the half second) a C4 played
+            // live N frames later, held 300 ms: the DAW sent the clip's off first, so the played note must sound (S065 C5)
+            const long rate = clk.rate, f0 = clk.frame(b), f1 = f0 + block;
+            const long gap = (long)live_after, len = (long)(0.3 * rate);
+            for (long s = (f0 / rate) * rate - rate; s < f1; s += rate)
+                for (int k = 0; k < 2; k++) {
+                    long t = s + rate / 2 + gap + (k ? len : 0);
+                    if (t < f0 || t >= f1)
+                        continue;
+                    Event e{};
+                    e.sampleOffset = (int32)(t - f0);
+                    e.flags = Event::kIsLive;
+                    e.type = k ? Event::kNoteOffEvent : Event::kNoteOnEvent;
+                    if (k)
+                        e.noteOff = {0, 60, 0.f, -1, 0};
+                    else
+                        e.noteOn = {0, 60, 0, 0.8f, 0, -1};
+                    ev.addEvent(e);
                 }
         }
         if (hold >= 0) { // one C4 from `hold` on, released only at the end
@@ -746,7 +776,9 @@ int main(int argc, char **argv)
             fflush(stdout);
             peak = 0;
         }
-        t_next += std::chrono::microseconds((long long)block * 1000000 / clk.rate); // real time at the host rate
+        // real time at the host rate, in nanoseconds: whole microseconds rounded the period down, 0.1 % fast at 32
+        // frames / 48 kHz (666 instead of 666.667 us), which the plug-in then steered out in lumps (simulator S082)
+        t_next += std::chrono::nanoseconds(std::llround(block * 1e9 / clk.rate));
         for (auto &ah : aheads)
             if (ah.second > 0 && clk.seconds(b) >= ah.first) {
                 t_next -= std::chrono::microseconds((long long)(ah.second * 1000));

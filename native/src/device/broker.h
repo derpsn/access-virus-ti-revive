@@ -71,6 +71,9 @@ public:
     // (blocks in `out`) or -1 (also at once from a broker without the INFO message: older than 0.8.21). Takes about
     // 2 s the first time.
     int flash_info(std::vector<uint8_t> &out, int timeout_ms = 8000);
+    // macOS: ask the broker to let the system re-enumerate the Virus (software replug after a sleep, E472); no reply,
+    // an older broker ignores it
+    bool reenumerate();
 
     // control replies received and not yet taken (unit tests)
     size_t pending_replies() const

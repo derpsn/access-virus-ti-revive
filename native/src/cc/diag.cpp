@@ -53,6 +53,8 @@ const std::vector<PluginOption> &plugin_options()
     static const std::vector<PluginOption> opts = {
         {"outdelay-changes", "outdelay-changes.on", "Output delays only on change (not at every Play/Stop)"},
         {"timing-classic", "timing-classic.on", "Timing as before 0.8.35 (lead 1024, no safety net)"},
+        // on by default since 0.8.39, as the original's VST3 always does it (E400, E402); the file switches it off
+        {"live-notes", "live-notes.off", "Notes played live skip the lead, like the original (#30)", true},
     };
     return opts;
 }
@@ -68,7 +70,7 @@ static const PluginOption *find_option(const std::string &name)
 bool plugin_option(const std::string &name)
 {
     const PluginOption *o = find_option(name);
-    return o && flag(o->file);
+    return o && (o->default_on ? !flag(o->file) : flag(o->file));
 }
 
 bool set_plugin_option(const std::string &name, bool on, std::string &error)
@@ -78,7 +80,7 @@ bool set_plugin_option(const std::string &name, bool on, std::string &error)
         error = "unknown option " + name;
         return false;
     }
-    return set_flag(o->file, on, error);
+    return set_flag(o->file, o->default_on ? !on : on, error);
 }
 
 #if defined(_WIN32) || defined(__APPLE__) // Linux: the journal

@@ -70,6 +70,96 @@ TEST(editormenus_action_at)
     CHECK(m.action_at(0) == MenuAction::HelpMode);
 }
 
+// The Access manuals (editor/manuals.h): the PDFs TI Revive's setup copies from the user's own Access installer next
+// to the Access files (Documentation/Manuals), Snow names for a Snow, the TI's where the Snow has none
+TEST(manuals_file_names_ti_and_snow)
+{
+    CHECK(manual_file(kManualReference, false) == "Virus TI Reference.pdf");
+    CHECK(manual_file(kManualReference, true) == "Virus TI Snow Reference.pdf");
+    CHECK(manual_file(kManualQuickstart, true) == "Virus TI Snow Quickstart.pdf");
+    CHECK(manual_file(kManualAtomizer, true) == "Atomizer Manual.pdf"); // one for both
+    CHECK(manual_file(kManualTutorial, false) == "Virus Control Tutorial.pdf");
+    CHECK(manual_file(kManualProgramming, false) == "Programming Analogue Synths.pdf");
+    CHECK(std::string(manual_title(kManualReference, true)) == "Virus TI Snow Reference Manual (PDF)");
+    CHECK(std::string(manual_title(kManualReference, false)) == "Virus TI Reference Manual (PDF)");
+}
+
+TEST(manuals_folders_next_to_the_access_files)
+{
+    // Windows/Linux: <...>/Virus TI/Common/Virus Control.dll -> <...>/Virus TI/Documentation
+    auto d = manual_dirs("/home/u/.local/share/tirevive/access/Access Music/Virus TI/Common/Virus Control.dll", "");
+    CHECK(!d.empty() && d[0] == "/home/u/.local/share/tirevive/access/Access Music/Virus TI/Documentation");
+    // a plain Windows Access install keeps Documentation under Program Files (x86)
+    d = manual_dirs("C:/Program Files/Access Music/Virus TI/Common/Virus Control.dll", "C:/Program Files (x86)");
+    bool x86 = false;
+    for (auto &s : d)
+        x86 |= s == "C:/Program Files (x86)/Access Music/Virus TI/Documentation";
+    CHECK(x86);
+    d = manual_dirs("C:\\Program Files\\Access Music\\Virus TI\\Common\\Virus Control.dll", "");
+    CHECK(!d.empty() && d[0] == "C:/Program Files/Access Music/Virus TI/Documentation");
+    // macOS: the bundle's resources; the setup copies the manuals to /Library/Documentation
+    d = manual_dirs("/Library/Application Support/Access Music/Virus TI/Common/Virus Control.bundle/Contents/Resources", "");
+    bool mac = false;
+    for (auto &s : d)
+        mac |= s == "/Library/Documentation/Access Music/Virus TI";
+    CHECK(mac);
+    CHECK(manual_dirs("", "").size() >= 1); // the macOS folder is always tried
+}
+
+TEST(manuals_find_snow_falls_back_to_ti)
+{
+    std::vector<std::string> dirs = {"/a", "/b"}; // Documentation roots
+    auto only = [](std::vector<std::string> have) {
+        return [have](const std::string &p) {
+            for (auto &h : have)
+                if (h == p)
+                    return true;
+            return false;
+        };
+    };
+    CHECK(find_manual(dirs, kManualReference, true, only({"/b/Manuals/Virus TI Snow Reference.pdf"})) ==
+          "/b/Manuals/Virus TI Snow Reference.pdf");
+    CHECK(find_manual(dirs, kManualReference, true, only({"/a/Manuals/Virus TI Reference.pdf"})) ==
+          "/a/Manuals/Virus TI Reference.pdf");
+    CHECK(find_manual(dirs, kManualAtomizer, false, only({})).empty());
+    // the MSI keeps the programming tutorial under Tutorials, the Mac package under Manuals
+    CHECK(find_manual(dirs, kManualProgramming, false,
+                      only({"/a/Tutorials/Programming Tutorial/Programming Analogue Synths.pdf"})) ==
+          "/a/Tutorials/Programming Tutorial/Programming Analogue Synths.pdf");
+    CHECK(find_manual(dirs, kManualProgramming, false, only({"/b/Manuals/Programming Analogue Synths.pdf"})) ==
+          "/b/Manuals/Programming Analogue Synths.pdf");
+}
+
+// the "?" menu lists the manuals it found, as the original's does, in their own group; none found: no group
+TEST(editormenus_help_menu_manuals_when_found)
+{
+    HelpMenuState s;
+    BuiltMenu m = help_menu(s);
+    CHECK(index_of(m, MenuAction::Manual) < 0);
+    s.manuals = {kManualReference, kManualAtomizer};
+    s.snow = true;
+    m = help_menu(s);
+    int i = index_of(m, MenuAction::Manual);
+    CHECK(i > index_of(m, MenuAction::SetupTips) && i < index_of(m, MenuAction::Website));
+    CHECK(m.items[i].text == "Virus TI Snow Reference Manual (PDF)" && m.arg_at(i) == kManualReference);
+    CHECK(m.action_at(i + 1) == MenuAction::Manual && m.arg_at(i + 1) == kManualAtomizer);
+    CHECK(m.items[i - 1].separator);
+    int lines = 0;
+    for (auto &it : m.items)
+        lines += it.separator;
+    CHECK(lines == 3);
+}
+
+// the welcome and What's New pages (infopage.h) can be opened again from the "?" menu, after the setup tips
+TEST(editormenus_help_menu_welcome_and_whats_new)
+{
+    HelpMenuState s;
+    BuiltMenu m = help_menu(s);
+    int w = index_of(m, MenuAction::Welcome), n = index_of(m, MenuAction::WhatsNew);
+    CHECK(w > index_of(m, MenuAction::SetupTips) && n == w + 1);
+    CHECK(m.items[w].text == "Welcome Page" && m.items[n].text == "What's New in TI Revive");
+}
+
 TEST(editormenus_links)
 {
     CHECK(std::string(issues_url()) == "https://github.com/derpsn/access-virus-ti-revive/issues");

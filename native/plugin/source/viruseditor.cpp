@@ -1078,6 +1078,7 @@ public:
             keep_runloop(); // a new instance's setHostContext may have replaced it (E183)
 #endif
             plugin_->diag_report();
+            tick_info();
             tick_tips();
             plugin_->tick_gestures(); // knob moves on the Virus -> host edits (E304)
             if (int kb, kp; key_load_.due(now_ms(), kb, kp)) // Up/Down in the browser stopped
@@ -1219,6 +1220,11 @@ public:
     }
     void onKeyboardEvent(KeyboardEvent &event, CFrame *frame) override
     {
+        if (info_ != vti::InfoStart::None && event.type == EventType::KeyDown && event.virt == VirtualKey::Escape) {
+            close_info(false); // as OK
+            event.consumed = true;
+            return;
+        }
         if (tips_ && event.type == EventType::KeyDown && event.virt == VirtualKey::Escape) {
             close_tips();
             event.consumed = true;
@@ -1391,6 +1397,8 @@ public:
             draw_help(ctx);
         if (tips_)
             draw_tips(ctx);
+        if (info_ != vti::InfoStart::None)
+            draw_info(info_page_, true);
         {
             long us = (long)std::chrono::duration_cast<std::chrono::microseconds>(std::chrono::steady_clock::now() - t0).count();
             plugin_->diag.draw_us += us;
@@ -1410,6 +1418,15 @@ public:
 
     void onMouseDownEvent(MouseDownEvent &event) override
     {
+        if (info_ != vti::InfoStart::None) { // only its buttons act, as on the original's Info page
+            const int mx = (int)event.mousePosition.x, my = (int)event.mousePosition.y;
+            if (vti::kInfoOk.contains(mx, my))
+                close_info(false);
+            else if (vti::kInfoDontShow.contains(mx, my))
+                close_info(true);
+            event.consumed = true;
+            return;
+        }
         if (tips_) { // any click closes the setup page and does nothing else
             close_tips();
             event.consumed = true;
@@ -1984,52 +2001,136 @@ private:
         if (tips_) {
             tips_page_ = std::move(page);
             invalid();
-        } else if (!help_ && !getenv("VTI_NO_SETUP_TIPS") && vti::tips_open_at_start(page, tips_seen_)) {
+        } else if (!help_ && start_pages_done() && info_checked_ && info_ == vti::InfoStart::None &&
+                   !getenv("VTI_NO_SETUP_TIPS") && vti::tips_open_at_start(page, tips_seen_)) {
+            // one page after the other: the start pages, then the welcome / What's New page, then these tips
             tips_page_ = std::move(page);
             tips_ = true;
             invalid();
         }
     }
+    // the setup page in the same look as the welcome page: the tips as paragraphs, warnings in red; any click closes it
     void draw_tips(CDrawContext *ctx)
     {
-        const CRect view(0, 0, getViewSize().getWidth(), getViewSize().getHeight());
-        SharedPointer<CFontDesc> font = makeOwned<CFontDesc>(*kNormalFontSmall);
-        SharedPointer<CFontDesc> bold = makeOwned<CFontDesc>(*kNormalFontSmall);
-        bold->setStyle(kBoldFace);
-        const double w = std::min<double>(640, view.getWidth() - 40), pad = 14, lh = 15, gap = 6;
-        ctx->setFont(font);
-        std::vector<std::vector<std::string>> texts;
-        double h = pad + lh + gap * 2 + lh + pad; // title, closing hint
-        for (const vti::Tip &t : tips_page_.tips) {
-            texts.push_back(wrap(ctx, t.text, w - 2 * pad));
-            h += texts.back().size() * lh + gap;
+        (void)ctx;
+        vti::InfoPage p;
+        p.title = tips_page_.title;
+        for (const vti::Tip &t : tips_page_.tips)
+            p.paras.push_back({t.text, false, t.warn});
+        p.paras.push_back({"Click anywhere or press Esc to close. This page is in the ? menu."});
+        draw_info(p, false);
+    }
+
+    // the welcome / What's New pages (infopage.h): the original's Info page background and buttons from the user's
+    // Access files, our text where the original's text image sits. Opens with the editor once the start pages are
+    // gone (never over "Syncing memory"); only its buttons (or Esc = OK) close it.
+    vti::InfoStart info_ = vti::InfoStart::None;
+    vti::InfoPage info_page_;
+    bool info_checked_ = false;
+    static const char *tirevive_version()
+    {
+#ifdef TIREVIVE_VERSION
+        return TIREVIVE_VERSION;
+#else
+        return "";
+#endif
+    }
+    void open_info(vti::InfoStart which, bool from_menu)
+    {
+        const vti::InfoState st = plugin_->info_state();
+        info_page_ = which == vti::InfoStart::Welcome ? vti::welcome_page(tirevive_version())
+                     : from_menu ? vti::whats_new_page("", tirevive_version()) // the menu: all notes up to this one
+                                 : vti::whats_new_page(st.last_version, tirevive_version());
+        if (which == vti::InfoStart::WhatsNew && info_page_.paras.empty())
+            return; // nothing written for this version
+        if (which == vti::InfoStart::Welcome && st.last_version.empty()) {
+            vti::InfoState s = st; // a new install: this version's news count as seen, the welcome stays on
+            s.last_version = tirevive_version();
+            plugin_->info_save_state(s);
         }
-        const double x = view.left + (view.getWidth() - w) / 2, y0 = std::max<double>(10, (view.getHeight() - h) / 2);
-        const CRect panel(x, y0, x + w, y0 + h);
+        if (tips_) // the open setup page goes away as if read (from the menu over it), so it does not come back
+            close_tips();
+        info_ = which;
+        invalid();
+    }
+    bool start_pages_done() const
+    {
+        return plugin_->ui_value("VirusControl/RecallProgress", -1) >= 127 &&
+               plugin_->ui_value("VirusControl/InitialSyncProgress", -1) >= 127;
+    }
+    void close_info(bool dont_show_again)
+    {
+        vti::InfoState st = plugin_->info_state();
+        if (vti::version_cmp(tirevive_version(), st.last_version) > 0)
+            st.last_version = tirevive_version();
+        if (dont_show_again)
+            (info_ == vti::InfoStart::Welcome ? st.welcome_off : st.news_off) = true;
+        plugin_->info_save_state(st);
+        info_ = vti::InfoStart::None;
+        invalid();
+    }
+    void tick_info()
+    {
+        if (info_checked_ || getenv("VTI_NO_SETUP_TIPS")) // test hosts: as the setup page
+            return;
+        if (!start_pages_done())
+            return; // after the start pages, as the original's welcome lies under them
+        info_checked_ = true;
+        const vti::InfoStart which = vti::info_at_start(plugin_->info_state(), tirevive_version(), plugin_->has_history());
+        if (which != vti::InfoStart::None)
+            open_info(which, false);
+    }
+    void draw_info(const vti::InfoPage &page, bool dont_show_button)
+    {
+        if (void *bg = canvas_.image("BG_Page_Info.png"))
+            canvas_.blit(bg, 0, 0, vti::kInfoPage.x, vti::kInfoPage.y, vti::kInfoPage.w, vti::kInfoPage.h, 1.0);
+        else
+            canvas_.fill(vti::kInfoPage.x, vti::kInfoPage.y, vti::kInfoPage.w, vti::kInfoPage.h, {170, 172, 176, 255});
+        CDrawContext *ctx = canvas_.ctx;
+        const vti::InfoRect &a = vti::kInfoText;
+        SharedPointer<CFontDesc> title = makeOwned<CFontDesc>(*kNormalFont), body = makeOwned<CFontDesc>(*kNormalFont),
+                                 bold = makeOwned<CFontDesc>(*kNormalFont);
+        title->setStyle(kBoldFace);
+        bold->setStyle(kBoldFace);
+        title->setSize(18);
+        // the largest body size whose text fits above the buttons
+        std::vector<std::vector<std::string>> lines;
+        double size = 13, lh = 0, gap = 0;
+        for (; size >= 9; size -= 1) {
+            body->setSize(size), bold->setSize(size);
+            lh = size + 4, gap = size * 0.6;
+            lines.clear();
+            double h = 18 + 4 + gap * 2;
+            for (const vti::InfoPara &p : page.paras) {
+                ctx->setFont(p.bold || p.warn ? bold : body);
+                lines.push_back(wrap(ctx, p.text, a.w));
+                h += lines.back().size() * lh + gap;
+            }
+            if (h <= vti::kInfoOk.y - 8 - a.y)
+                break;
+        }
         ctx->setDrawMode(kAntiAliasing);
-        ctx->setFillColor(CColor(20, 22, 28, 245));
-        ctx->drawRect(panel, kDrawFilled);
-        ctx->setLineWidth(1);
-        ctx->setFrameColor(CColor(120, 190, 255, 255));
-        ctx->drawRect(panel, kDrawStroked);
-        double y = y0 + pad;
-        ctx->setFont(bold);
-        ctx->setFontColor(CColor(255, 255, 255, 255));
-        ctx->drawString(tips_page_.title.c_str(), CRect(x + pad, y, x + w - pad, y + lh), kLeftText);
-        y += lh + gap;
-        for (size_t i = 0; i < texts.size(); i++) {
-            const bool warn = tips_page_.tips[i].warn;
-            ctx->setFont(warn ? bold : font);
-            ctx->setFontColor(warn ? CColor(255, 190, 90, 255) : CColor(220, 230, 240, 255));
-            for (const std::string &line : texts[i]) {
-                ctx->drawString(line.c_str(), CRect(x + pad, y, x + w - pad, y + lh), kLeftText);
+        double y = a.y;
+        ctx->setFont(title);
+        ctx->setFontColor(CColor(20, 20, 20, 255));
+        ctx->drawString(page.title.c_str(), CRect(a.x, y, a.x + a.w, y + 22), kLeftText);
+        y += 22 + gap * 2;
+        for (size_t i = 0; i < page.paras.size(); i++) {
+            const vti::InfoPara &p = page.paras[i];
+            ctx->setFont(p.bold || p.warn ? bold : body);
+            ctx->setFontColor(p.warn ? CColor(150, 25, 15, 255) : CColor(25, 25, 25, 255));
+            for (const std::string &l : lines[i]) {
+                ctx->drawString(l.c_str(), CRect(a.x, y, a.x + a.w, y + lh), kLeftText);
                 y += lh;
             }
             y += gap;
         }
-        ctx->setFont(font);
-        ctx->setFontColor(CColor(150, 165, 180, 255));
-        ctx->drawString("Click or press Esc to close. This page is in the ? menu.", CRect(x + pad, y, x + w - pad, y + lh), kLeftText);
+        if (void *ok = canvas_.image("BTN_Ok_Red.png"))
+            canvas_.blit(ok, 0, 0, vti::kInfoOk.x, vti::kInfoOk.y, vti::kInfoOk.w, vti::kInfoOk.h, 1.0);
+        if (dont_show_button)
+            if (void *ds = canvas_.image("BTN_Dont_Show_Again.png"))
+                canvas_.blit(ds, 0, 0, vti::kInfoDontShow.x, vti::kInfoDontShow.y, vti::kInfoDontShow.w,
+                             vti::kInfoDontShow.h, 1.0);
     }
     // the note follows the mouse; a pinned (clicked) one stays while the mouse is over no explained control
     // the LCD shows the control under the mouse like the original (E353); the plug-in only hears of a new one
@@ -2842,12 +2943,27 @@ private:
         vti::HelpMenuState st;
         st.connected = plugin_->virus_connected();
         st.diag_log = vti::cc::plugin_log_enabled();
+        st.snow = plugin_->is_snow();
+        manual_paths_.assign(vti::kManualCount, std::string());
+        const char *x86 = getenv("ProgramFiles(x86)");
+        const auto dirs = vti::manual_dirs(plugin_->files().source(), x86 ? x86 : "");
+        for (int k = 0; k < vti::kManualCount; k++) { // only the PDFs the user's Access setup put on disk
+            manual_paths_[(size_t)k] = vti::find_manual(dirs, k, st.snow, [](const std::string &p) {
+                std::error_code ec;
+                return std::filesystem::is_regular_file(std::filesystem::u8path(p), ec);
+            });
+            if (!manual_paths_[(size_t)k].empty())
+                st.manuals.push_back(k);
+        }
         vti::BuiltMenu m = vti::help_menu(st);
         const int checked = m.checked;
-        show_list(std::move(m.items), checked, 0, where, [this, actions = std::move(m.actions)](int i) {
-            menu_action(i >= 0 && i < (int)actions.size() ? actions[(size_t)i] : vti::MenuAction::None, 0);
-        });
+        show_list(std::move(m.items), checked, 0, where,
+                  [this, actions = std::move(m.actions), args = std::move(m.args)](int i) {
+                      const bool in = i >= 0 && i < (int)actions.size();
+                      menu_action(in ? actions[(size_t)i] : vti::MenuAction::None, in ? args[(size_t)i] : 0);
+                  });
     }
+    std::vector<std::string> manual_paths_; // the manuals found when the "?" menu last opened, by kManual*
 
     // what a TI Revive menu entry does (editormenus.h); `arg`: the entry's argument (Size: index in kEditorSizes)
     void menu_action(vti::MenuAction a, int arg)
@@ -2859,6 +2975,16 @@ private:
             break;
         case vti::MenuAction::SetupTips:
             open_tips();
+            break;
+        case vti::MenuAction::Welcome:
+            open_info(vti::InfoStart::Welcome, true);
+            break;
+        case vti::MenuAction::WhatsNew:
+            open_info(vti::InfoStart::WhatsNew, true);
+            break;
+        case vti::MenuAction::Manual: // the system's PDF viewer, as for a link
+            if (arg >= 0 && arg < (int)manual_paths_.size() && !manual_paths_[(size_t)arg].empty())
+                open_url(manual_paths_[(size_t)arg].c_str());
             break;
         case vti::MenuAction::Website:
             open_url(vti::website_url());

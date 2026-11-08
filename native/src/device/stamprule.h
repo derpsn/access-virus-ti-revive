@@ -52,6 +52,128 @@ struct StampRun {
     }
 };
 
+// The live path, like the original (Control Center option live-notes, E400, E449). A note the host flags as played live
+// (Event::kIsLive; Ableton Live flags played notes, not clip notes, E448) gets no lead: the original stamps it from the
+// Virus' position, offset -1 x the rate ratio, 0x400 frames behind (0x1800a8420), which the DSP plays at once (E247).
+// A new, lower F5, nothing clamps it, and by the flag alone for note-on and note-off alike; so the safety net below does
+// not touch it and it does not move the net's memory. In VST3 hosts the flag is the only way in: the original's offset
+// rule is off there (E400 (3)).
+inline bool is_live_note(bool option, int event_flags)
+{
+    return option && (event_flags & 1); // Event::kIsLive
+}
+
+inline int64_t live_stamp(int64_t newest, int64_t marker, double ratio)
+{
+    return newest - marker + (int64_t)(-1.0 * ratio) - 0x400;
+}
+
+// Our one difference from the original's live path, by the user's word 2026-11-07: a flagged note-off goes at once only
+// when the last note-on of that key went at once. The original goes by the flag alone, so a flagged note-off of a clip
+// note still waiting on its lead lands first and the note hangs (simulator S065 C4, from about 35 ms before its due;
+// not seen on a real unit). Second difference, user's word 2026-11-08: a flagged note-on of a key whose sequenced
+// note-off still waits for its stamp goes stamped behind that off; at once it would be cut by it (E456: from 15 ms
+// before the off's stamp, measured on the real unit). Late in that rare case, never silent. pos = the event's
+// timeline position, window = how long a sequenced note-off can still wait (the lead difference of the two paths).
+// Audio thread: fixed tables, no allocation.
+// The window: a sequenced note-off at position p plays at p + A, a played note at once, so it is cut while the off
+// still has more than ~10-15 ms to go (E456). Protected until 5 ms before the off's stamp; outside, played notes go
+// at once (a window of A + 0x400 sent them at the clip delay, about 54 ms later, with nothing to protect, S087).
+inline int64_t live_guard_window(int a, int rate)
+{
+    const int64_t w = (int64_t)a - (int64_t)rate * 5 / 1000;
+    return w > 0 ? w : 0;
+}
+class LiveNoteGuard {
+public:
+    bool note_on(int channel, int key, bool flagged, int64_t pos = 0, int64_t window = 0)
+    {
+        const int c = channel & 15, k = key & 127;
+        if (flagged && window > 0 && off_set_[c][k] && pos - off_pos_[c][k] < window)
+            flagged = false; // a clip note-off of this key is still on its way: play after it
+        live_[c][k] = flagged;
+        return flagged;
+    }
+    bool note_off(int channel, int key, bool flagged, int64_t pos = 0)
+    {
+        const int c = channel & 15, k = key & 127;
+        bool &l = live_[c][k];
+        const bool now = flagged && l;
+        l = false;
+        if (!now) { // goes with the lead: may still be waiting when this key is played next
+            off_pos_[c][k] = pos;
+            off_set_[c][k] = true;
+        }
+        return now;
+    }
+
+private:
+    bool live_[16][128] = {};
+    bool off_set_[16][128] = {};
+    int64_t off_pos_[16][128] = {};
+};
+
+// With the live path the controllers go as in the original: CC, aftertouch, program, pressure, bend have no stamp of their
+// own and inherit the last F5 (0x1800a8452): at once behind a live note, waiting with a sequenced one.
+inline bool inherits_stamp(bool option, uint8_t status)
+{
+    return option && status >= 0xA0 && status < 0xF0;
+}
+
+// What one outgoing message gets. from_process = an event of a DAW block (stamped with its block's position); others
+// come from the queue (panic, editor, output delays at Play, start-up): those never inherit the last F5 and never move
+// the safety net unless they are stamped themselves (E472: the panic's CC 123 inherited a stale F5 after a wake;
+// simulator S097: an unstamped queued SysEx moved the net's last stamp, the first note after Play came a block late).
+// no_stamps = Live Mode / Plugin Latency Minimal: nothing stamped, as the original.
+struct StampPlan {
+    bool inherits; // no F5 of its own: the DSP applies the last one
+    bool stamp;    // gets its own F5
+    bool net;      // its stamp goes through the safety net (StampFloor)
+};
+inline StampPlan stamp_plan(const uint8_t *m, size_t n, bool from_process, bool live_option, bool no_stamps)
+{
+    StampPlan p{};
+    p.inherits = no_stamps || (from_process && n > 0 && inherits_stamp(live_option, m[0]));
+    p.stamp = !p.inherits && needs_stamp(m, n, from_process);
+    p.net = p.stamp;
+    return p;
+}
+
+// Live Mode and Plugin Latency, the original's switches (0x18002e170, E449). Plugin Latency N = 0..3 sets the lead to
+// N x 1024 frames, 3 (the default) being the 3072 we use anyway. Live Mode on, or N = 0, sends no lead and no F5 at all,
+// sequenced notes too, and the original then reports only 2X; we report what an unstamped note really takes instead
+// (LIVE_A: about 512 frames from send to the ring, measured E450), so the host's alignment stays true (the user's
+// choice, 2026-11-07). Plugin Latency counts only with Live Mode off, as in the original (0x18002e2ca).
+// The plug-in's delay in Virus frames, what it reports and where it reads the ring: lead A + the host block + the
+// read position's margin + the resampler's look-ahead. Since 0.8.39 like the original's 3584 + block (E402): it
+// follows the block all the way down (before, never below a 256-sample block) and the margin is the original's 512
+// (2X + 256; before 640): exact at blocks 32-512, both rates (E461-E465), steady margins 50-150 at blocks 32/64.
+inline int64_t reported_frames(int a, int block, int resample_extra, int margin = 512)
+{
+    return (int64_t)a + block + margin + resample_extra;
+}
+
+constexpr int LIVE_A = 512;
+struct TimingMode {
+    int a;       // the lead A in frames
+    bool stamps; // F5 time stamps sent
+};
+// Plugin Latency 1 and 2 keep at least three host blocks of lead: at block 512 the safety net moved every 4th chord
+// 5-7 ms late in about half the sessions at leads 1088 and 1216 (E476, E477; the net floors a note at newest +
+// 1024), exact at 1536 (E479). The default keeps the original's 3072 at every block. Users cannot pick Plugin
+// Latency in 0.8.39 (the original's layout has no control for it, E452, E468): groundwork for a lower-lead option.
+constexpr int MIN_LEAD_BLOCKS = 3;
+inline TimingMode timing_mode(bool live_mode, int plugin_latency, int base_a, int block = 0)
+{
+    if (live_mode || plugin_latency == 0)
+        return {LIVE_A, false};
+    if (plugin_latency == 1 || plugin_latency == 2) {
+        const int a = plugin_latency * 1024, floor = MIN_LEAD_BLOCKS * (block > 0 ? block : 0);
+        return {a > floor ? a : floor, true};
+    }
+    return {base_a, true};
+}
+
 // The lead A (frames from the newest ring frame to a note's sound): the original uses 3072 on every host (E364:
 // forced at every start, = its reported latency). Before 0.8.35 TI Revive used 1024 on Linux/macOS, which Logic's
 // uneven block timing overran (late notes, the sync error, E363); 'classic' keeps that for comparison.

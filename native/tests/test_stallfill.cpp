@@ -3,6 +3,7 @@
 #include "check.h"
 extern "C" {
 #include "stallfill.h"
+#include "firstmute.h"
 }
 
 // One completion every 10 ms of the Virus' clock, seen on a wall clock running `ppm` ahead of it.
@@ -87,4 +88,19 @@ TEST(stallfill_start_counts_the_first_transfer)
 {
     vti_stallfill s = VTI_STALLFILL_INIT(10);
     CHECK(vti_stallfill_step(&s, 5000, 0) == 0);
+}
+
+// The first iso IN transfer of a new stream on a running device (a kept broker, no USB reset) carries stale chip
+// memory, two odd samples about -5 dBFS next to descriptor-like bytes: a click at plug-in start (simulator S098 = S078).
+// It is muted, its frame count kept so the timeline does not move; every later transfer passes untouched.
+TEST(firstmute_only_the_first_transfer_of_a_stream)
+{
+    vti_firstmute m;
+    vti_firstmute_start(&m);
+    CHECK(vti_firstmute_take(&m) == 1); // the first completed transfer: muted
+    CHECK(vti_firstmute_take(&m) == 0);
+    CHECK(vti_firstmute_take(&m) == 0);
+    vti_firstmute_start(&m); // the next stream (a new session on the same broker)
+    CHECK(vti_firstmute_take(&m) == 1);
+    CHECK(vti_firstmute_take(&m) == 0);
 }

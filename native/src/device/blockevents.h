@@ -15,6 +15,7 @@ struct BlockEvents {
     struct Ev {
         int64_t stamp;
         uint8_t n, m[16];
+        bool live; // played live: goes at once, no lead (stamprule.h)
     };
     Ev ev[MAX];
     int n = 0;
@@ -23,7 +24,7 @@ struct BlockEvents {
 
     void clear() { n = 0, dropped = 0, dropped_off = false; }
 
-    bool add(int64_t stamp, const uint8_t *m, size_t len)
+    bool add(int64_t stamp, const uint8_t *m, size_t len, bool live = false)
     {
         if (n >= MAX || len > sizeof ev[0].m) {
             dropped++;
@@ -31,7 +32,7 @@ struct BlockEvents {
                 dropped_off = true;
             return false;
         }
-        ev[n].stamp = stamp, ev[n].n = (uint8_t)len;
+        ev[n].stamp = stamp, ev[n].n = (uint8_t)len, ev[n].live = live;
         memcpy(ev[n].m, m, len);
         n++;
         return true;

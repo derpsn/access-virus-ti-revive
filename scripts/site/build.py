@@ -218,7 +218,7 @@ def page_landing(latest, releases, sums):
                          "Connect the Virus, rescan plug-ins in your DAW and load <strong>TI Revive Virus "
                          "Control</strong>. The ASIO device <strong>TI Revive Virus Audio</strong> makes the Virus a "
                          "sound card."])
-    mac = os_card("macOS", "macOS 14.4 or newer, Apple Silicon and Intel (no test on an Intel Mac so far)", asset(latest, "-mac.zip"), None, sums,
+    mac = os_card("macOS", "macOS 14.4 or newer, Apple Silicon and Intel (Intel since 0.8.39, not tested on an Intel Mac yet)", asset(latest, "-mac.zip"), None, sums,
                   ["Unpack the zip and open <code>TI Revive.pkg</code> (not signed: right-click <span class='sep'>&rsaquo;</span> "
                    "<em>Open</em>).",
                    "Put your Access <code>.pkg</code> next to <code>Set up Access Virus TI files.command</code> and "
@@ -280,7 +280,7 @@ def page_landing(latest, releases, sums):
           (<a href="https://gearspace.com/threads/fixing-access-virus-sync-issues.839737/">Gearspace</a>,
           <a href="https://forum.ableton.com/viewtopic.php?p=938076">Ableton forum</a>). TI Revive stamps every note
           on the Virus' own clock and reports its latency to the DAW: in our tests every note lands on the grid, within
-          0.01 to 0.33 ms (standard deviation). The delay itself remains: about 90 ms at 44.1 kHz and 83 ms at 48 kHz at buffers up to 256 samples, 96 and 88 ms at 512 (measured on Linux). The DAW lines up what it plays from the timeline; notes you play live are heard with that delay.</li>
+          0.01 to 0.33 ms (standard deviation). The delay itself remains, as in the original: 3584 samples plus the buffer, at 48 kHz 76, 80 and 85 ms at buffers of 64, 256 and 512 samples, at 44.1 kHz 83, 87 and 93 ms (since 0.8.39, measured on Linux; before, it never went below the delay of a 256 buffer). The DAW lines up what it plays from the timeline. Notes you play live skip the delay in DAWs that mark played notes (Ableton Live), about 22 ms (since 0.8.39); Logic's Audio Unit marks none, so there they are heard with the delay. A played note that a clip note of the same key would cut waits for it.</li>
           <li>The original cannot export or freeze a Virus track faster than real time and shows a warning that
           offline rendering is not supported (<a href="https://www.kvraudio.com/forum/viewtopic.php?p=1599326">KVR</a>,
           <a href="https://zynewave.com/topic/realtime-bounce/">Zynewave forum</a>). TI Revive notices an offline
@@ -293,12 +293,11 @@ def page_landing(latest, releases, sums):
           plug-in on a track fed by a send (REAPER) puts every note on the grid.</li>
           <li>Access' software stopped working on new macOS from Sierra on
           (<a href="https://www.synthtopia.com/content/2016/09/13/access-virus-ti-owners-may-want-to-wait-to-update-their-mac-os/">Synthtopia</a>),
-          and Windows 11 blocks its old USB driver. TI Revive runs natively on Windows 11, macOS (Apple Silicon and
-          Intel) and Linux.</li>
+          and Windows 11 blocks its old USB driver. TI Revive runs natively on Windows 11, macOS (Apple Silicon and Intel; Intel since 0.8.39, not tested on an Intel Mac yet) and Linux.</li>
           <li>Sleep: on the Mac, sleep cut the original's connection until Access fixed it in 2008
           (<a href="https://www.kvraudio.com/news-print.php?id=10515">KVR</a>). Since 0.8.24 the plug-in sets the
           Virus up again after the computer wakes, also after a short USB drop at wake (tested with a drop of under a
-          second on Linux). In our tests on Windows 11, macOS and Linux the Virus played again after waking. Once, on Linux, the Virus stayed silent after waking because it kept the wrong sample rate; since 0.8.26 the plug-in keeps it quiet then, and since 0.8.32 it switches the rate away and back, which the Virus cannot ignore.</li>
+          second on Linux). In our tests on Windows 11, macOS and Linux the Virus played again after waking. Once, on Linux, the Virus stayed silent after waking because it kept the wrong sample rate; since 0.8.26 the plug-in keeps it quiet then, and since 0.8.32 it switches the rate away and back, which the Virus cannot ignore. On the Mac, macOS can leave the Virus' audio with gaps after a sleep; since 0.8.39 the plug-in then reconnects the Virus by itself, like a replug, at most once a minute (two good wakes on our Virus). If dropouts remain after waking, unplug and replug the Virus.</li>
         </ul>
         <h3 class="next">The same as in the original</h3>
         <ul>
@@ -385,8 +384,8 @@ def page_landing(latest, releases, sums):
       <li>The installers are not signed, so Windows and macOS ask once before they run them.</li>
       <li>On Windows and Linux the keys of a Keyboard or Polar cannot be recorded in a DAW yet. On macOS they can, through the MIDI input &ldquo;Virus TI Synth&rdquo; (since 0.8.38; by user reports, our Desktop has no keys). The plug-in switches Local off, as the
       original does; without that input the keys and wheels are silent until you set Local to On in CONFIG on the Virus.</li>
-      <li>On macOS the Virus may show &ldquo;Audio clock changed&rdquo; twice when the plug-in starts, because the plug-in corrects a wrong sample rate by switching away and back. Wait until this has finished; then it plays normally. In a few of our sessions in Ableton Live the sound hung once or the sync marker stayed missing after it. Cause not known, on our list for the next round.</li>
-      <li>Dense projects: with one patch (Main LD) on three channels, turning the filter down made notes drop out; muting the other tracks clears it. Cause not known, not compared with the original yet.</li>
+      <li>On macOS the Virus' audio can have dropouts after the Mac wakes from sleep: macOS's USB audio can leave it with gaps until the Virus is plugged in again. Since 0.8.39 the plug-in then reconnects the Virus by itself, at most once a minute. If dropouts remain after waking, unplug and replug the Virus.</li>
+      <li>Dense projects: with three heavy patches (Main LD, Hrd LD 1, Super Saw) on three channels some notes are lost; any two of them play cleanly. The original Virus Control loses the same notes on the same Virus, so this is the Virus' own limit, not TI Revive's.</li>
     </ul>
     <div class="testing">
       <div><h3>Automated tests</h3><p>{TESTS} unit tests run with every release build on Windows and Linux. They
@@ -541,7 +540,7 @@ def features_section():
       <h4>What it covers</h4>
       <ul>
         <li>All 16 parts, every parameter, the preset browser, RAM and ROM banks, patch libraries.</li>
-        <li>VST3 on Windows, macOS and Linux; Audio Unit for Logic and GarageBand. Native on Apple Silicon.</li>
+        <li>VST3 on Windows, macOS and Linux; Audio Unit for Logic and GarageBand. Native on Apple Silicon and Intel Macs (Intel since 0.8.39, not tested on an Intel Mac yet).</li>
       </ul>
       <h4>Projects and export</h4>
       <ul>
@@ -596,20 +595,24 @@ def features_section():
         <li>The REMOTE page (since 0.8.22): the Virus' remote templates with their names, knob names and MIDI strings, the original's knob template list, template files to load and save, sent to the Virus like the original.</li>
         <li>The original's sync error message, shown when the Virus reports late notes while your DAW plays.</li>
         <li>The keys of a Keyboard or Polar on macOS (since 0.8.38): TI Revive offers a MIDI input &ldquo;Virus TI Synth&rdquo; while the plug-in or the Control Center is open. Choose it as the MIDI input of the track and arm it. Not tested by us: our TI2 Desktop has no keys. By user reports: notes, pitch bend and mod wheel recorded on a TI1 Keyboard (Ableton Live 12.3.7) and a TI2 Polar.</li>
-        <li>Setup Tips for Your DAW in the ? menu (since 0.8.38): opens by itself the first time for a DAW and for a point not read before. Seen in REAPER on Linux; no test on Windows or macOS on record yet.</li>
+        <li>Setup Tips for Your DAW in the ? menu (since 0.8.38): opens by itself the first time for a DAW and for a point not read before. Seen on Linux (REAPER), macOS (Ableton Live, Logic) and Windows 11 (Ableton Live).</li>
         <li>In Logic, Plug-in Latency Compensation must be on. With it off, TI Revive and a Logic instrument played about 100 ms apart; with it on they were in sync by ear, and an export measured at most 0.42 ms apart. Logic warns when you turn it off.</li>
         <li>The Virus leaves remote mode when the plug-in closes, as with the original (since 0.8.38). Tested on Linux with a TI2 Desktop; the effect on a Virus with keys is not tested.</li>
         <li>One bad reply no longer ends a bank sync (since 0.8.38): a bank info of the wrong size or a dump that does not match it is asked for again, up to 3 times. The retry is covered by unit tests; on our TI2 Desktop only the normal sync has run with it.</li>
         <li>Linux: notes no longer get later in long sessions (since 0.8.38). From clock drift, the broker added 30 ms about every 22 minutes on our TI2, and notes stayed late until the plug-in restarted. Measured with the fix past that point. Linux only: macOS and Windows take their timing from the device, by reading the code.</li>
         <li>A crash when the plug-in closes just as the Virus connects is fixed (since 0.8.38): 3 hits before, 25 of 25 clean after, on Linux.</li>
         <li>The numbers 100 to 127 in the browser no longer touch the names (since 0.8.38, issue #28).</li>
+        <li>The D button (direct monitoring) works (since 0.8.39): the part plays straight on Out 1. Tested on macOS (Ableton Live).</li>
+        <li>Panic and the editor's own messages reach the Virus at once, also while notes are played (since 0.8.39). Tested on macOS (Ableton Live).</li>
+        <li>macOS: a saved project no longer switches the Virus' audio clock at start (since 0.8.39), so &ldquo;Audio clock changed&rdquo; no longer shows twice. Tested in Ableton Live.</li>
+        <li>Linux: no click at the start of playback when the broker stays running (since 0.8.39): the broker mutes the first audio packet of a stream. Checked on Linux with a TI2 Desktop, 10 of 10 starts clean.</li>
       </ul>
       <h4>In the editor</h4>
       <ul>
         <li>The LCD shows the control under the mouse (since 0.8.34), as in the original: its name, its value, the value stored in the patch in brackets, and the part.</li>
         <li>A help mode: the ? menu's Explain the Controls explains every control, and why a greyed-out one is inactive.</li>
-        <li><strong>The ? menu.</strong> Since 0.8.36 the ? at the bottom right opens a menu (the original's lists its manuals): Explain the Controls (the help mode above), Setup Tips for Your DAW (since 0.8.38), the TI Revive website, Report a Problem (the GitHub issues), Save Logs for a Bug Report (one text file with the system, the versions and the ends of the plug-in and broker logs, home folder and user name replaced), the detailed log for the next start, and Panic, which sends sustain off and all notes off on all 16 channels.</li>
-        <li>The original's start-up page, &ldquo;Starting up&rdquo; with its filling ring, while a project opens; &ldquo;Syncing memory with Virus&rdquo; only when the plug-in really reads banks from the Virus (since 0.8.27).</li>
+        <li><strong>The ? menu.</strong> Since 0.8.36 the ? at the bottom right opens a menu: Explain the Controls (the help mode above), Setup Tips for Your DAW (since 0.8.38), the Access manuals (since 0.8.39: Reference, Quickstart, Atomizer and the tutorials, opened from your own Access installation, as the original's menu lists them; a Snow gets its own manuals), the Welcome page and What's New in TI Revive (since 0.8.39), the TI Revive website, Report a Problem (the GitHub issues), Save Logs for a Bug Report (one text file with the system, the versions and the ends of the plug-in and broker logs, home folder and user name replaced), the detailed log for the next start, and Panic, which sends sustain off and all notes off on all 16 channels.</li>
+        <li>The original's start-up page, &ldquo;Starting up&rdquo; with its filling ring, while a project opens; &ldquo;Syncing memory with Virus&rdquo; only when the plug-in really reads banks from the Virus (since 0.8.27). Since 0.8.39 &ldquo;Starting up&rdquo; goes straight to &ldquo;Syncing memory with Virus&rdquo; when banks have to be read, without the editor in between, as in the original. Then a Welcome page after a new install, or What's New after an update, in the original's style (since 0.8.39, also in the ? menu).</li>
         <li>Editor sizes from 100 to 200 %. On larger sizes and Retina screens each image is enlarged once with a
         sharp filter, in memory only.</li>
       </ul>
@@ -686,8 +689,7 @@ def features_section():
 
     <div class="feature">
       <div><h3>Timing</h3>
-      <p>The plug-in finds the clock of the Virus on USB, stamps every note against it and reports its latency, so the
-      DAW lines recordings up with the grid. The Virus follows the host at 44.1 or 48 kHz like with the original (since
+      <p>The plug-in finds the clock of the Virus on USB, stamps every note against it and reports its latency, so the DAW lines recordings up with the grid. Since 0.8.39 that delay follows your buffer down to 32 samples, as the original's does (3584 samples plus the buffer: 76 ms at 64 samples and 48 kHz, before 82.7 ms), and notes you play live skip it in DAWs that mark them (Ableton Live), about 22 ms. The Virus follows the host at 44.1 or 48 kHz like with the original (since
       0.8.32); at other host rates a resampler converts with -90 dB error.</p></div>
       <div><table class="data">
         <thead><tr><th>16th notes at 120 BPM</th><th>On the grid</th><th>Jitter</th><th>Drift</th></tr></thead>
@@ -779,7 +781,7 @@ def features_section():
       bank sync. It lists which programs use the Virus, shows the plug-in's and the broker's logs, and saves them all
       for a bug report in one file. It only watches; it never sends anything to the Virus. Its Options... menu
       switches a few things for comparisons with the original: the output delays only on change instead of at every
-      Play/Stop, and the timing as before 0.8.35 (from the next start of the plug-in).</p></div>
+      Play/Stop, and the timing as before 0.8.35 (from the next start of the plug-in), and notes played live skipping the delay (on by default since 0.8.39).</p></div>
       <figure class="shot"><img loading="lazy" src="control-center-nerd-mode.png" width="860" height="620"
       alt="Nerd mode: the plug-in plays notes and checks its bank cache, decoded live">
       <figcaption>The plug-in plays notes and checks its bank cache, decoded live.</figcaption></figure>
@@ -831,7 +833,7 @@ def page_changelog_landing(releases):
 SHARED_IMAGES = ["control-center.png", "control-center-nerd-mode.png", "plugin-help-mode.png", "plugin-help-inactive.png",
                  "plugin-menus.png", "plugin-library-drop.png",
                  "plugin-section-lock.png", "plugin-edit-menu.png", "plugin-help-menu.png"]
-TESTS = 572 # unit tests in native/tests (vtitests), as of 2026-11-07 (0.8.38 round)
+TESTS = 620 # unit tests in native/tests (vtitests), as of 2026-11-08 (0.8.39 round)
 
 # Important information shown at the top of the page, newest first (empty list = no box). The README starts with the
 # same text ("Important" block), keep both identical. Remove an entry when it no longer matters to users.
@@ -854,7 +856,7 @@ COVERAGE, COVERAGE_DATE = "94 %", "16 Oct 2026"
 # the site: one page plus the changelog archive (file name, title and description for search results and link
 # previews, content)
 PAGES = [("index", "TI Revive: the Access Virus TI on Windows 11, macOS and Linux",
-          "The Access Virus TI on Windows 11, macOS (Apple Silicon and Intel) and Linux without the old drivers: "
+          "The Access Virus TI on Windows 11, macOS (Apple Silicon and Intel; Intel since 0.8.39, not tested on an Intel Mac yet) and Linux without the old drivers: "
           "a free, open-source plug-in that looks and works like Virus Control.",
           lambda latest, releases, sums: page_landing(latest, releases, sums)),
          ("changelog", "TI Revive changelog: every version",

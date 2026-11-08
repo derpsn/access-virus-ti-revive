@@ -42,6 +42,23 @@ TEST(stallwatch_worker_paused_too)
     CHECK(w.update(1882, 30000));
 }
 
+// the worker itself hung in writes the Virus did not take (it refused MIDI for 8-19 s during the state upload at 44.1
+// kHz, every write waiting 1 s, simulator S089): the stream ran on meanwhile, so its frames are all there - no stall.
+// Reporting one sent the whole state again into the same block and left the session silent (E464)
+TEST(stallwatch_blocked_worker_with_a_running_stream_is_no_stall)
+{
+    StallWatch w;
+    w.update(1000, 0, 44100);
+    w.update(1441, 10, 44100);                             // running
+    CHECK(!w.update(1441 + 88200, 2010, 44100));           // 2 s later, 2 s of frames: the stream ran
+    CHECK(!w.update(1441 + 88200 + 44100 * 16, 18010, 44100)); // 16 s later, all frames there
+    // a real pause in between: 19 s with 0.05 s of frames is still a sleep
+    StallWatch v;
+    v.update(1000, 0, 48000);
+    v.update(1480, 10, 48000);
+    CHECK(v.update(1480 + 2400, 19010, 48000));
+}
+
 TEST(stallwatch_no_stream_resets)
 {
     StallWatch w;
@@ -69,9 +86,41 @@ TEST(stallwatch_stream_from_frame_zero_and_the_limit)
     StallWatch w;
     w.update(0, 0);
     w.update(441, 10);                                      // running from frame 0
-    CHECK(w.update(882, 10 + StallWatch::LIMIT_MS));        // stood still exactly LIMIT_MS: a stall
+    // since S089 the limit counts frames MISSING for that long: 441 frames arrived = 10 ms that are not missing
+    CHECK(w.update(882, 10 + 10 + StallWatch::LIMIT_MS));   // missing exactly LIMIT_MS: a stall
     StallWatch v;
     v.update(1000, 0);
     v.update(1441, 10);
-    CHECK(!v.update(1882, 10 + StallWatch::LIMIT_MS - 1)); // 1 ms less: a hiccup
+    CHECK(!v.update(1882, 10 + 10 + StallWatch::LIMIT_MS - 1)); // 1 ms less: a hiccup
+}
+
+// The read position ahead of the Virus' audio in every block: after a Virus power cycle with the USB cable left in
+// (Mac, E472) the plug-in anchored on a stream not yet running steadily and its reads were pulled back in every block
+// from then on (read margin min 0 in every 10 s window, dropouts that never settled). A full second of nothing but
+// pulled-back reads starts a new timeline, once; a single pulled-back read (a hiccup) does not.
+TEST(clampwatch_a_second_of_pulled_back_reads_reanchors)
+{
+    ClampWatch w;
+    for (int i = 0; i < 100; i++) // 100 blocks of 64 at 48 kHz: 133 ms, not enough
+        CHECK(!w.update(true, 64, 48000));
+    CHECK(!w.update(false, 64, 48000)); // one good read clears it
+    bool fired = false;
+    int blocks = 0;
+    while (!fired && blocks < 2000) {
+        fired = w.update(true, 64, 48000);
+        blocks++;
+    }
+    CHECK(fired && blocks == 750);       // exactly one second of 64-frame blocks
+    CHECK(!w.update(true, 64, 48000));   // once: the next second counts afresh
+}
+
+// After a Mac sleep the stream can stay gapped until macOS re-enumerates the Virus (E472, E473); the plug-in asks the
+// broker for that software replug, at most once a minute: USB resets close together have hung the Virus (E136, E312)
+TEST(repluggate_once_a_minute)
+{
+    ReplugGate g;
+    CHECK(g.allow(1000));          // the first sleep
+    CHECK(!g.allow(1000 + 30000)); // a second one 30 s later: not yet
+    CHECK(g.allow(1000 + 60000));  // a minute later
+    CHECK(!g.allow(1000 + 60001));
 }

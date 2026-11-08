@@ -24,6 +24,13 @@ static int reset_allowed(void)
 }
 #endif
 
+#ifdef __APPLE__
+#include "resetguard.h"
+#include <time.h>
+#include <unistd.h>
+#define REENUM_GAP_S 60 // E136, E312: USB resets close together have hung the Virus until a power cycle
+#endif
+
 static const uint8_t HANDSHAKE[4] = {0x4e, 0x73, 0x52, 0x01}; // spec §3, sent raw on EP 0x05
 
 struct vti {
@@ -267,3 +274,24 @@ void vti_libusb(vti *v, struct libusb_context **ctx, struct libusb_device_handle
     *ctx = v->ctx;
     *h = v->h;
 }
+
+#ifdef __APPLE__
+// E472: after a Mac sleep the Virus' Core Audio stream can stay gapped until macOS re-enumerates the device (a replug
+// cured it every time). libusb 1.0.30 makes libusb_reset_device a USBDeviceReEnumerate on macOS when nothing is
+// captured (darwin_usb.c darwin_reset_device), and restores our claims afterwards. At most once a minute per user.
+int vti_reenumerate(vti *v)
+{
+    char path[64];
+    snprintf(path, sizeof path, "/tmp/tirevive-reenum-%u", (unsigned)getuid());
+    if (!v || !vti_reset_guard(path, time(NULL), REENUM_GAP_S))
+        return -2;
+    return libusb_reset_device(v->h);
+}
+#else
+int vti_reenumerate(vti *v) // Linux and Windows: not needed (E472 is the Mac's Core Audio)
+{
+    (void)v;
+    return -1;
+}
+#endif
+

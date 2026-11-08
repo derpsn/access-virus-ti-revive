@@ -69,6 +69,8 @@ static bool env_no_ping() // R5 test: the old stamping without sync ping / marke
 }
 
 static const char *const USB_IO_PATH = "Global USB/Virus Control USB IO Configuration";
+static const std::string DM_PATH = "VirusControl/Direct Monitoring"; // the D button (directmon.h)
+static const std::string LIVE_MODE_PATH = "VirusControl/Live Mode", PLUGIN_LATENCY_PATH = "VirusControl/Plugin Latency";
 static const char *const SYNC_INFO_PATH = "Global USB/Sync Information Event"; // global 0x54 from the Virus (E205)
 
 // the USB IO configuration of this computer: VTI_IO_CONFIG (tests), else <plug-in folder>/usb-io, else 0
@@ -257,7 +259,7 @@ int DeviceOut::start_audio()
     return r;
 }
 
-bool DeviceOut::send_rt(const uint8_t *msg, size_t n, int64_t stamp)
+bool DeviceOut::send_rt(const uint8_t *msg, size_t n, int64_t stamp, bool live)
 {
     if (blocked_to_virus(msg, n)) { // rule 2 (sendguard.h); counted here, logged off the audio thread
         blocked_.fetch_add(1, std::memory_order_relaxed);
@@ -275,6 +277,7 @@ bool DeviceOut::send_rt(const uint8_t *msg, size_t n, int64_t stamp)
     Slot &s = rt_[w % RT_SLOTS];
     s.len = (uint8_t)n;
     s.stamp = stamp;
+    s.live = live;
     memcpy(s.data, msg, n);
     rt_w_.store(w + 1, std::memory_order_release);
     return true;
@@ -576,6 +579,7 @@ void DeviceOut::run()
         bool piece_last = false;
         int64_t piece_wait_ns = 0;
         int64_t stamp = -1;
+        bool live = false;
         uint8_t cable = CABLE_PLUGIN; // queued remote template records: 3 (E199)
         {
             std::unique_lock<std::mutex> lk(mu_);
@@ -623,6 +627,7 @@ void DeviceOut::run()
                     const Slot &sl = rt_[r % RT_SLOTS];
                     msg.assign(sl.data, sl.data + sl.len);
                     stamp = sl.stamp;
+                    live = sl.live;
                     rt_r_.store(r + 1, std::memory_order_release);
                     rt_run_.event();
                     cable = dump_.event_cable(CABLE_PLUGIN); // cable 5 while a dump is in pieces (dumppacer.h)
@@ -654,9 +659,18 @@ void DeviceOut::run()
         // reconnect (process() re-anchors on the generation change)
         if (audio_ok() && stall_.update(audio_.newest_frame(),
                                        std::chrono::duration_cast<std::chrono::milliseconds>(
-                                           std::chrono::steady_clock::now().time_since_epoch()).count())) {
+                                           std::chrono::steady_clock::now().time_since_epoch()).count(),
+                                       (int)rate.load(std::memory_order_relaxed))) { // frames, not only time (S089)
             log("Virus TI native: the Virus' audio stood still (sleep?) - set-up, state and a new timeline again\n");
             generation++;
+#ifdef __APPLE__
+            // E472: macOS may keep the Virus' stream gapped after a sleep until it re-enumerates the device (a replug
+            // cured it every time); ask the broker for that software replug, at most once a minute (ReplugGate)
+            if (replug_gate_.allow(std::chrono::duration_cast<std::chrono::milliseconds>(
+                                       std::chrono::steady_clock::now().time_since_epoch()).count()) &&
+                broker_.reenumerate())
+                log("Virus TI native: asked the broker to re-enumerate the Virus after the sleep (E472)\n");
+#endif
             if (resume_) // after a Windows sleep the Virus answered sync pings but played no notes until this (E210)
                 resume_();
         }
@@ -719,6 +733,8 @@ void DeviceOut::run()
                 (long long)(stats_newest_ >= 0 ? newest - stats_newest_ : -1), (long long)anchors.exchange(0),
                 (long long)err_min.exchange(INT64_MAX), (long long)err_max.exchange(INT64_MIN));
             stats_newest_ = newest;
+            if (int n = clamp_reanchors.exchange(0)) // E472: reads pulled back for a second, a new timeline
+                log("Virus TI native: reads ran ahead of the Virus' audio for a second - a new timeline (%d)\n", n);
             int pk[6];
             if (audio_ok() && audio_.raw_peaks(rate.load(), pk)) // the last second per raw channel (0/1 in, 2/3 USB 1, 4/5 USB 2)
                 log("stats: raw peaks %d %d | %d %d | %d %d\n", pk[0], pk[1], pk[2], pk[3], pk[4], pk[5]);
@@ -786,7 +802,7 @@ void DeviceOut::run()
         // other threads use the latest timeline position
         pk_.clear();
         StampRun stamps; // one F5 per stamp value in this write (stamprule.h)
-        auto pack = [&](const std::vector<uint8_t> &m, int64_t st) {
+        auto pack = [&](const std::vector<uint8_t> &m, int64_t st, bool is_live) {
             bool from_process = st >= 0;
             if (st < 0)
                 st = timeline.load();
@@ -794,11 +810,22 @@ void DeviceOut::run()
                 st = audio_.newest_frame();
             int64_t raw = st;
             bool ping = m.size() == 11 && m[6] == 0x73 && m[8] == 0x22;
-            if (int64_t mk = marker.load(); st >= 0 && mk >= 0 && !ping) {
-                int64_t due = st + lead.load(); // the ring frame it sounds at
-                if (stamp_floor.load(std::memory_order_relaxed) && audio_ok()) // never in the past (E364)
-                    due = floor_.apply(due, audio_.newest_frame(), floor_min);
-                st = due - mk; // on the Virus' stamp clock (0 at the marker)
+            // stamprule.h stamp_plan: queued messages (panic, editor) never inherit and never move the net (E472, S097)
+            const StampPlan plan = stamp_plan(m.data(), m.size(), from_process,
+                                              live_notes.load(std::memory_order_relaxed),
+                                              no_stamps.load(std::memory_order_relaxed));
+            const bool inherits = !m.empty() && !ping && plan.inherits;
+            bool live_stamped = false; // a real live stamp, not "no stamp yet"
+            if (int64_t mk = marker.load(); st >= 0 && mk >= 0 && !ping && !inherits && plan.net) {
+                if (is_live && audio_ok()) { // no lead, no safety net (stamprule.h)
+                    st = live_stamp(audio_.newest_frame(), mk, live_ratio.load(std::memory_order_relaxed));
+                    live_stamped = true;
+                } else {
+                    int64_t due = st + lead.load(); // the ring frame it sounds at
+                    if (stamp_floor.load(std::memory_order_relaxed) && audio_ok()) // never in the past (E364)
+                        due = floor_.apply(due, audio_.newest_frame(), floor_min);
+                    st = due - mk; // on the Virus' stamp clock (0 at the marker)
+                }
             }
             if (env_debug()) {
                 fprintf(stderr, "send %02x stamp %lld newest %lld", m[0], (long long)st,
@@ -807,7 +834,8 @@ void DeviceOut::run()
                     fprintf(stderr, " %02x", m[i]);
                 fprintf(stderr, "\n");
             }
-            if (st >= 0 && needs_stamp(m.data(), m.size(), from_process) && (ping || stamps.fresh(st))) {
+            // a live stamp may lie below 0 right after the marker: it wraps in the F5's 14 bits like any stamp
+            if ((st >= 0 || live_stamped) && !inherits && needs_stamp(m.data(), m.size(), from_process) && (ping || stamps.fresh(st))) {
                 auto t = usbmidi_pack({0xF5, (uint8_t)(st & 0x7F), (uint8_t)((st >> 7) & 0x7F)}, CABLE_TIME);
                 pk_.insert(pk_.end(), t.begin(), t.end());
             }
@@ -816,7 +844,7 @@ void DeviceOut::run()
             if (klog_ && st >= 0 && m.size() == 3 && (m[0] & 0xF0) == 0x90 && m[2] && klog_stamps_.size() < 64)
                 klog_stamps_.push_back({raw, audio_ok() ? audio_.newest_frame() : -1, 0, 0});
         };
-        pack(msg, stamp);
+        pack(msg, stamp, live);
         // the rest of a block's events in the same write (one broker message instead of one per event); the
         // fairness rule stays: after 8 in a row the queue gets its turn in the next round
         if (stamp >= 0 && !pending_send_) {
@@ -832,13 +860,14 @@ void DeviceOut::run()
                 const Slot &sl = rt_[r % RT_SLOTS];
                 msg.assign(sl.data, sl.data + sl.len);
                 int64_t st = sl.stamp;
+                const bool sl_live = sl.live;
                 rt_r_.store(r + 1, std::memory_order_release);
                 rt_run_.event();
                 if (dump_.active() && HeldParams::held(msg.data(), msg.size())) { // automation: after the dump
                     held_.add(msg);
                     continue;
                 }
-                pack(msg, st);
+                pack(msg, st, sl_live);
             }
         }
         bool ok = broker_.write(EP_PLUGIN_OUT, pk_.data(), pk_.size());
@@ -987,8 +1016,10 @@ tresult PLUGIN_API VirusPlugin::initialize(FUnknown *context)
     {
         std::error_code tec;
         timing_classic_ = std::filesystem::exists(own_cache_dir() + "/../timing-classic.on", tec);
+        note_probe_on_ = diag_enabled() && std::filesystem::exists(own_cache_dir() + "/../noteprobe.on", tec);
         // the output delays only on change, not at every Play/Stop (Control Center option, outputdelay.h resend_all)
         od_changes_only_ = std::filesystem::exists(own_cache_dir() + "/../outdelay-changes.on", tec);
+        live_notes_ = vti::cc::plugin_option("live-notes"); // the plug-in folder itself: no cache folder needed (S065 C9)
 #ifdef _WIN32
         timing_a_ = timing_lead(timing_classic_, true);
 #else
@@ -996,12 +1027,16 @@ tresult PLUGIN_API VirusPlugin::initialize(FUnknown *context)
 #endif
         if (const char *a = getenv("VTI_NATIVE_A"))
             timing_a_ = atoi(a);
+        a_now_ = timing_a_;
     }
     out_ = std::make_unique<DeviceOut>();
     out_->lead = lead();
     out_->stamp_floor = !timing_classic_;
+    out_->live_notes = live_notes_;
     if (diag_enabled())
         out_->set_diag_path(own_cache_dir() + "/../diag.log");
+    if (live_notes_) // after set_diag_path, or the line never reaches diag.log
+        out_->log("Virus TI native: live notes on (default; live-notes.off switches it off): notes flagged as played go without the lead\n");
     out_->log("Virus TI native: timing: lead %d frames, safety net %s%s\n", timing_a_, timing_classic_ ? "off" : "on",
               timing_classic_ ? " (timing-classic.on)" : "");
     if (od_changes_only_)
@@ -1112,6 +1147,7 @@ std::vector<std::vector<uint8_t>> VirusPlugin::startup_messages() const
 
 tresult PLUGIN_API VirusPlugin::terminate()
 {
+    note_probe_flush();
     stop_warm_ = true;
     if (sync_)
         sync_->cancel(); // a request in flight ends now, not after its timeout (review 2026-10-19 M6)
@@ -1232,6 +1268,7 @@ tresult PLUGIN_API VirusPlugin::setupProcessing(ProcessSetup &setup)
 {
     block_ = setup.maxSamplesPerBlock;
     rate_ = setup.sampleRate;
+    apply_timing_mode(false); // Plugin Latency 1/2 follow the block (3 blocks at least, E477)
     if (out_) // the audio start and setActive ask for it (rate following, design-rate.md step 5)
         out_->want_rate = virus_rate_for(rate_);
     // the Virus runs at 44.1 or 48 kHz (E323); other host rates get its audio resampled. Converters for both Virus
@@ -1274,8 +1311,78 @@ int VirusPlugin::state_part(const std::string &path, int part) const
     return part > 15 || (p && p->part == "none") ? -1 : part;
 }
 
+// Live Mode / Plugin Latency in force (stamprule.h timing_mode): the lead and the F5s change, the host gets the new
+// latency, and the Virus gets B0 78 00 as from the original at every switch (E449). Only while the transport is
+// stopped by the editor's condition, as in the original; a latency change moves the read position, so it clicks once
+void VirusPlugin::apply_timing_mode(bool notify)
+{
+    const bool live = ui_value(LIVE_MODE_PATH, -1) == 1;
+    int n = ui_value(PLUGIN_LATENCY_PATH, -1);
+    if (n < 0 || n > 3)
+        n = 3;
+    const TimingMode m = timing_mode(live, n, timing_a_, block_); // Plugin Latency 1/2: 3 blocks at least (E477)
+    if (m.a == a_now_.load() && m.stamps == stamps_now_)
+        return;
+    a_now_ = m.a;
+    stamps_now_ = m.stamps;
+    if (out_) {
+        out_->lead = lead();
+        out_->no_stamps = !m.stamps;
+        out_->send({0xB0, 0x78, 0x00});
+        out_->log("Virus TI native: timing: lead %d frames, %s (Live Mode %s, Plugin Latency %d)\n", m.a,
+                  m.stamps ? "time stamps" : "no time stamps", live ? "on" : "off", n);
+    }
+    if (notify && componentHandler) // from setupProcessing the host asks for the latency afterwards anyway
+        componentHandler->restartComponent(kLatencyChanged);
+}
+
+// "Output Select Control2" (which 0) or "Control3" (1) as this model names it: the Snow has "pr" names (E449)
+std::string VirusPlugin::dm_output_path(int which) const
+{
+    const std::string n = which ? "Output Select Control3" : "Output Select Control2";
+    for (const char *f : {"Multi Part Parameter/", "Multi Part Parameter/pr "})
+        if (dev_.find(f + n))
+            return f + n;
+    return std::string();
+}
+
+// the D button (directmon.h): from the editor's click; the outputs go the normal way of a part parameter, so the Virus,
+// the project and the output delays (E344) follow; the button itself is not stored, like the original
+void VirusPlugin::direct_monitoring(int part, bool on)
+{
+    const std::string p2 = dm_output_path(0), p3 = dm_output_path(1);
+    if (p2.empty() || p3.empty() || part < 0 || part > 15)
+        return;
+    const int out2 = ui_value(p2, part), out3 = ui_value(p3, part);
+    std::vector<DirectMonitor::Set> sets;
+    int before, after;
+    {
+        std::lock_guard<std::mutex> lk(dm_mu_);
+        before = dm_.part();
+        sets = on ? dm_.on(part, out2, out3) : dm_.off(part);
+        after = dm_.part();
+        dm_part_ = after;
+    }
+    if (before >= 0 && before != after)
+        set_editor_value(DM_PATH, before, 0, false);
+    set_editor_value(DM_PATH, part, after == part ? 1 : 0, false);
+    for (auto &s : sets)
+        ui_set(s.which ? p3 : p2, s.part, s.value);
+}
+
 void VirusPlugin::set_part_value(int part, const std::string &path, int value)
 {
+    // the D button's part: a change of its outputs by hand ends it and keeps that choice (directmon.h)
+    if (part >= 0 && part == dm_part_.load(std::memory_order_relaxed) && path.find("Output Select Control") != std::string::npos) {
+        bool ended;
+        {
+            std::lock_guard<std::mutex> lk(dm_mu_);
+            ended = dm_.changed(part, path.back() == '3', value);
+            dm_part_ = dm_.part();
+        }
+        if (ended)
+            set_editor_value(DM_PATH, part, 0, false);
+    }
     {
         std::lock_guard<std::mutex> lk(values_mu_);
         part_values_[part][path] = value;
@@ -1300,7 +1407,7 @@ void VirusPlugin::set_part_value(int part, const std::string &path, int value)
     // message of this parameter, else add one - otherwise a patch load or project reload brought the old value back
     // (user test: part 3 selected, load a patch -> back on part 1)
     auto msg = dev_.encode(path, value, part < 0 ? 0 : part);
-    if (msg.empty())
+    if (msg.empty() || is_system_clock_global(msg)) // the Virus' report of its rate is not the project's (E445)
         return;
     // index (path, part) -> record, rebuilt when the record list was replaced or grew (patch / project load); a
     // linear decode of all ~240 records per change cost ~45 us - with automation thousands of times per second
@@ -1377,6 +1484,37 @@ void VirusPlugin::tips_save_seen(const std::vector<std::string> &seen) const
     }
 }
 
+vti::InfoState VirusPlugin::info_state() const
+{
+    std::string text;
+    if (FILE *f = fopen((own_cache_dir() + "/../info-page.state").c_str(), "rb")) {
+        char b[256];
+        size_t n;
+        while ((n = fread(b, 1, sizeof b, f)) > 0)
+            text.append(b, n);
+        fclose(f);
+    }
+    return vti::info_state_parse(text);
+}
+
+void VirusPlugin::info_save_state(const vti::InfoState &s) const
+{
+    std::error_code ec;
+    std::filesystem::create_directories(own_cache_dir() + "/..", ec);
+    if (FILE *f = fopen((own_cache_dir() + "/../info-page.state").c_str(), "wb")) {
+        const std::string text = vti::info_state_text(s);
+        fwrite(text.data(), 1, text.size(), f);
+        fclose(f);
+    }
+}
+
+bool VirusPlugin::has_history() const
+{
+    std::error_code ec;
+    return std::filesystem::exists(own_cache_dir() + "/RAM A", ec) ||
+           std::filesystem::exists(own_cache_dir() + "/../setup-tips.seen", ec);
+}
+
 bool VirusPlugin::diag_enabled()
 {
     static int on = -1;
@@ -1387,6 +1525,21 @@ bool VirusPlugin::diag_enabled()
     return on == 1;
 }
 
+void VirusPlugin::note_probe_flush()
+{
+    if (!note_probe_on_)
+        return;
+    std::lock_guard<std::mutex> lock(note_probe_mu_);
+    FILE *f = fopen((own_cache_dir() + "/../diag.log").c_str(), "a");
+    if (!f)
+        return;
+    const int largest = block_;
+    note_probe_.drain([&](const NoteProbe::Rec &r) { fprintf(f, "noteprobe: %s\n", noteprobe_line(r, largest).c_str()); });
+    if (const uint32_t lost = note_probe_.dropped())
+        fprintf(f, "noteprobe: %u records dropped so far\n", (unsigned)lost);
+    fclose(f);
+}
+
 void VirusPlugin::diag_report()
 {
     // called by the editor's timer and the device worker: one of them writes every 10 s
@@ -1394,6 +1547,7 @@ void VirusPlugin::diag_report()
     int64_t due = diag_next_ms_.load();
     if (!diag_enabled() || now < due || !diag_next_ms_.compare_exchange_strong(due, now + 10000))
         return;
+    note_probe_flush();
     long long drops = -1; // the editor's timer or the worker: read under the audio gate (audiogate.h)
     if (out_)
         if (AudioGate::Use ring(out_->audio_gate()); ring)
@@ -1576,6 +1730,8 @@ tresult PLUGIN_API VirusPlugin::process(ProcessData &data)
         fe_.run(tl_ + block_frames, [&](int64_t t) { add(t, &fe, 1); });
     }
     auto at = [&](int32 offset) { return tl_valid_ ? tl_ + (int64_t)std::lround(offset * ratio) : -1; };
+    if (live_notes_ && out_)
+        out_->live_ratio.store(ratio, std::memory_order_relaxed);
     if (data.inputParameterChanges && out_) {
         for (int32 i = 0; i < data.inputParameterChanges->getParameterCount(); i++) {
             IParamValueQueue *q = data.inputParameterChanges->getParameterData(i);
@@ -1636,13 +1792,27 @@ tresult PLUGIN_API VirusPlugin::process(ProcessData &data)
             Event e;
             if (data.inputEvents->getEvent(i, e) != kResultOk)
                 continue;
+            if (note_probe_on_ && (e.type == Event::kNoteOnEvent || e.type == Event::kNoteOffEvent)) {
+                const bool on = e.type == Event::kNoteOnEvent;
+                NoteProbe::Rec r{};
+                r.on = on;
+                r.channel = (uint8_t)((on ? e.noteOn.channel : e.noteOff.channel) & 15);
+                r.pitch = (uint8_t)(on ? e.noteOn.pitch : e.noteOff.pitch);
+                r.flags = e.flags;
+                r.offset = e.sampleOffset;
+                r.frames = data.numSamples;
+                r.playing = host_playing_.load(std::memory_order_relaxed);
+                note_probe_.push(r);
+            }
             if (e.type == Event::kNoteOnEvent && starting_.load(std::memory_order_relaxed))
                 continue; // the Virus is still busy with the start-up messages and the state (notes would be late)
             if (e.type == Event::kNoteOnEvent) {
                 last_note_ms_.store(now_ms(), std::memory_order_relaxed);
                 uint8_t m[3] = {(uint8_t)(0x90 | (e.noteOn.channel & 15)), note7(e.noteOn.pitch),
                                 std::max<uint8_t>(1, data7(e.noteOn.velocity))};
-                add(at(e.sampleOffset), m, 3);
+                evs.add(at(e.sampleOffset), m, 3,
+                        live_guard_.note_on(m[0] & 15, m[1], is_live_note(live_notes_, e.flags), at(e.sampleOffset),
+                                            live_guard_window(timing_a(), virus_rate()))); // E456, E466
                 held_notes_.note_on(m[0] & 15, m[1]);
                 auto &mt = meter_[e.noteOn.channel & 15]; // MIDI activity meter: the highest velocity, decays in tick_meters
                 if (mt.load(std::memory_order_relaxed) < m[2])
@@ -1650,7 +1820,8 @@ tresult PLUGIN_API VirusPlugin::process(ProcessData &data)
             } else if (e.type == Event::kNoteOffEvent) {
                 uint8_t m[3] = {(uint8_t)(0x80 | (e.noteOff.channel & 15)), note7(e.noteOff.pitch),
                                 data7(e.noteOff.velocity)};
-                add(at(e.sampleOffset), m, 3);
+                evs.add(at(e.sampleOffset), m, 3,
+                        live_guard_.note_off(m[0] & 15, m[1], is_live_note(live_notes_, e.flags), at(e.sampleOffset)));
                 held_notes_.note_off(m[0] & 15, m[1]);
             }
         }
@@ -1666,7 +1837,7 @@ tresult PLUGIN_API VirusPlugin::process(ProcessData &data)
     // audio thread, and the events come nearly in order)
     evs.sort();
     for (int i = 0; out_ && i < evs.n; i++)
-        out_->send_rt(evs.ev[i].m, evs.ev[i].n, evs.ev[i].stamp);
+        out_->send_rt(evs.ev[i].m, evs.ev[i].n, evs.ev[i].stamp, evs.ev[i].live);
     if (out_ && evs.n > 0)
         out_->wake_rt();
     if (out_ && evs.dropped > 0)
@@ -1716,8 +1887,14 @@ tresult PLUGIN_API VirusPlugin::process(ProcessData &data)
         {
             if (tl_valid_ && out_->marker.load() >= 0) { // stamp-aligned: an event of this block sounds latency() later
                 int64_t pos = block_start + lead() - latency_frames();
-                if (pos + data.numSamples > avail) // never read frames that are not there yet (silence, clicks)
+                const bool pulled_back = pos + data.numSamples > avail;
+                if (pulled_back) // never read frames that are not there yet (silence, clicks)
                     pos = avail - data.numSamples;
+                // pulled back in every block for a second: the timeline sits ahead of the audio, start a new one (E472)
+                if (clamp_watch_.update(pulled_back, data.numSamples, virus_rate())) {
+                    out_->clamp_reanchors.fetch_add(1, std::memory_order_relaxed);
+                    out_->generation.fetch_add(1, std::memory_order_relaxed);
+                }
                 out_->audio().read_at(o1[0], o1[1], o2[0], o2[1], data.numSamples, pos, l3, r3);
                 int64_t margin = avail - (pos + data.numSamples); // < 0: frames not there yet (silence)
                 if (margin < out_->read_margin_min.load(std::memory_order_relaxed))
@@ -2338,6 +2515,21 @@ void VirusPlugin::ui_set(const std::string &path, int part, int value)
                 arp_action(part, b.second);
             return;
         }
+    if (path == LIVE_MODE_PATH || path == PLUGIN_LATENCY_PATH) { // the original's timing switches (stamprule.h)
+        // Live Mode only while stopped, as the original's editor allows it: enforced here too, not only by greying
+        if (path == LIVE_MODE_PATH && host_playing_.load(std::memory_order_relaxed)) {
+            ui_dirty_ = true;
+            return;
+        }
+        ui_state_set(path, value);
+        ui_dirty_ = true;
+        apply_timing_mode();
+        return;
+    }
+    if (path == DM_PATH) { // the D button: the part's outputs to Out1 L+R and back, nothing of its own (directmon.h)
+        direct_monitoring(part, value != 0);
+        return;
+    }
     if (path == USB_IO_PATH) { // a hardware setting of this computer (original: registry), sent at once
         set_usb_io(value, true);
         if (out_)
@@ -2980,10 +3172,9 @@ void VirusPlugin::wait_virus_ready()
     const int64_t tm = now_ms();
     while (!stop_warm_ && out_->marker.load() < 0 && now_ms() - tm < 3000)
         std::this_thread::sleep_for(std::chrono::milliseconds(20));
-    if (sync_expected_)
-        set_start_pages(127, 0); // straight to "Syncing memory"
-    else
-        set_recall_progress(127);
+    // the full ring stays until sync_banks knows whether it reads (user ROM programs are only known after
+    // load_rom_banks, which needs the ready Virus); it then switches both pages in one step, without the editor
+    set_recall_progress(126);
 }
 
 bool VirusPlugin::probe_virus_ready()
@@ -3057,12 +3248,11 @@ void VirusPlugin::sync_banks()
                 sync_expected = true;
         }
     }
-    sync_expected_ = sync_expected; // wait_virus_ready switches from "Starting up" to "Syncing" in one step
     wait_virus_ready();
     starting_ = false;
     if (stop_warm_ || !out_ || !out_->connected()) { // no Virus: no sync, the editor as usual
         syncing_ = false;
-        set_sync_progress(127);
+        set_start_pages(127, 127);
         return;
     }
     std::string dir = own_cache_dir();
@@ -3071,6 +3261,8 @@ void VirusPlugin::sync_banks()
         std::filesystem::create_directories(dir, ec);
     }
     const int rom_missing = load_rom_banks();
+    // "Starting up" ends here: straight to "Syncing memory" when a read is certain (as the original), else the editor
+    set_start_pages(127, sync_page_at_start(sync_expected, rom_missing) ? 0 : 127);
     sync_->before_request = [this] { return wait_until_quiet(); };
     const int64_t sync_t0 = now_ms();
     // like the original: its page "Syncing memory with Virus" (VirusControl/InitialSyncProgress 0..126) covers the
@@ -3080,7 +3272,7 @@ void VirusPlugin::sync_banks()
     SyncPage page;
     int result = 0; // the last bank's sync_bank result: < 0 = the sync stopped there
     page.total = 512 + rom_missing; // user ROM banks are read after RAM D (the page shows once their reading starts)
-    if (sync_expected)
+    if (sync_page_at_start(sync_expected, rom_missing)) // a read is certain: the page follows "Starting up" directly
         page.expect();
     std::atomic<bool> rise{true}, fetching{page.shown()};
     std::thread riser([this, &rise, &fetching] {
@@ -4584,6 +4776,10 @@ tresult PLUGIN_API VirusPlugin::setState(IBStream *state)
                   part1_name(recs).c_str());
     if (recs.empty())
         return kResultFalse;
+    // a project saved by 0.8.38 or older may hold the Virus' report of its rate: sent back it switched the Virus' clock
+    // at every load (E445). Gone here, so the next save is clean too
+    if (int clock = drop_system_clock_globals(recs); clock && out_)
+        out_->log("Virus TI native: %d System Clock setting(s) in the project ignored\n", clock);
     {
         std::lock_guard<std::mutex> lk(undo_mu_);
         undo_.clear(); // another project: the steps belong to the one before

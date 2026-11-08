@@ -40,6 +40,16 @@ TEST(startprogress_sync_page_at_once_when_a_bank_is_missing)
     CHECK(s.progress(256, false) == 63);
 }
 
+// user ROM programs not cached yet (a bank burned in the Control Center, E459) are known before the RAM check:
+// they will be read, so the page follows "Starting up" directly too, as the original's (user, 2026-11-08: the editor
+// showed first and the page appeared only when ROM Z's reading began)
+TEST(startprogress_sync_page_at_once_when_user_rom_is_missing)
+{
+    CHECK(sync_page_at_start(false, 0) == false); // current caches: the check alone shows nothing
+    CHECK(sync_page_at_start(true, 0));           // a RAM bank without a cache file
+    CHECK(sync_page_at_start(false, 117));        // user ROM programs to read
+}
+
 TEST(startprogress_sync_end_names_an_abort)
 {
     // the sync stops at the first bank that fails (-1: a request without an answer) or is cancelled (-2: closed
