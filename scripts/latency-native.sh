@@ -27,7 +27,7 @@ mkdir -p "$out"
 for block in $blocks; do
     name="b$block$tag"
     # latency_frames() in virusplugin.h at the Virus' rate (reported_frames, stamprule.h; since 0.8.39 no 256 floor)
-    reported=$(( a + block + ${VTI_NATIVE_M:-640} ))
+    reported=$(( a + block + ${VTI_NATIVE_MARGIN:-640} ))
     if [ "$override" = 1 ]; then
         VTI_NATIVE_A=$a timeout $((seconds + 60)) "$host" "$plugin" --notes --block "$block" --rate "$rate" --seconds "$seconds" --wav "$out/$name.wav" >"$out/$name.out" 2>"$out/$name.err"
     else
