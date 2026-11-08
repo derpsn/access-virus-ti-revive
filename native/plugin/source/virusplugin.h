@@ -132,6 +132,7 @@ public:
     std::atomic<int> generation{0}; // +1 on every return of the Virus (process() re-anchors its timeline)
     std::atomic<int> clamp_reanchors{0}; // new timelines because every read was pulled back for a second (E472)
     StallWatch stall_;              // worker: the stream stood still and runs on (sleep) -> generation + 1
+    ReplugGate replug_gate_;        // worker, macOS: at most one software replug a minute (E472)
     bool connected() const { return broker_.device_present(); }
     void stop_worker(); // the worker and the broker's reader have ended when it returns; the destructor does it too
     void leave_virus(); // what the Virus is left with when the plug-in closes (closeseq.h); blocks 350 ms, up to ~1.5 s

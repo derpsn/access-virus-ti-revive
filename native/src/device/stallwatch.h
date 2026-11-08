@@ -69,4 +69,22 @@ private:
     int64_t frames_ = 0;
 };
 
+// After a detected sleep on the Mac the plug-in asks the broker to make macOS re-enumerate the Virus (a software
+// replug; E472: the stream can stay gapped until then). At most once a minute: USB resets close together have hung
+// the Virus until a power cycle (E136, E312). The broker keeps its own gap too (resetguard.h).
+class ReplugGate {
+public:
+    static constexpr int64_t GAP_MS = 60000;
+    bool allow(int64_t now_ms)
+    {
+        if (last_ms_ >= 0 && now_ms - last_ms_ < GAP_MS)
+            return false;
+        last_ms_ = now_ms;
+        return true;
+    }
+
+private:
+    int64_t last_ms_ = -1;
+};
+
 } // namespace vti

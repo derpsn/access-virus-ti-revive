@@ -26,6 +26,9 @@ void vti_close(vti *v);
 
 // 1 once a reader hit a fatal error (device removed, handle invalid): close and reopen.
 int vti_is_dead(vti *v);
+// macOS: let the system re-enumerate the Virus (a software replug after a sleep, E472); at most once a minute;
+// 0 = done, -2 = skipped by the gap, other < 0 = libusb error or not supported (Linux, Windows)
+int vti_reenumerate(vti *v);
 
 // libusb backend only (vticore.c): the context and handle, for the Linux broker's audio streaming
 struct libusb_context;

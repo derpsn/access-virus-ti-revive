@@ -1123,6 +1123,16 @@ static void *client_thread(void *arg)
                 }
             }
             break;
+        case VTIMSG_REENUM: { // E472: the owner's plug-in saw a Mac sleep; the device thread then sees the Virus go and
+                              // come back and sends STATE 0 / 1 as on a replug
+            if (c->observer || !may_use(c))
+                break;
+            pthread_mutex_lock(&g_cs_dev);
+            int r = g_dev ? vti_reenumerate(g_dev) : -1;
+            pthread_mutex_unlock(&g_cs_dev);
+            vti_log("re-enumerate after a sleep (E472): %d%s\n", r, r == -2 ? " (skipped, the last one was less than 60 s ago)" : "");
+            break;
+        }
         case VTIMSG_FLASHINFO: { // the owner only (never an observer or a waiting plug-in)
             if (c->observer)
                 break;

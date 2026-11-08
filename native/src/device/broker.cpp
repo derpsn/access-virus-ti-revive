@@ -352,6 +352,8 @@ int Broker::control(uint8_t rt, uint8_t req, uint16_t value, uint16_t index, uin
     return r;
 }
 
+bool Broker::reenumerate() { return send(VTIMSG_REENUM, nullptr, 0); }
+
 int Broker::flash_info(std::vector<uint8_t> &out, int timeout_ms)
 {
     out.clear();

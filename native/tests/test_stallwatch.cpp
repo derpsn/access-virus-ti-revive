@@ -113,3 +113,14 @@ TEST(clampwatch_a_second_of_pulled_back_reads_reanchors)
     CHECK(fired && blocks == 750);       // exactly one second of 64-frame blocks
     CHECK(!w.update(true, 64, 48000));   // once: the next second counts afresh
 }
+
+// After a Mac sleep the stream can stay gapped until macOS re-enumerates the Virus (E472, E473); the plug-in asks the
+// broker for that software replug, at most once a minute: USB resets close together have hung the Virus (E136, E312)
+TEST(repluggate_once_a_minute)
+{
+    ReplugGate g;
+    CHECK(g.allow(1000));          // the first sleep
+    CHECK(!g.allow(1000 + 30000)); // a second one 30 s later: not yet
+    CHECK(g.allow(1000 + 60000));  // a minute later
+    CHECK(!g.allow(1000 + 60001));
+}

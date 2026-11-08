@@ -663,6 +663,14 @@ void DeviceOut::run()
                                        (int)rate.load(std::memory_order_relaxed))) { // frames, not only time (S089)
             log("Virus TI native: the Virus' audio stood still (sleep?) - set-up, state and a new timeline again\n");
             generation++;
+#ifdef __APPLE__
+            // E472: macOS may keep the Virus' stream gapped after a sleep until it re-enumerates the device (a replug
+            // cured it every time); ask the broker for that software replug, at most once a minute (ReplugGate)
+            if (replug_gate_.allow(std::chrono::duration_cast<std::chrono::milliseconds>(
+                                       std::chrono::steady_clock::now().time_since_epoch()).count()) &&
+                broker_.reenumerate())
+                log("Virus TI native: asked the broker to re-enumerate the Virus after the sleep (E472)\n");
+#endif
             if (resume_) // after a Windows sleep the Virus answered sync pings but played no notes until this (E210)
                 resume_();
         }
