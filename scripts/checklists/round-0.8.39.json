@@ -121,6 +121,18 @@
       "Watch the pages after the start, then open ? and look at the manual entries."
      ],
      "expect": "It plays as before; What's New shows after the start pages; the manuals are listed if the Access software is installed in the VM, and open in the PDF viewer."
+    },
+    {
+     "id": "W2",
+     "title": "Heavy project with the ORIGINAL Virus Control (win10ref)",
+     "steps": [
+      "win10ref, Ableton Live 11, the original Virus Control 5.1.7 (not TI Revive). Claude passes the Virus through and copies the three MIDI files to the VM's Desktop (folder heavy-project).",
+      "One track with Virus Control in Multi mode: part 1 Main LD, part 2 Hrd LD 1, part 3 Super Saw. Three MIDI tracks with the looped clips (150 BPM), MIDI To the Virus track on channels 1, 2 and 3.",
+      "Run 1: parts on Out 1, Out 2, Out 3 as on the Mac. Play all three 30 s, then two at a time.",
+      "Run 2: all parts on Out 1 L/R. Play all three 30 s and listen on the Virus' headphones too.",
+      "Run 3, the part swap: move Super Saw to part 2 (or 4) and Hrd LD 1 to part 3, the clips' MIDI channels with them. Play all three 30 s."
+     ],
+     "expect": "Note in each run whether notes go missing and in which part. If the original loses the same notes, it is the Virus' own limit (E376's load governor); if the swap changes which notes go missing, the load per DSP is the cause (simulator: parts 1 and 3 share a DSP). VM USB timing is not exact (E288): crackle here proves little, missing notes do."
     }
    ]
   }
