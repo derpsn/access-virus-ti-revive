@@ -60,8 +60,16 @@ TEST(diag_plugin_options)
     CHECK(opts.size() == 3);
     CHECK(std::string(opts[0].name) == "outdelay-changes" && std::string(opts[0].file) == "outdelay-changes.on");
     CHECK(std::string(opts[1].name) == "timing-classic" && std::string(opts[1].file) == "timing-classic.on");
-    CHECK(std::string(opts[2].name) == "live-notes" && std::string(opts[2].file) == "live-notes.on");
-    CHECK(!plugin_option("live-notes")); // off unless asked for
+    // live-notes is on by default since 0.8.39 (the original's VST3 does it always, E400/E402; user 2026-11-08): its
+    // file switches it OFF
+    CHECK(std::string(opts[2].name) == "live-notes" && std::string(opts[2].file) == "live-notes.off");
+    CHECK(opts[2].default_on && !opts[0].default_on && !opts[1].default_on);
+    CHECK(plugin_option("live-notes")); // on without any file
+    std::string e0;
+    CHECK(set_plugin_option("live-notes", false, e0) && !plugin_option("live-notes"));
+    CHECK(fs::exists(h.dir / ".local/share/virus-ti-native/live-notes.off"));
+    CHECK(set_plugin_option("live-notes", true, e0) && plugin_option("live-notes"));
+    CHECK(!fs::exists(h.dir / ".local/share/virus-ti-native/live-notes.off"));
     CHECK(!plugin_option("outdelay-changes"));
     std::string err;
     CHECK(set_plugin_option("outdelay-changes", true, err) && plugin_option("outdelay-changes"));

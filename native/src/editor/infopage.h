@@ -59,6 +59,9 @@ inline const std::vector<ChangeNote> &changelog()
          {"Lower latency, now the same as the original's: TI Revive's delay follows your audio buffer all the way "
           "down (before, never below 256 samples) and uses the original's smaller safety margin. At 64 samples and "
           "48 kHz a note now takes 76 ms instead of 82.7 ms.",
+          "Notes you play on a keyboard skip that delay, as in the original: about 22 ms instead of 76 ms in DAWs that "
+          "mark played notes (Ableton Live). Notes from clips keep their exact timing. A played note that would be cut "
+          "by a clip note of the same key now waits for it instead.",
           "The Access manuals in the ? menu: Reference, Quickstart, Atomizer and the tutorials, opened from your own "
           "Access installation.",
           "The start pages work like the original's: \"Starting up\" goes straight to \"Syncing memory with Virus\" "

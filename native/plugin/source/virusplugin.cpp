@@ -1022,7 +1022,7 @@ tresult PLUGIN_API VirusPlugin::initialize(FUnknown *context)
     if (diag_enabled())
         out_->set_diag_path(own_cache_dir() + "/../diag.log");
     if (live_notes_) // after set_diag_path, or the line never reaches diag.log
-        out_->log("Virus TI native: live notes on (live-notes.on): notes flagged as played go without the lead\n");
+        out_->log("Virus TI native: live notes on (default; live-notes.off switches it off): notes flagged as played go without the lead\n");
     out_->log("Virus TI native: timing: lead %d frames, safety net %s%s\n", timing_a_, timing_classic_ ? "off" : "on",
               timing_classic_ ? " (timing-classic.on)" : "");
     if (od_changes_only_)

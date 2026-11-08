@@ -16,9 +16,11 @@ bool plugin_log_enabled();
 bool set_plugin_log(bool on, std::string &error);
 
 // The options of nerd mode (A/B tests against the original): a flag file each in plugin_dir(), read when a plug-in
-// instance starts. `name` is what tirevive-cc takes, `label` what the Control Center shows.
+// instance starts. `name` is what tirevive-cc takes, `label` what the Control Center shows. An option that is on by
+// default (default_on) is switched OFF by its file.
 struct PluginOption {
     const char *name, *file, *label;
+    bool default_on = false;
 };
 const std::vector<PluginOption> &plugin_options();
 bool plugin_option(const std::string &name);                                  // false for an unknown name
