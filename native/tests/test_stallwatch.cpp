@@ -114,6 +114,33 @@ TEST(clampwatch_a_second_of_pulled_back_reads_reanchors)
     CHECK(!w.update(true, 64, 48000));   // once: the next second counts afresh
 }
 
+// Short pulled-back reads were invisible (ClampWatch acts only after a full second): with a host that hands over blocks
+// in bursts every pulled-back read puts out older audio, so notes sound late by the shortfall (E490). The stats line
+// counts them per window: how many blocks and the largest shortfall in frames.
+TEST(read_shortfall_is_what_the_read_lacks)
+{
+    CHECK_EQ(read_shortfall(1000, 64, 2000), 0);  // well inside the audio that arrived
+    CHECK_EQ(read_shortfall(1936, 64, 2000), 0);  // ends exactly at the newest frame
+    CHECK_EQ(read_shortfall(2000, 64, 2000), 64); // starts at the newest frame: a whole block missing
+    CHECK_EQ(read_shortfall(2300, 256, 2000), 556);
+}
+
+TEST(pullstats_counts_blocks_and_the_largest_shortfall_per_window)
+{
+    PullStats p;
+    p.add(0); // not pulled back: not counted
+    p.add(128);
+    p.add(640);
+    p.add(256);
+    int64_t blocks = -1, max = -1;
+    p.take(blocks, max);
+    CHECK_EQ(blocks, 3);
+    CHECK_EQ(max, 640);
+    p.take(blocks, max); // the next window starts empty
+    CHECK_EQ(blocks, 0);
+    CHECK_EQ(max, 0);
+}
+
 // After a Mac sleep the stream can stay gapped until macOS re-enumerates the Virus (E472, E473); the plug-in asks the
 // broker for that software replug, at most once a minute: USB resets close together have hung the Virus (E136, E312)
 TEST(repluggate_once_a_minute)

@@ -740,6 +740,10 @@ void DeviceOut::run()
                 (long long)(stats_newest_ >= 0 ? newest - stats_newest_ : -1), (long long)anchors.exchange(0),
                 (long long)err_min.exchange(INT64_MAX), (long long)err_max.exchange(INT64_MIN));
             stats_newest_ = newest;
+            int64_t pull_blocks = 0, pull_max = 0;
+            pulls.take(pull_blocks, pull_max);
+            if (pull_blocks > 0) // E490: the host ran ahead of the Virus' audio (bursts): those blocks put out older audio
+                log("stats: pulled back %lld blocks, largest %lld frames\n", (long long)pull_blocks, (long long)pull_max);
             if (int n = clamp_reanchors.exchange(0)) // E472: reads pulled back for a second, a new timeline
                 log("Virus TI native: reads ran ahead of the Virus' audio for a second - a new timeline (%d)\n", n);
             int pk[6];
@@ -1901,9 +1905,11 @@ tresult PLUGIN_API VirusPlugin::process(ProcessData &data)
         {
             if (tl_valid_ && out_->marker.load() >= 0) { // stamp-aligned: an event of this block sounds latency() later
                 int64_t pos = block_start + lead() - latency_frames();
-                const bool pulled_back = pos + data.numSamples > avail;
+                const int64_t shortfall = read_shortfall(pos, data.numSamples, avail);
+                const bool pulled_back = shortfall > 0;
                 if (pulled_back) // never read frames that are not there yet (silence, clicks)
                     pos = avail - data.numSamples;
+                out_->pulls.add(shortfall); // the block puts out older audio: notes in it sound late (E490)
                 // pulled back in every block for a second: the timeline sits ahead of the audio, start a new one (E472)
                 if (clamp_watch_.update(pulled_back, data.numSamples, virus_rate())) {
                     out_->clamp_reanchors.fetch_add(1, std::memory_order_relaxed);
