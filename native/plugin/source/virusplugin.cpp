@@ -403,7 +403,11 @@ void DeviceOut::scan_audio()
         static const bool fake = getenv("VTI_NATIVE_FAKE_SLIP") != nullptr;
         for (int i = 0; i < n; i++) {
             int16_t *fr = raw + i * 6, s[6];
-            freeze_.feed(fr); // the device's own frames (never the fake slip below)
+            // VTI_NATIVE_FAKE_FREEZE (test only): from 8 s into the stream the detector sees the frozen frame E493 saw,
+            // so the alert page can be checked on a live Virus; the audio itself is untouched
+            static const bool fake_freeze = getenv("VTI_NATIVE_FAKE_FREEZE") != nullptr;
+            static const int16_t kFrozen[6] = {-4672, -4672, 0, 0, 0, 0};
+            freeze_.feed(fake_freeze && scanned_ + i > 8 * (int64_t)rate.load() ? kFrozen : fr); // the device's frames
             if (fake && slip_gate_.count() == 0) {
                 for (int k = 0; k < 6; k++)
                     s[k] = (int16_t)(uint16_t)((((uint16_t)fr[k] >> 8) & 0xFF) | (((uint16_t)fr[(k + 2) % 6] & 0xFF) << 8));
