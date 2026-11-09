@@ -55,6 +55,10 @@ struct ChangeNote {
 inline const std::vector<ChangeNote> &changelog()
 {
     static const std::vector<ChangeNote> notes = {
+        {"0.8.40",
+         {"Windows: a patch library or template file whose name has letters outside Windows' old code page "
+          "(Japanese or Cyrillic on a Western Windows, accents copied from a Mac, emoji) no longer makes the plug-in "
+          "crash when it starts. Such libraries are listed, and the menus show their names correctly."}},
         {"0.8.39",
          {"Lower latency, now the same as the original's: TI Revive's delay follows your audio buffer all the way "
           "down (before, never below 256 samples) and uses the original's smaller safety margin. At 64 samples and "

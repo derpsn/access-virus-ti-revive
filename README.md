@@ -348,6 +348,7 @@ same with Access' own driver.
 - Panic and the editor's own messages reach the Virus at once, also while notes are played (since 0.8.39). Tested on macOS (Ableton Live).
 - macOS: a saved project no longer switches the Virus' audio clock at start (since 0.8.39), so "Audio clock changed" no longer shows twice. Tested in Ableton Live.
 - Linux: no click at the start of playback when the broker stays running (since 0.8.39): the broker mutes the first audio packet of a stream. Checked on Linux with a TI2 Desktop, 10 of 10 starts clean.
+- Windows: library and template files with names outside Windows' old code page (Japanese or Cyrillic on a Western Windows, accents copied from a Mac, emoji) no longer crash the plug-in when it starts (since 0.8.40, issue #35), and the menus show their names correctly. Reproduced and checked on Windows 10 in Steinberg's VST3PluginTestHost; not yet tested with a Virus connected.
 - **One plug-in instance per synth.** Virus Control is designed that way (it controls all 16 parts);
   a second instance shows "Virus unavailable" and takes over when the first one is removed.
 
@@ -539,7 +540,7 @@ hardware (TI2 Desktop) - details and raw numbers in [`findings/evidence.md`](fin
   automation lanes) passes. One extreme note flood in a test of ours hung it too.
 - **macOS, after a sleep:** On macOS the Virus' audio can have dropouts after the Mac wakes from sleep: macOS's USB audio can leave it with gaps until the Virus is plugged in again. Since 0.8.39 the plug-in then reconnects the Virus by itself, at most once a minute. If dropouts remain after waking, unplug and replug the Virus.
 - **Dense projects:** with three heavy patches (Main LD, Hrd LD 1, Super Saw) on three channels some notes are lost; any two of them play cleanly. The original Virus Control loses the same notes on the same Virus, so this is the Virus' own limit, not TI Revive's.
-- Checked with ThreadSanitizer and AddressSanitizer (one race in the broker connection found and fixed); 620 unit
+- Checked with ThreadSanitizer and AddressSanitizer (one race in the broker connection found and fixed); 627 unit
   tests run with every release build on Windows and Linux, plus two end-to-end tests on Linux in a virtual display
   (two editors of a duplicated track; the Control Center's window and close button).
 
