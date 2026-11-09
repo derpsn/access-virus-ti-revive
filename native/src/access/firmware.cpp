@@ -1,5 +1,6 @@
 // firmware.cpp - see firmware.h.
 #include "firmware.h"
+#include "model/utf8.h"
 #include <cstring>
 #include <filesystem>
 #include <fstream>
@@ -37,7 +38,7 @@ std::vector<std::vector<std::vector<uint8_t>>> load_rom_banks(const std::string 
                                                                std::string &error)
 {
     std::vector<std::vector<std::vector<uint8_t>>> banks;
-    std::ifstream f(path, std::ios::binary);
+    std::ifstream f(u8path(path), std::ios::binary);
     std::vector<uint8_t> d((std::istreambuf_iterator<char>(f)), std::istreambuf_iterator<char>());
     auto top = chunks(d.data(), d.size());
     if (top.empty() || top[0].tag != "TABL") {
@@ -114,10 +115,10 @@ std::vector<std::vector<std::vector<uint8_t>>> load_rom_banks(const std::string 
 std::string firmware_path(const std::string &vc)
 {
     std::error_code ec;
-    fs::path p(vc);
+    fs::path p = u8path(vc);
     for (int up = 0; up < 4 && !p.empty(); up++, p = p.parent_path()) // DLL folder, or the bundle's ancestors
         if (fs::is_regular_file(p / "firmware.bin", ec))
-            return (p / "firmware.bin").string();
+            return u8str(p / "firmware.bin");
     return {};
 }
 

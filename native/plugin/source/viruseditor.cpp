@@ -25,6 +25,7 @@ extern char **environ;
 #include "access/library.h"
 #include "cc/diag.h"
 #include "editor/helptext.h"
+#include "model/utf8.h"
 #include "editor/editormenus.h"
 #include "editor/dragsend.h"
 #include "editor/textfield.h"
@@ -63,7 +64,7 @@ using namespace VSTGUI;
 static void open_url(const char *url)
 {
 #if SMTG_OS_WINDOWS
-    ShellExecuteA(nullptr, "open", url, nullptr, nullptr, SW_SHOWNORMAL);
+    ShellExecuteW(nullptr, L"open", vti::widen(url).c_str(), nullptr, nullptr, SW_SHOWNORMAL); // UTF-8 (#35)
 #else
     const char *tool = SMTG_OS_MACOS ? "open" : "xdg-open";
     char *argv[] = {const_cast<char *>(tool), const_cast<char *>(url), nullptr};
@@ -1893,14 +1894,7 @@ private:
             std::string path((const char *)buf, n);
             while (!path.empty() && path.back() == '\0')
                 path.pop_back();
-#ifdef _WIN32
-            // VSTGUI gives UTF-8; the plug-in's paths are narrow (ANSI code page) like library_dir(): converted, a
-            // name the code page cannot hold is kept and fails with "Cannot read" instead of opening something else
-            try {
-                path = std::filesystem::u8path(path).string();
-            } catch (...) {
-            }
-#endif
+            // VSTGUI gives UTF-8, the plug-in's own path format on every platform (#35, model/utf8.h)
             if (importable_library(path))
                 out.push_back(path);
         }
@@ -2324,12 +2318,12 @@ private:
         fs->addFileExtension(CFileExtension("Virus TI Patch Libraries", "mid"));
         const std::string dir = vti::library_dir(), name = "New Library.mid";
         std::error_code ec;
-        std::filesystem::create_directories(dir, ec);
+        std::filesystem::create_directories(vti::u8path(dir), ec);
 #if defined(_WIN32) || defined(__APPLE__)
         fs->setInitialDirectory(dir.c_str());
         fs->setDefaultSaveName(name.c_str());
 #else
-        fs->setInitialDirectory((std::filesystem::path(dir) / name).string().c_str()); // zenity/kdialog: a full path
+        fs->setInitialDirectory(vti::u8str(vti::u8path(dir) / vti::u8path(name)).c_str()); // zenity/kdialog: a full path
 #endif
         auto *plugin = plugin_;
         fs->run([plugin](CNewFileSelector *sel) {
@@ -2708,7 +2702,7 @@ private:
                     (int)files->size() - 1;
             }
             for (auto &f : list) {
-                files->push_back((std::filesystem::path(dir) / f).string());
+                files->push_back(vti::u8str(vti::u8path(dir) / vti::u8path(f)));
                 (*index)[vti::popup_add_path(items, name + "/" + vti::remote_template_name(f), {""}, folders)] =
                     (int)files->size() - 1;
             }
@@ -2945,8 +2939,7 @@ private:
         st.diag_log = vti::cc::plugin_log_enabled();
         st.snow = plugin_->is_snow();
         manual_paths_.assign(vti::kManualCount, std::string());
-        const char *x86 = getenv("ProgramFiles(x86)");
-        const auto dirs = vti::manual_dirs(plugin_->files().source(), x86 ? x86 : "");
+        const auto dirs = vti::manual_dirs(plugin_->files().source(), vti::u8env("ProgramFiles(x86)"));
         for (int k = 0; k < vti::kManualCount; k++) { // only the PDFs the user's Access setup put on disk
             manual_paths_[(size_t)k] = vti::find_manual(dirs, k, st.snow, [](const std::string &p) {
                 std::error_code ec;
@@ -3043,7 +3036,7 @@ private:
 #if defined(_WIN32) || defined(__APPLE__)
         fs->setDefaultSaveName(name.c_str());
 #else
-        fs->setInitialDirectory((std::filesystem::path(vti::cc::plugin_dir()).parent_path() / name).string().c_str());
+        fs->setInitialDirectory(vti::u8str(vti::u8path(vti::cc::plugin_dir()).parent_path() / name).c_str());
 #endif
         auto *plugin = plugin_;
         fs->run([plugin](CNewFileSelector *sel) {
@@ -3100,7 +3093,7 @@ static double load_zoom()
     double z = 1.0;
     if (const char *e = getenv("VTI_NATIVE_ZOOM"))
         z = atof(e);
-    else if (FILE *f = fopen(zoom_file().c_str(), "r")) {
+    else if (FILE *f = vti::u8fopen(zoom_file(), "r")) {
         if (fscanf(f, "%lf", &z) != 1)
             z = 1.0;
         fclose(f);
@@ -3144,7 +3137,7 @@ void VirusEditor::set_user_zoom(double z)
         return;
     user_zoom_ = z;
     apply_zoom();
-    if (FILE *f = fopen(zoom_file().c_str(), "w")) {
+    if (FILE *f = vti::u8fopen(zoom_file(), "w")) {
         fprintf(f, "%g\n", z);
         fclose(f);
     }

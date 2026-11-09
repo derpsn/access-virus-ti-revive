@@ -7,6 +7,7 @@
 // from the plug-in. Firmware/OS update, Burn To Flash, factory reset and renaming are not offered, on purpose: they
 // write the Virus' flash (AGENTS.md rule 2).
 #include "access/accessfiles.h"
+#include "model/utf8.h"
 #include "access/library.h"
 #include "cc/controlcenter.h"
 #include "nerdmode.h"
@@ -462,7 +463,7 @@ private:
             std::lock_guard<std::mutex> lk(sh_.mu);
             dir = sh_.folder;
         }
-        dir = fs::exists(dir) ? dir : fs::path(dir).parent_path().string(); // the backups folder
+        dir = fs::exists(vti::u8path(dir)) ? dir : vti::u8str(vti::u8path(dir).parent_path()); // the backups folder
         open->setInitialDirectory(dir.c_str());
         open->addFileExtension(CFileExtension("Patch library", "mid"));
         open->addFileExtension(CFileExtension("SysEx file", "syx"));
@@ -487,8 +488,8 @@ private:
         if (!vti::load_library_file(file, *lib, files ? files->default_page_b() : std::vector<uint8_t>()) ||
             lib->dumps.empty())
             return status("No Virus TI patches in " + file);
-        const std::string name = fs::path(file).filename().string();
-        const int guess = vti::cc::bank_from_name(fs::path(file).stem().string());
+        const std::string name = vti::u8str(vti::u8path(file).filename());
+        const int guess = vti::cc::bank_from_name(vti::u8str(vti::u8path(file).stem()));
         auto *menu = new COptionMenu();
         for (int b = 1; b <= 4; b++) {
             auto *item = menu->addEntry(("Overwrite RAM " + std::string(1, (char)('A' + b - 1)) + " with \"" + name +
@@ -569,12 +570,12 @@ private:
             if (!vti::load_library_file(in, lib, files ? files->default_page_b() : std::vector<uint8_t>()) ||
                 lib.dumps.empty())
                 return set(&Shared::status, "No Virus TI patches in " + in);
-            bool to_syx = fs::path(in).extension() != ".syx";
+            bool to_syx = vti::u8path(in).extension() != ".syx";
             auto save = owned(CNewFileSelector::create(frame_, CNewFileSelector::kSelectSaveFile));
             if (!save)
                 return;
             save->setTitle(to_syx ? "Save as .syx" : "Save as .mid library");
-            save->setDefaultSaveName((fs::path(in).stem().string() + (to_syx ? ".syx" : ".mid")).c_str());
+            save->setDefaultSaveName((vti::u8str(vti::u8path(in).stem()) + (to_syx ? ".syx" : ".mid")).c_str());
             save->setDefaultExtension(to_syx ? CFileExtension("SysEx file", "syx") : CFileExtension("Patch library", "mid"));
             bool saved = save->run([this, lib, to_syx](CNewFileSelector *s2) mutable {
                 if (!s2->getNumSelectedFiles())

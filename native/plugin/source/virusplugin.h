@@ -41,6 +41,7 @@
 #include "device/directmon.h"
 #include "model/devicestatus.h"
 #include "model/otherdrivers.h"
+#include "model/utf8.h"
 #include "model/arpactions.h"
 #include "model/panelfollow.h"
 #include "model/remotedevice.h"
@@ -189,7 +190,7 @@ public:
         diag_on_.store(true, std::memory_order_release);
         // klog.on next to diag.log also enables the R5 log (a DAW started from the desktop misses new env variables)
         std::string k = p.substr(0, p.find_last_of("/\\") + 1) + "klog.on";
-        if (FILE *f = fopen(k.c_str(), "rb")) {
+        if (FILE *f = vti::u8fopen(k, "rb")) {
             fclose(f);
             klog_.store(true);
         }

@@ -1,5 +1,6 @@
 // memsync.cpp - see memsync.h.
 #include "memsync.h"
+#include "model/utf8.h"
 #include "../model/remotedevice.h"
 #include "usbmidi.h"
 #include <algorithm>
@@ -17,7 +18,7 @@ static const size_t SINGLE_SIZE = 524, BANKINFO_SIZE = 267;
 
 bool load_bank_file(const std::string &path, Bank &bank)
 {
-    FILE *f = fopen(path.c_str(), "rb");
+    FILE *f = u8fopen(path, "rb");
     if (!f)
         return false;
     uint8_t hdr[8];
@@ -42,7 +43,7 @@ bool load_bank_file(const std::string &path, Bank &bank)
 bool save_bank_file(const std::string &path, const Bank &bank)
 {
     std::string tmp = path + ".tmp";
-    FILE *f = fopen(tmp.c_str(), "wb");
+    FILE *f = u8fopen(tmp, "wb");
     if (!f)
         return false;
     static const uint8_t hdr[8] = {'M', 'I', 'D', 'I', 0x00, 0x01, 0x08, 0x00};
@@ -55,7 +56,7 @@ bool save_bank_file(const std::string &path, const Bank &bank)
     // std::filesystem::rename replaces an existing file on Windows too (C rename() fails there)
     std::error_code ec;
     if (ok)
-        std::filesystem::rename(tmp, path, ec);
+        std::filesystem::rename(u8path(tmp), u8path(path), ec);
     return ok && !ec;
 }
 

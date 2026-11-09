@@ -1,5 +1,6 @@
 // controlcenter.cpp - see controlcenter.h.
 #include "controlcenter.h"
+#include "model/utf8.h"
 #include "../access/library.h"
 #include "../device/usbmidi.h"
 #include "../model/bankdrop.h"
@@ -54,8 +55,8 @@ std::string cache_dir()
 {
     // same folders as the plug-in (plugin/source/virusplugin.cpp own_cache_dir)
 #ifdef _WIN32
-    const char *base = getenv("LOCALAPPDATA");
-    return base ? std::string(base) + "/virus-ti-native/cache" : std::string();
+    const std::string base = u8env("LOCALAPPDATA"); // UTF-8 (#35): the user name may be outside the code page
+    return base.empty() ? std::string() : base + "/virus-ti-native/cache";
 #elif defined(__APPLE__)
     const char *home = getenv("HOME");
     return home ? std::string(home) + "/Library/Application Support/virus-ti-native/cache" : std::string();
@@ -69,11 +70,11 @@ std::string default_backup_dir()
 {
     // next to the "Patches" folder, not inside it: the plug-in lists everything below Patches as libraries
     std::string lib = library_dir();
-    fs::path base = lib.empty() ? fs::path("Virus TI Backups") : fs::path(lib).parent_path() / "Backups";
+    fs::path base = lib.empty() ? fs::path("Virus TI Backups") : u8path(lib).parent_path() / "Backups";
     char stamp[32];
     time_t t = time(nullptr);
     strftime(stamp, sizeof stamp, "%Y-%m-%d %H%M", localtime(&t));
-    return (base / stamp).string();
+    return u8str(base / stamp);
 }
 
 bool backup_ram(Broker &broker, const std::string &banks, const std::string &out_dir,
@@ -81,7 +82,7 @@ bool backup_ram(Broker &broker, const std::string &banks, const std::string &out
                 const std::atomic<bool> *stop)
 {
     std::error_code ec;
-    fs::create_directories(out_dir, ec);
+    fs::create_directories(u8path(out_dir), ec);
     if (ec) {
         error = "cannot create " + out_dir + ": " + ec.message();
         if (ec == std::errc::permission_denied) // e.g. Documents/Access Music made by the Access installer as root (E182)
@@ -91,7 +92,7 @@ bool backup_ram(Broker &broker, const std::string &banks, const std::string &out
     }
     std::string cache = cache_dir();
     if (!cache.empty())
-        fs::create_directories(cache, ec);
+        fs::create_directories(u8path(cache), ec);
     MemorySync sync(broker);
     for (char c : banks) {
         int bank = c - '0';
@@ -117,7 +118,7 @@ bool backup_ram(Broker &broker, const std::string &banks, const std::string &out
         }
         PatchLibrary lib;
         lib.name = name;
-        lib.path = (fs::path(out_dir) / (name + ".mid")).string();
+        lib.path = u8str(u8path(out_dir) / u8path(name + ".mid"));
         lib.dumps.assign(b.begin(), b.end());
         for (auto &d : lib.dumps)
             if (d.size() != 524) {
@@ -188,7 +189,7 @@ bool restore_ram(Broker &broker, int bank, const std::vector<Dump> &backup,
     std::string cache = cache_dir();
     std::error_code ec;
     if (!cache.empty())
-        fs::create_directories(cache, ec);
+        fs::create_directories(u8path(cache), ec);
     Bank b;
     if (!cache.empty())
         load_bank_file(cache + "/" + name, b);
@@ -241,7 +242,7 @@ bool write_syx(const std::vector<Dump> &dumps, const std::string &path, std::str
 {
     std::string tmp = path + ".tmp";
     {
-        std::ofstream o(tmp, std::ios::binary);
+        std::ofstream o(u8path(tmp), std::ios::binary);
         for (auto &d : dumps)
             o.write((const char *)d.data(), (std::streamsize)d.size());
         if (!o) {
@@ -250,7 +251,7 @@ bool write_syx(const std::vector<Dump> &dumps, const std::string &path, std::str
         }
     }
     std::error_code ec;
-    fs::rename(tmp, path, ec);
+    fs::rename(u8path(tmp), u8path(path), ec);
     if (ec)
         error = ec.message();
     return !ec;

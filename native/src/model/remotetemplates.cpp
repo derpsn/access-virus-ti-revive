@@ -1,4 +1,5 @@
 #include "model/remotetemplates.h"
+#include "model/utf8.h"
 #include <algorithm>
 #include <cctype>
 #include <cstdio>
@@ -373,14 +374,17 @@ std::vector<std::string> remote_template_files(const std::string &dir)
     namespace fs = std::filesystem;
     std::vector<std::string> out;
     std::error_code ec;
-    for (fs::recursive_directory_iterator it(dir, ec), end; !ec && it != end; it.increment(ec)) {
-        if (!it->is_regular_file(ec))
+    const fs::path root = u8path(dir); // UTF-8 names (#35: path::string() threw on Windows outside the code page)
+    for (fs::recursive_directory_iterator it(root, ec), end; !ec && it != end; it.increment(ec)) {
+        std::error_code fe;
+        if (!it->is_regular_file(fe))
             continue;
-        std::string ext = it->path().extension().string();
+        std::string ext = u8str(it->path().extension());
         for (auto &c : ext)
-            c = (char)tolower((unsigned char)c);
+            if (c >= 'A' && c <= 'Z')
+                c = (char)(c - 'A' + 'a');
         if (ext == ".vrt")
-            out.push_back(fs::relative(it->path(), dir, ec).generic_string());
+            out.push_back(u8generic(fs::relative(it->path(), root, fe)));
     }
     std::sort(out.begin(), out.end());
     return out;
@@ -394,7 +398,7 @@ std::string remote_template_name(const std::string &file)
 bool RemoteTemplates::load_file(const std::string &path)
 {
     std::vector<uint8_t> d;
-    if (FILE *f = fopen(path.c_str(), "rb")) {
+    if (FILE *f = u8fopen(path, "rb")) {
         uint8_t buf[4096];
         for (size_t n; (n = fread(buf, 1, sizeof buf, f)) > 0;)
             d.insert(d.end(), buf, buf + n);
@@ -406,7 +410,7 @@ bool RemoteTemplates::load_file(const std::string &path)
 bool RemoteTemplates::save_file(const std::string &path) const
 {
     const std::string tmp = path + ".tmp";
-    FILE *f = fopen(tmp.c_str(), "wb");
+    FILE *f = u8fopen(tmp, "wb");
     if (!f)
         return false;
     auto d = cache();
@@ -414,9 +418,9 @@ bool RemoteTemplates::save_file(const std::string &path) const
     ok = fclose(f) == 0 && ok;
     std::error_code ec;
     if (ok)
-        std::filesystem::rename(tmp, path, ec); // another instance reading meanwhile sees the old or the new file
+        std::filesystem::rename(u8path(tmp), u8path(path), ec); // another instance reading meanwhile sees the old or the new file
     if (!ok || ec)
-        std::filesystem::remove(tmp, ec);
+        std::filesystem::remove(u8path(tmp), ec);
     return ok && !ec;
 }
 

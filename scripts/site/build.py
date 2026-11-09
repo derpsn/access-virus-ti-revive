@@ -606,6 +606,7 @@ def features_section():
         <li>Panic and the editor's own messages reach the Virus at once, also while notes are played (since 0.8.39). Tested on macOS (Ableton Live).</li>
         <li>macOS: a saved project no longer switches the Virus' audio clock at start (since 0.8.39), so &ldquo;Audio clock changed&rdquo; no longer shows twice. Tested in Ableton Live.</li>
         <li>Linux: no click at the start of playback when the broker stays running (since 0.8.39): the broker mutes the first audio packet of a stream. Checked on Linux with a TI2 Desktop, 10 of 10 starts clean.</li>
+        <li>Windows: library and template files with names outside Windows' old code page (Japanese or Cyrillic on a Western Windows, accents copied from a Mac, emoji) no longer crash the plug-in when it starts (since 0.8.40, issue #35), and the menus show their names correctly. Reproduced and checked on Windows 10 in Steinberg's VST3PluginTestHost; not yet tested with a Virus connected.</li>
       </ul>
       <h4>In the editor</h4>
       <ul>
@@ -833,7 +834,7 @@ def page_changelog_landing(releases):
 SHARED_IMAGES = ["control-center.png", "control-center-nerd-mode.png", "plugin-help-mode.png", "plugin-help-inactive.png",
                  "plugin-menus.png", "plugin-library-drop.png",
                  "plugin-section-lock.png", "plugin-edit-menu.png", "plugin-help-menu.png"]
-TESTS = 620 # unit tests in native/tests (vtitests), as of 2026-11-08 (0.8.39 round)
+TESTS = 627 # unit tests in native/tests (vtitests), as of 2026-11-09 (0.8.40 hotfix)
 
 # Important information shown at the top of the page, newest first (empty list = no box). The README starts with the
 # same text ("Important" block), keep both identical. Remove an entry when it no longer matters to users.

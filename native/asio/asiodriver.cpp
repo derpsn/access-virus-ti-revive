@@ -140,19 +140,20 @@ uint64_t now_ns()
 // diagnostics: %LOCALAPPDATA%\virus-ti-native\asio.log, only when diag.on exists in that folder (like the plug-in)
 void dlog(const char *fmt, ...)
 {
-    static std::string path = [] {
-        char base[MAX_PATH];
-        DWORD n = GetEnvironmentVariableA("LOCALAPPDATA", base, sizeof base);
-        if (!n || n >= sizeof base)
-            return std::string();
-        std::string dir = std::string(base) + "\\virus-ti-native\\";
-        return GetFileAttributesA((dir + "diag.on").c_str()) != INVALID_FILE_ATTRIBUTES ? dir + "asio.log" : std::string();
+    // wide: the user name in %LOCALAPPDATA% can be outside the ANSI code page (#35)
+    static std::wstring path = [] {
+        wchar_t base[MAX_PATH];
+        DWORD n = GetEnvironmentVariableW(L"LOCALAPPDATA", base, MAX_PATH);
+        if (!n || n >= MAX_PATH)
+            return std::wstring();
+        std::wstring dir = std::wstring(base) + L"\\virus-ti-native\\";
+        return GetFileAttributesW((dir + L"diag.on").c_str()) != INVALID_FILE_ATTRIBUTES ? dir + L"asio.log" : std::wstring();
     }();
     if (path.empty())
         return;
     static std::mutex m;
     std::lock_guard<std::mutex> g(m);
-    FILE *f = fopen(path.c_str(), "a");
+    FILE *f = _wfopen(path.c_str(), L"a");
     if (!f)
         return;
     SYSTEMTIME t;

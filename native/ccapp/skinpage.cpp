@@ -1,5 +1,6 @@
 // skinpage.cpp - see skinpage.h.
 #include "skinpage.h"
+#include "model/utf8.h"
 #include "access/accessfiles.h"
 #include "cc/ccskin.h"
 #include "cc/controlcenter.h"
@@ -333,20 +334,20 @@ private:
         // each backup in its own dated folder ("2026-10-15 1230") inside the chosen one, which starts at
         // <Documents>/Access Music/Virus TI/Backups
         std::string def = vti::cc::default_backup_dir();
-        std::filesystem::path base = std::filesystem::path(def).parent_path();
-        std::string stamp = std::filesystem::path(def).filename().string();
+        std::filesystem::path base = vti::u8path(def).parent_path();
+        std::string stamp = vti::u8str(vti::u8path(def).filename());
         std::error_code ec;
         std::filesystem::create_directories(base, ec);
         auto sel = owned(CNewFileSelector::create(getFrame(), CNewFileSelector::kSelectDirectory));
         if (sel) {
             sel->setTitle("Backup folder (a dated folder is created inside)");
-            sel->setInitialDirectory(base.string().c_str());
+            sel->setInitialDirectory(vti::u8str(base).c_str());
         }
         bool shown = sel && sel->run([this, stamp](CNewFileSelector *s) {
             if (!s->getNumSelectedFiles())
                 return;
             std::lock_guard<std::mutex> l(mu_);
-            target_ = (std::filesystem::path(s->getSelectedFile(0)) / stamp).string();
+            target_ = vti::u8str(vti::u8path(s->getSelectedFile(0)) / vti::u8path(stamp));
             done_ = false;
             backup_text_ = target_;
             status_ = "OK starts the backup";

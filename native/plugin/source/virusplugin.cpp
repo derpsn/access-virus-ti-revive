@@ -1,5 +1,6 @@
 // virusplugin.cpp - see virusplugin.h.
 #include "virusplugin.h"
+#include "model/utf8.h"
 #include "model/devicestatus.h"
 #include <cstdarg>
 #include <ctime>
@@ -79,7 +80,7 @@ static int load_usb_io()
     int v = 0;
     if (const char *e = std::getenv("VTI_IO_CONFIG"))
         v = std::atoi(e);
-    else if (FILE *f = std::fopen((vti::cc::plugin_dir() + "/usb-io").c_str(), "r")) {
+    else if (FILE *f = vti::u8fopen(vti::cc::plugin_dir() + "/usb-io", "r")) {
         if (std::fscanf(f, "%d", &v) != 1)
             v = 0;
         std::fclose(f);
@@ -332,7 +333,7 @@ void DeviceOut::log(const char *fmt, ...)
     va_end(ap);
     fputs(line, stderr);
     if (diag_on_.load(std::memory_order_acquire))
-        if (FILE *f = fopen(diag_path_, "a")) {
+        if (FILE *f = vti::u8fopen(diag_path_, "a")) {
             fprintf(f, "%ld %s", (long)std::time(nullptr), line);
             fclose(f);
         }
@@ -927,7 +928,7 @@ tresult PLUGIN_API VirusPlugin::initialize(FUnknown *context)
         // without the user's Access installation there is nothing to show; the host still gets a valid instance
         fprintf(stderr, "Virus TI native: %s\n", err.c_str());
         if (diag_enabled()) // no device worker (and so no log) without the files: the reason, e.g. a 32-bit DLL (E345)
-            if (FILE *f = fopen((own_cache_dir() + "/../diag.log").c_str(), "a")) {
+            if (FILE *f = vti::u8fopen(own_cache_dir() + "/../diag.log", "a")) {
                 fprintf(f, "%ld Virus TI native: no Access files: %s\n", (long)std::time(nullptr), err.c_str());
                 fclose(f);
             }
@@ -1015,10 +1016,10 @@ tresult PLUGIN_API VirusPlugin::initialize(FUnknown *context)
     // the timing (E363, E364): the original's lead of 3072 and the safety net; timing-classic.on = as before 0.8.35
     {
         std::error_code tec;
-        timing_classic_ = std::filesystem::exists(own_cache_dir() + "/../timing-classic.on", tec);
-        note_probe_on_ = diag_enabled() && std::filesystem::exists(own_cache_dir() + "/../noteprobe.on", tec);
+        timing_classic_ = std::filesystem::exists(vti::u8path(own_cache_dir() + "/../timing-classic.on"), tec);
+        note_probe_on_ = diag_enabled() && std::filesystem::exists(vti::u8path(own_cache_dir() + "/../noteprobe.on"), tec);
         // the output delays only on change, not at every Play/Stop (Control Center option, outputdelay.h resend_all)
-        od_changes_only_ = std::filesystem::exists(own_cache_dir() + "/../outdelay-changes.on", tec);
+        od_changes_only_ = std::filesystem::exists(vti::u8path(own_cache_dir() + "/../outdelay-changes.on"), tec);
         live_notes_ = vti::cc::plugin_option("live-notes"); // the plug-in folder itself: no cache folder needed (S065 C9)
 #ifdef _WIN32
         timing_a_ = timing_lead(timing_classic_, true);
@@ -1122,7 +1123,7 @@ void VirusPlugin::set_usb_io(int value, bool save)
         return;
     const int old = usb_io_.exchange(value);
     if (save && value != old)
-        if (FILE *f = std::fopen((vti::cc::plugin_dir() + "/usb-io").c_str(), "w")) {
+        if (FILE *f = vti::u8fopen(vti::cc::plugin_dir() + "/usb-io", "w")) {
             std::fprintf(f, "%d\n", value);
             std::fclose(f);
         }
@@ -1463,7 +1464,7 @@ vti::TipsFacts VirusPlugin::tips_facts() const
 std::vector<std::string> VirusPlugin::tips_seen() const
 {
     std::string text;
-    if (FILE *f = fopen((own_cache_dir() + "/../setup-tips.seen").c_str(), "rb")) {
+    if (FILE *f = vti::u8fopen(own_cache_dir() + "/../setup-tips.seen", "rb")) {
         char b[1024];
         size_t n;
         while ((n = fread(b, 1, sizeof b, f)) > 0)
@@ -1476,8 +1477,8 @@ std::vector<std::string> VirusPlugin::tips_seen() const
 void VirusPlugin::tips_save_seen(const std::vector<std::string> &seen) const
 {
     std::error_code ec;
-    std::filesystem::create_directories(own_cache_dir() + "/..", ec);
-    if (FILE *f = fopen((own_cache_dir() + "/../setup-tips.seen").c_str(), "wb")) {
+    std::filesystem::create_directories(vti::u8path(own_cache_dir() + "/.."), ec);
+    if (FILE *f = vti::u8fopen(own_cache_dir() + "/../setup-tips.seen", "wb")) {
         const std::string text = vti::tips_seen_text(seen);
         fwrite(text.data(), 1, text.size(), f);
         fclose(f);
@@ -1487,7 +1488,7 @@ void VirusPlugin::tips_save_seen(const std::vector<std::string> &seen) const
 vti::InfoState VirusPlugin::info_state() const
 {
     std::string text;
-    if (FILE *f = fopen((own_cache_dir() + "/../info-page.state").c_str(), "rb")) {
+    if (FILE *f = vti::u8fopen(own_cache_dir() + "/../info-page.state", "rb")) {
         char b[256];
         size_t n;
         while ((n = fread(b, 1, sizeof b, f)) > 0)
@@ -1500,8 +1501,8 @@ vti::InfoState VirusPlugin::info_state() const
 void VirusPlugin::info_save_state(const vti::InfoState &s) const
 {
     std::error_code ec;
-    std::filesystem::create_directories(own_cache_dir() + "/..", ec);
-    if (FILE *f = fopen((own_cache_dir() + "/../info-page.state").c_str(), "wb")) {
+    std::filesystem::create_directories(vti::u8path(own_cache_dir() + "/.."), ec);
+    if (FILE *f = vti::u8fopen(own_cache_dir() + "/../info-page.state", "wb")) {
         const std::string text = vti::info_state_text(s);
         fwrite(text.data(), 1, text.size(), f);
         fclose(f);
@@ -1511,8 +1512,8 @@ void VirusPlugin::info_save_state(const vti::InfoState &s) const
 bool VirusPlugin::has_history() const
 {
     std::error_code ec;
-    return std::filesystem::exists(own_cache_dir() + "/RAM A", ec) ||
-           std::filesystem::exists(own_cache_dir() + "/../setup-tips.seen", ec);
+    return std::filesystem::exists(vti::u8path(own_cache_dir() + "/RAM A"), ec) ||
+           std::filesystem::exists(vti::u8path(own_cache_dir() + "/../setup-tips.seen"), ec);
 }
 
 bool VirusPlugin::diag_enabled()
@@ -1520,7 +1521,7 @@ bool VirusPlugin::diag_enabled()
     static int on = -1;
     if (on < 0) {
         std::error_code ec;
-        on = std::filesystem::exists(own_cache_dir() + "/../diag.on", ec) ? 1 : 0;
+        on = std::filesystem::exists(vti::u8path(own_cache_dir() + "/../diag.on"), ec) ? 1 : 0;
     }
     return on == 1;
 }
@@ -1530,7 +1531,7 @@ void VirusPlugin::note_probe_flush()
     if (!note_probe_on_)
         return;
     std::lock_guard<std::mutex> lock(note_probe_mu_);
-    FILE *f = fopen((own_cache_dir() + "/../diag.log").c_str(), "a");
+    FILE *f = vti::u8fopen(own_cache_dir() + "/../diag.log", "a");
     if (!f)
         return;
     const int largest = block_;
@@ -1552,7 +1553,7 @@ void VirusPlugin::diag_report()
     if (out_)
         if (AudioGate::Use ring(out_->audio_gate()); ring)
             drops = (long long)out_->audio().drops();
-    if (FILE *f = fopen((own_cache_dir() + "/../diag.log").c_str(), "a")) {
+    if (FILE *f = vti::u8fopen(own_cache_dir() + "/../diag.log", "a")) {
         fprintf(f, "%ld s: draws full %ld partial %ld, draw time %ld ms, dirty ticks %ld, process calls %ld max %ld us,"
                    " over block time %ld, audio %d drops %lld, queued %d, host %.0f Hz block %d (largest %ld)\n",
                 (long)std::time(nullptr), diag.full_draws.exchange(0), diag.part_draws.exchange(0),
@@ -2784,8 +2785,8 @@ void VirusPlugin::meta_init()
 static std::string own_cache_dir()
 {
 #ifdef _WIN32
-    if (const char *la = getenv("LOCALAPPDATA"))
-        return std::string(la) + "/virus-ti-native/cache";
+    if (const std::string la = vti::u8env("LOCALAPPDATA"); !la.empty()) // UTF-8 (#35)
+        return la + "/virus-ti-native/cache";
 #elif defined(__APPLE__)
     if (const char *home = getenv("HOME"))
         return std::string(home) + "/Library/Application Support/virus-ti-native/cache";
@@ -2808,8 +2809,8 @@ void VirusPlugin::load_remote_templates()
     if (remote_.load_file(remote_path_))
         return;
 #ifdef _WIN32
-    if (const char *pd = getenv("ProgramData"))
-        remote_.load_file(std::string(pd) + "/Access Music/Virus TI/Cache/RemoteSets");
+    if (const std::string pd = vti::u8env("ProgramData"); !pd.empty())
+        remote_.load_file(pd + "/Access Music/Virus TI/Cache/RemoteSets");
 #endif
 }
 
@@ -2818,7 +2819,7 @@ void VirusPlugin::save_remote_templates()
     if (remote_path_.empty())
         return;
     std::error_code ec;
-    std::filesystem::create_directories(std::filesystem::path(remote_path_).parent_path(), ec);
+    std::filesystem::create_directories(vti::u8path(remote_path_).parent_path(), ec);
     if (!remote_.save_file(remote_path_))
         fprintf(stderr, "Virus TI native: cannot write %s\n", remote_path_.c_str());
 }
@@ -2876,7 +2877,7 @@ void VirusPlugin::choose_remote_template(int t)
 static std::string remote_template_dir()
 {
     std::string lib = library_dir(); // .../Access Music/Virus TI/Patches
-    return lib.empty() ? std::string() : (std::filesystem::path(lib).parent_path() / "Remote Templates").string();
+    return lib.empty() ? std::string() : vti::u8str(vti::u8path(lib).parent_path() / "Remote Templates");
 }
 
 std::vector<std::pair<std::string, std::string>> VirusPlugin::remote_template_folders() const
@@ -2894,7 +2895,7 @@ std::vector<std::pair<std::string, std::string>> VirusPlugin::remote_template_fo
 bool VirusPlugin::load_remote_template(const std::string &path)
 {
     std::vector<uint8_t> d;
-    if (FILE *f = fopen(path.c_str(), "rb")) {
+    if (FILE *f = vti::u8fopen(path, "rb")) {
         uint8_t buf[4096];
         for (size_t n; (n = fread(buf, 1, sizeof buf, f)) > 0;)
             d.insert(d.end(), buf, buf + n);
@@ -2917,12 +2918,12 @@ bool VirusPlugin::load_remote_template(const std::string &path)
 bool VirusPlugin::save_remote_template(const std::string &file)
 {
     namespace fs = std::filesystem;
-    const fs::path dir = remote_template_dir();
+    const fs::path dir = vti::u8path(remote_template_dir());
     if (file.empty() && dir.empty())
         return false;
     int sel = ui_value("Remote Templates/Selected Template", -1);
     std::vector<uint8_t> d;
-    fs::path path = file;
+    fs::path path = vti::u8path(file);
     {
         std::lock_guard<std::mutex> lk(remote_mu_);
         d = remote_.template_file(sel < 0 ? 0 : sel);
@@ -2933,24 +2934,24 @@ bool VirusPlugin::save_remote_template(const std::string &file)
                     c = '_';
             if (name.empty())
                 name = "Template";
-            path = dir / (name + ".vrt");
+            path = dir / vti::u8path(name + ".vrt");
             std::error_code ec;
             for (int n = 2; fs::exists(path, ec); n++)
-                path = dir / (name + " " + std::to_string(n) + ".vrt");
+                path = dir / vti::u8path(name + " " + std::to_string(n) + ".vrt");
         }
     }
     std::error_code ec;
     fs::create_directories(path.parent_path(), ec);
-    const std::string tmp = path.string() + ".tmp";
-    FILE *f = fopen(tmp.c_str(), "wb");
+    const std::string tmp = vti::u8str(path) + ".tmp";
+    FILE *f = vti::u8fopen(tmp, "wb");
     if (!f)
         return false;
     bool ok = fwrite(d.data(), 1, d.size(), f) == d.size();
     ok = fclose(f) == 0 && ok;
     if (ok)
-        fs::rename(tmp, path, ec);
+        fs::rename(vti::u8path(tmp), path, ec);
     if (!ok || ec) {
-        fs::remove(tmp, ec);
+        fs::remove(vti::u8path(tmp), ec);
         return false;
     }
     return true;
@@ -2977,7 +2978,7 @@ void VirusPlugin::load_banks()
                 fprintf(stderr, "Virus TI native: library %s/%s: %d patch(es) skipped (damaged or unknown format)\n",
                         root.menu.c_str(), lib.name.c_str(), lib.skipped);
                 if (diag_enabled())
-                    if (FILE *f = fopen((own_cache_dir() + "/../diag.log").c_str(), "a")) {
+                    if (FILE *f = vti::u8fopen(own_cache_dir() + "/../diag.log", "a")) {
                         fprintf(f, "%ld Virus TI native: library %s/%s: %d patch(es) skipped (damaged or unknown format)\n",
                                 (long)std::time(nullptr), root.menu.c_str(), lib.name.c_str(), lib.skipped);
                         fclose(f);
@@ -3036,7 +3037,7 @@ int VirusPlugin::load_rom_banks()
     // test switch: <plug-in folder>/rom-user.on with letters ("Z") treats those banks as user banks, so the path
     // can be tried on a Virus with factory ROMs: they are read from the Virus with the same requests (E382)
     std::string base = own_cache_dir(), test;
-    if (FILE *f = base.empty() ? nullptr : fopen((base + "/../rom-user.on").c_str(), "r")) {
+    if (FILE *f = base.empty() ? nullptr : vti::u8fopen(base + "/../rom-user.on", "r")) {
         char buf[64] = {0};
         size_t n = fread(buf, 1, sizeof buf - 1, f);
         fclose(f);
@@ -3258,7 +3259,7 @@ void VirusPlugin::sync_banks()
     std::string dir = own_cache_dir();
     if (!dir.empty()) {
         std::error_code ec;
-        std::filesystem::create_directories(dir, ec);
+        std::filesystem::create_directories(vti::u8path(dir), ec);
     }
     const int rom_missing = load_rom_banks();
     // "Starting up" ends here: straight to "Syncing memory" when a read is certain (as the original), else the editor
@@ -3342,7 +3343,7 @@ void VirusPlugin::sync_banks()
     int rom_done = 0;
     if (result >= 0 && rom_missing > 0 && !user_rom_dir_.empty()) {
         std::error_code ec;
-        std::filesystem::create_directories(user_rom_dir_, ec);
+        std::filesystem::create_directories(vti::u8path(user_rom_dir_), ec);
     }
     for (int i = 0; i < 26 && result >= 0 && rom_missing > 0; i++) {
         if (!(user_rom_ >> i & 1))
@@ -3681,7 +3682,7 @@ bool VirusPlugin::store_patch(int part, int bank, int program)
     std::string dir = own_cache_dir();
     if (!dir.empty()) {
         std::error_code ec;
-        std::filesystem::create_directories(dir, ec);
+        std::filesystem::create_directories(vti::u8path(dir), ec);
         save_bank_file(dir + "/RAM " + (char)('A' + bank), cache);
     }
     ui_dirty_ = true;
@@ -4008,9 +4009,9 @@ bool VirusPlugin::backup_ram(const std::vector<BankDrop::Write> &w)
         strftime(date, sizeof date, "%Y-%m-%d", lt);
     const std::string dir = library_dir();
     std::error_code ec;
-    std::filesystem::create_directories(dir, ec);
+    std::filesystem::create_directories(vti::u8path(dir), ec);
     // a backup library is found by its file in the Personal Libraries folder, listed or not
-    auto path_of = [&dir](const std::string &name) { return (std::filesystem::path(dir) / (name + ".mid")).string(); };
+    auto path_of = [&dir](const std::string &name) { return vti::u8str(vti::u8path(dir) / vti::u8path(name + ".mid")); };
     auto listed = [this](const std::string &path) { // index in lib_paths_ or -1 (banks_mu_ held)
         auto it = std::find(lib_paths_.begin(), lib_paths_.end(), path);
         return it == lib_paths_.end() ? -1 : (int)(it - lib_paths_.begin());
@@ -4029,7 +4030,7 @@ bool VirusPlugin::backup_ram(const std::vector<BankDrop::Write> &w)
         PatchLibrary lib;
         dumps.clear();
         std::error_code fe;
-        if (!std::filesystem::exists(path, fe))
+        if (!std::filesystem::exists(vti::u8path(path), fe))
             return true;
         if (!load_library_file(path, lib, page_b))
             return false;
@@ -4097,7 +4098,7 @@ bool VirusPlugin::send_ram_writes(const std::vector<BankDrop::Write> &w)
     std::string dir = own_cache_dir();
     if (!dir.empty()) {
         std::error_code ec;
-        std::filesystem::create_directories(dir, ec);
+        std::filesystem::create_directories(vti::u8path(dir), ec);
         for (auto &c : caches)
             save_bank_file(dir + "/RAM " + (char)('A' + c.first), c.second);
     }
@@ -4120,7 +4121,7 @@ bool VirusPlugin::create_library(const std::string &chosen)
             banks_[LIB_BASE + (int)(it - lib_paths_.begin())].clear();
         } else { // listed by its file name, as the original adds it (wherever the file was saved)
             banks_[LIB_BASE + (int)lib_names_.size()].clear();
-            lib_names_.push_back(std::filesystem::path(path).stem().string());
+            lib_names_.push_back(vti::u8str(vti::u8path(path).stem()));
             lib_paths_.push_back(path);
             lib_roots_.push_back("Personal Libraries");
         }
@@ -4139,7 +4140,7 @@ LibraryImport VirusPlugin::import_library_file(const std::string &src, int &libr
             r.error = "Cannot read file";
         // the file name only, no path (rule 5); the LCD has only room for the reason
         fprintf(stderr, "Virus TI native: dropped file %s not added: %s\n",
-                std::filesystem::path(src).filename().string().c_str(), r.error.c_str());
+                vti::u8str(vti::u8path(src).filename()).c_str(), r.error.c_str());
         return r;
     }
     // already listed (a drop of a library that is there)? The same file whatever the separators (Windows): the file

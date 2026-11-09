@@ -1,6 +1,7 @@
 // library.cpp - see library.h.
 #include "library.h"
 #include "model/remotedevice.h"
+#include "model/utf8.h"
 #include <algorithm>
 #include <cstdlib>
 #include <filesystem>
@@ -11,9 +12,21 @@ namespace vti {
 
 namespace fs = std::filesystem;
 
+namespace {
+// the extension in lower case (ASCII letters only: tolower on a UTF-8 byte would be undefined)
+std::string lower_ext(const fs::path &p)
+{
+    std::string ext = u8str(p.extension());
+    for (auto &ch : ext)
+        if (ch >= 'A' && ch <= 'Z')
+            ch = (char)(ch - 'A' + 'a');
+    return ext;
+}
+} // namespace
+
 bool load_library_file(const std::string &path, PatchLibrary &lib, const std::vector<uint8_t> &page_b)
 {
-    std::ifstream f(path, std::ios::binary);
+    std::ifstream f(u8path(path), std::ios::binary);
     if (!f)
         return false;
     std::vector<uint8_t> d((std::istreambuf_iterator<char>(f)), std::istreambuf_iterator<char>());
@@ -74,19 +87,23 @@ std::vector<PatchLibrary> load_libraries(const std::string &dir, const std::vect
 {
     std::vector<PatchLibrary> out;
     std::error_code ec;
-    // like the original: also the libraries in subfolders (e.g. "Virus TI2 Factory Backup/Rom/Virus TI2 Rom A")
-    for (auto &e : fs::recursive_directory_iterator(dir, fs::directory_options::skip_permission_denied, ec)) {
-        if (!e.is_regular_file(ec))
+    const fs::path root = u8path(dir);
+    // like the original: also the libraries in subfolders (e.g. "Virus TI2 Factory Backup/Rom/Virus TI2 Rom A").
+    // increment(ec), not a range-for: its ++ throws on an unreadable entry. Names as UTF-8 (#35: path::string()
+    // threw on Windows for a name outside the ANSI code page and crashed the host in initialize())
+    for (fs::recursive_directory_iterator it(root, fs::directory_options::skip_permission_denied, ec), end;
+         !ec && it != end; it.increment(ec)) {
+        const fs::directory_entry &e = *it;
+        std::error_code fe;
+        if (!e.is_regular_file(fe))
             continue;
-        std::string ext = e.path().extension().string();
-        for (auto &ch : ext)
-            ch = (char)tolower(ch);
+        const std::string ext = lower_ext(e.path());
         if (ext != ".mid" && ext != ".syx")
             continue;
         PatchLibrary lib;
-        if (!load_library_file(e.path().string(), lib, page_b))
+        if (!load_library_file(u8str(e.path()), lib, page_b))
             continue;
-        lib.name = (e.path().parent_path().lexically_relative(dir) / e.path().stem()).generic_string();
+        lib.name = u8generic(e.path().parent_path().lexically_relative(root) / e.path().stem());
         if (lib.name.rfind("./", 0) == 0)
             lib.name = lib.name.substr(2);
         out.push_back(std::move(lib));
@@ -96,13 +113,6 @@ std::vector<PatchLibrary> load_libraries(const std::string &dir, const std::vect
 }
 
 namespace {
-std::string lower_ext(const fs::path &p)
-{
-    std::string ext = p.extension().string();
-    for (auto &ch : ext)
-        ch = (char)tolower(ch);
-    return ext;
-}
 
 // the same patches in the same slots (the slot layout is the user's); the bank/program bytes and the checksums may
 // differ (save_library sets them)
@@ -124,7 +134,7 @@ bool same_patches(const PatchLibrary &a, const PatchLibrary &b)
 
 bool importable_library(const std::string &path)
 {
-    const fs::path p(path);
+    const fs::path p = u8path(path);
     const std::string ext = lower_ext(p);
     return !p.stem().empty() && (ext == ".mid" || ext == ".midi" || ext == ".syx");
 }
@@ -133,7 +143,7 @@ bool importable_library(const std::string &path)
 LibraryImport import_library(const std::string &src, const std::string &dir, const std::vector<uint8_t> &page_b)
 {
     LibraryImport r;
-    const fs::path from(src);
+    const fs::path from = u8path(src), folder = u8path(dir);
     if (dir.empty()) { // no documents folder known: a relative path would land in the host's working folder
         r.error = "No library folder";
         return r;
@@ -151,29 +161,29 @@ LibraryImport import_library(const std::string &src, const std::string &dir, con
     }
     std::error_code ec;
     // already in the folder (a drop from Personal Libraries itself): listed under its own name
-    const fs::path base = fs::weakly_canonical(dir, ec), canon = fs::weakly_canonical(from, ec);
+    const fs::path base = fs::weakly_canonical(folder, ec), canon = fs::weakly_canonical(from, ec);
     const fs::path rel = canon.lexically_relative(base);
     if (!rel.empty() && *rel.begin() != "..") {
         r.existed = true;
         r.path = src;
-        r.name = (rel.parent_path() / rel.stem()).generic_string();
+        r.name = u8generic(rel.parent_path() / rel.stem());
         return r;
     }
     // a .syx becomes a .mid unless it holds more than one bank (save_library writes 128 positions)
     const bool as_mid = lower_ext(from) != ".syx" || lib.dumps.size() <= 128;
-    const std::string ext = as_mid ? ".mid" : ".syx", stem = from.stem().string();
+    const std::string ext = as_mid ? ".mid" : ".syx", stem = u8str(from.stem());
     for (int n = 1; n < 1000; n++) {
         const std::string name = n == 1 ? stem : stem + " " + std::to_string(n);
-        const fs::path mid = fs::path(dir) / (name + ".mid"), syx = fs::path(dir) / (name + ".syx");
+        const fs::path mid = folder / u8path(name + ".mid"), syx = folder / u8path(name + ".syx");
         bool taken = false;
         for (const fs::path &p : {mid, syx}) { // both would be listed as `name`
             if (!fs::exists(p, ec))
                 continue;
             taken = true;
             PatchLibrary there;
-            if (load_library_file(p.string(), there, page_b) && same_patches(there, lib)) {
+            if (load_library_file(u8str(p), there, page_b) && same_patches(there, lib)) {
                 r.existed = true;
-                r.path = p.string();
+                r.path = u8str(p);
                 r.name = name;
                 return r;
             }
@@ -181,11 +191,11 @@ LibraryImport import_library(const std::string &src, const std::string &dir, con
         if (taken)
             continue;
         const fs::path to = ext == ".mid" ? mid : syx;
-        fs::create_directories(dir, ec);
+        fs::create_directories(folder, ec);
         std::string err;
         if (as_mid && lower_ext(from) == ".syx") {
             PatchLibrary out = lib;
-            out.path = to.string();
+            out.path = u8str(to);
             if (!save_library(out, err)) {
                 r.error = "Cannot write file";
                 return r;
@@ -194,7 +204,7 @@ LibraryImport import_library(const std::string &src, const std::string &dir, con
             r.error = "Cannot copy file";
             return r;
         }
-        r.path = to.string();
+        r.path = u8str(to);
         r.name = name;
         return r;
     }
@@ -217,7 +227,7 @@ bool write_empty_library(const std::string &path, std::string &error)
     // byte for byte the original's empty file (Virus Control 0x180065900 writes it): the end of track at delta 120
     static const uint8_t empty[] = {'M', 'T', 'h', 'd', 0, 0, 0, 6, 0, 0, 0, 1, 0x01, 0xE0,
                                     'M', 'T', 'r', 'k', 0, 0, 0, 4, 0x78, 0xFF, 0x2F, 0x00};
-    std::ofstream o(path, std::ios::binary | std::ios::trunc);
+    std::ofstream o(u8path(path), std::ios::binary | std::ios::trunc);
     o.write((const char *)empty, sizeof empty);
     o.close();
     if (!o) {
@@ -264,7 +274,7 @@ bool save_library(const PatchLibrary &lib, std::string &error)
     f.insert(f.end(), trk.begin(), trk.end());
     std::string tmp = lib.path + ".tmp";
     {
-        std::ofstream o(tmp, std::ios::binary);
+        std::ofstream o(u8path(tmp), std::ios::binary);
         o.write((const char *)f.data(), (std::streamsize)f.size());
         if (!o) {
             error = "cannot write " + tmp;
@@ -272,7 +282,7 @@ bool save_library(const PatchLibrary &lib, std::string &error)
         }
     }
     std::error_code ec;
-    fs::rename(tmp, lib.path, ec);
+    fs::rename(u8path(tmp), u8path(lib.path), ec);
     if (ec)
         error = ec.message();
     return !ec;
@@ -306,8 +316,9 @@ std::string library_dir()
     const std::string tail = "/Access Music/Virus TI/Patches";
     std::vector<std::string> c;
 #ifdef _WIN32
-    if (const char *up = getenv("USERPROFILE"))
-        c.push_back(std::string(up) + "/Documents" + tail);
+    const std::string up = u8env("USERPROFILE"); // UTF-8: the user name can be outside the ANSI code page
+    if (!up.empty())
+        c.push_back(up + "/Documents" + tail);
 #else
     if (const char *home = getenv("HOME")) {
         std::string h = home, docs = h + "/Documents" + tail;
@@ -329,7 +340,7 @@ std::string library_dir()
 #endif
     std::error_code ec;
     for (auto &d : c)
-        if (fs::is_directory(d, ec))
+        if (fs::is_directory(u8path(d), ec))
             return d;
     return c.empty() ? std::string() : c.front();
 }
@@ -354,10 +365,8 @@ std::vector<LibraryRoot> library_roots()
 {
     std::string user, shared;
 #ifdef _WIN32
-    if (const char *a = getenv("APPDATA"))
-        user = a;
-    if (const char *p = getenv("PROGRAMDATA"))
-        shared = p;
+    user = u8env("APPDATA");
+    shared = u8env("PROGRAMDATA");
 #elif defined(__APPLE__)
     if (const char *home = getenv("HOME"))
         user = std::string(home) + "/Library/Application Support";

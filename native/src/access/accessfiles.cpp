@@ -1,6 +1,7 @@
 // accessfiles.cpp - see accessfiles.h. The PE resource reader handles the standard three-level resource tree
 // (type / name / language) of a PE32+ or PE32 image; only named types "XML" and "PNG" are collected.
 #include "accessfiles.h"
+#include "model/utf8.h"
 #include <cstdio>
 #include <algorithm>
 #include <cctype>
@@ -20,9 +21,10 @@ static std::string lower(std::string s)
     return s;
 }
 
-static bool read_file(const fs::path &p, std::vector<uint8_t> &out)
+// `path` as UTF-8 (#35)
+static bool read_file(const std::string &path, std::vector<uint8_t> &out)
 {
-    std::ifstream f(p, std::ios::binary);
+    std::ifstream f(u8path(path), std::ios::binary);
     if (!f)
         return false;
     out.assign(std::istreambuf_iterator<char>(f), std::istreambuf_iterator<char>());
@@ -131,11 +133,12 @@ bool AccessFiles::load_pe(const std::string &dll, std::string &error, const char
 bool AccessFiles::load_dir(const std::string &dir, std::string &error, const char *required)
 {
     std::error_code ec;
-    for (auto &e : fs::directory_iterator(dir, ec)) {
-        std::string ext = lower(e.path().extension().string());
+    for (fs::directory_iterator it(u8path(dir), ec), end; !ec && it != end; it.increment(ec)) {
+        const fs::path &f = it->path();
+        std::string ext = lower(u8str(f.extension()));
         if (ext != ".xml" && ext != ".png")
             continue;
-        read_file(e.path(), files_[lower(e.path().filename().string())]);
+        read_file(u8str(f), files_[lower(u8str(f.filename()))]);
     }
     if (!files_.count(required)) {
         error = dir + " does not contain the Virus TI resources";
@@ -149,12 +152,12 @@ std::vector<uint8_t> AccessFiles::find_dump(uint8_t cmd, size_t size, size_t nam
                                             std::vector<uint8_t> *binary, size_t *offset) const
 {
     std::vector<std::string> bins = {source_};                                       // Windows: the DLL itself
-    bins.push_back((fs::path(source_) / ".." / "MacOS" / "Virus Control").string()); // Mac: bundle binary
+    bins.push_back(u8str(u8path(source_) / ".." / "MacOS" / "Virus Control")); // Mac: bundle binary
     const uint8_t hdr[] = {0xF0, 0x00, 0x20, 0x33, 0x01, 0x10, cmd};
     size_t nl = strlen(name);
     for (auto &b : bins) {
         std::error_code ec;
-        if (!fs::is_regular_file(b, ec))
+        if (!fs::is_regular_file(u8path(b), ec))
             continue;
         std::vector<uint8_t> d;
         read_file(b, d);
@@ -349,10 +352,10 @@ std::vector<KnobTemplate> find_knob_templates(const std::vector<uint8_t> &bin)
 std::vector<KnobTemplate> AccessFiles::knob_templates() const
 {
     std::vector<std::string> bins = {source_};                                       // Windows: the DLL itself
-    bins.push_back((fs::path(source_) / ".." / "MacOS" / "Virus Control").string()); // Mac: bundle binary
+    bins.push_back(u8str(u8path(source_) / ".." / "MacOS" / "Virus Control")); // Mac: bundle binary
     for (auto &b : bins) {
         std::error_code ec;
-        if (!fs::is_regular_file(b, ec))
+        if (!fs::is_regular_file(u8path(b), ec))
             continue;
         std::vector<uint8_t> d;
         read_file(b, d);
@@ -366,10 +369,10 @@ std::vector<KnobTemplate> AccessFiles::knob_templates() const
 std::vector<float> AccessFiles::osc_waves() const
 {
     std::vector<std::string> bins = {source_};                                       // Windows: the DLL itself
-    bins.push_back((fs::path(source_) / ".." / "MacOS" / "Virus Control").string()); // Mac: bundle binary
+    bins.push_back(u8str(u8path(source_) / ".." / "MacOS" / "Virus Control")); // Mac: bundle binary
     for (auto &b : bins) {
         std::error_code ec;
-        if (!fs::is_regular_file(b, ec))
+        if (!fs::is_regular_file(u8path(b), ec))
             continue;
         std::vector<uint8_t> d;
         read_file(b, d);
@@ -420,14 +423,14 @@ std::unique_ptr<AccessFiles> AccessFiles::open(const std::string &hint, std::str
     std::vector<std::string> cands;
     if (!hint.empty())
         cands.push_back(hint);
-    if (const char *e = std::getenv("VTI_ACCESS_DIR"))
+    if (const std::string e = u8env("VTI_ACCESS_DIR"); !e.empty())
         cands.push_back(e);
     const char *home = std::getenv("HOME");
     const std::string common = "Access Music/Virus TI/Common";
 #if defined(_WIN32)
     for (const char *pf : {"ProgramW6432", "ProgramFiles"})
-        if (const char *p = std::getenv(pf))
-            cands.push_back(std::string(p) + "/" + common);
+        if (const std::string p = u8env(pf); !p.empty())
+            cands.push_back(p + "/" + common);
 #elif defined(__APPLE__)
     cands.push_back("/Library/Application Support/" + common + "/Virus Control.bundle");
 #else
@@ -452,7 +455,7 @@ std::unique_ptr<AccessFiles> AccessFiles::open(const std::string &hint, std::str
 #endif
     std::string last = "no Access Virus TI installation found", x86;
     for (auto c : cands) {
-        fs::path p(c);
+        fs::path p = u8path(c);
         std::error_code ec;
         if (fs::is_directory(p / "Contents" / "Resources", ec))
             p = p / "Contents" / "Resources";
@@ -461,10 +464,10 @@ std::unique_ptr<AccessFiles> AccessFiles::open(const std::string &hint, std::str
         else if (fs::is_directory(p, ec) && fs::exists(p / "Virus Control.bundle", ec))
             p = p / "Virus Control.bundle" / "Contents" / "Resources";
         std::unique_ptr<AccessFiles> a(new AccessFiles);
-        bool ok = fs::is_directory(p, ec) ? a->load_dir(p.string(), last) : a->load_pe(p.string(), last);
+        bool ok = fs::is_directory(p, ec) ? a->load_dir(u8str(p), last) : a->load_pe(u8str(p), last);
         if (ok && a->pe32_) { // only the 64-bit DLL: the 32-bit one's tables lie elsewhere (E345); keep the reason
             if (x86.empty())
-                x86 = p.string() + " is the 32-bit Virus Control.dll; TI Revive needs the 64-bit one from the "
+                x86 = u8str(p) + " is the 32-bit Virus Control.dll; TI Revive needs the 64-bit one from the "
                                    "\"Virus TI Software Suite 5.1.7.00 64-bit.msi\": " FIX_32BIT;
             continue;
         }
@@ -479,17 +482,17 @@ std::unique_ptr<AccessFiles> AccessFiles::open_control_center(std::string &error
 {
     const char *exe = "Virus Control Center.exe";
     std::vector<fs::path> cands;
-    if (const char *e = std::getenv("VTI_ACCESS_CC"))
-        cands.push_back(e);
+    if (const std::string e = u8env("VTI_ACCESS_CC"); !e.empty())
+        cands.push_back(u8path(e));
     std::string err;
     if (auto plugin = open("", err)) { // the Control Center sits next to the plug-in in the installer's Common folder
-        fs::path src(plugin->source());
+        const fs::path src = u8path(plugin->source());
         cands.push_back(src.parent_path() / exe);
     }
 #if defined(_WIN32)
     for (const char *pf : {"ProgramW6432", "ProgramFiles"})
-        if (const char *p = std::getenv(pf))
-            cands.push_back(fs::path(p) / "Access Music/Virus TI/Common" / exe);
+        if (const std::string p = u8env(pf); !p.empty())
+            cands.push_back(u8path(p) / "Access Music/Virus TI/Common" / exe);
 #elif defined(__APPLE__)
     // TI Revive's "Set up Access Virus TI files" copies its images and layout there; else an Access installation
     cands.push_back("/Library/Application Support/Access Music/Virus TI/Common/Virus Control Center Resources");
@@ -506,8 +509,8 @@ std::unique_ptr<AccessFiles> AccessFiles::open_control_center(std::string &error
         if (!fs::exists(p, ec))
             continue;
         std::unique_ptr<AccessFiles> a(new AccessFiles);
-        bool ok = fs::is_directory(p, ec) ? a->load_dir(p.string(), last, "engine.xml")
-                                          : a->load_pe(p.string(), last, "engine.xml");
+        bool ok = fs::is_directory(p, ec) ? a->load_dir(u8str(p), last, "engine.xml")
+                                          : a->load_pe(u8str(p), last, "engine.xml");
         if (ok && a->files_.count("editor.xml"))
             return a;
     }

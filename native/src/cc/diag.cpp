@@ -1,12 +1,14 @@
 // diag.cpp - see diag.h.
 #include "diag.h"
 #include "controlcenter.h"
+#include "model/utf8.h"
 #include <cstdio>
 #include <cstdlib>
 #include <ctime>
 #include <deque>
 #include <filesystem>
 #include <fstream>
+#include <vector>
 
 namespace vti::cc {
 
@@ -15,30 +17,30 @@ namespace fs = std::filesystem;
 std::string plugin_dir()
 {
     std::string c = cache_dir(); // <plug-in folder>/cache
-    return c.empty() ? c : fs::path(c).parent_path().string();
+    return c.empty() ? c : u8str(u8path(c).parent_path());
 }
 
-std::string plugin_log_path() { return (fs::path(plugin_dir()) / "diag.log").string(); }
+std::string plugin_log_path() { return u8str(u8path(plugin_dir()) / "diag.log"); }
 
 static bool flag(const char *file)
 {
     std::error_code ec;
-    return fs::exists(fs::path(plugin_dir()) / file, ec);
+    return fs::exists(u8path(plugin_dir()) / file, ec);
 }
 
 static bool set_flag(const char *file, bool on, std::string &error)
 {
-    fs::path f = fs::path(plugin_dir()) / file;
+    fs::path f = u8path(plugin_dir()) / file;
     std::error_code ec;
     if (on) {
         fs::create_directories(f.parent_path(), ec);
         std::ofstream o(f);
         if (!o) {
-            error = "cannot create " + f.string();
+            error = "cannot create " + u8str(f);
             return false;
         }
     } else if (fs::exists(f, ec) && !fs::remove(f, ec)) {
-        error = "cannot remove " + f.string() + ": " + ec.message();
+        error = "cannot remove " + u8str(f) + ": " + ec.message();
         return false;
     }
     return true;
@@ -87,8 +89,8 @@ bool set_plugin_option(const std::string &name, bool on, std::string &error)
 static std::string broker_log_file()
 {
 #ifdef _WIN32
-    const char *t = getenv("TEMP");
-    return t ? std::string(t) + "\\vtibroker.log" : std::string();
+    const std::string t = u8env("TEMP");
+    return t.empty() ? std::string() : t + "\\vtibroker.log";
 #else
     return "/tmp/tirevive-vtibroker.log";
 #endif
@@ -106,7 +108,7 @@ std::string broker_log_location()
 
 std::vector<std::string> tail_file(const std::string &path, size_t n)
 {
-    std::ifstream f(path, std::ios::binary);
+    std::ifstream f(u8path(path), std::ios::binary);
     if (!f)
         return {};
     // only the end of a long log: diag.log can grow to many MB
@@ -158,27 +160,28 @@ static void replace_all(std::string &s, const std::string &from, const std::stri
 
 std::string anonymize(const std::string &text)
 {
-    std::string s = text, home, user;
+    std::string s = text;
+    std::vector<std::string> homes, users;
 #ifdef _WIN32
-    if (const char *h = getenv("USERPROFILE"))
-        home = h;
-    if (const char *u = getenv("USERNAME"))
-        user = u;
+    // both spellings: TI Revive's own lines are UTF-8, the broker (C) writes the ANSI code page
+    homes = {u8env("USERPROFILE"), getenv("USERPROFILE") ? getenv("USERPROFILE") : ""};
+    users = {u8env("USERNAME"), getenv("USERNAME") ? getenv("USERNAME") : ""};
 #else
-    if (const char *h = getenv("HOME"))
-        home = h;
-    if (const char *u = getenv("USER"))
-        user = u;
+    homes = {u8env("HOME")};
+    users = {u8env("USER")};
 #endif
-    if (home.size() > 1) {
+    for (const std::string &home : homes) {
+        if (home.size() <= 1)
+            continue;
         replace_all(s, home, "~");
         std::string alt = home; // the same path with the other kind of slashes
         for (auto &c : alt)
             c = c == '\\' ? '/' : c == '/' ? '\\' : c;
         replace_all(s, alt, "~");
     }
-    if (user.size() >= 3) // a very short name would also hit ordinary words
-        replace_all(s, user, "<user>");
+    for (const std::string &user : users)
+        if (user.size() >= 3) // a very short name would also hit ordinary words
+            replace_all(s, user, "<user>");
     return s;
 }
 
@@ -204,7 +207,7 @@ bool collect_logs(const std::string &out_path, const std::string &version, std::
     for (auto &l : broker_log_tail(1000))
         t += l + "\n";
     t = anonymize(t);
-    std::ofstream o(out_path, std::ios::binary);
+    std::ofstream o(u8path(out_path), std::ios::binary);
     o << t;
     if (!o) {
         error = "cannot write " + out_path;
