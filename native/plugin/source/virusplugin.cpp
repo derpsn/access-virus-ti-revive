@@ -94,6 +94,12 @@ static bool env_stats()
     return on;
 }
 
+static double env_resync_s() // S094 test: a new sync every N s of quiet (resync.h); 0 = off
+{
+    static const double s = getenv("VTI_NATIVE_RESYNC") ? atof(getenv("VTI_NATIVE_RESYNC")) : 0.0;
+    return s > 0 ? s : 0.0;
+}
+
 static const uint8_t EP_PLUGIN_OUT = 0x06, CABLE_PLUGIN = 2, CABLE_TIME = 5;
 static const ParamID MIDI_MAP_BASE = 0x100000; // + channel * 0x1000 + controller (0..119), 0x80 aftertouch, 0x81 bend
 static std::string own_cache_dir();
@@ -1640,10 +1646,17 @@ tresult PLUGIN_API VirusPlugin::process(ProcessData &data)
             marker_retries_++;
             anchor_now = true;
         }
+        // S094 test switch: a new sync every N s, after a second of quiet like the original's pings (E491)
+        resync_.period = (int64_t)(env_resync_s() * vrate);
+        bool resync = tl_valid_ && !anchor_now && !out_->calibrating() && !env_no_ping() && resync_.due(newest, quiet);
+        if (resync)
+            anchor_now = true;
         if (anchor_now) {
-            if (env_stats())
-                fprintf(stderr, "timeline %s: err %lld newest %lld block %d\n", tl_valid_ ? "re-anchor" : "anchor",
-                        (long long)err, (long long)newest, data.numSamples);
+            if (env_stats() || resync)
+                fprintf(stderr, "timeline %s: err %lld newest %lld block %d\n",
+                        resync ? "resync" : tl_valid_ ? "re-anchor" : "anchor", (long long)err, (long long)newest,
+                        data.numSamples);
+            resync_.start(newest);
             tl_ = target;
             next_tick_ = (double)tl_;
             tl_follow_.reset();

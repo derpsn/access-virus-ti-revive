@@ -263,6 +263,7 @@ int main(int argc, char **argv)
     double hold = -1; // --hold: note on at this time, never off
     double live_after = -1; // --live-after N: a played C4 N frames after each clip note-off, held 300 ms
     double notes_off_from = -1, notes_off_to = -1; // --notes-off A:B: no --notes in [A, B) s (a DAW stopped after a render)
+    long cycle_on = 0, cycle_off = 0;              // --notes-cycle ON:OFF
     struct TimedChange {
         double t;
         ParamID id;
@@ -297,6 +298,8 @@ int main(int argc, char **argv)
 #endif
         else if (!strcmp(argv[i], "--notes-off") && i + 1 < argc)
             sscanf(argv[++i], "%lf:%lf", &notes_off_from, &notes_off_to);
+        else if (!strcmp(argv[i], "--notes-cycle") && i + 1 < argc) // --notes-cycle ON:OFF: ON s of --notes, then
+            sscanf(argv[++i], "%ld:%ld", &cycle_on, &cycle_off);     // OFF s without, repeated (gaps for S094 re-syncs)
         else if (!strcmp(argv[i], "--hold") && i + 1 < argc)
             hold = atof(argv[++i]);
         else if (!strcmp(argv[i], "--live-after") && i + 1 < argc)
@@ -602,7 +605,8 @@ int main(int argc, char **argv)
         if (notes) { // C4 on at the start of every second, off at the half
             const long rate = clk.rate, f0 = clk.frame(b), f1 = f0 + block;
             for (long t = (f0 / (rate / 2)) * (rate / 2); t < f1; t += (rate / 2))
-                if (t >= f0 && !(t >= notes_off_from * rate && t < notes_off_to * rate)) {
+                if (t >= f0 && !(t >= notes_off_from * rate && t < notes_off_to * rate) &&
+                    !(cycle_on > 0 && (t / rate) % (cycle_on + cycle_off) >= cycle_on)) {
                     Event e{};
                     e.sampleOffset = (int32)(t - f0);
                     if (live_notes == 2 || (live_notes == 1 && (t / rate) % 2 == 1))

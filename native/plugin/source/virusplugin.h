@@ -13,6 +13,7 @@
 #include "device/broker.h"
 #include "device/keepalive.h"
 #include "device/memsync.h"
+#include "device/resync.h"
 #include "device/noteprobe.h"
 #include "device/sendbudget.h"
 #include "device/cablerule.h"
@@ -463,6 +464,7 @@ public:
     std::atomic<bool> sync_paused_{false}; // the bank sync waits for a gap between notes
     std::atomic<int> sync_eta_s_{-1};       // see sync_eta()
     int marker_retries_ = 0; // process(): sync pings sent again after "no marker"
+    ResyncTimer resync_;     // process(): VTI_NATIVE_RESYNC test switch (S094, E491), off by default
     static int64_t now_ms()
     {
         return std::chrono::duration_cast<std::chrono::milliseconds>(std::chrono::steady_clock::now().time_since_epoch()).count();
