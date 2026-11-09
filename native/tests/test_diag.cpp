@@ -57,7 +57,11 @@ TEST(diag_plugin_options)
 {
     Home h("vtester");
     const auto &opts = plugin_options();
-    CHECK(opts.size() == 3);
+    CHECK(opts.size() == 4);
+    // slip-restart (E488, 0.8.41): on by default, the Control Center switch writes slip-restart.off
+    CHECK(std::string(opts[3].name) == "slip-restart" && std::string(opts[3].file) == "slip-restart.off");
+    CHECK(opts[3].default_on);
+    CHECK(plugin_option("slip-restart"));
     CHECK(std::string(opts[0].name) == "outdelay-changes" && std::string(opts[0].file) == "outdelay-changes.on");
     CHECK(std::string(opts[1].name) == "timing-classic" && std::string(opts[1].file) == "timing-classic.on");
     // live-notes is on by default since 0.8.39 (the original's VST3 does it always, E400/E402; user 2026-11-08): its

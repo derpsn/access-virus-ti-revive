@@ -353,7 +353,10 @@ void DeviceOut::scan_audio()
     if (newest < 0)
         return;
     if (scanned_ < 0 || newest - scanned_ > 16384 - 2048)
+    {
         scanned_ = std::max<int64_t>(0, newest - 4096); // first call / fell behind: the ring holds 16384 frames
+        slip_.reset();                                   // a new stream (or a gap): its windows start afresh
+    }
     int64_t from = marker_from_.load();
     // a frame is judged once the 66 after it are there: the marker check below reads frames f+2..f+65, which past
     // the newest frame are not written yet (review 2026-10-19: a marker could be judged on them)
@@ -382,6 +385,26 @@ void DeviceOut::scan_audio()
             }
             if (usb1 || usb2)
                 last_sound = f;
+        }
+        // the byte layout of the same frames as the device delivered them (E488): a slipped stream finds no marker
+        if (const int r = (int)rate.load(); r != slip_rate_) {
+            slip_rate_ = r;
+            slip_.set_rate(r);
+        }
+        int16_t raw[1024 * 6];
+        audio_.read_raw_at(raw, n, scanned_);
+        // VTI_NATIVE_FAKE_SLIP (test only): the detector sees the first stream slipped (byte 2k = high byte of word k,
+        // 2k+1 = low byte of word k+2, E488) so the restart path runs on a real Virus; the audio itself is untouched
+        static const bool fake = getenv("VTI_NATIVE_FAKE_SLIP") != nullptr;
+        for (int i = 0; i < n; i++) {
+            int16_t *fr = raw + i * 6, s[6];
+            if (fake && slip_gate_.count() == 0) {
+                for (int k = 0; k < 6; k++)
+                    s[k] = (int16_t)(uint16_t)((((uint16_t)fr[k] >> 8) & 0xFF) | (((uint16_t)fr[(k + 2) % 6] & 0xFF) << 8));
+                fr = s;
+            }
+            if (slip_.feed(fr))
+                slip_fired_ = true;
         }
         scanned_ += n;
     }
@@ -661,6 +684,39 @@ void DeviceOut::run()
         if (idle_)
             idle_();
         scan_audio();
+        if (slip_fired_) { // E488: the Virus delivers this stream byte-slipped - no marker, notes off time, until it restarts
+            slip_fired_ = false;
+#ifdef __APPLE__
+            // the Core Audio path is not the device's 1:1 bytes (E488): logged only, nothing restarted
+            log("Virus TI native: the Virus' audio looks scrambled (byte slip, E488, ratio %.3f) - not restarted on macOS; "
+                "switch the Virus off and on if notes are off time\n", slip_.last_ratio());
+#else
+            const int64_t now = std::chrono::duration_cast<std::chrono::milliseconds>(
+                                    std::chrono::steady_clock::now().time_since_epoch()).count();
+            if (!vti::cc::plugin_option("slip-restart"))
+                log("Virus TI native: the Virus' audio arrives scrambled (byte slip, E488, ratio %.3f) - slip-restart is "
+                    "off, not restarted\n", slip_.last_ratio());
+            else if (!slip_gate_.allow(now))
+                log("Virus TI native: the Virus' audio arrives scrambled (byte slip, E488, ratio %.3f) - %s\n",
+                    slip_.last_ratio(), slip_gate_.count() >= 5 ? "restarted 5 times already, giving up"
+                                                                 : "restarted less than 10 s ago, waiting");
+            else {
+                // the broker's normal stop and start (alt 0/1 + SET_CUR, as at every session start), then a new
+                // timeline and sync ping on the new stream, as after a rate change
+                log("Virus TI native: the Virus' audio arrives scrambled (byte slip, E488, ratio %.3f) - restarting "
+                    "the stream (%d)\n", slip_.last_ratio(), slip_gate_.count());
+                close_audio();
+                broker_.audio(false);
+                const int r = start_audio();
+                scanned_ = -1;
+                marker_skip_ = -1;
+                last_sound = -1;
+                pings_out_ = 0;
+                generation++;
+                log("Virus TI native: audio stream restarted -> %d\n", r);
+            }
+#endif
+        }
         // the stream stood still while time went on and runs on (macOS sleep pauses Core Audio, E207): the Virus'
         // stamp clock did not stop, so the anchor is off by the pause - a new timeline and sync ping, as after a
         // reconnect (process() re-anchors on the generation change)

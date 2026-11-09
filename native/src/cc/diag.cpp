@@ -57,6 +57,8 @@ const std::vector<PluginOption> &plugin_options()
         {"timing-classic", "timing-classic.on", "Timing as before 0.8.35 (lead 1024, no safety net)"},
         // on by default since 0.8.39, as the original's VST3 always does it (E400, E402); the file switches it off
         {"live-notes", "live-notes.off", "Notes played live skip the lead, like the original (#30)", true},
+        // on by default since 0.8.41: restart the Virus' audio once when it arrives byte-slipped (slipwatch.h, E488)
+        {"slip-restart", "slip-restart.off", "Restart the Virus' audio when it arrives scrambled (Linux, Windows)", true},
     };
     return opts;
 }

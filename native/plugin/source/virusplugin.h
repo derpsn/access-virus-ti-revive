@@ -14,6 +14,7 @@
 #include "device/keepalive.h"
 #include "device/memsync.h"
 #include "device/resync.h"
+#include "device/slipwatch.h"
 #include "device/noteprobe.h"
 #include "device/sendbudget.h"
 #include "device/cablerule.h"
@@ -135,6 +136,10 @@ public:
     std::atomic<int> clamp_reanchors{0}; // new timelines because every read was pulled back for a second (E472)
     StallWatch stall_;              // worker: the stream stood still and runs on (sleep) -> generation + 1
     ReplugGate replug_gate_;        // worker, macOS: at most one software replug a minute (E472)
+    SlipWatch slip_;                // worker (scan_audio): the stream arrives byte-slipped (E488)
+    SlipRestartGate slip_gate_;     // worker: restarts after a slip, 10 s apart, at most 5 a session
+    bool slip_fired_ = false;       // worker: scan_audio saw a slip, the loop acts on it
+    int slip_rate_ = 0;             // worker: the rate slip_ was set for
     bool connected() const { return broker_.device_present(); }
     void stop_worker(); // the worker and the broker's reader have ended when it returns; the destructor does it too
     void leave_virus(); // what the Virus is left with when the plug-in closes (closeseq.h); blocks 350 ms, up to ~1.5 s
