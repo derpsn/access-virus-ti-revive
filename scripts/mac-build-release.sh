@@ -9,7 +9,9 @@ set -euo pipefail
 REPO="$(cd "${1:?repo dir}" && pwd)"
 VERSION="${2:?version}"
 OUT="$(mkdir -p "${3:-$REPO/../release}" && cd "${3:-$REPO/../release}" && pwd)"
-export VERSION MACOSX_DEPLOYMENT_TARGET=14.4
+# the defaults are the release; a Catalina test build (#37) sets MAC_MIN=10.15 MAC_ARCHS=x86_64 PLUGIN_MIN=10.15
+MAC_MIN="${MAC_MIN:-14.4}"; MAC_ARCHS="${MAC_ARCHS:-arm64 x86_64}"; PLUGIN_MIN="${PLUGIN_MIN:-11.0}"
+export VERSION MACOSX_DEPLOYMENT_TARGET="$MAC_MIN"
 # a stale MacOSX27.0.sdk in some Command Line Tools installs breaks ld (E098): use a working SDK
 if [ -z "${SDKROOT:-}" ]; then
     for s in /Library/Developer/CommandLineTools/SDKs/MacOSX26.5.sdk $(xcrun --show-sdk-path); do
@@ -23,35 +25,36 @@ echo "== libusb (static, built for macOS $MACOSX_DEPLOYMENT_TARGET; Homebrew's t
 LIBUSB_VER=1.0.30
 # universal (arm64 + x86_64): the broker has to run on Intel Macs too (issue #33: it was arm64 only, the plug-in was
 # universal). One build per architecture, joined with lipo: libusb's configure does not take two -arch flags at once.
-LIBUSB="$OUT/libusb-$LIBUSB_VER-macos$MACOSX_DEPLOYMENT_TARGET-universal"
+LIBUSB="$OUT/libusb-$LIBUSB_VER-macos$MACOSX_DEPLOYMENT_TARGET-${MAC_ARCHS// /-}"
 if [ ! -f "$LIBUSB/lib/libusb-1.0.a" ]; then
     T=$(mktemp -d)
     curl -fsSL "https://github.com/libusb/libusb/releases/download/v$LIBUSB_VER/libusb-$LIBUSB_VER.tar.bz2" -o "$T/libusb.tar.bz2"
-    for A in arm64 x86_64; do
+    for A in $MAC_ARCHS; do
         H=$([ "$A" = arm64 ] && echo aarch64 || echo x86_64)-apple-darwin
         mkdir -p "$T/$A" && tar -xjf "$T/libusb.tar.bz2" -C "$T/$A"
         (cd "$T/$A/libusb-$LIBUSB_VER" && ./configure -q --disable-shared --enable-static --prefix="$T/$A/prefix" \
             --host="$H" CFLAGS="-arch $A -O2 -mmacosx-version-min=$MACOSX_DEPLOYMENT_TARGET" >/dev/null &&
             make -s -j4 install >/dev/null)
     done
-    mkdir -p "$LIBUSB/lib" && cp -R "$T/arm64/prefix/include" "$LIBUSB/"
-    lipo -create "$T/arm64/prefix/lib/libusb-1.0.a" "$T/x86_64/prefix/lib/libusb-1.0.a" -output "$LIBUSB/lib/libusb-1.0.a"
+    FIRST=${MAC_ARCHS%% *}
+    mkdir -p "$LIBUSB/lib" && cp -R "$T/$FIRST/prefix/include" "$LIBUSB/"
+    lipo -create $(for A in $MAC_ARCHS; do echo "$T/$A/prefix/lib/libusb-1.0.a"; done) -output "$LIBUSB/lib/libusb-1.0.a"
     rm -rf "$T"
 fi
 lipo -info "$LIBUSB/lib/libusb-1.0.a"
 echo "== broker (static libusb)"
-make -C "$REPO/src/broker" mac-static OUT="$BUILD" LIBUSB_PREFIX="$LIBUSB"
+make -C "$REPO/src/broker" mac-static OUT="$BUILD" LIBUSB_PREFIX="$LIBUSB" MAC_ARCH_FLAGS="$(for A in $MAC_ARCHS; do printf -- '-arch %s ' $A; done)"
 otool -L "$BUILD/mac/vtibroker" | grep -q libusb && { echo "broker still links a libusb dylib"; exit 1; }
 ARCHS=$(lipo -archs "$BUILD/mac/vtibroker")
-for A in arm64 x86_64; do
+for A in $MAC_ARCHS; do
     case " $ARCHS " in *" $A "*) ;; *) echo "broker is not universal (has: $ARCHS, lacks $A; issue #33)"; exit 1 ;; esac
 done
 echo "broker: $ARCHS"
 codesign --force --sign - "$BUILD/mac/vtibroker"
 
 echo "== plug-in TI Revive Virus Control: VST3 + Audio Unit (arm64 + x86_64)"
-cmake -S "$REPO/native" -B "$BUILD/native" -G Xcode -DCMAKE_OSX_ARCHITECTURES="arm64;x86_64" \
-    -DCMAKE_OSX_DEPLOYMENT_TARGET=11.0 ${SDKROOT:+-DCMAKE_OSX_SYSROOT="$SDKROOT"} >/dev/null
+cmake -S "$REPO/native" -B "$BUILD/native" -G Xcode -DCMAKE_OSX_ARCHITECTURES="${MAC_ARCHS// /;}" \
+    -DCMAKE_OSX_DEPLOYMENT_TARGET="$PLUGIN_MIN" ${SDKROOT:+-DCMAKE_OSX_SYSROOT="$SDKROOT"} >/dev/null
 cmake --build "$BUILD/native" --config Release --target VirusTINative VirusTINative_AU VirusTINative_AU_Snow tirevive-cc TIReviveControlCenter -- -quiet
 VST3="$BUILD/native/VST3/Release/TI Revive Virus Control.vst3"
 AU="$BUILD/native/AU/Release/TI Revive Virus Control.component"
@@ -98,16 +101,16 @@ pkgbuild --root "$ROOT" --component-plist "$BUILD/components.plist" --identifier
 # package installed and the plug-in then failed to load (#37: UniformTypeIdentifiers missing); the broker and libusb
 # are built for 14.4 (MACOSX_DEPLOYMENT_TARGET above). TI Revive is for systems where the original no longer runs.
 productbuild --synthesize --package "$BUILD/tirevive-component.pkg" "$BUILD/distribution.xml"
-python3 - "$BUILD/distribution.xml" <<'PYEOF'
+python3 - "$BUILD/distribution.xml" "$MAC_MIN" <<'PYEOF'
 import sys
 p = sys.argv[1]
 lines = open(p).read().split('\n')
 i = next(k for k, l in enumerate(lines) if '<installer-gui-script' in l)
 lines[i + 1:i + 1] = ['    <title>TI Revive</title>',
-                      '    <allowed-os-versions><os-version min="14.4"/></allowed-os-versions>']
+                      '    <allowed-os-versions><os-version min="' + sys.argv[2] + '"/></allowed-os-versions>']
 open(p, 'w').write('\n'.join(lines))
 PYEOF
-grep -q 'os-version min="14.4"' "$BUILD/distribution.xml" || { echo "distribution.xml without the OS minimum" >&2; exit 1; }
+grep -q "os-version min=\"$MAC_MIN\"" "$BUILD/distribution.xml" || { echo "distribution.xml without the OS minimum" >&2; exit 1; }
 productbuild --distribution "$BUILD/distribution.xml" --package-path "$BUILD" "$STAGE/TI Revive.pkg"
 cp "$REPO/src/installer-mac/Set up Access Virus TI files.command" "$REPO/src/installer-mac/Uninstall TI Revive.command" \
     "$REPO/src/installer-mac/README-mac.txt" "$REPO/LICENSE" "$REPO/THIRD-PARTY-NOTICES.txt" "$STAGE/"

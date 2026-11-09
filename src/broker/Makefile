@@ -62,8 +62,10 @@ mac: vtibroker_posix.c vtimidi_mac.c vtikeyport_mac.c vticore.c $(SRC_MIDI) vtic
 
 # macOS release: libusb linked statically (users have no Homebrew), universal arm64 + x86_64 for Intel Macs (issue
 # #33); LIBUSB_PREFIX = a universal static libusb (scripts/mac-build-release.sh builds one)
+# universal by default; a Catalina test build (#37) passes MAC_ARCH_FLAGS="-arch x86_64"
+MAC_ARCH_FLAGS ?= -arch arm64 -arch x86_64
 mac-static: vtibroker_posix.c vtimidi_mac.c vtikeyport_mac.c vticore.c $(SRC_MIDI) vticore.h trafficring.h keyport.h vtiproto.h brokerinfo.h ctrlguard.h owner.h vtimidi_mac.h vtikeyport_mac.h
 	mkdir -p $(OUT)/mac
-	clang $(CFLAGS) $(VDEF) -arch arm64 -arch x86_64 -I$(LIBUSB_PREFIX)/include/libusb-1.0 -o $(OUT)/mac/vtibroker vtibroker_posix.c \
+	clang $(CFLAGS) $(VDEF) $(MAC_ARCH_FLAGS) -I$(LIBUSB_PREFIX)/include/libusb-1.0 -o $(OUT)/mac/vtibroker vtibroker_posix.c \
 		vtimidi_mac.c vtikeyport_mac.c vticore.c $(SRC_MIDI) $(LIBUSB_PREFIX)/lib/libusb-1.0.a -lpthread -framework CoreFoundation \
 		-framework IOKit -framework Security -framework CoreMIDI
