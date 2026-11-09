@@ -1106,6 +1106,7 @@ tresult PLUGIN_API VirusPlugin::initialize(FUnknown *context)
         // the output delays only on change, not at every Play/Stop (Control Center option, outputdelay.h resend_all)
         od_changes_only_ = std::filesystem::exists(vti::u8path(own_cache_dir() + "/../outdelay-changes.on"), tec);
         live_notes_ = vti::cc::plugin_option("live-notes"); // the plug-in folder itself: no cache folder needed (S065 C9)
+        low_latency_ = vti::cc::plugin_option("low-latency") && !getenv("VTI_NATIVE_A"); // a measurement's A wins
 #ifdef _WIN32
         timing_a_ = timing_lead(timing_classic_, true);
 #else
@@ -1406,7 +1407,9 @@ void VirusPlugin::apply_timing_mode(bool notify)
     int n = ui_value(PLUGIN_LATENCY_PATH, -1);
     if (n < 0 || n > 3)
         n = 3;
-    const TimingMode m = timing_mode(live, n, timing_a_, block_); // Plugin Latency 1/2: 3 blocks at least (E477)
+    // the base lead: the original's 3072, or with the low-latency option the lead measured for this block (E496)
+    const int base = low_latency_ ? experimental_lead(block_, virus_rate_for(rate_)) : timing_a_;
+    const TimingMode m = timing_mode(live, n, base, block_); // Plugin Latency 1/2: 3 blocks at least (E477)
     if (m.a == a_now_.load() && m.stamps == stamps_now_)
         return;
     a_now_ = m.a;
@@ -1415,8 +1418,9 @@ void VirusPlugin::apply_timing_mode(bool notify)
         out_->lead = lead();
         out_->no_stamps = !m.stamps;
         out_->send({0xB0, 0x78, 0x00});
-        out_->log("Virus TI native: timing: lead %d frames, %s (Live Mode %s, Plugin Latency %d)\n", m.a,
-                  m.stamps ? "time stamps" : "no time stamps", live ? "on" : "off", n);
+        out_->log("Virus TI native: timing: lead %d frames, %s (Live Mode %s, Plugin Latency %d%s)\n", m.a,
+                  m.stamps ? "time stamps" : "no time stamps", live ? "on" : "off", n,
+                  low_latency_ ? ", low-latency option" : "");
     }
     if (notify && componentHandler) // from setupProcessing the host asks for the latency afterwards anyway
         componentHandler->restartComponent(kLatencyChanged);

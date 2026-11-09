@@ -57,7 +57,11 @@ TEST(diag_plugin_options)
 {
     Home h("vtester");
     const auto &opts = plugin_options();
-    CHECK(opts.size() == 4);
+    CHECK(opts.size() == 5);
+    // low-latency (E496, 0.8.41): the experimental lower lead, OFF by default; low-latency.on switches it on
+    CHECK(std::string(opts[4].name) == "low-latency" && std::string(opts[4].file) == "low-latency.on");
+    CHECK(!opts[4].default_on);
+    CHECK(!plugin_option("low-latency"));
     // the Control Center's Options page (0.8.41) shows a title and a one-line explanation per option
     for (auto &o : opts)
         CHECK(o.title && *o.title && o.hint && *o.hint);

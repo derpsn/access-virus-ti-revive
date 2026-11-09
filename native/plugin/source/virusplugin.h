@@ -756,6 +756,7 @@ private:
     // timing-classic.on next to diag.on gives the old A and no safety net, to compare; VTI_NATIVE_A overrides
     int timing_a_ = 3072; // set in initialize()
     bool timing_classic_ = false;
+    bool low_latency_ = false; // Control Center option low-latency: the experimental lead per block (E496)
     // the lead in force: timing_a_, or what Live Mode / Plugin Latency make of it (stamprule.h timing_mode)
     std::atomic<int> a_now_{3072};
     bool stamps_now_ = true;

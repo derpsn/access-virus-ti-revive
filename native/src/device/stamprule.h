@@ -182,6 +182,24 @@ inline int timing_lead(bool classic, bool windows)
     return classic && !windows ? 1024 : 3072;
 }
 
+// The experimental lower lead (Control Center option low-latency, 0.8.41, #30): per host block and Virus rate the
+// values measured exact on the real TI2 (E496, 10-20 sessions each, every note on its stamp on the wire). The safety
+// net floors a note when the timeline's error exceeds A - 1024, and that error grows with the block (48 kHz b512: up
+// to 671), so the lead grows with it. It leaves the host about 20-25 ms: a longer stall makes a note late where 3072
+// absorbs it. Above block 512 nothing was measured: the default lead stays.
+inline int experimental_lead(int block, int virus_rate)
+{
+    if (block <= 0 || block > 512)
+        return 3072;
+    if (block <= 64)
+        return 1152;
+    if (block <= 128)
+        return 1280;
+    if (block <= 256)
+        return 1344;
+    return virus_rate == 48000 ? 1792 : 1408;
+}
+
 // The safety net (0.8.35): a stamp from the timeline can lie in the past when the host hands over a block late. The
 // original cannot have that (it stamps from the Virus' position now, E364); here a stamp keeps at least min_ahead
 // frames past the newest ring frame, and stamps never go backwards (a stamp behind the DSP's newest one can raise

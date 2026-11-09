@@ -94,3 +94,17 @@ TEST(freezewatch_reset_forgets_the_run)
     feed_n(w, kFrozen, 100);
     CHECK(!w.frozen(44100));
 }
+
+TEST(freezewatch_three_outputs_with_usb3_silent_and_notes_on_usb1_never_fires)
+{
+    // IO configuration "3 Outs" (E158/E164): words 0/1 = USB 3 (silent: exact 0), the notes on USB 1 (words 2/3)
+    FreezeWatch w;
+    for (long f = 0; f < 44100 * 5; f++) {
+        int16_t fr[6] = {0, 0, 0, 0, 0, 0};
+        if (f % 44100 < 20000) // a note sounding for part of each second
+            fr[2] = fr[3] = (int16_t)((f * 37) % 4000 - 2000);
+        w.feed(fr);
+        if (f % 441 == 0) // the worker checks about every 10 ms; a note went out at the start of each second
+            CHECK(!w.check(f * 1000 / 44100, (f / 44100) * 1000, 44100));
+    }
+}

@@ -134,3 +134,27 @@ TEST(stamp_plan_queued_messages_own_stamp_no_net)
     p = stamp_plan(note, 3, true, false, true);
     CHECK(p.inherits && !p.stamp && !p.net);
 }
+
+// The experimental lower lead (Control Center option low-latency, 0.8.41, E496): per host block and Virus rate, the
+// values measured exact in 10 or more sessions each on the real TI2; above block 512 nothing was measured, so the
+// default lead stays there
+TEST(stamprule_experimental_lead_per_block_and_rate)
+{
+    CHECK_EQ(experimental_lead(32, 44100), 1152);
+    CHECK_EQ(experimental_lead(64, 44100), 1152);
+    CHECK_EQ(experimental_lead(100, 44100), 1280);
+    CHECK_EQ(experimental_lead(128, 44100), 1280);
+    CHECK_EQ(experimental_lead(256, 44100), 1344);
+    CHECK_EQ(experimental_lead(512, 44100), 1408);
+    CHECK_EQ(experimental_lead(512, 48000), 1792); // 48 kHz b512: the net fires up to ~1700 (err max 671)
+    CHECK_EQ(experimental_lead(64, 48000), 1152);
+    CHECK_EQ(experimental_lead(1024, 44100), 3072); // not measured: the default
+    CHECK_EQ(experimental_lead(0, 44100), 3072);    // block unknown yet: the default
+}
+
+TEST(stamprule_timing_mode_takes_the_experimental_lead_as_its_base)
+{
+    // the option only changes the base: Live Mode and Plugin Latency 1/2 still decide over it
+    CHECK_EQ(timing_mode(false, 3, experimental_lead(128, 44100), 128).a, 1280);
+    CHECK(timing_mode(true, 3, experimental_lead(128, 44100), 128).a == LIVE_A);
+}

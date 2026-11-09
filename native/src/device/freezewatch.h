@@ -3,7 +3,9 @@
 // Virus cleared it, so the plug-in tells the user. On a live unit identical frames last at most ~175 frames in a row
 // (simulator, 1039 real streams); exact all-zero stretches occur with the original's software and on the Mac (where
 // channels 0/1 are always 0), so an all-zero frame never counts. It fires only when a note was due and did not come:
-// a note sent during the run, at least half a second ago. Header only: the plug-in's device worker and the tests.
+// a note sent during the run, at least half a second ago. In the IO configurations "3 Outs" (Global 0x09 = 1 or 2,
+// E158/E164) words 0/1 carry USB 3, not the analog inputs: with USB 3 silent a freeze may hold an all-zero frame and
+// is then missed (never a false alarm). Header only: the plug-in's device worker and the tests.
 #pragma once
 #include <cstdint>
 #include <cstring>

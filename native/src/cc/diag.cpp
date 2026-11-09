@@ -66,6 +66,10 @@ const std::vector<PluginOption> &plugin_options()
          "Restart scrambled audio",
          "When the Virus' audio arrives scrambled (about 1 in 250 starts), restart it once. Linux and Windows; on a Mac "
          "it is only logged."},
+        // off by default (0.8.41, #30): the lead per host block measured exact on the TI2 (stamprule.h, E496)
+        {"low-latency", "low-latency.on", "Lower latency, experimental (#30)", false, "Lower latency (experimental)",
+         "About 36-48 ms instead of 76-87 ms at buffers up to 256 (55-59 ms at 512, unchanged above). It leaves "
+         "the DAW only about 20 ms: if notes come late, switch it off."},
     };
     return opts;
 }
