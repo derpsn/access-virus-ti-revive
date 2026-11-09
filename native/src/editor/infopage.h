@@ -55,6 +55,20 @@ struct ChangeNote {
 inline const std::vector<ChangeNote> &changelog()
 {
     static const std::vector<ChangeNote> notes = {
+        {"0.8.41",
+         {"Lower latency, experimental: a new option on the Control Center's Options page. At audio buffers up to 256 "
+          "a note takes 36 to 48 ms instead of 76 to 87 ms (55 to 59 ms at 512). It leaves your DAW only about 20 ms "
+          "of slack: if notes come late, switch it off.",
+          "The Control Center has an Options page: the plug-in's options as switches, with a line on what each does.",
+          "When the Virus' audio arrives scrambled (about one start in 250; notes then come early or late), the "
+          "plug-in restarts it once by itself. Linux and Windows; on a Mac it is only logged. Switch on the Options "
+          "page.",
+          "When the Virus stops sending audio, the plug-in now tells you to switch the Virus off and on (in our tests "
+          "only that helped; it happened once, after a change of the sample rate).",
+          "The plug-in's log notes when your DAW asks for audio before the Virus has sent it, which makes notes late. "
+          "It helps us with reports of late notes.",
+          "macOS: the installer refuses macOS versions older than 14.4 with a clear message, instead of installing a "
+          "plug-in that cannot start there (issue #37)."}},
         {"0.8.40",
          {"Windows: a patch library or template file whose name has letters outside Windows' old code page "
           "(Japanese or Cyrillic on a Western Windows, accents copied from a Mac, emoji) no longer makes the plug-in "
