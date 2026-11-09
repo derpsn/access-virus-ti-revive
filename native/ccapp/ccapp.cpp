@@ -11,6 +11,7 @@
 #include "access/library.h"
 #include "cc/controlcenter.h"
 #include "nerdmode.h"
+#include "optionspage.h"
 #include "skinpage.h"
 #include "model/remotedevice.h"
 #include "vstgui/lib/cfileselector.h"
@@ -45,9 +46,10 @@ namespace {
 
 const CColor kBack(43, 43, 43), kText(230, 230, 230), kDim(160, 160, 160), kAccent(240, 170, 60);
 constexpr CCoord W = 640, H = 470, M = 20;
-enum Tag { kRefresh = 1, kBackup, kCancel, kFolder, kExport, kNerd, kSkin, kRestore };
-enum UiPage { kPlainPage, kSkinPage, kNerdPage };
+enum Tag { kRefresh = 1, kBackup, kCancel, kFolder, kExport, kNerd, kSkin, kRestore, kOptionsBtn };
+enum UiPage { kPlainPage, kSkinPage, kNerdPage, kOptionsPage };
 const Command kNerdCommand{"View", "Nerd mode"};
+const Command kOptionsCommand{"View", "Options"};
 // the window's size (the original layout is small on today's screens); kept in the app's preferences
 const double kSizes[] = {1.0, 1.25, 1.5, 1.75, 2.0};
 const Command kSizeCommands[] = {{"View", "Size 100 %"}, {"View", "Size 125 %"}, {"View", "Size 150 %"},
@@ -89,6 +91,7 @@ public:
         config.style.border().close().centered();
         config.size = {W, H};
         IApplication::instance().registerCommand(kNerdCommand, 0);
+        IApplication::instance().registerCommand(kOptionsCommand, 0);
         for (auto &c : kSizeCommands)
             IApplication::instance().registerCommand(c, 0);
         if (auto z = IApplication::instance().getPreferences().get("Zoom"))
@@ -107,6 +110,8 @@ public:
         build();
         nerd_ = tirevive::make_nerd_page(TIREVIVE_VERSION, [this] { show_page(look_); });
         frame_->addView(nerd_);
+        options_ = tirevive::make_options_page([this] { show_page(look_); });
+        frame_->addView(options_);
         // the look of Access' Virus Control Center, when the user's installer has it (else the plain page)
         std::string err;
         skin_ = tirevive::make_skin_page(vti::AccessFiles::open_control_center(err), TIREVIVE_VERSION,
@@ -114,7 +119,8 @@ public:
                                           [this] { show_page(kPlainPage); }, [this](CPoint p) { size_menu(p); },
                                           [this](std::function<void(const std::string &)> st) {
                                               choose_restore(std::move(st));
-                                          }},
+                                          },
+                                          [this] { show_page(kOptionsPage); }},
                                          err);
         if (skin_)
             frame_->addView(skin_);
@@ -136,7 +142,7 @@ public:
         for (auto &s : kSizeCommands)
             if (c == s)
                 return true;
-        return c == kNerdCommand;
+        return c == kNerdCommand || c == kOptionsCommand;
     }
     bool handleCommand(const Command &c) override
     {
@@ -145,9 +151,9 @@ public:
                 set_zoom(kSizes[i]);
                 return true;
             }
-        if (c != kNerdCommand)
+        if (c != kNerdCommand && c != kOptionsCommand)
             return false;
-        show_page(kNerdPage);
+        show_page(c == kNerdCommand ? kNerdPage : kOptionsPage);
         return true;
     }
 
@@ -171,6 +177,7 @@ public:
         case kExport: export_library(); break;
         case kRestore: choose_restore(); break;
         case kNerd: show_page(kNerdPage); break;
+        case kOptionsBtn: show_page(kOptionsPage); break;
         case kSkin: show_page(kSkinPage); break;
         }
     }
@@ -188,7 +195,7 @@ private:
 
     WindowPtr window_;
     SharedPointer<CFrame> frame_;
-    CViewContainer *main_ = nullptr, *nerd_ = nullptr, *skin_ = nullptr; // the pages, owned by the frame
+    CViewContainer *main_ = nullptr, *nerd_ = nullptr, *skin_ = nullptr, *options_ = nullptr; // the pages, owned by the frame
     UiPage look_ = kPlainPage; // plain or Access look: where Nerd mode's "Back" returns to
     UiPage page_ = kPlainPage;
     double zoom_ = 1.0;
@@ -272,6 +279,7 @@ private:
         main_->addView(status_);
         buttons_[5] = button(W - M - 110, 14, 110, kNerd, "Nerd mode");
         buttons_[6] = button(W - M - 230, 14, 110, kSkin, "Access look");
+        button(W - M - 320, 14, 80, kOptionsBtn, "Options");
         auto *note = new CMultiLineTextLabel(CRect(M, 372, W - M, H - 10));
         note->setText("Only Restore writes to the Virus: programs into a RAM bank, never its flash. It works next to "
                       "your DAW (the plug-in and the Control Center share the Virus). Firmware/OS updates, Burn To "
@@ -289,13 +297,15 @@ private:
     // Only one page talks to the broker at a time: it serves one program (and one connection) at a time.
     void show_page(UiPage p)
     {
-        if (p != kNerdPage)
+        if (p != kNerdPage && p != kOptionsPage)
             look_ = p;
-        CPoint size = p == kNerdPage ? CPoint(tirevive::kNerdWidth, tirevive::kNerdHeight)
-                      : p == kSkinPage ? tirevive::skin_page_size(skin_)
+        CPoint size = p == kNerdPage      ? CPoint(tirevive::kNerdWidth, tirevive::kNerdHeight)
+                      : p == kOptionsPage ? CPoint(tirevive::kOptionsWidth, tirevive::kOptionsHeight)
+                      : p == kSkinPage    ? tirevive::skin_page_size(skin_)
                                        : CPoint(W, H);
         main_->setVisible(p == kPlainPage);
         tirevive::set_nerd_page_active(nerd_, p == kNerdPage);
+        tirevive::set_options_page_active(options_, p == kOptionsPage);
         if (skin_)
             tirevive::set_skin_page_active(skin_, p == kSkinPage);
         // the page's own size, then the zoom (VSTGUI scales drawing and mouse events)
@@ -305,7 +315,9 @@ private:
         win_size_ = {size.x * zoom_, size.y * zoom_};
         window_->setSize(win_size_);
         page_ = p;
-        window_->setTitle(p == kNerdPage ? "TI Revive Control Center - Nerd mode" : "TI Revive Control Center");
+        window_->setTitle(p == kNerdPage      ? "TI Revive Control Center - Nerd mode"
+                          : p == kOptionsPage ? "TI Revive Control Center - Options"
+                                              : "TI Revive Control Center");
         frame_->invalid();
         if (p == kPlainPage && !plain_refreshed_) {
             plain_refreshed_ = true;

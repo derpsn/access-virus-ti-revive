@@ -58,6 +58,9 @@ TEST(diag_plugin_options)
     Home h("vtester");
     const auto &opts = plugin_options();
     CHECK(opts.size() == 4);
+    // the Control Center's Options page (0.8.41) shows a title and a one-line explanation per option
+    for (auto &o : opts)
+        CHECK(o.title && *o.title && o.hint && *o.hint);
     // slip-restart (E488, 0.8.41): on by default, the Control Center switch writes slip-restart.off
     CHECK(std::string(opts[3].name) == "slip-restart" && std::string(opts[3].file) == "slip-restart.off");
     CHECK(opts[3].default_on);

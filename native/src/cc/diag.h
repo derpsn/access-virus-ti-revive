@@ -21,6 +21,7 @@ bool set_plugin_log(bool on, std::string &error);
 struct PluginOption {
     const char *name, *file, *label;
     bool default_on = false;
+    const char *title = "", *hint = ""; // the Control Center's Options page: a short title and one line on what it does
 };
 const std::vector<PluginOption> &plugin_options();
 bool plugin_option(const std::string &name);                                  // false for an unknown name

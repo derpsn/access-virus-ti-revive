@@ -53,12 +53,19 @@ bool set_plugin_log(bool on, std::string &error) { return set_flag("diag.on", on
 const std::vector<PluginOption> &plugin_options()
 {
     static const std::vector<PluginOption> opts = {
-        {"outdelay-changes", "outdelay-changes.on", "Output delays only on change (not at every Play/Stop)"},
-        {"timing-classic", "timing-classic.on", "Timing as before 0.8.35 (lead 1024, no safety net)"},
+        {"outdelay-changes", "outdelay-changes.on", "Output delays only on change (not at every Play/Stop)", false,
+         "Output delays only on change",
+         "Sends the parts' output delays only when they change, not at every Play and Stop (a test against the original)."},
+        {"timing-classic", "timing-classic.on", "Timing as before 0.8.35 (lead 1024, no safety net)", false,
+         "Timing as before 0.8.35", "Lead 1024 and no safety net, as before 0.8.35 (a test; notes can come late)."},
         // on by default since 0.8.39, as the original's VST3 always does it (E400, E402); the file switches it off
-        {"live-notes", "live-notes.off", "Notes played live skip the lead, like the original (#30)", true},
+        {"live-notes", "live-notes.off", "Notes played live skip the lead, like the original (#30)", true, "Live notes",
+         "Notes you play live skip the lead, like the original: about 22 ms instead of 76 ms at 48 kHz (#30)."},
         // on by default since 0.8.41: restart the Virus' audio once when it arrives byte-slipped (slipwatch.h, E488)
-        {"slip-restart", "slip-restart.off", "Restart the Virus' audio when it arrives scrambled (Linux, Windows)", true},
+        {"slip-restart", "slip-restart.off", "Restart the Virus' audio when it arrives scrambled (Linux, Windows)", true,
+         "Restart scrambled audio",
+         "When the Virus' audio arrives scrambled (about 1 in 250 starts), restart it once. Linux and Windows; on a Mac "
+         "it is only logged."},
     };
     return opts;
 }

@@ -64,7 +64,7 @@ add_executable(tirevive-cc tools/tirevive-cc.cpp)
 target_link_libraries(tirevive-cc PRIVATE vticore $<$<PLATFORM_ID:Windows>:shell32>)
 target_compile_definitions(tirevive-cc PRIVATE TIREVIVE_VERSION="${PROJECT_VERSION}")
 # Control Center app (ccapp/, docs/controlcenter.md): a window around src/cc, VSTGUI's standalone library
-vstgui_add_executable(TIReviveControlCenter "ccapp/ccapp.cpp;ccapp/nerdmode.cpp;ccapp/skinpage.cpp;ccapp/skinview.cpp")
+vstgui_add_executable(TIReviveControlCenter "ccapp/ccapp.cpp;ccapp/nerdmode.cpp;ccapp/optionspage.cpp;ccapp/skinpage.cpp;ccapp/skinview.cpp")
 target_link_libraries(TIReviveControlCenter PRIVATE vticore)
 target_include_directories(TIReviveControlCenter SYSTEM PRIVATE external/vst3sdk/vstgui4)
 target_compile_definitions(TIReviveControlCenter PRIVATE TIREVIVE_VERSION="${PROJECT_VERSION}")
