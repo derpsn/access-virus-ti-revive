@@ -4,6 +4,7 @@
 // the Virus first after it appears on USB wins. The "No Virus TI can be found" page names them (our own addition).
 // Header only: the plug-in and the tests use it (the folders are parameters, so the tests use their own).
 #pragma once
+#include "model/utf8.h"
 #include <algorithm>
 #include <cctype>
 #include <filesystem>
@@ -19,10 +20,10 @@ inline std::vector<std::string> other_virus_drivers(const std::string &midi_driv
     bool aura = false, access = false;
     auto scan = [&](const std::string &dir) {
         std::error_code ec;
-        if (dir.empty() || !fs::is_directory(dir, ec))
+        if (dir.empty() || !fs::is_directory(u8path(dir), ec))
             return;
-        for (fs::directory_iterator it(dir, ec), end; !ec && it != end; it.increment(ec)) {
-            std::string n = it->path().filename().string();
+        for (fs::directory_iterator it(u8path(dir), ec), end; !ec && it != end; it.increment(ec)) {
+            std::string n = u8str(it->path().filename()); // UTF-8, never throws (#35)
             std::transform(n.begin(), n.end(), n.begin(), [](unsigned char c) { return (char)std::tolower(c); });
             if (n.find("aura") != std::string::npos && n.find("virus") != std::string::npos)
                 aura = true;

@@ -19,6 +19,15 @@
 // Firmware/OS update, Burn To Flash, factory reset and renaming the Virus are not supported, on purpose: they write
 // the Virus' flash (AGENTS.md rule 2). restore writes RAM only.
 #include "../src/access/accessfiles.h"
+#include "model/utf8.h"
+#include <vector>
+#ifdef _WIN32
+#ifndef NOMINMAX
+#define NOMINMAX
+#endif
+#include <windows.h>
+#include <shellapi.h>
+#endif
 #include "../src/access/library.h"
 #include "../src/cc/controlcenter.h"
 #include "../src/cc/capture.h"
@@ -231,7 +240,7 @@ static int export_(const char *in, const char *out)
     vti::PatchLibrary lib;
     if (!load(in, lib))
         return 1;
-    std::string ext = fs::path(out).extension().string(), err;
+    std::string ext = vti::u8str(vti::u8path(out).extension()), err;
     for (auto &c : ext)
         c = (char)tolower(c);
     bool ok;
@@ -383,7 +392,7 @@ static int capture(int argc, char **argv)
         else
             return usage();
     }
-    FILE *f = fopen(path.c_str(), "w");
+    FILE *f = vti::u8fopen(path, "w");
     if (!f) {
         fprintf(stderr, "tirevive-cc: cannot write %s\n", path.c_str());
         return 1;
@@ -431,6 +440,22 @@ static int capture(int argc, char **argv)
 
 int main(int argc, char **argv)
 {
+#ifdef _WIN32
+    // the arguments as UTF-8, the format of every path inside TI Revive (#35); Windows passes the ANSI code page
+    static std::vector<std::string> u8args;
+    static std::vector<char *> u8argv;
+    int wn = 0;
+    if (wchar_t **w = CommandLineToArgvW(GetCommandLineW(), &wn)) {
+        for (int i = 0; i < wn; i++)
+            u8args.push_back(vti::narrow(w[i]));
+        LocalFree(w);
+        for (auto &a : u8args)
+            u8argv.push_back(&a[0]);
+        u8argv.push_back(nullptr);
+        argc = wn;
+        argv = u8argv.data();
+    }
+#endif
     if (argc < 2)
         return usage();
     std::string cmd = argv[1];

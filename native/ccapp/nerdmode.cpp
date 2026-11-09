@@ -1,5 +1,6 @@
 // nerdmode.cpp - see nerdmode.h.
 #include "nerdmode.h"
+#include "model/utf8.h"
 #include "access/accessfiles.h"
 #include "cc/capture.h"
 #include "cc/decode.h"
@@ -47,7 +48,7 @@ public:
     bool start_record(const std::string &path, const std::string &version)
     {
         stop();
-        FILE *f = fopen(path.c_str(), "w");
+        FILE *f = vti::u8fopen(path, "w");
         if (!f)
             return false;
         {

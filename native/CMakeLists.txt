@@ -61,7 +61,7 @@ target_link_libraries(virusmon PRIVATE vticore)
 add_executable(virussync tools/virussync.cpp)
 target_link_libraries(virussync PRIVATE vticore)
 add_executable(tirevive-cc tools/tirevive-cc.cpp)
-target_link_libraries(tirevive-cc PRIVATE vticore)
+target_link_libraries(tirevive-cc PRIVATE vticore $<$<PLATFORM_ID:Windows>:shell32>)
 target_compile_definitions(tirevive-cc PRIVATE TIREVIVE_VERSION="${PROJECT_VERSION}")
 # Control Center app (ccapp/, docs/controlcenter.md): a window around src/cc, VSTGUI's standalone library
 vstgui_add_executable(TIReviveControlCenter "ccapp/ccapp.cpp;ccapp/nerdmode.cpp;ccapp/skinpage.cpp;ccapp/skinview.cpp")

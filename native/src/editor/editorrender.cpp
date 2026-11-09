@@ -1,5 +1,6 @@
 // editorrender.cpp - see editorrender.h.
 #include "editorrender.h"
+#include "model/utf8.h"
 #include <algorithm>
 #include <cmath>
 #include <cstdlib>
@@ -68,13 +69,15 @@ std::string EditorRenderer::value_text(const std::string &param, int v) const
     return std::to_string(v);
 }
 
-// bitmap font: vertical strip of 96 glyphs (ASCII 32..127), 6 pixels wide
-void EditorRenderer::text(Canvas &c, const std::string &font, const std::string &str, int x, int y, int w, int h,
+// bitmap font: vertical strip of 96 glyphs (ASCII 32..127), 6 pixels wide. `utf8` is folded to one glyph per
+// character first (library names are UTF-8 since #35: "Björn" shows as "Bjorn", not as two '?')
+void EditorRenderer::text(Canvas &c, const std::string &font, const std::string &utf8, int x, int y, int w, int h,
                           const std::string &align, double alpha)
 {
     void *f = c.image(font);
-    if (!f || str.empty())
+    if (!f || utf8.empty())
         return;
+    const std::string str = ascii_fold(utf8);
     const int gw = 6, gh = c.image_height(f) / 96;
     c.frames(f, gh);
     int tw = (int)str.size() * gw;
