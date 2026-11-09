@@ -41,7 +41,7 @@ FetchContent_Declare(pugixml GIT_REPOSITORY https://github.com/zeux/pugixml.git 
 FetchContent_MakeAvailable(pugixml)
 
 # core library: Access files + device model (no Access material in this repo; loaded at runtime)
-add_library(vticore STATIC src/access/accessfiles.cpp src/model/remotedevice.cpp src/model/state.cpp src/device/broker.cpp src/device/memsync.cpp src/device/audioin.cpp src/device/sidechain.cpp src/editor/editormodel.cpp src/editor/editorrender.cpp src/access/firmware.cpp src/access/library.cpp src/cc/controlcenter.cpp src/cc/diag.cpp src/cc/decode.cpp src/cc/capture.cpp src/cc/ccskin.cpp src/model/panelfollow.cpp src/editor/upscale.cpp src/editor/helptext.cpp src/model/sysinfo.cpp src/model/remotetemplates.cpp src/editor/popupmenu.cpp)
+add_library(vticore STATIC src/access/accessfiles.cpp src/model/remotedevice.cpp src/model/state.cpp src/device/broker.cpp src/device/memsync.cpp src/device/audioin.cpp src/device/sidechain.cpp src/editor/editormodel.cpp src/editor/editorrender.cpp src/access/firmware.cpp src/access/library.cpp src/cc/controlcenter.cpp src/cc/diag.cpp src/cc/decode.cpp src/cc/capture.cpp src/cc/ccskin.cpp src/model/panelfollow.cpp src/editor/upscale.cpp src/editor/helptext.cpp src/model/sysinfo.cpp src/model/remotetemplates.cpp src/editor/popupmenu.cpp src/model/utf8.cpp)
 # TI Revive's broker headers (vtiproto.h, vtiaudioshm.h) from the repository's src/broker
 target_include_directories(vticore PUBLIC src ${CMAKE_CURRENT_SOURCE_DIR}/../src/broker)
 find_package(Threads REQUIRED)
@@ -169,7 +169,7 @@ add_executable(vtitests tests/main.cpp tests/test_usbmidi.cpp tests/test_state.c
                tests/test_blockevents.cpp tests/test_outputdelay.cpp tests/test_lcdhover.cpp
                tests/test_heldnotes.cpp tests/test_factoryorder.cpp tests/test_ratemeter.cpp tests/test_sectionlock.cpp
                tests/test_editormenus.cpp tests/test_infopage.cpp tests/test_rambackup.cpp tests/test_undohistory.cpp
-               tests/test_comparestate.cpp tests/test_randomizer.cpp tests/test_trafficring.cpp tests/test_capture.cpp tests/test_keyport.cpp tests/test_closeseq.cpp)
+               tests/test_comparestate.cpp tests/test_randomizer.cpp tests/test_trafficring.cpp tests/test_capture.cpp tests/test_keyport.cpp tests/test_closeseq.cpp tests/test_utf8.cpp)
 target_link_libraries(vtitests PRIVATE vticore)
 add_test(NAME vtitests COMMAND vtitests)
 
