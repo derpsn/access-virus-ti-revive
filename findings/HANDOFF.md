@@ -1,5 +1,7 @@
 # HANDOFF
 
+**Issue check 2026-11-09 (with the user):** 13 open. Owed replies POSTED as derpsn (AI note, no "checked by the maintainer" because the user had not read them): #33 final 0.8.39 out, Intel testers wanted; #30 0.8.39 latency for Chris (Logic 32/48k about 75 ms instead of 90, Logic AU flags no played notes so live-notes does not help there, the 41-45 ms lead is NOT in 0.8.39, planned as an option in 0.8.40, untested on a Snow); #28 numbers 100-127 moved 5 px since 0.8.38, asked to confirm, close on yes. NEW, no reply yet: #35 (psychowsky, Win10, TI2, 0.8.39: plug-in crashes on load in Cubase 15 and in VST3PluginTestHost, validator stops at [Scan Editor Classes], no diag.log, 5 .dmp attached) and #36 (same user, Live 11: browser shows no RAM presets with no filter set). Quiet-issue closing due: #20 from 11-11, #14 from 11-12.
+
 ## START HERE (2026-11-08 morning): round 0.8.39, branch `round-0.8.39`, Virus on LINUX
 
 User: "virus is on linux and work with it on all open hardware related tasks that needs the TI", together with the simulator session virus-ti-sim-1d (it does prep and analysis, never touches the unit; its S072/S073 read today's files). The open questions of 2026-11-07 below (Live Mode by ear, Plugin Latency as a Control Center option, live-notes default) are still unanswered.
