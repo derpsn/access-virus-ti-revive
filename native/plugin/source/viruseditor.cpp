@@ -1081,6 +1081,7 @@ public:
             plugin_->diag_report();
             tick_info();
             tick_tips();
+            tick_alert();
             plugin_->tick_gestures(); // knob moves on the Virus -> host edits (E304)
             if (int kb, kp; key_load_.due(now_ms(), kb, kp)) // Up/Down in the browser stopped
                 plugin_->load_patch_remembered(kb, kp, plugin_->ui_value(plugin_->layout().frame_parameter, -1));
@@ -1223,6 +1224,11 @@ public:
     {
         if (info_ != vti::InfoStart::None && event.type == EventType::KeyDown && event.virt == VirtualKey::Escape) {
             close_info(false); // as OK
+            event.consumed = true;
+            return;
+        }
+        if (alert_ && event.type == EventType::KeyDown && event.virt == VirtualKey::Escape) {
+            close_alert();
             event.consumed = true;
             return;
         }
@@ -1400,6 +1406,8 @@ public:
             draw_tips(ctx);
         if (info_ != vti::InfoStart::None)
             draw_info(info_page_, true);
+        if (alert_) // over everything: the Virus' audio froze (E493)
+            draw_info(alert_page_, false);
         {
             long us = (long)std::chrono::duration_cast<std::chrono::microseconds>(std::chrono::steady_clock::now() - t0).count();
             plugin_->diag.draw_us += us;
@@ -1425,6 +1433,11 @@ public:
                 close_info(false);
             else if (vti::kInfoDontShow.contains(mx, my))
                 close_info(true);
+            event.consumed = true;
+            return;
+        }
+        if (alert_) { // any click closes the alert page and does nothing else
+            close_alert();
             event.consumed = true;
             return;
         }
@@ -1963,6 +1976,35 @@ private:
     {
         help_ = on;
         help_hit_ = help_pin_ = {};
+        invalid();
+    }
+    // E493: the Virus' audio froze (FreezeWatch in the plug-in) - a page in the welcome page's look that says what to do;
+    // it opens for each new freeze the plug-in reports, any click or Esc closes it
+    bool alert_ = false;
+    int freeze_seen_ = 0;
+    vti::InfoPage alert_page_;
+    void tick_alert()
+    {
+        const int n = plugin_->audio_freezes();
+        if (n <= freeze_seen_)
+            return;
+        freeze_seen_ = n;
+        alert_page_ = {};
+        alert_page_.title = "The Virus stopped sending audio";
+        alert_page_.paras = {
+            {"TI Revive receives only one constant value from the Virus, and notes no longer come back. MIDI and USB "
+             "still work.", false, true},
+            {"Switch the Virus off, wait a few seconds and switch it on again. Restarting the DAW or the plug-in does "
+             "not help: in our tests only switching the Virus off and on cleared it."},
+            {"If this happens more than once, please open an issue on GitHub with the plug-in's log (Control Center, "
+             "Nerd mode, Save logs)."},
+            {"Click anywhere or press Esc to close."}};
+        alert_ = true;
+        invalid();
+    }
+    void close_alert()
+    {
+        alert_ = false;
         invalid();
     }
     // the setup page (setuptips.h): over the editor, any click or Esc closes it, and what it showed counts as read

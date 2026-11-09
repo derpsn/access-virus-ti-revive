@@ -15,6 +15,7 @@
 #include "device/memsync.h"
 #include "device/resync.h"
 #include "device/slipwatch.h"
+#include "device/freezewatch.h"
 #include "device/noteprobe.h"
 #include "device/sendbudget.h"
 #include "device/cablerule.h"
@@ -134,11 +135,14 @@ public:
     bool waiting() const { return wait_reported_.load() || broker_.in_use_elsewhere(); }
     std::atomic<int> generation{0}; // +1 on every return of the Virus (process() re-anchors its timeline)
     std::atomic<int> clamp_reanchors{0}; // new timelines because every read was pulled back for a second (E472)
+    std::atomic<int64_t> last_note_ms{0}; // steady clock of the last note-on sent (FreezeWatch: was a note due?)
+    std::atomic<int> freezes{0};          // frozen streams seen (E493); the editor opens its page on a new one
     StallWatch stall_;              // worker: the stream stood still and runs on (sleep) -> generation + 1
     ReplugGate replug_gate_;        // worker, macOS: at most one software replug a minute (E472)
     SlipWatch slip_;                // worker (scan_audio): the stream arrives byte-slipped (E488)
     SlipRestartGate slip_gate_;     // worker: restarts after a slip, 10 s apart, at most 5 a session
     bool slip_fired_ = false;       // worker: scan_audio saw a slip, the loop acts on it
+    FreezeWatch freeze_;            // worker (scan_audio): the stream froze (E493), only a power cycle helped
     int slip_rate_ = 0;             // worker: the rate slip_ was set for
     bool connected() const { return broker_.device_present(); }
     void stop_worker(); // the worker and the broker's reader have ended when it returns; the destructor does it too
@@ -384,6 +388,7 @@ public:
     bool part_locked(int part);  // any section of the part (the part strip's indicator)
     // the setup page (setuptips.h): this DAW and this setup; which points were read, in setup-tips.seen
     vti::TipsFacts tips_facts() const;
+    int audio_freezes() const { return out_ ? out_->freezes.load(std::memory_order_relaxed) : 0; } // E493, editor
     std::vector<std::string> tips_seen() const;
     void tips_save_seen(const std::vector<std::string> &seen) const;
     // the welcome / What's New pages (infopage.h): what the user chose, in info-page.state; has_history = TI Revive

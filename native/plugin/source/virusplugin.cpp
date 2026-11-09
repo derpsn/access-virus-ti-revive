@@ -272,6 +272,10 @@ bool DeviceOut::send_rt(const uint8_t *msg, size_t n, int64_t stamp, bool live)
         blocked_.fetch_add(1, std::memory_order_relaxed);
         return true;
     }
+    if (n >= 3 && (msg[0] & 0xF0) == 0x90 && msg[2] != 0) // a note is due soon: FreezeWatch's "nothing came" (E493)
+        last_note_ms.store(std::chrono::duration_cast<std::chrono::milliseconds>(
+                               std::chrono::steady_clock::now().time_since_epoch()).count(),
+                           std::memory_order_relaxed);
     size_t w = rt_w_.load(std::memory_order_relaxed);
     if (n > sizeof rt_[0].data || w - rt_r_.load(std::memory_order_acquire) >= RT_SLOTS) {
         // full (a runaway host while the budget holds the flood back): counted, and a lost note-off is answered with
@@ -356,6 +360,7 @@ void DeviceOut::scan_audio()
     {
         scanned_ = std::max<int64_t>(0, newest - 4096); // first call / fell behind: the ring holds 16384 frames
         slip_.reset();                                   // a new stream (or a gap): its windows start afresh
+        freeze_.reset();
     }
     int64_t from = marker_from_.load();
     // a frame is judged once the 66 after it are there: the marker check below reads frames f+2..f+65, which past
@@ -398,6 +403,7 @@ void DeviceOut::scan_audio()
         static const bool fake = getenv("VTI_NATIVE_FAKE_SLIP") != nullptr;
         for (int i = 0; i < n; i++) {
             int16_t *fr = raw + i * 6, s[6];
+            freeze_.feed(fr); // the device's own frames (never the fake slip below)
             if (fake && slip_gate_.count() == 0) {
                 for (int k = 0; k < 6; k++)
                     s[k] = (int16_t)(uint16_t)((((uint16_t)fr[k] >> 8) & 0xFF) | (((uint16_t)fr[(k + 2) % 6] & 0xFF) << 8));
@@ -716,6 +722,15 @@ void DeviceOut::run()
                 log("Virus TI native: audio stream restarted -> %d\n", r);
             }
 #endif
+        }
+        // E493: the Virus' audio froze (the same frame for a second while a note was due); only a power cycle of the
+        // Virus helped, so the editor tells the user (its alert page) - nothing is sent to the Virus
+        if (audio_ok() && freeze_.check(std::chrono::duration_cast<std::chrono::milliseconds>(
+                                            std::chrono::steady_clock::now().time_since_epoch()).count(),
+                                        last_note_ms.load(std::memory_order_relaxed), (int)rate.load())) {
+            freezes.fetch_add(1, std::memory_order_relaxed);
+            log("Virus TI native: the Virus stopped sending audio (the same frame for %.1f s while notes were due, "
+                "E493) - switch the Virus off and on again\n", (double)freeze_.run_frames() / std::max(1, (int)rate.load()));
         }
         // the stream stood still while time went on and runs on (macOS sleep pauses Core Audio, E207): the Virus'
         // stamp clock did not stop, so the anchor is off by the pause - a new timeline and sync ping, as after a
