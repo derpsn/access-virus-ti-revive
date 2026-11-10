@@ -123,11 +123,11 @@ Use the `tirevive-pr` skill (`.claude/skills/tirevive-pr/`) or its checklist:
 Be concrete and friendly, base answers on the logs, and add a short note at the end when an answer was written with
 AI assistance.
 
-**Closing quiet issues (decided by the maintainer, 2026-11-03):** when the last comment in an issue is ours and asks
-the reporter for something (logs, a test, an answer), and more than 14 days pass without a reply, close the issue with
-this message (translated if the thread is in another language):
+**Closing quiet issues (decided by the maintainer, 2026-11-03; threshold lowered to 7 days on 2026-11-10):** when
+the last comment in an issue is ours and asks the reporter for something (logs, a test, an answer), and 7 days or
+more pass without a reply, close the issue with this message (translated if the thread is in another language):
 
-> We're closing this issue for now because we haven't heard back for two weeks - this just keeps the list of open
+> We're closing this issue for now because we haven't heard back for a week - this just keeps the list of open
 > issues manageable, nothing more. Thank you very much for your report and your time! If the problem is still there
 > or you have new information, simply leave a comment here and we'll gladly reopen it.
 
