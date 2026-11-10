@@ -1,5 +1,11 @@
 # HANDOFF
 
+## Update 2026-11-10 morning
+- CI 42690290083 (0.8.41-rc1) now fully green incl. mac: rc1 artefacts ready (Mac package not yet on the Mac, win11 not installed, tag not set).
+- Catalina run 42690610019 FAILED: the VST3 SDK's SMTG_BUILD_UNIVERSAL_BINARY (default ON) forces ARCHS = arm64+x86_64, so the VST3 linked arm64 against the x86_64-only vticore. Fix 49bcbe7 on catalina-test (option OFF when MAC_ARCHS has one arch; release unchanged), new dev-mac run 42763820670.
+- #36 log arrived (CC 0.8.40, broker log only: "Plug-in log OFF", diag.log empty). Broker: in 3 of 9 sessions `vti: read ep 86: error 31` 12-22 s after the plug-in connected (EP 0x86 = where bank dumps arrive, E031/E039); reader resets the pipe and goes on, no further error logged. The last session (01:05-01:07, the reproduction) has no MIDI error at all. Audio clean (48 kHz, 60000 packets/min in the 47-49 bucket = normal at 48k). Cannot tell from this whether the 0/128 sync coincides with the ep 86 stall: need the plug-in log (switch did not take effect or was not on). Reply not posted yet (user to decide).
+- No other issue has a new reporter comment; #33 still waits for the Logic log, #37 waits for the build.
+
 ## START HERE (2026-11-09 evening, end of the day): round 0.8.41, branch `round-0.8.41` (pushed), preview 0.8.41-rc1 almost ready
 
 **State.** All 0.8.41 features are built, tested on Linux and committed (651 tests, ctest 5/5): experimental lower latency (Control Center option `low-latency`, off by default, `experimental_lead` in stamprule.h, E496), Control Center Options page (ccapp/optionspage.*), slip detector + automatic restart (slipwatch.h, option `slip-restart`, E488), freeze alert page (freezewatch.h, E493), burst counter in the stats line (E490), Mac pkg refuses macOS < 14.4 (#37; not built yet). Test switches: VTI_NATIVE_RESYNC, VTI_NATIVE_FAKE_SLIP, VTI_NATIVE_FAKE_FREEZE, nativehost --notes-cycle. Version 0.8.41, What's New and the build.yml release text are written (6691ee4).
