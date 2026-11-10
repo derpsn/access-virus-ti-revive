@@ -52,8 +52,11 @@ done
 echo "broker: $ARCHS"
 codesign --force --sign - "$BUILD/mac/vtibroker"
 
-echo "== plug-in TI Revive Virus Control: VST3 + Audio Unit (arm64 + x86_64)"
-cmake -S "$REPO/native" -B "$BUILD/native" -G Xcode -DCMAKE_OSX_ARCHITECTURES="${MAC_ARCHS// /;}" \
+echo "== plug-in TI Revive Virus Control: VST3 + Audio Unit ($MAC_ARCHS)"
+# the VST3 SDK's SMTG_BUILD_UNIVERSAL_BINARY (default ON) sets ARCHS = standard (arm64 + x86_64) on its targets and
+# overrides CMAKE_OSX_ARCHITECTURES: a one-arch build (Catalina, x86_64) then links arm64 against an x86_64 vticore
+UNIV=$([ "$(echo $MAC_ARCHS | wc -w)" -gt 1 ] && echo ON || echo OFF)
+cmake -S "$REPO/native" -B "$BUILD/native" -G Xcode -DCMAKE_OSX_ARCHITECTURES="${MAC_ARCHS// /;}" -DSMTG_BUILD_UNIVERSAL_BINARY=$UNIV \
     -DCMAKE_OSX_DEPLOYMENT_TARGET="$PLUGIN_MIN" ${SDKROOT:+-DCMAKE_OSX_SYSROOT="$SDKROOT"} >/dev/null
 cmake --build "$BUILD/native" --config Release --target VirusTINative VirusTINative_AU VirusTINative_AU_Snow tirevive-cc TIReviveControlCenter -- -quiet
 VST3="$BUILD/native/VST3/Release/TI Revive Virus Control.vst3"
