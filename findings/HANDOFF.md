@@ -1,5 +1,8 @@
 # HANDOFF
 
+## Update 2026-11-10 midday
+- #37: packman83 cannot open the Catalina pkg: Installer "com.apple.installer.pagecontroller error -1. Couldn't open \"TI Revive.pkg\"" (also with right-click > Open). Checked the artifact of run 42763820670 here (xar parsed in Python): Distribution valid XML, minSpecVersion 1, os-version min 10.15, payload gzip cpio (legacy, fine), unsigned; only oddity: hostArchitectures="x86_64,arm64" (productbuild --synthesize default) on an x86_64-only build -> set it from MAC_ARCHS in the next Catalina build (cause unproven). Web: no documented cause (one report: Installer failed to parse the distribution). POSTED (issuecomment-6765471038): asks for `sudo installer -verbose -pkg ... -target /` output + install.log tail. NEXT: wait; no rebuild before the log.
+
 ## Update 2026-11-10 morning
 - CI 42690290083 (0.8.41-rc1) now fully green incl. mac: rc1 artefacts ready (Mac package not yet on the Mac, win11 not installed, tag not set).
 - Catalina run 42690610019 FAILED: the VST3 SDK's SMTG_BUILD_UNIVERSAL_BINARY (default ON) forces ARCHS = arm64+x86_64, so the VST3 linked arm64 against the x86_64-only vticore. Fix 49bcbe7 on catalina-test (option OFF when MAC_ARCHS has one arch; release unchanged), new dev-mac run 42763820670.
