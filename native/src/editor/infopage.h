@@ -67,8 +67,12 @@ inline const std::vector<ChangeNote> &changelog()
           "only that helped; it happened once, after a change of the sample rate).",
           "The plug-in's log notes when your DAW asks for audio before the Virus has sent it, which makes notes late. "
           "It helps us with reports of late notes.",
-          "macOS: the installer refuses macOS versions older than 14.4 with a clear message, instead of installing a "
-          "plug-in that cannot start there (issue #37)."}},
+          "macOS: the installer refuses macOS versions older than 14.4 instead of installing a plug-in that cannot "
+          "start there (issue #37). On very old versions such as Catalina, Installer then only says it cannot open "
+          "the package.",
+          "The plug-in's log is now on by default, so a bug report has everything we need. It stays on your computer "
+          "(nothing is sent anywhere) and is kept small. To switch it off: ? > Detailed Log in the plug-in, or the "
+          "Control Center's Options page."}},
         {"0.8.40",
          {"Windows: a patch library or template file whose name has letters outside Windows' old code page "
           "(Japanese or Cyrillic on a Western Windows, accents copied from a Mac, emoji) no longer makes the plug-in "
@@ -124,7 +128,9 @@ inline InfoPage welcome_page(const std::string &version)
          "everything, which takes several minutes; after that only banks that changed are read again. You can play "
          "meanwhile."},
         {"Click the ? at the bottom right whenever you need help: Explain the Controls, Setup Tips for Your DAW, the "
-         "Access manuals of your installation, the TI Revive website, and Report a Problem if something does not work."},
+         "Access manuals of your installation, the TI Revive website, and Report a Problem if something does not work. "
+         "For such reports the plug-in keeps a small log on your computer; nothing is sent anywhere. ? > Detailed Log "
+         "switches it off."},
         {"Have fun with your Virus TI!"},
     };
     return p;

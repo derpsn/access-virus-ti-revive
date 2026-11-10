@@ -378,9 +378,12 @@ same with Access' own driver.
 
 #### Logs and firmware
 
-- **Logs for bug reports:** create an empty file `diag.on` in the plug-in's folder (Windows
-  `%LOCALAPPDATA%\virus-ti-native`, macOS `~/Library/Application Support/virus-ti-native`, Linux
-  `~/.local/share/virus-ti-native`), reproduce the problem and attach `diag.log` from there (see CONTRIBUTING.md).
+- **Logs for bug reports:** since 0.8.41 the plug-in log is on by default. It stays on your computer (nothing is
+  sent anywhere) and is kept small (about 8 MB at most). Reproduce the problem, then *Save logs...* in the Control
+  Center's Nerd mode, or attach `diag.log` from the plug-in's folder (Windows `%LOCALAPPDATA%\virus-ti-native`, macOS
+  `~/Library/Application Support/virus-ti-native`, Linux `~/.local/share/virus-ti-native`; see CONTRIBUTING.md). To
+  switch it off: *? > Detailed Log* in the plug-in, or the Control Center's Options page. With 0.8.40 or older, create
+  an empty file `diag.on` in that folder first.
 - Do not run firmware/OS updates of the Virus through TI Revive; that path is not verified.
 
 **Backups: TI Revive Control Center**
@@ -394,7 +397,7 @@ such a backup and converts libraries between `.mid` and `.syx`. **Nerd mode** (b
 TI Revive and the Virus (decoded: notes, parameter changes by name, dumps, bank sync), which programs use the Virus,
 the plug-in's and the broker's logs; it switches the plug-in log on and off and saves all logs for a bug report in
 one file. **Record...** writes all traffic to and from the Virus to a file (raw and decoded, with endpoint and cable, from the Virus' first reply on), for bug reports; the audio stream is not in it. It only watches: it never sends anything to the Virus. Its *Options...* menu switches a few things for
-comparisons with the original: the output delays only on change instead of at every Play/Stop, and the timing as before 0.8.35 (from the next start of the plug-in), and notes played live skipping the delay (on by default since 0.8.39).
+comparisons with the original: the output delays only on change instead of at every Play/Stop, and the timing as before 0.8.35 (from the next start of the plug-in), and notes played live skipping the delay (on by default since 0.8.39), and the plug-in log (on by default since 0.8.41).
 
 **Restore** (since 0.8.30): *Restore...* (in the Access look: RESTORE) asks for a backup's `RAM B.mid` (or any library), then for the RAM bank to overwrite. Only the programs that differ are written, into the Virus' RAM, the way the plug-in's browser writes them, and each one is read back. Unlike Access' Control Center it never writes the Virus' flash. The same from a terminal: `tirevive-cc restore B "RAM B.mid"`.
 

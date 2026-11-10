@@ -47,7 +47,7 @@ struct BuiltMenu {
 
 struct HelpMenuState {
     bool connected = false;   // the Virus is there: Panic can reach it
-    bool diag_log = false;    // diag.on exists: the detailed log is written from the next start
+    bool diag_log = false;    // the detailed log is on (default since 0.8.41; diag.off switches it off from the next start)
     std::vector<int> manuals; // the Access manuals found (manuals.h kManual*), in menu order; none: no group
     bool snow = false;        // a Snow: its own manuals' names
 };

@@ -1120,8 +1120,10 @@ tresult PLUGIN_API VirusPlugin::initialize(FUnknown *context)
     out_->lead = lead();
     out_->stamp_floor = !timing_classic_;
     out_->live_notes = live_notes_;
-    if (diag_enabled())
+    if (diag_enabled()) {
+        vti::cc::rotate_log(own_cache_dir() + "/../diag.log", vti::cc::kPluginLogLimit); // on for everyone: kept small
         out_->set_diag_path(own_cache_dir() + "/../diag.log");
+    }
     if (live_notes_) // after set_diag_path, or the line never reaches diag.log
         out_->log("Virus TI native: live notes on (default; live-notes.off switches it off): notes flagged as played go without the lead\n");
     out_->log("Virus TI native: timing: lead %d frames, safety net %s%s\n", timing_a_, timing_classic_ ? "off" : "on",
@@ -1608,10 +1610,8 @@ bool VirusPlugin::has_history() const
 bool VirusPlugin::diag_enabled()
 {
     static int on = -1;
-    if (on < 0) {
-        std::error_code ec;
-        on = std::filesystem::exists(vti::u8path(own_cache_dir() + "/../diag.on"), ec) ? 1 : 0;
-    }
+    if (on < 0)
+        on = vti::cc::plugin_log_enabled() ? 1 : 0; // on unless diag.off (since 0.8.41, the Options page switch)
     return on == 1;
 }
 
@@ -1637,6 +1637,9 @@ void VirusPlugin::diag_report()
     int64_t due = diag_next_ms_.load();
     if (!diag_enabled() || now < due || !diag_next_ms_.compare_exchange_strong(due, now + 10000))
         return;
+    // a long session (the DAW open for days) must not grow the log without end either; another instance may rotate
+    // the same file meanwhile, then at most a few lines go to the old file
+    vti::cc::rotate_log(own_cache_dir() + "/../diag.log", vti::cc::kPluginLogLimit);
     note_probe_flush();
     long long drops = -1; // the editor's timer or the worker: read under the audio gate (audiogate.h)
     if (out_)

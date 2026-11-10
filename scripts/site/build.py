@@ -473,8 +473,9 @@ def page_landing(latest, releases, sums):
       <ol>
         <li><strong>Collect the logs.</strong> Easiest: open the <strong>TI Revive Control Center</strong>, switch on
         <em>Nerd mode</em> and press the <em>Save logs...</em> button. You get the plug-in and broker logs in one file,
-        without your home folder or user name. Or by hand: create an empty file <code>diag.on</code> in the plug-in's folder,
-        reproduce the problem, and take <code>diag.log</code> from the same folder:
+        without your home folder or user name. Or by hand: take <code>diag.log</code> from the plug-in's folder (the log is on
+        by default since 0.8.41; with 0.8.40 or older create an empty file <code>diag.on</code> there first and reproduce
+        the problem):
         <div class="paths"><b>Windows</b><code>%LOCALAPPDATA%\\virus-ti-native</code>
         <b>macOS</b><code>~/Library/Application Support/virus-ti-native</code>
         <b>Linux</b><code>~/.local/share/virus-ti-native</code></div></li>

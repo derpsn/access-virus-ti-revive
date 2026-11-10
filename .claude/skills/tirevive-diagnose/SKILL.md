@@ -13,8 +13,9 @@ the missing log instead.
 Note platform, OS version, Virus model (TI / TI2 / Snow / Polar / Keyboard), DAW (native or Rosetta on macOS),
 TI Revive version. Then make sure you have the logs (CONTRIBUTING.md lists where they are):
 
-- **All platforms (0.8.0+, plug-in "TI Revive Virus Control"):** the plug-in's `diag.log` (after creating `diag.on`
-  in its folder, see CONTRIBUTING.md) - lifecycle, state sent, device connect, sync, timing stats.
+- **All platforms (0.8.0+, plug-in "TI Revive Virus Control"):** the plug-in's `diag.log` (on by default since 0.8.41;
+  with 0.8.40 or older only after creating `diag.on` in its folder, see CONTRIBUTING.md; a report header "Plug-in log
+  OFF" means it was switched off) - lifecycle, state sent, device connect, sync, timing stats.
 - **Windows:** `TI-Revive-usbinfo.txt` from `scripts/tirevive-usbinfo.ps1`, (0.7.x: the newest `%TEMP%\vtiemu-*.log`),
   `%TEMP%\vtibroker.log`.
 - **macOS:** `/tmp/tirevive-bridge.log`, `/tmp/tirevive-helper.log`, `/tmp/tirevive-libvirususb.log`,
