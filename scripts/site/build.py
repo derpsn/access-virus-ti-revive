@@ -169,7 +169,7 @@ def downloads_line(releases):
 # preview box. The README's "Preview" block at the top says the same (unit test); remove it there at the final release.
 PREVIEW_NEW = {
     "0.8.41": "lower latency as an experimental option, an Options page in the Control Center, the plug-in restarts "
-              "scrambled Virus audio by itself, and the plug-in log is on by default, so a bug report already has "
+              "scrambled Virus audio by itself (Linux and Windows), and the plug-in log is on by default, so a bug report already has "
               "what we need.",
 }
 
@@ -192,7 +192,7 @@ def preview_box(latest, releases):
       <p>A test version of the next release is out for anyone who wants to help test it. {"New: " + inline(new) + " " if new else ""}Please
       test with a disposable DAW project and tell us what you find with the <a href="{report}">Test report</a>
       template. What works helps us as much as what doesn't, especially on setups we can't test ourselves (the TI
-      Snow, Polar and Keyboard, Intel Macs, Windows 10, DAWs other than Ableton, REAPER and Logic). On Windows,
+      Snow, Polar and Keyboard, Intel Macs, Windows 10, DAWs other than Ableton, REAPER, Logic and GarageBand). On Windows,
       uninstall the preview before installing the final {html.escape(final)}. The regular download stays
       {html.escape(latest["tag_name"][1:])} until then.</p>
       <p class="actions"><a class="second" href="{r["html_url"]}">Download the preview</a>
