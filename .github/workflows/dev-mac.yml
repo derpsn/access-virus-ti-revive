@@ -28,7 +28,9 @@ jobs:
           otool -l "$P" | grep -A4 -E "LC_BUILD_VERSION|LC_VERSION_MIN_MACOSX" | head -12
           # Catalina has no UniformTypeIdentifiers (#37): it must not be linked
           if otool -L "$P" | grep -q UniformTypeIdentifiers; then echo "still links UniformTypeIdentifiers"; exit 1; fi
-          grep -o 'os-version min="[0-9.]*"' "$B/distribution.xml"
+          # a plain component package (PackageInfo at the top, no Distribution): Catalina cannot open the product archive (#37)
+          K=$(mktemp -d) && ditto -x -k out/TI-Revive-*-mac.zip "$K" && xar -tf "$K"/*/"TI Revive.pkg" | tee /dev/stderr | grep -qx PackageInfo
+          if xar -tf "$K"/*/"TI Revive.pkg" | grep -qx Distribution; then echo "product archive, not a component package"; exit 1; fi
       - name: Collect
         run: |
           mkdir dev && cp out/TI-Revive-*-mac.zip dev/
