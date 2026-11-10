@@ -100,6 +100,12 @@ STAGE="$BUILD/TI-Revive-$VERSION-mac"
 mkdir -p "$STAGE"
 pkgbuild --root "$ROOT" --component-plist "$BUILD/components.plist" --identifier io.github.derpsn.tirevive \
     --version "$VERSION" --scripts "$REPO/src/installer-mac/scripts" --install-location / "$BUILD/tirevive-component.pkg"
+# a build for an older macOS (Catalina test build, #37) ships the plain component package: Catalina's Installer cannot
+# open the product archive below ("can't instantiate package", pagecontroller error -1, #37 log 2026-11-10), while the
+# plain package of 0.8.40 installed there
+if [ "$MAC_MIN" != 14.4 ]; then
+cp "$BUILD/tirevive-component.pkg" "$STAGE/TI Revive.pkg"
+else
 # a product archive around it that refuses macOS older than 14.4 with Installer's own message: on Catalina the old
 # package installed and the plug-in then failed to load (#37: UniformTypeIdentifiers missing); the broker and libusb
 # are built for 14.4 (MACOSX_DEPLOYMENT_TARGET above). TI Revive is for systems where the original no longer runs.
@@ -115,6 +121,7 @@ open(p, 'w').write('\n'.join(lines))
 PYEOF
 grep -q "os-version min=\"$MAC_MIN\"" "$BUILD/distribution.xml" || { echo "distribution.xml without the OS minimum" >&2; exit 1; }
 productbuild --distribution "$BUILD/distribution.xml" --package-path "$BUILD" "$STAGE/TI Revive.pkg"
+fi
 cp "$REPO/src/installer-mac/Set up Access Virus TI files.command" "$REPO/src/installer-mac/Uninstall TI Revive.command" \
     "$REPO/src/installer-mac/README-mac.txt" "$REPO/LICENSE" "$REPO/THIRD-PARTY-NOTICES.txt" "$STAGE/"
 chmod +x "$STAGE"/*.command
