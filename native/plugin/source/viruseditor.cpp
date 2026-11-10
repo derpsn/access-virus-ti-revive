@@ -1404,8 +1404,8 @@ public:
             draw_help(ctx);
         if (tips_)
             draw_tips(ctx);
-        if (info_ != vti::InfoStart::None)
-            draw_info(info_page_, true);
+        if (info_ != vti::InfoStart::None) // the log notice is shown once: no "Don't show again"
+            draw_info(info_page_, info_ != vti::InfoStart::LogNotice);
         if (alert_) // over everything: the Virus' audio froze (E493)
             draw_info(alert_page_, false);
         {
@@ -1431,7 +1431,7 @@ public:
             const int mx = (int)event.mousePosition.x, my = (int)event.mousePosition.y;
             if (vti::kInfoOk.contains(mx, my))
                 close_info(false);
-            else if (vti::kInfoDontShow.contains(mx, my))
+            else if (info_ != vti::InfoStart::LogNotice && vti::kInfoDontShow.contains(mx, my))
                 close_info(true);
             event.consumed = true;
             return;
@@ -2074,7 +2074,8 @@ private:
     void open_info(vti::InfoStart which, bool from_menu)
     {
         const vti::InfoState st = plugin_->info_state();
-        info_page_ = which == vti::InfoStart::Welcome ? vti::welcome_page(tirevive_version())
+        info_page_ = which == vti::InfoStart::Welcome     ? vti::welcome_page(tirevive_version())
+                     : which == vti::InfoStart::LogNotice ? vti::log_notice_page()
                      : from_menu ? vti::whats_new_page("", tirevive_version()) // the menu: all notes up to this one
                                  : vti::whats_new_page(st.last_version, tirevive_version());
         if (which == vti::InfoStart::WhatsNew && info_page_.paras.empty())
@@ -2096,12 +2097,7 @@ private:
     }
     void close_info(bool dont_show_again)
     {
-        vti::InfoState st = plugin_->info_state();
-        if (vti::version_cmp(tirevive_version(), st.last_version) > 0)
-            st.last_version = tirevive_version();
-        if (dont_show_again)
-            (info_ == vti::InfoStart::Welcome ? st.welcome_off : st.news_off) = true;
-        plugin_->info_save_state(st);
+        plugin_->info_save_state(vti::info_closed(plugin_->info_state(), info_, tirevive_version(), dont_show_again));
         info_ = vti::InfoStart::None;
         invalid();
     }
@@ -2129,21 +2125,24 @@ private:
         title->setStyle(kBoldFace);
         bold->setStyle(kBoldFace);
         title->setSize(18);
-        // the largest body size whose text fits above the buttons
-        std::vector<std::vector<std::string>> lines;
-        double size = 13, lh = 0, gap = 0;
-        for (; size >= 9; size -= 1) {
-            body->setSize(size), bold->setSize(size);
-            lh = size + 4, gap = size * 0.6;
-            lines.clear();
-            double h = 18 + 4 + gap * 2;
-            for (const vti::InfoPara &p : page.paras) {
+        // the largest body size whose text fits above the buttons; with several versions on What's New the older ones
+        // go first (fit_info_page: they overflowed the page into the footer, 2026-11-10)
+        auto measure = [&](const std::vector<vti::InfoPara> &paras, double sz) {
+            body->setSize(sz), bold->setSize(sz);
+            double h = 18 + 4 + sz * 0.6 * 2;
+            for (const vti::InfoPara &p : paras) {
                 ctx->setFont(p.bold || p.warn ? bold : body);
-                lines.push_back(wrap(ctx, p.text, a.w));
-                h += lines.back().size() * lh + gap;
+                h += wrap(ctx, p.text, a.w).size() * (sz + 4) + sz * 0.6;
             }
-            if (h <= vti::kInfoOk.y - 8 - a.y)
-                break;
+            return h;
+        };
+        const vti::InfoFit fit = vti::fit_info_page(page, vti::kInfoOk.y - 8 - a.y, measure);
+        const double size = fit.size, lh = size + 4, gap = size * 0.6;
+        body->setSize(size), bold->setSize(size);
+        std::vector<std::vector<std::string>> lines;
+        for (const vti::InfoPara &p : fit.page.paras) {
+            ctx->setFont(p.bold || p.warn ? bold : body);
+            lines.push_back(wrap(ctx, p.text, a.w));
         }
         ctx->setDrawMode(kAntiAliasing);
         double y = a.y;
@@ -2151,8 +2150,8 @@ private:
         ctx->setFontColor(CColor(20, 20, 20, 255));
         ctx->drawString(page.title.c_str(), CRect(a.x, y, a.x + a.w, y + 22), kLeftText);
         y += 22 + gap * 2;
-        for (size_t i = 0; i < page.paras.size(); i++) {
-            const vti::InfoPara &p = page.paras[i];
+        for (size_t i = 0; i < fit.page.paras.size(); i++) {
+            const vti::InfoPara &p = fit.page.paras[i];
             ctx->setFont(p.bold || p.warn ? bold : body);
             ctx->setFontColor(p.warn ? CColor(150, 25, 15, 255) : CColor(25, 25, 25, 255));
             for (const std::string &l : lines[i]) {
