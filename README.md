@@ -6,15 +6,15 @@
 
 Website with downloads, features and help: **[derpsn.github.io/access-virus-ti-revive](https://derpsn.github.io/access-virus-ti-revive/)**
 
-> **Preview: 0.8.41-rc1 for testers** (10 Nov 2026). A test version of the next release is out for anyone who wants
+> **Preview: 0.8.41-rc2 for testers** (11 Nov 2026). A test version of the next release is out for anyone who wants
 > to help test it. New: lower latency as an experimental option, an Options page in the Control Center, the plug-in
-> restarts scrambled Virus audio by itself (Linux and Windows), and the plug-in log is on by default, so a bug
-> report already has what we need. Please test with a disposable DAW project and tell us what you find with the
+> restarts scrambled Virus audio by itself (Linux and Windows), the Virus display shows the bank sync like with the
+> original, and the plug-in log is on by default, so a bug report already has what we need. Please test with a disposable DAW project and tell us what you find with the
 > [Test report](https://github.com/derpsn/access-virus-ti-revive/issues/new?template=test_report.yml) template. What
 > works helps us as much as what doesn't, especially on setups we can't test ourselves (the TI Snow, Polar and
 > Keyboard, Intel Macs, Windows 10, DAWs other than Ableton, REAPER, Logic and GarageBand). On Windows, uninstall the preview
 > before installing the final 0.8.41. The regular download stays 0.8.40 until then.
-> [Download the preview](https://github.com/derpsn/access-virus-ti-revive/releases/tag/v0.8.41-rc1)
+> [Download the preview](https://github.com/derpsn/access-virus-ti-revive/releases/tag/v0.8.41-rc2)
 
 > ☕ **Free, and it will stay free.** Changes that touch the Virus are tested on the real synth, on the systems the release notes name, often
 > back and forth between the three, and that takes a lot of evenings. If TI Revive gives your Virus a second life and
