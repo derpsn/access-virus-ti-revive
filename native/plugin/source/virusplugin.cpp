@@ -1122,6 +1122,10 @@ tresult PLUGIN_API VirusPlugin::initialize(FUnknown *context)
     out_->stamp_floor = !timing_classic_;
     out_->live_notes = live_notes_;
     if (diag_enabled()) {
+        // the folder first: on a fresh install it came only with the bank cache, ~7 s in, and every line before
+        // (library scan, ready probe, marker) was lost (win10 VM, rc1, 2026-11-11)
+        std::error_code ec;
+        std::filesystem::create_directories(vti::u8path(own_cache_dir()), ec);
         vti::cc::rotate_log(own_cache_dir() + "/../diag.log", vti::cc::kPluginLogLimit); // on for everyone: kept small
         out_->set_diag_path(own_cache_dir() + "/../diag.log");
     }
