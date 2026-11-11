@@ -72,7 +72,13 @@ inline const std::vector<ChangeNote> &changelog()
           "the package.",
           "The plug-in's log is now on by default, so a bug report has everything we need. It stays on your computer "
           "(nothing is sent anywhere) and is kept small. To switch it off: ? > Detailed Log in the plug-in, or the "
-          "Control Center's Options page."}},
+          "Control Center's Options page.",
+          "While the banks sync, the Virus' display shows its syncing message for each patch, as with the original "
+          "software (it showed \"Configuring Virus TI\" the whole time). The plug-in's sync page names each patch as "
+          "it arrives, and its time left counts only what is really missing.",
+          "Windows: fixed a case where the TI Revive service could keep a connection to a Virus that had disappeared "
+          "from Windows for a moment, instead of connecting again (#36).",
+          "The plug-in's log keeps its first lines on a fresh install."}},
         {"0.8.40",
          {"Windows: a patch library or template file whose name has letters outside Windows' old code page "
           "(Japanese or Cyrillic on a Western Windows, accents copied from a Mac, emoji) no longer makes the plug-in "

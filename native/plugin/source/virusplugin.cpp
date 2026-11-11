@@ -3382,6 +3382,18 @@ void VirusPlugin::sync_banks()
     page.total = 512 + rom_missing; // user ROM banks are read after RAM D (the page shows once their reading starts)
     if (sync_page_at_start(sync_expected, rom_missing)) // a read is certain: the page follows "Starting up" directly
         page.expect();
+    std::array<std::vector<bool>, 4> empty; // slots sure to be fetched, for the time left on the sync page
+    {
+        std::lock_guard<std::mutex> lk(banks_mu_);
+        for (int b = 0; b < 4; b++) {
+            empty[b].assign(128, true);
+            if (auto it = banks_.find(b); it != banks_.end())
+                for (size_t p = 0; p < 128 && p < it->second.size(); p++)
+                    empty[b][p] = it->second[p].empty();
+        }
+    }
+    int fetched_total = 0;
+    sync_eta_s_ = sync_eta_s(sync_remaining(empty, 0, -1, rom_missing), 0, 0);
     for (int b = 0; b < 4; b++) {
         Bank bank;
         {
@@ -3391,19 +3403,22 @@ void VirusPlugin::sync_banks()
                 for (size_t p = 0; p < 128 && p < it->second.size(); p++)
                     bank[p] = it->second[p];
         }
-        int n = sync_->sync_bank(b + 1, bank, [this, b, &bank, sync_t0, &page, rom_missing](int p, bool fetched) {
+        int n = sync_->sync_bank(b + 1, bank, [this, b, &bank, sync_t0, &page, rom_missing, &empty, &fetched_total](
+                                                  int p, bool fetched) {
             set_sync_progress(page.progress(b * 128 + p + 1, fetched));
             // remaining time at the pace so far (pauses for notes not counted): the original's start page promises
-            // "a couple of seconds", but a first sync takes 8-9 minutes (issue #5)
-            int done = b * 128 + p + 1;
-            int64_t worked = now_ms() - sync_t0 - sync_paused_ms_;
-            if (done >= 8 && worked > 0)
-                sync_eta_s_ = (int)((512 - done) * worked / done / 1000) + rom_missing; // ROM: one a second
+            // "a couple of seconds", but a first sync takes 8-9 minutes (issue #5); only what is sure to be fetched
+            // counts, not all 512 (one missing bank said "about 9 min" for 2, 2026-11-11)
+            fetched_total += fetched;
+            sync_eta_s_ = sync_eta_s(sync_remaining(empty, b, p, rom_missing), now_ms() - sync_t0 - sync_paused_ms_,
+                                     fetched_total);
 
             if (page.shown()) {
                 std::lock_guard<std::mutex> lk(values_mu_); // progress on the LCD
                 // the patch just fetched, as the Virus display shows its entry (Rise Message 4)
                 lcd_param_ = sync_lcd_title("Synchronizing " + bank_name(b), fetched ? cc::patch_name(bank[p]) : "");
+                if (fetched)
+                    sync_item_ = sync_page_item(bank_name(b), p + 1, cc::patch_name(bank[p]));
                 lcd_value_ = std::to_string(p + 1) + " / 128";
                 lcd_part_.clear();
                 lcd_orig_.clear();
@@ -3458,6 +3473,7 @@ void VirusPlugin::sync_banks()
             {
                 std::lock_guard<std::mutex> lk(values_mu_);
                 lcd_param_ = sync_lcd_title("Synchronizing " + name, cc::patch_name(bank[p]));
+                sync_item_ = sync_page_item(name, p + 1, cc::patch_name(bank[p]));
                 lcd_value_ = std::to_string(p + 1) + " / 128";
                 lcd_part_.clear();
                 lcd_orig_.clear();
@@ -3478,6 +3494,10 @@ void VirusPlugin::sync_banks()
     out_->send({0xF0, 0x00, 0x20, 0x33, 0x01, 0x10, 0x74, 0x00, 0x29, 0x01, 0xF7});
     syncing_ = false;
     sync_eta_s_ = -1;
+    {
+        std::lock_guard<std::mutex> lk(values_mu_);
+        sync_item_.clear();
+    }
     set_sync_progress(127);
     out_->log("Virus TI native: bank sync %s in %.1f s\n", sync_end(result), (now_ms() - sync_t0) / 1000.0);
     if (page.shown()) {

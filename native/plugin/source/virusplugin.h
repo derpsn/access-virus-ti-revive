@@ -543,6 +543,12 @@ public:
     bool sync_paused() const { return syncing_.load() && sync_paused_.load(); } // the sync page's note
     // estimated seconds the bank sync still needs (-1: unknown or done); a first sync reads 512 programs at ~1 s each
     int sync_eta() const { return syncing_.load() ? sync_eta_s_.load() : -1; }
+    // the sync page's line with the patch just fetched ("RAM A 85 / 128: NAME"); empty: nothing fetched yet or done
+    std::string sync_item()
+    {
+        std::lock_guard<std::mutex> lk(values_mu_);
+        return syncing_.load() ? sync_item_ : std::string();
+    }
     bool lcd_changed() { return lcd_dirty_.exchange(false); } // only the LCD texts changed
     // field diagnostics (a log line every 10 s in diag.log; on unless diag.off, since 0.8.41)
     struct Diag {
@@ -669,6 +675,7 @@ private:
     std::vector<std::string> lock_sections_; // editordevice.xml's sections (initialize)
     std::vector<std::string> locked_children(int part); // the parameters part's locked sections keep
     std::string lcd_param_, lcd_value_, lcd_part_, lcd_orig_; // the last edited parameter for the LCD
+    std::string sync_item_; // see sync_item(), under values_mu_
     LcdHover lcd_hover_; // values_mu_
     bool lcd_hint_on_ = false; // values_mu_: lcd_hint's text is shown, lcd_saved_ holds what it covered
     LcdFields lcd_saved_;
