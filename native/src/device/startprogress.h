@@ -7,6 +7,8 @@
 // 2026-10-19: "only show the syncing if it really happens").
 #pragma once
 
+#include <string>
+
 namespace vti {
 
 // RecallProgress from the queued start-up messages and state; the largest count seen is the total (a project's
@@ -48,5 +50,12 @@ inline bool sync_page_at_start(bool ram_bank_missing, int rom_missing) { return 
 // how the bank sync ended, for the log: it stops at the first bank that fails (-1, a request without an answer) or
 // is cancelled (-2, closed while syncing); "bank sync done" after such a stop read like a full sync (E289)
 inline const char *sync_end(int result) { return result == -1 ? "failed" : result == -2 ? "stopped" : "done"; }
+
+// the LCD's first line while patches come from the Virus: the patch just fetched after the bank (user 2026-11-11: the
+// Virus display shows which entry is synced, the plug-in shows it too); only checked or blank: the bank alone
+inline std::string sync_lcd_title(const std::string &what, const std::string &name)
+{
+    return name.find_first_not_of(' ') == std::string::npos ? what : what + ": " + name;
+}
 
 } // namespace vti

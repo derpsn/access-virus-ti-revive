@@ -72,3 +72,13 @@ TEST(startprogress_sync_page_total)
     s.total = 0; // never divides by zero
     CHECK(s.progress(10, true) == 126);
 }
+
+// the LCD while patches come from the Virus names the patch just fetched (user 2026-11-11: the Virus display shows
+// which entry is synced, the plug-in should too); a patch only checked (current cache) or a blank name: no name
+TEST(startprogress_sync_lcd_names_the_fetched_patch)
+{
+    CHECK(sync_lcd_title("Synchronizing RAM A", "PrismPadRD") == "Synchronizing RAM A: PrismPadRD");
+    CHECK(sync_lcd_title("Downloading RAM B", "Pro1-FX XM") == "Downloading RAM B: Pro1-FX XM");
+    CHECK(sync_lcd_title("Synchronizing RAM A", "") == "Synchronizing RAM A");
+    CHECK(sync_lcd_title("Synchronizing RAM A", "   ") == "Synchronizing RAM A");
+}

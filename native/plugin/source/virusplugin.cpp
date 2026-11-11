@@ -9,6 +9,7 @@
 #include "access/accessfiles.h"
 #include "access/firmware.h"
 #include "access/library.h"
+#include "cc/controlcenter.h"
 #include "cc/diag.h"
 #include "base/source/fstreamer.h"
 #include "device/closeseq.h"
@@ -3397,7 +3398,8 @@ void VirusPlugin::sync_banks()
 
             if (page.shown()) {
                 std::lock_guard<std::mutex> lk(values_mu_); // progress on the LCD
-                lcd_param_ = "Synchronizing " + bank_name(b);
+                // the patch just fetched, as the Virus display shows its entry (Rise Message 4)
+                lcd_param_ = sync_lcd_title("Synchronizing " + bank_name(b), fetched ? cc::patch_name(bank[p]) : "");
                 lcd_value_ = std::to_string(p + 1) + " / 128";
                 lcd_part_.clear();
                 lcd_orig_.clear();
@@ -3451,7 +3453,7 @@ void VirusPlugin::sync_banks()
             sync_eta_s_ = rom_missing - rom_done; // one program a second (E382)
             {
                 std::lock_guard<std::mutex> lk(values_mu_);
-                lcd_param_ = "Synchronizing " + name;
+                lcd_param_ = sync_lcd_title("Synchronizing " + name, cc::patch_name(bank[p]));
                 lcd_value_ = std::to_string(p + 1) + " / 128";
                 lcd_part_.clear();
                 lcd_orig_.clear();
@@ -3995,7 +3997,7 @@ bool VirusPlugin::download_bank(int bank)
                 std::lock_guard<std::mutex> lk(banks_mu_);
                 banks_[bank][p] = cache[p];
             }
-            lcd(what, download_progress(p + 1, now_ms() - t0));
+            lcd(sync_lcd_title(what, cc::patch_name(cache[p])), download_progress(p + 1, now_ms() - t0));
             ui_dirty_ = true;
         }, &stop_warm_);
         lcd(n == 128 ? "Download done" : "Download stopped", "");
