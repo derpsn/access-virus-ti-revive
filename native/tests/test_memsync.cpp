@@ -160,7 +160,7 @@ TEST(memsync_sync_bank_fetches_only_stale)
     CHECK_EQ(progress_calls, 128);
     CHECK_EQ(stale_calls, 2);
     CHECK(cache[3] == v.ram[1][3] && cache[100] == v.ram[1][100]);
-    CHECK_EQ(v.requests.size(), 4u); // display message (E321) + bank info + 2 single dumps
+    CHECK_EQ(v.requests.size(), 6u); // display message (E321) + bank info + 2 x (syncing message + single dump)
     // up to date now: only the display message and the bank info
     v.requests.clear();
     CHECK_EQ(sync.sync_bank(1, cache), 0);
@@ -238,7 +238,7 @@ TEST(memsync_sync_bank_retries_a_wrong_fingerprint)
     v.corrupt_times = 1;
     CHECK_EQ(sync.sync_bank(1, cache), 1);
     CHECK(cache[2] == v.ram[1][2]);
-    CHECK_EQ(v.requests.size(), 4u); // display message + bank info + the dump twice
+    CHECK_EQ(v.requests.size(), 6u); // display message + bank info + the dump twice, each after its syncing message
 }
 
 TEST(memsync_sync_bank_gives_up_on_a_wrong_fingerprint)
@@ -256,7 +256,7 @@ TEST(memsync_sync_bank_gives_up_on_a_wrong_fingerprint)
     v.corrupt = 2; // always: never cached
     CHECK_EQ(sync.sync_bank(1, cache), -1);
     CHECK(cache[2] == old);
-    CHECK_EQ(v.requests.size(), 5u); // display message + bank info + 3 tries, bounded
+    CHECK_EQ(v.requests.size(), 8u); // display message + bank info + 3 tries (each with its syncing message), bounded
 }
 
 TEST(memsync_bank_file_round_trip)
@@ -370,6 +370,33 @@ TEST(memsync_sync_bank_keeps_the_configuring_message_up)
     CHECK_EQ(v.requests.size(), 2u);
     CHECK(v.requests[0] == rise);
     CHECK(v.requests.size() > 1 && v.requests[1][6] == 0x39);
+}
+
+// the original's start-up sync on the wire (captures/orig-rom-a-fetch-20261101b): 74 01 7E 07 only right before the
+// bank info; every program it fetches gets 74 01 7E 04 (the Virus shows its syncing message) right before its
+// 30 bank program, also each retry. Nothing else in between: no repeated "Configuring" while patches come in.
+TEST(memsync_sync_bank_shows_syncing_for_each_fetch)
+{
+    FakeVirus v;
+    MemorySync sync(v.send());
+    v.sync = &sync;
+    Bank cache;
+    for (int p = 0; p < 128; p++)
+        cache[p] = v.ram[1][p] = fake_single(1, p, p);
+    cache[3] = fake_single(1, 3, 500);
+    cache[100].clear();
+    v.corrupt = 100; // one wrong dump first: asked again
+    v.corrupt_times = 1;
+    CHECK_EQ(sync.sync_bank(1, cache), 2);
+    const Bytes configuring = {0xF0, 0x00, 0x20, 0x33, 0x01, 0x10, 0x74, 0x01, 0x7E, 0x07, 0xF7};
+    const Bytes syncing = {0xF0, 0x00, 0x20, 0x33, 0x01, 0x10, 0x74, 0x01, 0x7E, 0x04, 0xF7};
+    CHECK_EQ(v.requests.size(), 8u); // 7E 07, bank info, 7E 04 + #3, 7E 04 + #100, 7E 04 + #100 again
+    CHECK(v.requests.size() == 8 && v.requests[0] == configuring && v.requests[1][6] == 0x39);
+    for (size_t i = 2; i + 1 < v.requests.size(); i += 2) {
+        CHECK(v.requests[i] == syncing);
+        CHECK(v.requests[i + 1][6] == 0x30);
+    }
+    CHECK(v.requests.size() == 8 && v.requests[3][8] == 3 && v.requests[5][8] == 100 && v.requests[7][8] == 100);
 }
 
 TEST(memsync_read_bank_reads_all)

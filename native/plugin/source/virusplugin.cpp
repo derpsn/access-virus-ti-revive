@@ -3369,22 +3369,14 @@ void VirusPlugin::sync_banks()
     const int64_t sync_t0 = now_ms();
     // like the original: its page "Syncing memory with Virus" (VirusControl/InitialSyncProgress 0..126) covers the
     // editor while banks are fetched; notes still play. Only when a patch is really fetched (startprogress.h): the
-    // check of a current cache shows nothing. The original keeps "synchronising" on the Virus display while it
-    // syncs (74 01 7E 07 about once a second) - also only then
+    // check of a current cache shows nothing. The Virus display: MemorySync sends Rise Message 7 ("Configuring")
+    // before each bank info and Rise Message 4 (syncing) before each fetched patch, as the original's capture shows;
+    // nothing in between (a once-a-second 7E 07 kept "Configuring" up during the whole sync)
     SyncPage page;
     int result = 0; // the last bank's sync_bank result: < 0 = the sync stopped there
     page.total = 512 + rom_missing; // user ROM banks are read after RAM D (the page shows once their reading starts)
     if (sync_page_at_start(sync_expected, rom_missing)) // a read is certain: the page follows "Starting up" directly
         page.expect();
-    std::atomic<bool> rise{true}, fetching{page.shown()};
-    std::thread riser([this, &rise, &fetching] {
-        while (rise) {
-            if (fetching)
-                out_->send({0xF0, 0x00, 0x20, 0x33, 0x01, 0x10, 0x74, 0x01, 0x7E, 0x07, 0xF7});
-            for (int i = 0; i < 10 && rise; i++)
-                std::this_thread::sleep_for(std::chrono::milliseconds(100));
-        }
-    });
     for (int b = 0; b < 4; b++) {
         Bank bank;
         {
@@ -3394,9 +3386,8 @@ void VirusPlugin::sync_banks()
                 for (size_t p = 0; p < 128 && p < it->second.size(); p++)
                     bank[p] = it->second[p];
         }
-        int n = sync_->sync_bank(b + 1, bank, [this, b, &bank, sync_t0, &page, &fetching, rom_missing](int p, bool fetched) {
+        int n = sync_->sync_bank(b + 1, bank, [this, b, &bank, sync_t0, &page, rom_missing](int p, bool fetched) {
             set_sync_progress(page.progress(b * 128 + p + 1, fetched));
-            fetching = page.shown();
             // remaining time at the pace so far (pauses for notes not counted): the original's start page promises
             // "a couple of seconds", but a first sync takes 8-9 minutes (issue #5)
             int done = b * 128 + p + 1;
@@ -3437,10 +3428,7 @@ void VirusPlugin::sync_banks()
         ui_dirty_ = true;
     }
     // user ROM banks (E381/E382): their programs not cached yet, read like the original - no bank info, each request
-    // after its own display message 74 01 7E 04 (read_missing); the riser's 7E 07 ends first, so none comes between a
-    // 7E 04 and its request (the capture has only 7E 04 while ROM A is read)
-    rise = false;
-    riser.join();
+    // after its own display message 74 01 7E 04 (read_missing; the capture has only 7E 04 while ROM A is read)
     int rom_done = 0;
     if (result >= 0 && rom_missing > 0 && !user_rom_dir_.empty()) {
         std::error_code ec;
