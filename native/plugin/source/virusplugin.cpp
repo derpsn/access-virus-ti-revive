@@ -363,7 +363,6 @@ void DeviceOut::scan_audio()
         slip_.reset();                                   // a new stream (or a gap): its windows start afresh
         freeze_.reset();
     }
-    int64_t from = marker_from_.load();
     // a frame is judged once the 66 after it are there: the marker check below reads frames f+2..f+65, which past
     // the newest frame are not written yet (review 2026-10-19: a marker could be judged on them)
     const int64_t until = newest - 66;
@@ -374,7 +373,7 @@ void DeviceOut::scan_audio()
         for (int i = 0; i < n; i++) {
             int64_t f = scanned_ + i;
             bool usb1 = l1[i] != 0 || r1[i] != 0, usb2 = l2[i] != 0 || r2[i] != 0;
-            if (pings_out_.load() > 0 && from >= 0 && f >= from && f > marker_skip_ && usb2 && !usb1) {
+            if (markers_.candidate(f, usb1, usb2)) {
                 // the marker: one sample per channel, the rest of USB 2 silent around it
                 float ll[64], rr[64], a2[64], b2[64];
                 audio_.read_at(ll, rr, a2, b2, 64, f + 2);
@@ -382,11 +381,10 @@ void DeviceOut::scan_audio()
                 for (int k = 0; k < 64; k++)
                     isolated &= a2[k] == 0 && b2[k] == 0;
                 if (isolated) {
-                    marker = f; // the newest marker: the Virus reset its stamp clock here
-                    pings_out_.fetch_sub(1);
+                    const int64_t from = markers_.ping_frame();
+                    markers_.take(f); // the newest marker: the Virus reset its stamp clock here
                     log("Virus TI native: sync marker at frame %lld (ping at %lld, %lld frames later)\n", (long long)f,
                         (long long)from, (long long)(f - from));
-                    marker_skip_ = f + 1; // its second channel follows one frame later
                 }
             }
             if (usb1 || usb2)
@@ -419,13 +417,9 @@ void DeviceOut::scan_audio()
         }
         scanned_ += n;
     }
-    if (pings_out_.load() > 0 && from >= 0 && newest > from + 5 * (int64_t)rate.load()) { // 5 s without a marker
-        pings_out_ = 0;
-        if (marker.load() < 0) {
-            marker = -2;
-            log("Virus TI native: no sync marker - time stamps relative to the ring\n");
-        }
-    }
+    // 5 s without a marker for the newest ping (E497: judged now, not by the ping this pass started with)
+    if (markers_.end(newest, (int)rate.load()))
+        log("Virus TI native: no sync marker - time stamps relative to the ring\n");
 }
 
 // the Virus unplugged / switched off and back while the broker connection stays (user test): stop the audio, and on
@@ -451,9 +445,8 @@ void DeviceOut::check_presence()
         // a new audio stream counts its frames from 0 again: the scan positions of the old one would keep
         // scan_audio idle (and the sync marker unfound) until the new stream passed them - ~19 s (user test)
         scanned_ = -1;
-        marker_skip_ = -1;
+        markers_.reset_stream(); // a ping of the old stream gets no marker in the new one (its timeout fired too early)
         last_sound = -1;
-        pings_out_ = 0; // a ping of the old stream gets no marker in the new one (its 5 s timeout fired too early)
         generation++;
         // the Virus' OS version for PATCH UTILITY > INFO, read like the original at plug-in start, before the
         // memory sync: the broker's fixed read-only flash sequence (flashinfo.h, E026/E040), ~2 s once per open
@@ -720,9 +713,8 @@ void DeviceOut::run()
                 broker_.audio(false);
                 const int r = start_audio();
                 scanned_ = -1;
-                marker_skip_ = -1;
+                markers_.reset_stream();
                 last_sound = -1;
-                pings_out_ = 0;
                 generation++;
                 log("Virus TI native: audio stream restarted -> %d\n", r);
             }
@@ -794,9 +786,8 @@ void DeviceOut::run()
             log("Virus TI native: the Virus' audio now runs at %d Hz - a new timeline\n", r);
             rate = r;
             scanned_ = -1;
-            marker_skip_ = -1;
+            markers_.reset_stream();
             last_sound = -1;
-            pings_out_ = 0;
             generation++;
         }
         if (req_handled)
