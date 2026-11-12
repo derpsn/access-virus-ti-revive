@@ -59,20 +59,30 @@ to keep the list manageable. That is no judgement on the report: leave a comment
 
 ### Evidence entries
 
-`findings/evidence.md` is one table row per observation:
+`findings/evidence.md` has one section per observation (the top of the file explains every field):
 
 ```
-| E141 | 2026-10-20 | What was observed, under which conditions, with numbers | source (capture, log, test) | file or function it led to | HIGH / MEDIUM / LOW / open |
+### E505
+
+What was observed, under which conditions, with numbers.
+
+- **Date:** 2026-11-13
+- **Pointer:** source (capture + frame, log, file + line)
+- **Method:** command or procedure
+- **Confidence:** HIGH / MED / LOW / open, per part when the parts differ
+- **Hardware:** yes - <model>, <OS>, <build>  |  no  |  n/a (static analysis, documents)
 ```
 
 Use the next free number, write the date of the observation, and keep wrong turns: a later entry that corrects an
-earlier one is more useful than a silently edited old one. Community claims that were checked go into
+earlier one ("corrects E123") is more useful than a silently edited old one; the old entry then gets
+`- **Status:** corrected by E505`. `python3 -I scripts/evidence.py check` must pass (it also tells you to refresh
+the generated topic index `findings/evidence-index.md` with `python3 -I scripts/evidence.py index`). Community claims that were checked go into
 `findings/claims.md`.
 
 ## Where things are
 
-See [README → Repository layout](README.md#repository-layout). The working log of the project is
-[`findings/HANDOFF.md`](findings/HANDOFF.md); the protocol description is [`findings/spec.md`](findings/spec.md).
+See [README → Repository layout](README.md#repository-layout). The project's current state is
+[`findings/HANDOFF.md`](findings/HANDOFF.md) (the history in [`findings/log/`](findings/log/)); the protocol description is [`findings/spec.md`](findings/spec.md).
 
 ## License
 

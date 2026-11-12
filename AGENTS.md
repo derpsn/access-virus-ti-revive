@@ -48,11 +48,12 @@ The findings are free to use elsewhere; the maintainers would be happy about a m
 | Path | What it is |
 |---|---|
 | `findings/spec.md` | the USB/MIDI protocol of the Virus TI as far as it is known |
-| `findings/evidence.md` | numbered observations E001.. with source and confidence — search here first |
+| `findings/evidence.md` | numbered observations E001.., one section each, with source, confidence and hardware status — search here first; `evidence-index.md` lists them by topic (generated), `scripts/evidence.py check` must pass |
 | `findings/claims.md` | community claims and how they were checked |
 | `findings/design*.md` | design per platform (Windows, macOS bridge, Linux, MIDI ports) |
 | `findings/testing.md` | testing strategy: risk classes per path (`scripts/risk.py`), the automated hardware run (`scripts/hil.sh`), checklist rotation, mutation score |
-| `findings/HANDOFF.md` | the maintainers' working log: current state, open problems, next steps |
+| `findings/HANDOFF.md` | the current state only (at most 150 lines, rewritten, not appended): round, machines, who waits on whom, open tasks, next steps |
+| `findings/log/` | the maintainers' dated working log (newest month first), run IDs and details; older logs archived there |
 | `native/` | **the plug-in since 0.8.0**: "TI Revive Virus Control" (VST3, all platforms) and the Windows ASIO driver "TI Revive Virus Audio"; `native/docs/architecture.md`, `native/docs/protocol.md` (timing, stamp clock), `native/docs/formats.md` |
 | `src/broker/` | device access + broker: owns the Virus' USB interfaces, serves plug-in clients (WinUSB on Windows, libusb on macOS/Linux) |
 | `src/wrapper/` | the classic Windows plug-in of 0.7.x (emulation of the Access driver interface `vtiemu`, VST3 wrapper, ASIO wrapper); not shipped since 0.8.0, kept for reference |
@@ -63,7 +64,8 @@ The findings are free to use elsewhere; the maintainers would be happy about a m
 
 ## Before you change code
 
-1. Search `findings/evidence.md` and `findings/HANDOFF.md` for the symptom (error text, USB request, model name).
+1. Search `findings/evidence.md`, `findings/HANDOFF.md` and `findings/log/` for the symptom (error text, USB
+   request, model name); `python3 -I scripts/evidence.py list --topic <word>` / `--open` narrows the evidence.
    Many problems are known: e.g. another driver holding the interfaces (`LIBUSB_ERROR_ACCESS`, macOS
    `UsbExclusiveOwner = MIDIServer`, Windows `VIRUSUSB` service), wrong model detection (Snow vs TI, E115), part
    output not on USB ("connected but silent").

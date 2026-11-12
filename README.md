@@ -785,7 +785,7 @@ Branch pushes and pull requests do not build.
 | Path | Content |
 |---|---|
 | `native/` | the native plug-in "TI Revive Virus Control" (VST3, all platforms) and the ASIO driver "TI Revive Virus Audio": `native/README.md`, `native/docs/architecture.md` |
-| `findings/` | the research: `spec.md` (protocol), `evidence.md` (every observation with its source), `claims.md` (community claims checked), `design*.md`, `HANDOFF.md` (working log) |
+| `findings/` | the research: `spec.md` (protocol), `evidence.md` (every observation with its source), `claims.md` (community claims checked), `design*.md`, `HANDOFF.md` (current state), `log/` (working log) |
 | `src/broker/` | device access (WinUSB / libusb / named-pipe backends), broker (Windows and macOS; the macOS MIDI driver stand-in for the classic plug-in is opt-in), hardware test tools |
 | `src/wrapper/` | the classic Windows plug-in of 0.7.x (driver-interface emulation, VST3 wrapper, ASIO wrapper, Control Center launcher); not shipped since 0.8.0 |
 | `src/inf/` | Windows: the WinUSB driver package |

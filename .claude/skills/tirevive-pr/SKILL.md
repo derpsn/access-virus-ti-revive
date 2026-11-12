@@ -36,11 +36,16 @@ Record which builds you ran and their result. If a platform could not be built, 
 
 ## 4. Document
 
-- New knowledge about the device or the Access software: add a row to `findings/evidence.md` with the next free
-  number, in the table's columns `| ID | Date | Claim | Pointer | Method / command | Confidence |`: claim with
-  numbers and conditions, pointer to the capture/log/file, method or command used, confidence `HIGH` (directly
-  observed), `MED` (strong inference), `LOW` (plausible, needs confirmation) or `open`.
-  Correct earlier entries with a new entry instead of editing history away.
+- New knowledge about the device or the Access software: add a `### Ennn` section to `findings/evidence.md`
+  with the next free number (format at the top of that file): the claim with numbers and conditions, then the
+  fields Date, Pointer, Method, Confidence (`HIGH` directly observed, `MED` strong inference, `LOW` plausible,
+  `open`; per part when the parts differ) and Hardware (`yes - <model>, <OS>, <build>`, `no` for a fix that only
+  passed unit tests, `n/a` for static analysis). Correct earlier entries with a new entry ("corrects Ennn") and set
+  `Status: corrected by Ennn` on the old one instead of editing history away. Then
+  `python3 -I scripts/evidence.py index` and `python3 -I scripts/evidence.py check` (must pass).
+- Code change in `native/src` or the broker headers: `python3 scripts/risk.py` prints the mutation run for the
+  changed files; a surviving mutant gets a test. Line coverage must stay >= 95 % (`scripts/coverage.py --min 95`,
+  CI job `coverage`).
 - Changed user-visible behaviour: update `README.md` (installation, "Good to know", status table); notable features
   also go on the website (`scripts/site/build.py`, see the `tirevive-site-check` skill).
 
@@ -55,4 +60,5 @@ Keep the PR to one problem. Small, well-explained changes get merged fastest.
 ## Maintainers
 
 Fixes go onto the current round branch (`round-X.Y.Z`), not into one release each; hotfixes are the exception.
-Update and commit `findings/HANDOFF.md` after each step. Commit as `derpsn`.
+Keep `findings/HANDOFF.md` (current state, at most 150 lines) current in the same commit as each step; the details
+of what happened go to the dated log in `findings/log/`. Commit as `derpsn`.
