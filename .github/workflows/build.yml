@@ -219,6 +219,26 @@ jobs:
           path: native-linux
           if-no-files-found: error
 
+  coverage: # line coverage of native/src by vtitests must stay at 95 % or more (scripts/coverage.py, findings/testing.md)
+    # not in the release's needs: a red coverage job shows in the run (the release routine wants every job green),
+    # but it cannot hold back a hotfix on its own
+    runs-on: ubuntu-22.04
+    timeout-minutes: 25
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          submodules: recursive # native/external/vst3sdk (the CMake project configures it)
+      - name: Build dependencies # same list as native-linux, cached
+        uses: ./.github/actions/apt-install
+        with:
+          list: native-linux
+      - name: CMake
+        run: |
+          pip3 install --user "cmake>=3.25" # Ubuntu 22.04 ships 3.22
+          echo "$HOME/.local/bin" >> "$GITHUB_PATH"
+      - name: Coverage
+        run: python3 -I scripts/coverage.py --build cov-build --min 95 --show 15
+
   linux:
     needs: native-linux
     runs-on: ubuntu-24.04

@@ -141,12 +141,26 @@ for class B), and the round's own items stay targeted at the changed feature.
 Recount after every few rounds: add the round's FAILs to this table and move items in or out of the rotation in
 `risk.json`.
 
+## Line coverage (`scripts/coverage.py`)
+
+`python3 -I scripts/coverage.py --min 95` makes a separate coverage build (`build-cov/`, Debug, `--coverage -O0`),
+runs vtitests with an empty HOME (no Access files, no user state, `XDG_CONFIG_HOME`/`WINEPREFIX`/`VTI_ACCESS_DIR`
+unset) and merges gcov's line hits of vticore and vtitests per source line of `native/src` (header-only code runs
+from the test objects). It prints the total and the weakest files and exits 1 below the threshold. The CI job
+`coverage` in build.yml runs it on every CI build; it is not in the release's `needs` (a red job shows, it does not
+hold back a hotfix by itself). Never use build-native for it (the flags would stick in that build's cache).
+
+Measured 2026-11-12 on round-0.8.41 (4f72e64 + docs): **96.4 %** (6206 of 6435 lines, 87 files, 653 vtitests);
+weakest editor/manuals.h 88.4 %, device/outputdelay.h 90.0 %. Threshold 95 %. The website's "94 %" is the older
+vticore-only method of 2026-10-16, a different measure (site check decides whether to switch it).
+
 ## Mutation score (`scripts/mutation.py`)
 
-Line coverage (vticore 94 %) only says that code ran during the tests, not that a test would notice a wrong
+Line coverage only says that code ran during the tests, not that a test would notice a wrong
 result. `mutation.py` changes one operator at a time (`<` to `<=`, `&&` to `||`, `true` to `false`, `+ 1` to `- 1`)
 in a copy of the tree, rebuilds vtitests and runs it: a mutant the tests still pass is behaviour no test pins
-down. Run it now and then on the class B/C logic, not in CI (each mutant is a rebuild).
+down. Not in CI (each mutant is a rebuild): `scripts/risk.py` prints the command for the round's changed files in
+`native/src` and the broker headers; run it once per round on those, and now and then on the class B/C logic.
 
 ```
 git worktree add ../tirevive-mut HEAD          # a copy: an interrupted run must not leave a mutant behind
