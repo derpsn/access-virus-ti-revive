@@ -15,7 +15,9 @@ Last update: 2026-11-12 late.
   slip detector + automatic restart (`slip-restart`, on by default, E488), freeze alert page (E493), burst counter
   (E490), Mac pkg refuses macOS < 14.4, plug-in log on by default (`diag.off` switches it off), Rise Message 4 per
   fetched patch (E499/E502), LCD/sync page names each fetched patch, Windows broker error 433 = gone,
-  libusb reader stall handling (E503), Windows setup unplug step (E504).
+  libusb reader stall handling (E503), Windows setup unplug step (E504), and since rc3 (not in a build yet):
+  E497 fix d7a0d1f (user 2026-11-12: "put E497 in 0.8.41") - a re-sync ping sent during a marker scan pass keeps
+  its 5 s (device/markerscan.h, test_markerscan.cpp; the two race tests failed on the old logic first).
 - Branch `catalina-test` (worktree `../virus-ti-re-catalina`, e91ef17): untested x86_64 / macOS 10.15 build for
   #37 only; dev-mac run 43278510379 green, link posted on #37. Never merged into main.
 
@@ -51,12 +53,13 @@ message, only in a joint check with the user (by the dates above: #28 from 2026-
 - E503 libusb reader stall handling (5660a93): unit tests only; macOS broker not built locally.
 - Windows broker error 433 = device gone (5af74bd): mingw build + unit test only.
 - Windows setup unplug step (c6313b4, E504): the unplug path never exercised (no Virus on the Access driver).
+- E497 fix d7a0d1f: hardware check RUNNING (plan B settings, 60 x 70 s, re-sync every 10 s, local build, kept
+  broker; `work/latency/e497fix/run.meta`, script in the session scratchpad `e497-runs.sh`). Pass = markers equal
+  resyncs + 1 in every session (old code: 14 of 572 re-syncs missed). Result -> evidence E505 + reply to the sim.
 - `python3 -I scripts/evidence.py list --no-hardware` lists the evidence entries marked this way.
 
 ## Open decisions for the user
 
-- E497 missed re-sync markers (race in `scan_audio`, virusplugin.cpp ~:365/:421): fix in 0.8.41 or 0.8.42?
-  Fix idea: re-read `marker_from_` in the timeout (or a ping sequence number), log/re-ping a re-sync without marker.
 - Restart of the killed sim plan runs (A/B extra) only with the user's OK and streaming decoders (memory).
 
 ## To do before the final 0.8.41
@@ -85,6 +88,8 @@ message, only in a joint check with the user (by the dates above: #28 from 2026-
 
 ## NEXT
 
-1. Wait for the reporters; next joint issue check with the user.
-2. User: install rc3 on the Mac (double-click `Install test build.command`), then Mac checks if wanted.
-3. Then the "To do before the final 0.8.41" list.
+1. E497 hardware run done -> count markers vs re-syncs, write E505 (Hardware field), tell virus-ti-sim-47 (C3),
+   push round-0.8.41. Windows/macOS builds of the fix come with the next CI run.
+2. Wait for the reporters; next joint issue check with the user.
+3. User: install rc3 on the Mac (double-click `Install test build.command`), then Mac checks if wanted.
+4. Then the "To do before the final 0.8.41" list.
