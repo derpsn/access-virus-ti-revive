@@ -19,7 +19,7 @@
 	<key>CFBundleVersion</key>
 	<string>@TIREVIVE_APP_VERSION@</string>
 	<key>LSMinimumSystemVersion</key>
-	<string>11.0</string>
+	<string>@TIREVIVE_APP_MIN_MACOS@</string>
 	<key>NSHighResolutionCapable</key>
 	<true/>
 	<key>NSPrincipalClass</key>
