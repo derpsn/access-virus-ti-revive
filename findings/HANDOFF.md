@@ -5,7 +5,7 @@ NEXT. At most 150 lines; the Stop hook (`.claude/hooks/handoff-check.sh`) refuse
 how goes into the dated log [`log/2026-11.md`](log/2026-11.md) (newest first); older logs are in [`log/`](log/).
 Device/protocol knowledge goes into [`evidence.md`](evidence.md). Update this file in the same commit as the work._
 
-Last update: 2026-11-12 late.
+Last update: 2026-11-12 night (end of the day; user: "stop the test and we continue tomorrow").
 
 ## Round
 
@@ -53,9 +53,11 @@ message, only in a joint check with the user (by the dates above: #28 from 2026-
 - E503 libusb reader stall handling (5660a93): unit tests only; macOS broker not built locally.
 - Windows broker error 433 = device gone (5af74bd): mingw build + unit test only.
 - Windows setup unplug step (c6313b4, E504): the unplug path never exercised (no Virus on the Access driver).
-- E497 fix d7a0d1f: hardware check RUNNING (plan B settings, 60 x 70 s, re-sync every 10 s, local build, kept
-  broker; `work/latency/e497fix/run.meta`, script in the session scratchpad `e497-runs.sh`). Pass = markers equal
-  resyncs + 1 in every session (old code: 14 of 572 re-syncs missed). Result -> evidence E505 + reply to the sim.
+- E497 fix d7a0d1f: hardware check STOPPED by the user after 1 of 60 sessions (B1: 4 pings, 4 markers, 0 missed;
+  B2 interrupted 20:17 UTC, no result) = no evidence yet. To restart: a copy of `work/latency/q-runs.sh` with
+  `plugin=` the local build (`build-native/VST3/Release/TI Revive Virus Control.vst3`, rebuilt from d7a0d1f),
+  `out=$repo/work/latency/e497fix2`, the dumpcap line replaced by `:`; run `B 60` (~75 min, Virus on Linux USB).
+  Pass = markers == resyncs + 1 in every session (old code: 14 of 572 re-syncs missed, ~6 expected in 60).
 - `python3 -I scripts/evidence.py list --no-hardware` lists the evidence entries marked this way.
 
 ## Open decisions for the user
@@ -88,8 +90,9 @@ message, only in a joint check with the user (by the dates above: #28 from 2026-
 
 ## NEXT
 
-1. E497 hardware run done -> count markers vs re-syncs, write E505 (Hardware field), tell virus-ti-sim-47 (C3),
-   push round-0.8.41. Windows/macOS builds of the fix come with the next CI run.
+1. Tomorrow: restart the E497 hardware run (above), then write E505 (Hardware field) and send the count to
+   virus-ti-sim-47 (it waits for C3; it read the fix and found no hole). Windows/macOS builds of the fix come
+   with the next CI run.
 2. Wait for the reporters; next joint issue check with the user.
 3. User: install rc3 on the Mac (double-click `Install test build.command`), then Mac checks if wanted.
 4. Then the "To do before the final 0.8.41" list.
