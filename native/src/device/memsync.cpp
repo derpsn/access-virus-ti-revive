@@ -187,11 +187,13 @@ int MemorySync::sync_bank(int bank, Bank &cache, const std::function<void(int, b
             if (before_request && !before_request())
                 return -2;
             // a dump of the right size that does not match the bank info: ask again before giving up, bounded. A wrong
-            // dump is never cached.
+            // dump is never cached. Each request after Rise Message 4 like the original's start-up sync (its capture:
+            // 74 01 7E 04 + 30 bank program per try), so the Virus shows its syncing message, not "Configuring"
             Dump d;
             for (int t = 0; t < 3; t++) {
                 if (t > 0 && before_request && !before_request())
                     return -2;
+                send_({0xF0, 0x00, 0x20, 0x33, 0x01, (uint8_t)dev_, 0x74, 0x01, 0x7E, 0x04, 0xF7});
                 d = single(bank, p);
                 if (d.empty() || RemoteDevice::single_fingerprint(d) == info[p])
                     break;

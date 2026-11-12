@@ -6,6 +6,8 @@
 #include <stdlib.h>
 #include <string.h>
 #include "writeretry.h" // all platforms: vti_write (Linux and macOS)
+#include "vtireaderr.h" // when a reader clears a stall, waits, or gives up (#37)
+#include <unistd.h>     // usleep
 
 #ifdef __linux__
 #include "resetguard.h"
@@ -104,19 +106,33 @@ static void *reader(void *p)
     free(p);
     vti *v = a.v;
     uint8_t ep = v->rd_ep[a.i], buf[64];
+    int fails = 0, last = 0; // errors in a row and the last one (vtireaderr.h)
     while (!v->stop) {
         int got = 0, r = xfer(v, ep, buf, sizeof buf, &got, 200);
+        if (r != LIBUSB_ERROR_TIMEOUT && r != 0) {
+            fails++;
+            last = r;
+            if (vti_read_error_logged(fails))
+                vti_log("vti: read ep %02x: %s\n", ep, libusb_error_name(r));
+            if (vti_libusb_read_dead(r, fails)) { // gone or broken: the broker closes it and opens the Virus again
+                vti_log("vti: read ep %02x: %d errors in a row (last %s), giving up on the device\n", ep, fails,
+                        libusb_error_name(r));
+                v->dead = 1;
+                break;
+            }
+            if (vti_libusb_stalled(r)) // the standard CLEAR_FEATURE(ENDPOINT_HALT), as WinUsb_ResetPipe on Windows
+                libusb_clear_halt(v->h, ep);
+            usleep(10000); // never a tight loop on errors (#37: ~25000 a second, 300 MB of log)
+            continue;
+        }
+        if (fails > 3)
+            vti_log("vti: read ep %02x: %d errors in a row (last %s), then read again\n", ep, fails,
+                    libusb_error_name(last));
+        fails = 0;
         if (r == 0 && got > 0 && ep == VTI_EP_MI03_IN && v->bulk[ep & 15] && !(got = drop_idle(v, buf, got)))
             continue;
         if (r == 0 && got > 0)
             v->cb(v->user, ep, buf, got);
-        else if (r != LIBUSB_ERROR_TIMEOUT && r != 0) {
-            vti_log("vti: read ep %02x: %s\n", ep, libusb_error_name(r));
-            if (r == LIBUSB_ERROR_NO_DEVICE) {
-                v->dead = 1;
-                break;
-            }
-        }
     }
     return NULL;
 }
@@ -242,6 +258,8 @@ int vti_write(vti *v, uint8_t ep, const uint8_t *data, int len)
         vti_log("vti: write ep %02x: %d timeout(s), %s\n", ep, timeouts, r ? "gave up" : "then accepted");
     if (r && c.err)
         vti_log("vti: write ep %02x: %s\n", ep, libusb_error_name(c.err));
+    if (r && vti_libusb_stalled(c.err)) // a stalled OUT endpoint refuses every later write until its halt is cleared
+        libusb_clear_halt(v->h, ep);
     return r;
 }
 

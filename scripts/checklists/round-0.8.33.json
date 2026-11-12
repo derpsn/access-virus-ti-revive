@@ -91,7 +91,7 @@
      "title": "Automated hardware run (hil-win): cold start, reopen x2, export, broker kill",
      "steps": [
       "Unzip the hil kit, run <code>hil-win.ps1</code> (about 5 minutes).",
-      "Copy the results folder it prints to Linux (like the last time, e.g. into /home/datoml/windows_tests)."
+      "Copy the results folder it prints to Linux (like the last time, e.g. into ~/windows_tests)."
      ],
      "expect": "'done, nothing failed'; Claude grades the folder. Covers the core items cold start, reopen and export (automated since this round, findings/testing.md)."
     },

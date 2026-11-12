@@ -33,8 +33,9 @@ Revive version, sample rate and buffer size, USB connection (direct / hub).
    with the Virus connected and keep `TI-Revive-usbinfo.txt`. macOS: `ioreg -p IOUSB -l -w0 | grep -i -A30 virus`.
    Linux: `lsusb -d 133e: -v`. This step changes nothing on the Virus.
 2. **Install** as the README describes for the platform (Access files from the user's own installer).
-3. **Turn on the plug-in log:** create an empty file `diag.on` in the plug-in folder (Windows
-   `%LOCALAPPDATA%\virus-ti-native`, macOS `~/Library/Application Support/virus-ti-native`, Linux
+3. **Check the plug-in log is on:** on by default since 0.8.41 (*? > Detailed Log* is ticked; the Control Center's
+   Options page shows "Plug-in log"). With 0.8.40 or older create an empty file `diag.on` in the plug-in folder
+   (Windows `%LOCALAPPDATA%\virus-ti-native`, macOS `~/Library/Application Support/virus-ti-native`, Linux
    `~/.local/share/virus-ti-native`).
 4. **Plug-in loads and connects:** the DAW lists "TI Revive Virus Control", the editor opens, the LCD shows no
    "Virus disconnected", the first bank sync finishes (progress page).

@@ -42,12 +42,21 @@ TEST(diag_switch_and_paths)
     Home h("vtester");
     CHECK(plugin_dir() == (h.dir / ".local/share/virus-ti-native").string());
     CHECK(plugin_log_path() == (h.dir / ".local/share/virus-ti-native/diag.log").string());
-    CHECK(!plugin_log_enabled());
+    // on by default since 0.8.41 (user 2026-11-10: reports without the log kept coming); diag.off switches it off
+    CHECK(plugin_log_enabled());
     std::string err;
-    CHECK(set_plugin_log(true, err) && plugin_log_enabled()); // creates the folder too
-    CHECK(set_plugin_log(true, err));                         // again: harmless
+    CHECK(set_plugin_log(false, err) && !plugin_log_enabled()); // creates the folder too
+    CHECK(fs::exists(h.dir / ".local/share/virus-ti-native/diag.off"));
+    CHECK(set_plugin_log(false, err)); // again: harmless
+    CHECK(set_plugin_log(true, err) && plugin_log_enabled());
+    CHECK(!fs::exists(h.dir / ".local/share/virus-ti-native/diag.off"));
+    CHECK(set_plugin_log(true, err)); // already on
+    // an old diag.on (the switch before 0.8.41) changes nothing, and switching off removes it
+    std::ofstream(h.dir / ".local/share/virus-ti-native/diag.on").put('\n');
+    CHECK(plugin_log_enabled());
     CHECK(set_plugin_log(false, err) && !plugin_log_enabled());
-    CHECK(set_plugin_log(false, err)); // already off
+    CHECK(!fs::exists(h.dir / ".local/share/virus-ti-native/diag.on"));
+    CHECK(set_plugin_log(true, err));
     CHECK(broker_log_location().find("journalctl") != std::string::npos);
     (void)broker_log_tail(5); // the user journal: read-only, may be empty (CI)
 }
@@ -57,7 +66,11 @@ TEST(diag_plugin_options)
 {
     Home h("vtester");
     const auto &opts = plugin_options();
-    CHECK(opts.size() == 5);
+    CHECK(opts.size() == 6);
+    // plugin-log (0.8.41): the plug-in's log for bug reports, ON by default; diag.off switches it off, so the plug-in's
+    // own Options page can do it (the user is told on What's New and the welcome page)
+    CHECK(std::string(opts[5].name) == "plugin-log" && std::string(opts[5].file) == "diag.off");
+    CHECK(opts[5].default_on && plugin_option("plugin-log") == plugin_log_enabled());
     // low-latency (E496, 0.8.41): the experimental lower lead, OFF by default; low-latency.on switches it on
     CHECK(std::string(opts[4].name) == "low-latency" && std::string(opts[4].file) == "low-latency.on");
     CHECK(!opts[4].default_on);
@@ -129,11 +142,28 @@ TEST(diag_anonymize)
     }
 }
 
+// the log is on for everyone since 0.8.41, so it must not grow without end: over the limit diag.log becomes diag.log.1
+// (an older .1 is replaced), at most about two limits on disk
+TEST(diag_rotate_log)
+{
+    Home h("vtester");
+    fs::path log = h.dir / "diag.log", old = h.dir / "diag.log.1";
+    CHECK(!rotate_log(log.string(), 100)); // missing: nothing to do
+    std::ofstream(log) << std::string(100, 'a');
+    CHECK(!rotate_log(log.string(), 100) && fs::exists(log)); // at the limit: kept
+    std::ofstream(log, std::ios::app) << "b";
+    CHECK(rotate_log(log.string(), 100) && !fs::exists(log) && fs::file_size(old) == 101);
+    std::ofstream(log) << std::string(150, 'c');
+    CHECK(rotate_log(log.string(), 100) && fs::file_size(old) == 150); // the older .1 is replaced
+    CHECK(kPluginLogLimit >= 1000000 && kPluginLogLimit <= 8000000);
+}
+
 TEST(diag_collect_logs)
 {
     Home h("vtester");
     std::string err;
     CHECK(set_plugin_log(true, err));
+    fs::create_directories(plugin_dir()); // "on" writes no file since 0.8.41; the plug-in makes its folder itself
     {
         std::ofstream o(plugin_log_path());
         o << "Virus TI native: cache " << h.dir.string() << "/x\n" << "Virus ready after 3.8 s\n";
@@ -146,6 +176,23 @@ TEST(diag_collect_logs)
     CHECK(all.find("Plug-in log ON") != std::string::npos && all.find("Virus ready after 3.8 s") != std::string::npos);
     CHECK(all.find(h.dir.string()) == std::string::npos && all.find("cache ~/x") != std::string::npos);
     CHECK(all.find("--- broker log") != std::string::npos);
+    // right after a rotation diag.log is short: the end of diag.log.1 comes first, so the report keeps its context
+    {
+        std::ofstream(plugin_log_path() + ".1") << "older line\n";
+        std::ofstream(plugin_log_path()) << "newer line\n";
+        CHECK(collect_logs(out.string(), "0.0.1", err));
+        std::ifstream g(out);
+        std::string r((std::istreambuf_iterator<char>(g)), std::istreambuf_iterator<char>());
+        const size_t a = r.find("older line"), b = r.find("newer line");
+        CHECK(a != std::string::npos && b != std::string::npos && a < b);
+    }
+    // switched off: the header says how to switch it on again
+    CHECK(set_plugin_log(false, err) && collect_logs(out.string(), "0.0.1", err));
+    {
+        std::ifstream g(out);
+        std::string r((std::istreambuf_iterator<char>(g)), std::istreambuf_iterator<char>());
+        CHECK(r.find("Plug-in log OFF (switch it on on the Options page") != std::string::npos);
+    }
     // a folder as the target: cannot be written
     err.clear();
     CHECK(!collect_logs(h.dir.string(), "0.0.1", err) && !err.empty());

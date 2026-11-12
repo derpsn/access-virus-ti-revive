@@ -72,3 +72,40 @@ TEST(startprogress_sync_page_total)
     s.total = 0; // never divides by zero
     CHECK(s.progress(10, true) == 126);
 }
+
+// the LCD while patches come from the Virus names the patch just fetched (user 2026-11-11: the Virus display shows
+// which entry is synced, the plug-in should too); a patch only checked (current cache) or a blank name: no name
+TEST(startprogress_sync_lcd_names_the_fetched_patch)
+{
+    CHECK(sync_lcd_title("Synchronizing RAM A", "PrismPadRD") == "Synchronizing RAM A: PrismPadRD");
+    CHECK(sync_lcd_title("Downloading RAM B", "Pro1-FX XM") == "Downloading RAM B: Pro1-FX XM");
+    CHECK(sync_lcd_title("Synchronizing RAM A", "") == "Synchronizing RAM A");
+    CHECK(sync_lcd_title("Synchronizing RAM A", "   ") == "Synchronizing RAM A");
+}
+
+// the original hides the LCD texts while its sync page shows (skin condition "NOT Display Recall or Sync Progress"),
+// so the patch just fetched goes on the page itself, under the progress bar, in the page's capitals
+TEST(startprogress_sync_page_names_the_fetched_patch)
+{
+    CHECK(sync_page_item("RAM A", 85, "PrismPadRD") == "RAM A 85 / 128: PRISMPADRD");
+    CHECK(sync_page_item("ROM Z", 1, "Pro1-FX XM") == "ROM Z 1 / 128: PRO1-FX XM");
+    CHECK(sync_page_item("RAM B", 3, "  ") == "RAM B 3 / 128");
+}
+
+// the time left on the sync page counts only what is sure to be fetched (empty slots of the RAM banks still to come,
+// plus user ROM programs), not 512: with only RAM A missing it said "about 9 min" for a 2-minute sync (2026-11-11)
+TEST(startprogress_sync_eta_counts_only_what_is_missing)
+{
+    std::array<std::vector<bool>, 4> empty;
+    for (auto &e : empty)
+        e.assign(128, false);
+    std::fill(empty[0].begin(), empty[0].end(), true); // RAM A without a cache file
+    empty[2][5] = true;                                // one gap in RAM C
+    CHECK_EQ(sync_remaining(empty, 0, 0, 0), 127 + 1);  // after RAM A #1: 127 of A, the gap in C
+    CHECK_EQ(sync_remaining(empty, 0, 127, 0), 1);
+    CHECK_EQ(sync_remaining(empty, 2, 5, 0), 0);
+    CHECK_EQ(sync_remaining(empty, 1, 10, 128), 1 + 128); // user ROM programs come after RAM D
+    CHECK_EQ(sync_eta_s(120, 0, 0), 124);                 // nothing measured yet: about 1.03 s each
+    CHECK_EQ(sync_eta_s(60, 20000, 20), 60);              // measured: 1 s each
+    CHECK_EQ(sync_eta_s(0, 20000, 20), 0);
+}

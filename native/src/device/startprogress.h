@@ -7,6 +7,11 @@
 // 2026-10-19: "only show the syncing if it really happens").
 #pragma once
 
+#include <array>
+#include <cstdint>
+#include <string>
+#include <vector>
+
 namespace vti {
 
 // RecallProgress from the queued start-up messages and state; the largest count seen is the total (a project's
@@ -48,5 +53,45 @@ inline bool sync_page_at_start(bool ram_bank_missing, int rom_missing) { return 
 // how the bank sync ended, for the log: it stops at the first bank that fails (-1, a request without an answer) or
 // is cancelled (-2, closed while syncing); "bank sync done" after such a stop read like a full sync (E289)
 inline const char *sync_end(int result) { return result == -1 ? "failed" : result == -2 ? "stopped" : "done"; }
+
+// the LCD's first line while patches come from the Virus: the patch just fetched after the bank (user 2026-11-11: the
+// Virus display shows which entry is synced, the plug-in shows it too); only checked or blank: the bank alone
+inline std::string sync_lcd_title(const std::string &what, const std::string &name)
+{
+    return name.find_first_not_of(' ') == std::string::npos ? what : what + ": " + name;
+}
+
+// the sync page's line under the progress bar: bank, position and the patch just fetched, in the page's capitals (the
+// original hides the LCD texts while that page shows, so the LCD cannot carry the name there)
+inline std::string sync_page_item(const std::string &bank, int done, const std::string &name)
+{
+    std::string t = bank + " " + std::to_string(done) + " / 128";
+    if (name.find_first_not_of(' ') != std::string::npos) {
+        t += ": ";
+        for (char c : name)
+            t += (char)(c >= 'a' && c <= 'z' ? c - 32 : c);
+    }
+    return t;
+}
+
+// what the sync is sure to fetch after RAM bank `bank` (0..3) program `p`: the empty slots of that bank after p and of
+// the banks after it (no cache file = all 128), plus the user ROM programs read after RAM D. Changed patches of a
+// cached bank are not known before its bank info, they are usually few.
+inline int sync_remaining(const std::array<std::vector<bool>, 4> &empty, int bank, int p, int rom_missing)
+{
+    int n = rom_missing;
+    for (int b = bank; b < 4; b++)
+        for (size_t i = b == bank ? (size_t)p + 1 : 0; i < empty[b].size(); i++)
+            n += empty[b][i];
+    return n;
+}
+
+// seconds for `remaining` fetches at the pace so far (worked_ms over `fetched`), about 1.03 s each until 8 are
+// measured (E037: ~1 s per program, device-side)
+inline int sync_eta_s(int remaining, int64_t worked_ms, int fetched)
+{
+    const int64_t per = fetched >= 8 && worked_ms > 0 ? worked_ms / fetched : 1030;
+    return (int)((remaining * per + 500) / 1000);
+}
 
 } // namespace vti

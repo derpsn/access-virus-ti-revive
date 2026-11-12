@@ -9,6 +9,7 @@
 #include "access/accessfiles.h"
 #include "access/firmware.h"
 #include "access/library.h"
+#include "cc/controlcenter.h"
 #include "cc/diag.h"
 #include "base/source/fstreamer.h"
 #include "device/closeseq.h"
@@ -1120,8 +1121,14 @@ tresult PLUGIN_API VirusPlugin::initialize(FUnknown *context)
     out_->lead = lead();
     out_->stamp_floor = !timing_classic_;
     out_->live_notes = live_notes_;
-    if (diag_enabled())
+    if (diag_enabled()) {
+        // the folder first: on a fresh install it came only with the bank cache, ~7 s in, and every line before
+        // (library scan, ready probe, marker) was lost (win10 VM, rc1, 2026-11-11)
+        std::error_code ec;
+        std::filesystem::create_directories(vti::u8path(own_cache_dir()), ec);
+        vti::cc::rotate_log(own_cache_dir() + "/../diag.log", vti::cc::kPluginLogLimit); // on for everyone: kept small
         out_->set_diag_path(own_cache_dir() + "/../diag.log");
+    }
     if (live_notes_) // after set_diag_path, or the line never reaches diag.log
         out_->log("Virus TI native: live notes on (default; live-notes.off switches it off): notes flagged as played go without the lead\n");
     out_->log("Virus TI native: timing: lead %d frames, safety net %s%s\n", timing_a_, timing_classic_ ? "off" : "on",
@@ -1608,10 +1615,8 @@ bool VirusPlugin::has_history() const
 bool VirusPlugin::diag_enabled()
 {
     static int on = -1;
-    if (on < 0) {
-        std::error_code ec;
-        on = std::filesystem::exists(vti::u8path(own_cache_dir() + "/../diag.on"), ec) ? 1 : 0;
-    }
+    if (on < 0)
+        on = vti::cc::plugin_log_enabled() ? 1 : 0; // on unless diag.off (since 0.8.41, the Options page switch)
     return on == 1;
 }
 
@@ -1637,6 +1642,9 @@ void VirusPlugin::diag_report()
     int64_t due = diag_next_ms_.load();
     if (!diag_enabled() || now < due || !diag_next_ms_.compare_exchange_strong(due, now + 10000))
         return;
+    // a long session (the DAW open for days) must not grow the log without end either; another instance may rotate
+    // the same file meanwhile, then at most a few lines go to the old file
+    vti::cc::rotate_log(own_cache_dir() + "/../diag.log", vti::cc::kPluginLogLimit);
     note_probe_flush();
     long long drops = -1; // the editor's timer or the worker: read under the audio gate (audiogate.h)
     if (out_)
@@ -3366,22 +3374,26 @@ void VirusPlugin::sync_banks()
     const int64_t sync_t0 = now_ms();
     // like the original: its page "Syncing memory with Virus" (VirusControl/InitialSyncProgress 0..126) covers the
     // editor while banks are fetched; notes still play. Only when a patch is really fetched (startprogress.h): the
-    // check of a current cache shows nothing. The original keeps "synchronising" on the Virus display while it
-    // syncs (74 01 7E 07 about once a second) - also only then
+    // check of a current cache shows nothing. The Virus display: MemorySync sends Rise Message 7 ("Configuring")
+    // before each bank info and Rise Message 4 (syncing) before each fetched patch, as the original's capture shows;
+    // nothing in between (a once-a-second 7E 07 kept "Configuring" up during the whole sync)
     SyncPage page;
     int result = 0; // the last bank's sync_bank result: < 0 = the sync stopped there
     page.total = 512 + rom_missing; // user ROM banks are read after RAM D (the page shows once their reading starts)
     if (sync_page_at_start(sync_expected, rom_missing)) // a read is certain: the page follows "Starting up" directly
         page.expect();
-    std::atomic<bool> rise{true}, fetching{page.shown()};
-    std::thread riser([this, &rise, &fetching] {
-        while (rise) {
-            if (fetching)
-                out_->send({0xF0, 0x00, 0x20, 0x33, 0x01, 0x10, 0x74, 0x01, 0x7E, 0x07, 0xF7});
-            for (int i = 0; i < 10 && rise; i++)
-                std::this_thread::sleep_for(std::chrono::milliseconds(100));
+    std::array<std::vector<bool>, 4> empty; // slots sure to be fetched, for the time left on the sync page
+    {
+        std::lock_guard<std::mutex> lk(banks_mu_);
+        for (int b = 0; b < 4; b++) {
+            empty[b].assign(128, true);
+            if (auto it = banks_.find(b); it != banks_.end())
+                for (size_t p = 0; p < 128 && p < it->second.size(); p++)
+                    empty[b][p] = it->second[p].empty();
         }
-    });
+    }
+    int fetched_total = 0;
+    sync_eta_s_ = sync_eta_s(sync_remaining(empty, 0, -1, rom_missing), 0, 0);
     for (int b = 0; b < 4; b++) {
         Bank bank;
         {
@@ -3391,19 +3403,22 @@ void VirusPlugin::sync_banks()
                 for (size_t p = 0; p < 128 && p < it->second.size(); p++)
                     bank[p] = it->second[p];
         }
-        int n = sync_->sync_bank(b + 1, bank, [this, b, &bank, sync_t0, &page, &fetching, rom_missing](int p, bool fetched) {
+        int n = sync_->sync_bank(b + 1, bank, [this, b, &bank, sync_t0, &page, rom_missing, &empty, &fetched_total](
+                                                  int p, bool fetched) {
             set_sync_progress(page.progress(b * 128 + p + 1, fetched));
-            fetching = page.shown();
             // remaining time at the pace so far (pauses for notes not counted): the original's start page promises
-            // "a couple of seconds", but a first sync takes 8-9 minutes (issue #5)
-            int done = b * 128 + p + 1;
-            int64_t worked = now_ms() - sync_t0 - sync_paused_ms_;
-            if (done >= 8 && worked > 0)
-                sync_eta_s_ = (int)((512 - done) * worked / done / 1000) + rom_missing; // ROM: one a second
+            // "a couple of seconds", but a first sync takes 8-9 minutes (issue #5); only what is sure to be fetched
+            // counts, not all 512 (one missing bank said "about 9 min" for 2, 2026-11-11)
+            fetched_total += fetched;
+            sync_eta_s_ = sync_eta_s(sync_remaining(empty, b, p, rom_missing), now_ms() - sync_t0 - sync_paused_ms_,
+                                     fetched_total);
 
             if (page.shown()) {
                 std::lock_guard<std::mutex> lk(values_mu_); // progress on the LCD
-                lcd_param_ = "Synchronizing " + bank_name(b);
+                // the patch just fetched, as the Virus display shows its entry (Rise Message 4)
+                lcd_param_ = sync_lcd_title("Synchronizing " + bank_name(b), fetched ? cc::patch_name(bank[p]) : "");
+                if (fetched)
+                    sync_item_ = sync_page_item(bank_name(b), p + 1, cc::patch_name(bank[p]));
                 lcd_value_ = std::to_string(p + 1) + " / 128";
                 lcd_part_.clear();
                 lcd_orig_.clear();
@@ -3434,10 +3449,7 @@ void VirusPlugin::sync_banks()
         ui_dirty_ = true;
     }
     // user ROM banks (E381/E382): their programs not cached yet, read like the original - no bank info, each request
-    // after its own display message 74 01 7E 04 (read_missing); the riser's 7E 07 ends first, so none comes between a
-    // 7E 04 and its request (the capture has only 7E 04 while ROM A is read)
-    rise = false;
-    riser.join();
+    // after its own display message 74 01 7E 04 (read_missing; the capture has only 7E 04 while ROM A is read)
     int rom_done = 0;
     if (result >= 0 && rom_missing > 0 && !user_rom_dir_.empty()) {
         std::error_code ec;
@@ -3460,7 +3472,8 @@ void VirusPlugin::sync_banks()
             sync_eta_s_ = rom_missing - rom_done; // one program a second (E382)
             {
                 std::lock_guard<std::mutex> lk(values_mu_);
-                lcd_param_ = "Synchronizing " + name;
+                lcd_param_ = sync_lcd_title("Synchronizing " + name, cc::patch_name(bank[p]));
+                sync_item_ = sync_page_item(name, p + 1, cc::patch_name(bank[p]));
                 lcd_value_ = std::to_string(p + 1) + " / 128";
                 lcd_part_.clear();
                 lcd_orig_.clear();
@@ -3481,6 +3494,10 @@ void VirusPlugin::sync_banks()
     out_->send({0xF0, 0x00, 0x20, 0x33, 0x01, 0x10, 0x74, 0x00, 0x29, 0x01, 0xF7});
     syncing_ = false;
     sync_eta_s_ = -1;
+    {
+        std::lock_guard<std::mutex> lk(values_mu_);
+        sync_item_.clear();
+    }
     set_sync_progress(127);
     out_->log("Virus TI native: bank sync %s in %.1f s\n", sync_end(result), (now_ms() - sync_t0) / 1000.0);
     if (page.shown()) {
@@ -4004,7 +4021,7 @@ bool VirusPlugin::download_bank(int bank)
                 std::lock_guard<std::mutex> lk(banks_mu_);
                 banks_[bank][p] = cache[p];
             }
-            lcd(what, download_progress(p + 1, now_ms() - t0));
+            lcd(sync_lcd_title(what, cc::patch_name(cache[p])), download_progress(p + 1, now_ms() - t0));
             ui_dirty_ = true;
         }, &stop_warm_);
         lcd(n == 128 ? "Download done" : "Download stopped", "");

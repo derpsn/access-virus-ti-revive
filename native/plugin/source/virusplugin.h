@@ -194,7 +194,7 @@ public:
     std::atomic<int64_t> sc_frames{0}, sc_refills{0}, sc_yields{0}, sc_corr_ppm{0}, sc_queued_min{INT64_MAX},
         sc_queued_max{INT64_MIN};
     std::atomic<int> sc_in_peak{0}; // the highest sidechain input sample (x 32767) since the last stats line
-    // R5 lines also go to this file (diag.on, field tests); set once after construction, read by the worker
+    // R5 lines also go to this file (the plug-in log, on unless diag.off); set once after construction, read by the worker
     void set_diag_path(const std::string &p)
     {
         snprintf(diag_path_, sizeof diag_path_, "%s", p.c_str());
@@ -543,8 +543,14 @@ public:
     bool sync_paused() const { return syncing_.load() && sync_paused_.load(); } // the sync page's note
     // estimated seconds the bank sync still needs (-1: unknown or done); a first sync reads 512 programs at ~1 s each
     int sync_eta() const { return syncing_.load() ? sync_eta_s_.load() : -1; }
+    // the sync page's line with the patch just fetched ("RAM A 85 / 128: NAME"); empty: nothing fetched yet or done
+    std::string sync_item()
+    {
+        std::lock_guard<std::mutex> lk(values_mu_);
+        return syncing_.load() ? sync_item_ : std::string();
+    }
     bool lcd_changed() { return lcd_dirty_.exchange(false); } // only the LCD texts changed
-    // field diagnostics (file ~/.local/share/virus-ti-native/diag.on enables a log every 10 s in diag.log)
+    // field diagnostics (a log line every 10 s in diag.log; on unless diag.off, since 0.8.41)
     struct Diag {
         std::atomic<long> full_draws{0}, part_draws{0}, draw_us{0}, dirty_ticks{0}, process_calls{0};
         std::atomic<long> process_max_us{0}, process_over{0}; // over = longer than the block's real time
@@ -553,7 +559,7 @@ public:
     std::atomic<int64_t> diag_next_ms_{0}; // diag_report: when the next line is due
     bool diag_enabled();
     void diag_report(); // editor timer and device worker
-    // what the host really sends for a note (noteprobe.on next to diag.on, off by default, #30)
+    // what the host really sends for a note (noteprobe.on in the plug-in folder, with the log on, off by default, #30)
     NoteProbe note_probe_;
     bool note_probe_on_ = false;
     std::mutex note_probe_mu_; // diag_report and terminate may both drain
@@ -669,6 +675,7 @@ private:
     std::vector<std::string> lock_sections_; // editordevice.xml's sections (initialize)
     std::vector<std::string> locked_children(int part); // the parameters part's locked sections keep
     std::string lcd_param_, lcd_value_, lcd_part_, lcd_orig_; // the last edited parameter for the LCD
+    std::string sync_item_; // see sync_item(), under values_mu_
     LcdHover lcd_hover_; // values_mu_
     bool lcd_hint_on_ = false; // values_mu_: lcd_hint's text is shown, lcd_saved_ holds what it covered
     LcdFields lcd_saved_;
@@ -753,7 +760,7 @@ private:
     // host gets it exactly latency_frames() late in every session (reported as the plug-in latency)
     // A: time for a stamped event to reach the Virus. Since 0.8.35 3072 everywhere, like the original (E364); before,
     // Linux/macOS used 1024 (exact down to 768 in REAPER/Ableton), which Logic's uneven blocks overran (E363).
-    // timing-classic.on next to diag.on gives the old A and no safety net, to compare; VTI_NATIVE_A overrides
+    // timing-classic.on in the plug-in folder gives the old A and no safety net, to compare; VTI_NATIVE_A overrides
     int timing_a_ = 3072; // set in initialize()
     bool timing_classic_ = false;
     bool low_latency_ = false; // Control Center option low-latency: the experimental lead per block (E496)

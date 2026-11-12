@@ -6,14 +6,21 @@
 
 namespace vti::cc {
 
-// The plug-in's folder (diag.on / diag.log live there): Windows %LOCALAPPDATA%\virus-ti-native, macOS
+// The plug-in's folder (diag.off / diag.log live there): Windows %LOCALAPPDATA%\virus-ti-native, macOS
 // ~/Library/Application Support/virus-ti-native, Linux ~/.local/share/virus-ti-native.
 std::string plugin_dir();
 std::string plugin_log_path();
 
-// The plug-in writes diag.log while diag.on exists (checked when the plug-in starts).
+// The plug-in writes diag.log unless diag.off exists (checked when the plug-in starts). On by default since 0.8.41
+// (before, diag.on switched it on; such a file changes nothing now and is removed when the log is switched off).
+// The same switch as the option "plugin-log" below.
 bool plugin_log_enabled();
 bool set_plugin_log(bool on, std::string &error);
+
+// diag.log is on for everyone, so it is kept small: over kPluginLogLimit bytes it becomes diag.log.1 (an older .1 is
+// replaced). True when it rotated. The plug-in checks at start and every 10 s.
+constexpr unsigned long long kPluginLogLimit = 4ull * 1024 * 1024;
+bool rotate_log(const std::string &path, unsigned long long limit);
 
 // The options of nerd mode (A/B tests against the original): a flag file each in plugin_dir(), read when a plug-in
 // instance starts. `name` is what tirevive-cc takes, `label` what the Control Center shows. An option that is on by

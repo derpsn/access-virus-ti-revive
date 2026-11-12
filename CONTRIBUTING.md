@@ -34,14 +34,14 @@ platform. They are what makes a quick answer possible:
 
 | Platform | Logs |
 |---|---|
-| all (plug-in "TI Revive Virus Control") | create an empty file `diag.on` in the plug-in's folder (Windows `%LOCALAPPDATA%\virus-ti-native`, macOS `~/Library/Application Support/virus-ti-native`, Linux `~/.local/share/virus-ti-native`), reproduce the problem, attach `diag.log` from the same folder |
+| all (plug-in "TI Revive Virus Control") | the plug-in log is on by default since 0.8.41 (with 0.8.40 or older create an empty file `diag.on` first): reproduce the problem, then *Save logs...* in the Control Center's Nerd mode, or attach `diag.log` from the plug-in's folder (Windows `%LOCALAPPDATA%\virus-ti-native`, macOS `~/Library/Application Support/virus-ti-native`, Linux `~/.local/share/virus-ti-native`) |
 | Windows | run [`scripts/tirevive-usbinfo.ps1`](scripts/tirevive-usbinfo.ps1) (right-click → *Run with PowerShell*, or `powershell -ExecutionPolicy Bypass -File tirevive-usbinfo.ps1`) with the Virus connected; attach `TI-Revive-usbinfo.txt` from your Desktop. It also lists the newest `vtiemu-*.log`; `%TEMP%\vtibroker.log` helps too |
 | macOS | `/tmp/tirevive-bridge.log`, `/tmp/tirevive-helper.log`, `/tmp/tirevive-libvirususb.log`, `/tmp/tirevive-vtibroker.log`; for "not connected": `ioreg -p IOUSB -l -w0 \| grep -i -A30 virus` and `ls "/Library/Audio/MIDI Drivers" "/Library/Audio/Plug-Ins/HAL"` |
 | Linux | `journalctl --user -u tirevive-broker -b` |
 
 Please also tell us: what you did, what you expected, what happened, and whether it worked before.
 
-If we ask you for something (a log, a test, an answer) and do not hear back for more than 14 days, we close the issue
+If we ask you for something (a log, a test, an answer) and do not hear back for a week, we close the issue
 to keep the list manageable. That is no judgement on the report: leave a comment at any time and we reopen it.
 
 ## Pull requests

@@ -133,6 +133,13 @@ h2 { font-size: clamp(1.5rem, 2.8vw, 1.75rem); line-height: 1.2; margin: 0 0 0.7
 .os li + li { margin-top: 0.5rem; }
 .sum { display: block; margin-top: 0.75rem; font: var(--xs)/1.5 var(--mono); color: var(--soft); word-break: break-all; }
 .downloads { margin: 1.25rem 0 0; }
+/* the box for testers while a pre-release is out (build.py preview_box) */
+.preview { margin-top: 1rem; background: var(--surface); border: 1px solid var(--line); border-radius: 12px;
+  padding: 1.5rem; font-size: var(--prose); }
+.preview h3 { margin: 0 0 0.5rem; font-size: 1.125rem; }
+.preview time { font-weight: 400; color: var(--soft); font-size: var(--sm); margin-left: 0.5rem; white-space: nowrap; }
+.preview p { margin: 0 0 1rem; max-width: 60rem; }
+.preview .actions { margin: 0; }
 .needs { margin-top: 2.5rem; display: grid; grid-template-columns: repeat(2, 1fr); gap: 0 2.5rem; }
 .needs div { display: grid; grid-template-columns: 7.5rem 1fr; gap: 1rem; padding: 0.75rem 0;
   border-top: 1px solid var(--line); font-size: var(--sm); }

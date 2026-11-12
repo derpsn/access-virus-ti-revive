@@ -6,6 +6,16 @@
 
 Website with downloads, features and help: **[derpsn.github.io/access-virus-ti-revive](https://derpsn.github.io/access-virus-ti-revive/)**
 
+> **Preview: 0.8.41-rc2 for testers** (11 Nov 2026). A test version of the next release is out for anyone who wants
+> to help test it. New: lower latency as an experimental option, an Options page in the Control Center, the plug-in
+> restarts scrambled Virus audio by itself (Linux and Windows), the Virus display shows the bank sync like with the
+> original, and the plug-in log is on by default, so a bug report already has what we need. Please test with a disposable DAW project and tell us what you find with the
+> [Test report](https://github.com/derpsn/access-virus-ti-revive/issues/new?template=test_report.yml) template. What
+> works helps us as much as what doesn't, especially on setups we can't test ourselves (the TI Snow, Polar and
+> Keyboard, Intel Macs, Windows 10, DAWs other than Ableton, REAPER, Logic and GarageBand). On Windows, uninstall the preview
+> before installing the final 0.8.41. The regular download stays 0.8.40 until then.
+> [Download the preview](https://github.com/derpsn/access-virus-ti-revive/releases/tag/v0.8.41-rc2)
+
 > ☕ **Free, and it will stay free.** Changes that touch the Virus are tested on the real synth, on the systems the release notes name, often
 > back and forth between the three, and that takes a lot of evenings. If TI Revive gives your Virus a second life and
 > you'd like to say thanks, you can [buy me a coffee](https://buymeacoffee.com/callmederpsn). It is entirely
@@ -378,9 +388,12 @@ same with Access' own driver.
 
 #### Logs and firmware
 
-- **Logs for bug reports:** create an empty file `diag.on` in the plug-in's folder (Windows
-  `%LOCALAPPDATA%\virus-ti-native`, macOS `~/Library/Application Support/virus-ti-native`, Linux
-  `~/.local/share/virus-ti-native`), reproduce the problem and attach `diag.log` from there (see CONTRIBUTING.md).
+- **Logs for bug reports:** since 0.8.41 the plug-in log is on by default. It stays on your computer (nothing is
+  sent anywhere) and is kept small (about 8 MB at most). Reproduce the problem, then *Save logs...* in the Control
+  Center's Nerd mode, or attach `diag.log` from the plug-in's folder (Windows `%LOCALAPPDATA%\virus-ti-native`, macOS
+  `~/Library/Application Support/virus-ti-native`, Linux `~/.local/share/virus-ti-native`; see CONTRIBUTING.md). To
+  switch it off: *? > Detailed Log* in the plug-in, or the Control Center's Options page. With 0.8.40 or older, create
+  an empty file `diag.on` in that folder first.
 - Do not run firmware/OS updates of the Virus through TI Revive; that path is not verified.
 
 **Backups: TI Revive Control Center**
@@ -394,7 +407,7 @@ such a backup and converts libraries between `.mid` and `.syx`. **Nerd mode** (b
 TI Revive and the Virus (decoded: notes, parameter changes by name, dumps, bank sync), which programs use the Virus,
 the plug-in's and the broker's logs; it switches the plug-in log on and off and saves all logs for a bug report in
 one file. **Record...** writes all traffic to and from the Virus to a file (raw and decoded, with endpoint and cable, from the Virus' first reply on), for bug reports; the audio stream is not in it. It only watches: it never sends anything to the Virus. Its *Options...* menu switches a few things for
-comparisons with the original: the output delays only on change instead of at every Play/Stop, and the timing as before 0.8.35 (from the next start of the plug-in), and notes played live skipping the delay (on by default since 0.8.39).
+comparisons with the original: the output delays only on change instead of at every Play/Stop, and the timing as before 0.8.35 (from the next start of the plug-in), and notes played live skipping the delay (on by default since 0.8.39), and the plug-in log (on by default since 0.8.41).
 
 **Restore** (since 0.8.30): *Restore...* (in the Access look: RESTORE) asks for a backup's `RAM B.mid` (or any library), then for the RAM bank to overwrite. Only the programs that differ are written, into the Virus' RAM, the way the plug-in's browser writes them, and each one is read back. Unlike Access' Control Center it never writes the Virus' flash. The same from a terminal: `tirevive-cc restore B "RAM B.mid"`.
 

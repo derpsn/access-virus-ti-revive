@@ -67,8 +67,18 @@ inline const std::vector<ChangeNote> &changelog()
           "only that helped; it happened once, after a change of the sample rate).",
           "The plug-in's log notes when your DAW asks for audio before the Virus has sent it, which makes notes late. "
           "It helps us with reports of late notes.",
-          "macOS: the installer refuses macOS versions older than 14.4 with a clear message, instead of installing a "
-          "plug-in that cannot start there (issue #37)."}},
+          "macOS: the installer refuses macOS versions older than 14.4 instead of installing a plug-in that cannot "
+          "start there (issue #37). On very old versions such as Catalina, Installer then only says it cannot open "
+          "the package.",
+          "The plug-in's log is now on by default, so a bug report has everything we need. It stays on your computer "
+          "(nothing is sent anywhere) and is kept small. To switch it off: ? > Detailed Log in the plug-in, or the "
+          "Control Center's Options page.",
+          "While the banks sync, the Virus' display shows its syncing message for each patch, as with the original "
+          "software (it showed \"Configuring Virus TI\" the whole time). The plug-in's sync page names each patch as "
+          "it arrives, and its time left counts only what is really missing.",
+          "Windows: fixed a case where the TI Revive service could keep a connection to a Virus that had disappeared "
+          "from Windows for a moment, instead of connecting again (#36).",
+          "The plug-in's log keeps its first lines on a fresh install."}},
         {"0.8.40",
          {"Windows: a patch library or template file whose name has letters outside Windows' old code page "
           "(Japanese or Cyrillic on a Western Windows, accents copied from a Mac, emoji) no longer makes the plug-in "
@@ -124,7 +134,9 @@ inline InfoPage welcome_page(const std::string &version)
          "everything, which takes several minutes; after that only banks that changed are read again. You can play "
          "meanwhile."},
         {"Click the ? at the bottom right whenever you need help: Explain the Controls, Setup Tips for Your DAW, the "
-         "Access manuals of your installation, the TI Revive website, and Report a Problem if something does not work."},
+         "Access manuals of your installation, the TI Revive website, and Report a Problem if something does not work. "
+         "For such reports the plug-in keeps a small log on your computer; nothing is sent anywhere. ? > Detailed Log "
+         "switches it off."},
         {"Have fun with your Virus TI!"},
     };
     return p;
@@ -135,12 +147,13 @@ struct InfoState {
     bool welcome_off = false; // "Don't show again" on the welcome page
     bool news_off = false;    // "Don't show again" on What's New
     std::string last_version; // the newest version whose news were seen (OK or Don't show again)
+    bool log_notice_seen = false; // the plug-in log on by default (0.8.41) was told: What's New, welcome or its page
 };
 
 inline std::string info_state_text(const InfoState &s)
 {
     return std::string("welcome=") + (s.welcome_off ? "off" : "on") + "\nnews=" + (s.news_off ? "off" : "on") +
-           "\nlast=" + s.last_version + "\n";
+           "\nlast=" + s.last_version + "\n" + (s.log_notice_seen ? "log=seen\n" : "");
 }
 
 inline InfoState info_state_parse(const std::string &text)
@@ -157,11 +170,16 @@ inline InfoState info_state_parse(const std::string &text)
             s.news_off = true;
         else if (line.compare(0, 5, "last=") == 0)
             s.last_version = line.substr(5);
+        else if (line == "log=seen")
+            s.log_notice_seen = true;
     }
     return s;
 }
 
-enum class InfoStart { None, Welcome, WhatsNew };
+enum class InfoStart { None, Welcome, WhatsNew, LogNotice };
+
+// the version that switched the plug-in log on for everyone (diag.off switches it off)
+inline constexpr const char *kLogOnByDefault = "0.8.41";
 
 // which page opens with the editor. has_history: TI Revive ran here before (its caches exist), so a missing state
 // file means an update from a version without these pages, not a new install
@@ -170,9 +188,74 @@ inline InfoStart info_at_start(const InfoState &s, const std::string &version, b
     const bool updated = s.last_version.empty() ? has_history : version_cmp(version, s.last_version) > 0;
     if (updated && !s.news_off)
         return InfoStart::WhatsNew;
+    // What's New switched off: the log change is told once on its own page (it is not an ordinary news item)
+    if (updated && !s.log_notice_seen && version_cmp(version, kLogOnByDefault) >= 0)
+        return InfoStart::LogNotice;
     if (!s.welcome_off && !(s.last_version.empty() && has_history))
         return InfoStart::Welcome;
     return InfoStart::None;
+}
+
+// the state after a page is closed (OK, or Don't show again on the welcome / What's New page)
+inline InfoState info_closed(InfoState s, InfoStart which, const std::string &version, bool dont_show_again)
+{
+    if (version_cmp(version, s.last_version) > 0)
+        s.last_version = version;
+    if (dont_show_again && which == InfoStart::Welcome)
+        s.welcome_off = true;
+    if (dont_show_again && which == InfoStart::WhatsNew)
+        s.news_off = true;
+    if (which != InfoStart::None && version_cmp(version, kLogOnByDefault) >= 0)
+        s.log_notice_seen = true; // each of the three pages says it
+    return s;
+}
+
+inline InfoPage log_notice_page()
+{
+    InfoPage p;
+    p.title = "The plug-in log is now on";
+    p.paras = {
+        {"Since TI Revive 0.8.41 the plug-in keeps a log by default, so a bug report has everything we need. It "
+         "stays on your computer: nothing is sent anywhere, and it is kept small (about 8 MB at most)."},
+        {"To switch it off: ? > Detailed Log in the plug-in, or the Control Center's Options page. It takes effect "
+         "from the next start of the plug-in."},
+    };
+    return p;
+}
+
+// What's New must fit on the page (several versions at once overflowed it, 2026-11-10): `measure(paras, size)` gives
+// the height of the paragraphs at a font size, `room` the height there is. All of it from 13 pt down to 11; then the
+// oldest version goes, and a last line says where the rest is; the newest version alone may go down to 9 pt.
+struct InfoFit {
+    InfoPage page;
+    double size = 13;
+};
+template <class Measure> InfoFit fit_info_page(InfoPage page, double room, Measure measure)
+{
+    static const char *kRest = "Earlier versions: ? > TI Revive Website and Manual, then \"Every version\".";
+    auto versions = [&] {
+        int n = 0;
+        for (auto &q : page.paras)
+            n += q.bold && q.text.compare(0, 8, "Version ") == 0;
+        return n;
+    };
+    for (bool trimmed = false;;) {
+        const int v = versions();
+        const double smallest = v > 1 ? 11 : 9;
+        for (double size = 13; size >= smallest; size -= 1)
+            if (measure(page.paras, size) <= room)
+                return {page, size};
+        if (v <= 1)
+            return {page, 9}; // as good as it gets
+        if (trimmed)
+            page.paras.pop_back(); // the pointer line, added again below
+        size_t last = page.paras.size();
+        while (last > 0 && !(page.paras[last - 1].bold && page.paras[last - 1].text.compare(0, 8, "Version ") == 0))
+            last--;
+        page.paras.resize(last - 1); // the oldest version's heading and its lines
+        page.paras.push_back({kRest, false, false});
+        trimmed = true;
+    }
 }
 
 } // namespace vti

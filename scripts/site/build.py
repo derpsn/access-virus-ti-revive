@@ -165,6 +165,41 @@ def downloads_line(releases):
 
 
 # ------------------------------------------------------------------------------------------------ the pages
+# what a preview (pre-release) brings, by the version it leads to, written by hand: the "New:" sentence of the
+# preview box. The README's "Preview" block at the top says the same (unit test); remove it there at the final release.
+PREVIEW_NEW = {
+    "0.8.41": "lower latency as an experimental option, an Options page in the Control Center, the plug-in restarts "
+              "scrambled Virus audio by itself (Linux and Windows), the Virus display shows the bank sync like with the original, "
+              "and the plug-in log is on by default, so a bug report already has what we need.",
+}
+
+
+def preview_box(latest, releases):
+    """a box for testers while a pre-release newer than the latest release is out (the newest one); empty otherwise,
+    so it goes away by itself with the final release"""
+    pre = [r for r in releases if r.get("prerelease") and not r.get("draft")
+           and r.get("published_at", "") > latest["published_at"]]
+    if not pre:
+        return ""
+    r = max(pre, key=lambda r: r["published_at"])
+    v = r["tag_name"][1:]
+    final = v.split("-")[0]
+    new = PREVIEW_NEW.get(final)
+    report = GH + "/issues/new?template=test_report.yml"
+    return f"""
+    <div class="preview">
+      <h3>Preview: {html.escape(v)} for testers <time datetime="{r["published_at"][:10]}">{date(r["published_at"])}</time></h3>
+      <p>A test version of the next release is out for anyone who wants to help test it. {"New: " + inline(new) + " " if new else ""}Please
+      test with a disposable DAW project and tell us what you find with the <a href="{report}">Test report</a>
+      template. What works helps us as much as what doesn't, especially on setups we can't test ourselves (the TI
+      Snow, Polar and Keyboard, Intel Macs, Windows 10, DAWs other than Ableton, REAPER, Logic and GarageBand). On Windows,
+      uninstall the preview before installing the final {html.escape(final)}. The regular download stays
+      {html.escape(latest["tag_name"][1:])} until then.</p>
+      <p class="actions"><a class="second" href="{r["html_url"]}">Download the preview</a>
+      <a class="second" href="{report}">Test report</a></p>
+    </div>"""
+
+
 def highlights(rel, n=3):
     """the first points of a version's summary (its list items, else its first sentences)"""
     text = summary(rel).replace("\r", "")
@@ -333,7 +368,7 @@ def page_landing(latest, releases, sums):
     TI Revive unpacks only what the plug-in reads from it: the skin, the parameter descriptions, the ROM banks.
     Older versions are on <a href="{GH}/releases">GitHub</a>.</p>
     <div class="oses">{win}{mac}{lin}
-    </div>
+    </div>{preview_box(latest, releases)}
     {downloads_line(releases)}
     <div class="needs">
       <div><b>Synth</b><span>Virus TI and TI2: Desktop, Polar, Keyboard, and the TI Snow</span></div>
@@ -473,8 +508,9 @@ def page_landing(latest, releases, sums):
       <ol>
         <li><strong>Collect the logs.</strong> Easiest: open the <strong>TI Revive Control Center</strong>, switch on
         <em>Nerd mode</em> and press the <em>Save logs...</em> button. You get the plug-in and broker logs in one file,
-        without your home folder or user name. Or by hand: create an empty file <code>diag.on</code> in the plug-in's folder,
-        reproduce the problem, and take <code>diag.log</code> from the same folder:
+        without your home folder or user name. Or by hand: take <code>diag.log</code> from the plug-in's folder (the log is on
+        by default since 0.8.41; with 0.8.40 or older create an empty file <code>diag.on</code> there first and reproduce
+        the problem):
         <div class="paths"><b>Windows</b><code>%LOCALAPPDATA%\\virus-ti-native</code>
         <b>macOS</b><code>~/Library/Application Support/virus-ti-native</code>
         <b>Linux</b><code>~/.local/share/virus-ti-native</code></div></li>

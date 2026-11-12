@@ -6,6 +6,7 @@
 #include <setupapi.h>
 #include <winusb.h>
 #include "writeretry.h"
+#include "vtireaderr.h"
 #include <stdio.h>
 #include <stdlib.h>
 
@@ -90,8 +91,9 @@ static DWORD WINAPI reader(LPVOID p)
             DWORD e = GetLastError();
             if (e != ERROR_SEM_TIMEOUT && e != 0) {
                 vti_log("vti: read ep %02x: error %lu\n", a.ep, e);
-                if (e == ERROR_BAD_COMMAND || e == ERROR_DEVICE_NOT_CONNECTED || e == ERROR_INVALID_HANDLE ||
-                    (e == ERROR_GEN_FAILURE && ++fails > 50)) { // removed, or stalled beyond recovery
+                if (e == ERROR_GEN_FAILURE)
+                    fails++;
+                if (vti_read_error_dead(e, fails)) { // removed (also 433, vtireaderr.h), or stalled beyond recovery
                     a.v->dead = 1;
                     break;
                 }
