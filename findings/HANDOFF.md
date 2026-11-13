@@ -12,7 +12,7 @@ Last update: 2026-11-13 late (rc6 out + Catalina build; macOS libusb-audio feasi
 - **v0.8.41-rc6** pre-release 2026-11-13 19:28 UTC (tag on 8e9cf20: macOS slip restart E510), release CI
   43490921423 all green (the macOS branch compiles), 6 assets; main 4f0f061 preview box; Linux rc6 installed
   (plug-in 4cc924bc). Catalina build of rc6: catalina-test 77aa389 (round merged), dev-mac 43491758791 green,
-  artifact dev-mac-catalina (x86_64, minos 10.15, CC 10.15). #37 reply with both links posted. Open: Mac fake-slip test.
+  artifact dev-mac-catalina (x86_64, minos 10.15, CC 10.15). #37 reply with both links posted. Mac fake-slip test DONE (E510): restart path runs, new marker, rc6 pkg = installed.
 - **macOS without Apple's audio driver (option A, E511):** vtiaudioprobe on our Mac (macOS 27) WORKS as root: the
   Virus taken from usbaudiod, 20.5 s streamed with the broker's Linux code, C4 on USB 1, slip share 0.01-0.03, given
   back cleanly; as user LIBUSB_ERROR_ACCESS. Needs -usb (Global Mode 3 + Output Select 10, as the plug-in's start).
@@ -44,7 +44,7 @@ Last update: 2026-11-13 late (rc6 out + Catalina build; macOS libusb-audio feasi
 - Linux: rc4 CI build (run 43377561345) installed (plug-in b18c102b, broker 2e75801c), `hil.sh` ALL PASS.
 - win11 VM: rc4 CI MSI installed (/quiet, exit 0, DisplayVersion 0.8.41, no Virus attached), shut down.
 - win10 VM: reverted to snapshot `pre-i36` (0.8.36); snapshots `pre-i36`, `pre-i36-access` kept.
-- Mac (macOS 27.2.1): rc4 CI package INSTALLED (2026-11-13 09:42 CET; VST3 b9674444, AU 04b9bae3, broker 4558a47e
+- Mac (macOS 27.2.1): rc6 package INSTALLED 2026-11-13 21:00 (VST3 22e2d9fc, broker 4558a47e = payload); before: rc4 CI package (2026-11-13 09:42 CET; VST3 b9674444, AU 04b9bae3, broker 4558a47e
   = the package payload). The count-in arp test is left to the #30 reporter (user 2026-11-13).
 
 ## Open issues (as of 2026-11-12 late; check GitHub only together with the user)

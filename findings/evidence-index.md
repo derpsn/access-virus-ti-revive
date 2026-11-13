@@ -290,7 +290,7 @@ Entries: 508. Marks after an entry: its lowest confidence level when below HIGH,
 - [E507](evidence.md#e507) #39 (timemachine70, same unit and setup as E399/E428: TI1 Keyboard, Apple Silicon, macOS Sequoia, Ableton ... (LOW; open)
 - [E508](evidence.md#e508) #37 (packman83, TI Desktop, Intel MacBook Pro, macOS Catalina, Logic 10.6, the untested Catalina build of ... (LOW; not on hardware)
 - [E509](evidence.md#e509) #30 (Snow, "the level meters in the plug-in don't show", Logic's own meters fine): the Snow skin's part meter ... (MED; open; not on hardware)
-- [E510](evidence.md#e510) #37 follow-up (2026-11-13 18:56 UTC, Catalina, TI Desktop): the reporter's answers: "2 Outs / No Input" does ... (LOW; open; not on hardware)
+- [E510](evidence.md#e510) #37 follow-up (2026-11-13 18:56 UTC, Catalina, TI Desktop): the reporter's answers: "2 Outs / No Input" does ... (LOW; open)
 - [E511](evidence.md#e511) macOS without Apple's USB audio driver, feasibility (user 2026-11-13: "prepare the feasibility test", after ... (open)
 
 ## SysEx and parameter protocol (116)
@@ -921,7 +921,7 @@ Entries: 508. Marks after an entry: its lowest confidence level when below HIGH,
 - [E498](evidence.md#e498) The unit's +64 per sync and the stream slip with a kept broker, counted on the real TI2 Desktop (Linux, 44.1 ... (MED)
 - [E507](evidence.md#e507) #39 (timemachine70, same unit and setup as E399/E428: TI1 Keyboard, Apple Silicon, macOS Sequoia, Ableton ... (LOW; open)
 - [E508](evidence.md#e508) #37 (packman83, TI Desktop, Intel MacBook Pro, macOS Catalina, Logic 10.6, the untested Catalina build of ... (LOW; not on hardware)
-- [E510](evidence.md#e510) #37 follow-up (2026-11-13 18:56 UTC, Catalina, TI Desktop): the reporter's answers: "2 Outs / No Input" does ... (LOW; open; not on hardware)
+- [E510](evidence.md#e510) #37 follow-up (2026-11-13 18:56 UTC, Catalina, TI Desktop): the reporter's answers: "2 Outs / No Input" does ... (LOW; open)
 - [E511](evidence.md#e511) macOS without Apple's USB audio driver, feasibility (user 2026-11-13: "prepare the feasibility test", after ... (open)
 
 ## Access software (Virus Control, Control Center, installer) (208)
@@ -1132,7 +1132,7 @@ Entries: 508. Marks after an entry: its lowest confidence level when below HIGH,
 - [E507](evidence.md#e507) #39 (timemachine70, same unit and setup as E399/E428: TI1 Keyboard, Apple Silicon, macOS Sequoia, Ableton ... (LOW; open)
 - [E508](evidence.md#e508) #37 (packman83, TI Desktop, Intel MacBook Pro, macOS Catalina, Logic 10.6, the untested Catalina build of ... (LOW; not on hardware)
 - [E509](evidence.md#e509) #30 (Snow, "the level meters in the plug-in don't show", Logic's own meters fine): the Snow skin's part meter ... (MED; open; not on hardware)
-- [E510](evidence.md#e510) #37 follow-up (2026-11-13 18:56 UTC, Catalina, TI Desktop): the reporter's answers: "2 Outs / No Input" does ... (LOW; open; not on hardware)
+- [E510](evidence.md#e510) #37 follow-up (2026-11-13 18:56 UTC, Catalina, TI Desktop): the reporter's answers: "2 Outs / No Input" does ... (LOW; open)
 - [E511](evidence.md#e511) macOS without Apple's USB audio driver, feasibility (user 2026-11-13: "prepare the feasibility test", after ... (open)
 
 ## Windows (169)
@@ -1305,7 +1305,7 @@ Entries: 508. Marks after an entry: its lowest confidence level when below HIGH,
 - [E504](evidence.md#e504) #31 report (contributor vmunoz82, Windows 10 in VirtualBox, 1 vCPU, USB passthrough, Virus TI Snow OS ... (MED; open)
 - [E508](evidence.md#e508) #37 (packman83, TI Desktop, Intel MacBook Pro, macOS Catalina, Logic 10.6, the untested Catalina build of ... (LOW; not on hardware)
 - [E509](evidence.md#e509) #30 (Snow, "the level meters in the plug-in don't show", Logic's own meters fine): the Snow skin's part meter ... (MED; open; not on hardware)
-- [E510](evidence.md#e510) #37 follow-up (2026-11-13 18:56 UTC, Catalina, TI Desktop): the reporter's answers: "2 Outs / No Input" does ... (LOW; open; not on hardware)
+- [E510](evidence.md#e510) #37 follow-up (2026-11-13 18:56 UTC, Catalina, TI Desktop): the reporter's answers: "2 Outs / No Input" does ... (LOW; open)
 
 ## macOS and Audio Unit (180)
 
@@ -1487,7 +1487,7 @@ Entries: 508. Marks after an entry: its lowest confidence level when below HIGH,
 - [E507](evidence.md#e507) #39 (timemachine70, same unit and setup as E399/E428: TI1 Keyboard, Apple Silicon, macOS Sequoia, Ableton ... (LOW; open)
 - [E508](evidence.md#e508) #37 (packman83, TI Desktop, Intel MacBook Pro, macOS Catalina, Logic 10.6, the untested Catalina build of ... (LOW; not on hardware)
 - [E509](evidence.md#e509) #30 (Snow, "the level meters in the plug-in don't show", Logic's own meters fine): the Snow skin's part meter ... (MED; open; not on hardware)
-- [E510](evidence.md#e510) #37 follow-up (2026-11-13 18:56 UTC, Catalina, TI Desktop): the reporter's answers: "2 Outs / No Input" does ... (LOW; open; not on hardware)
+- [E510](evidence.md#e510) #37 follow-up (2026-11-13 18:56 UTC, Catalina, TI Desktop): the reporter's answers: "2 Outs / No Input" does ... (LOW; open)
 - [E511](evidence.md#e511) macOS without Apple's USB audio driver, feasibility (user 2026-11-13: "prepare the feasibility test", after ... (open)
 
 ## Linux (209)
@@ -1699,7 +1699,7 @@ Entries: 508. Marks after an entry: its lowest confidence level when below HIGH,
 - [E505](evidence.md#e505) How the original re-sends the song position, and where TI Revive differed (#30: the arpeggiator out of sync ... (MED; open)
 - [E506](evidence.md#e506) Hardware check of the E497 fix (d7a0d1f: a re-sync ping sent during a marker scan pass keeps its 5 s): plan B ... (open)
 - [E509](evidence.md#e509) #30 (Snow, "the level meters in the plug-in don't show", Logic's own meters fine): the Snow skin's part meter ... (MED; open; not on hardware)
-- [E510](evidence.md#e510) #37 follow-up (2026-11-13 18:56 UTC, Catalina, TI Desktop): the reporter's answers: "2 Outs / No Input" does ... (LOW; open; not on hardware)
+- [E510](evidence.md#e510) #37 follow-up (2026-11-13 18:56 UTC, Catalina, TI Desktop): the reporter's answers: "2 Outs / No Input" does ... (LOW; open)
 - [E511](evidence.md#e511) macOS without Apple's USB audio driver, feasibility (user 2026-11-13: "prepare the feasibility test", after ... (open)
 
 ## Models: Snow, Polar, Keyboard, TI2 (218)
@@ -1920,10 +1920,10 @@ Entries: 508. Marks after an entry: its lowest confidence level when below HIGH,
 - [E506](evidence.md#e506) Hardware check of the E497 fix (d7a0d1f: a re-sync ping sent during a marker scan pass keeps its 5 s): plan B ... (open)
 - [E507](evidence.md#e507) #39 (timemachine70, same unit and setup as E399/E428: TI1 Keyboard, Apple Silicon, macOS Sequoia, Ableton ... (LOW; open)
 - [E509](evidence.md#e509) #30 (Snow, "the level meters in the plug-in don't show", Logic's own meters fine): the Snow skin's part meter ... (MED; open; not on hardware)
-- [E510](evidence.md#e510) #37 follow-up (2026-11-13 18:56 UTC, Catalina, TI Desktop): the reporter's answers: "2 Outs / No Input" does ... (LOW; open; not on hardware)
+- [E510](evidence.md#e510) #37 follow-up (2026-11-13 18:56 UTC, Catalina, TI Desktop): the reporter's answers: "2 Outs / No Input" does ... (LOW; open)
 - [E511](evidence.md#e511) macOS without Apple's USB audio driver, feasibility (user 2026-11-13: "prepare the feasibility test", after ... (open)
 
-## DAWs (220)
+## DAWs (221)
 
 - [E031](evidence.md#e031) Ableton Live 11 + plugin, after clean re-attach (E030 procedure; Waveform buffer-size warning "use ... (MED)
 - [E033](evidence.md#e033) Preset switching after sync (Ableton, 180 s, user switched in plugin, on hardware, and ping-pong) (MED)
@@ -2145,6 +2145,7 @@ Entries: 508. Marks after an entry: its lowest confidence level when below HIGH,
 - [E507](evidence.md#e507) #39 (timemachine70, same unit and setup as E399/E428: TI1 Keyboard, Apple Silicon, macOS Sequoia, Ableton ... (LOW; open)
 - [E508](evidence.md#e508) #37 (packman83, TI Desktop, Intel MacBook Pro, macOS Catalina, Logic 10.6, the untested Catalina build of ... (LOW; not on hardware)
 - [E509](evidence.md#e509) #30 (Snow, "the level meters in the plug-in don't show", Logic's own meters fine): the Snow skin's part meter ... (MED; open; not on hardware)
+- [E510](evidence.md#e510) #37 follow-up (2026-11-13 18:56 UTC, Catalina, TI Desktop): the reporter's answers: "2 Outs / No Input" does ... (LOW; open)
 
 ## User reports (GitHub issues, forums) (103)
 
@@ -2249,7 +2250,7 @@ Entries: 508. Marks after an entry: its lowest confidence level when below HIGH,
 - [E507](evidence.md#e507) #39 (timemachine70, same unit and setup as E399/E428: TI1 Keyboard, Apple Silicon, macOS Sequoia, Ableton ... (LOW; open)
 - [E508](evidence.md#e508) #37 (packman83, TI Desktop, Intel MacBook Pro, macOS Catalina, Logic 10.6, the untested Catalina build of ... (LOW; not on hardware)
 - [E509](evidence.md#e509) #30 (Snow, "the level meters in the plug-in don't show", Logic's own meters fine): the Snow skin's part meter ... (MED; open; not on hardware)
-- [E510](evidence.md#e510) #37 follow-up (2026-11-13 18:56 UTC, Catalina, TI Desktop): the reporter's answers: "2 Outs / No Input" does ... (LOW; open; not on hardware)
+- [E510](evidence.md#e510) #37 follow-up (2026-11-13 18:56 UTC, Catalina, TI Desktop): the reporter's answers: "2 Outs / No Input" does ... (LOW; open)
 - [E511](evidence.md#e511) macOS without Apple's USB audio driver, feasibility (user 2026-11-13: "prepare the feasibility test", after ... (open)
 
 ## Safety (rule 2): sends that can hurt the Virus (63)
