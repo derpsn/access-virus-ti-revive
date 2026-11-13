@@ -40,7 +40,7 @@ Last update: 2026-11-13 evening (#39 investigated: E507 Mac keystamp run1 + run2
 |---|---|---|---|
 | #26 | Snow, Linux REAPER timing / clicks | reporter (REAPER audio system, pw-jack test, rc3) | 2026-11-12 |
 | #28 | numbers 100-127 moved 5 px | reporter (confirm, close on yes) | 2026-11-09 |
-| #30 | Snow, Logic: rc4 "nailed it, no latency anymore" (11-13 15:46); only the plug-in's level meters left | reporter (which meters + screenshot, arp after count-in; asked issuecomment-6860709832) | 2026-11-13 |
+| #30 | Snow, Logic: rc4 "nailed it"; arp after 1-bar count-in confirmed (18:00, E505); only the plug-in window's meters (Logic's are fine) | us: Snow meters (skin editorPR.xml has no meter element on the part strips; original vs ours in win10ref with the sim's virtual Snow) | 2026-11-13 |
 | #31 | Win10 VirtualBox, Snow, setup with Access drivers | reporter (rc3 setup with the unplug step) | 2026-11-12 |
 | #32 | (no change since 11-10) | reporter | before 11-10 |
 | #33 | Intel Mac: Ableton fine, Logic distorted | reporter (rc1: Logic log, rate, buffer) | 2026-11-10 |

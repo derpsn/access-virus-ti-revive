@@ -286,7 +286,7 @@ Entries: 504. Marks after an entry: its lowest confidence level when below HIGH,
 - [E501](evidence.md#e501) #36: the Access driver as a cause ruled out
 - [E503](evidence.md#e503) #37 broker log (TI Desktop, macOS 10.15.7, Logic 10.6, Catalina test build of 0.8.41; 300 MB, 6.33 M lines): ... (open; not on hardware)
 - [E504](evidence.md#e504) #31 report (contributor vmunoz82, Windows 10 in VirtualBox, 1 vCPU, USB passthrough, Virus TI Snow OS ... (MED; open)
-- [E505](evidence.md#e505) How the original re-sends the song position, and where TI Revive differed (#30: the arpeggiator out of sync ... (open)
+- [E505](evidence.md#e505) How the original re-sends the song position, and where TI Revive differed (#30: the arpeggiator out of sync ... (MED; open)
 - [E507](evidence.md#e507) #39 (timemachine70, same unit and setup as E399/E428: TI1 Keyboard, Apple Silicon, macOS Sequoia, Ableton ... (LOW; open)
 
 ## SysEx and parameter protocol (115)
@@ -405,7 +405,7 @@ Entries: 504. Marks after an entry: its lowest confidence level when below HIGH,
 - [E493](evidence.md#e493) The Virus' audio froze in the middle of the first 48 kHz stream after a 44.1 kHz one, and stayed frozen ... (MED; open)
 - [E498](evidence.md#e498) The unit's +64 per sync and the stream slip with a kept broker, counted on the real TI2 Desktop (Linux, 44.1 ... (MED)
 - [E499](evidence.md#e499) The Virus display during the start-up bank sync: TI Revive kept "Configuring Virus TI" up the whole time, the ... (open)
-- [E505](evidence.md#e505) How the original re-sends the song position, and where TI Revive differed (#30: the arpeggiator out of sync ... (open)
+- [E505](evidence.md#e505) How the original re-sends the song position, and where TI Revive differed (#30: the arpeggiator out of sync ... (MED; open)
 
 ## Patch banks and start-up sync (148)
 
@@ -755,7 +755,7 @@ Entries: 504. Marks after an entry: its lowest confidence level when below HIGH,
 - [E496](evidence.md#e496) The experimental lower lead (L9, plan by the simulator, run on the real TI2 Desktop, Linux, local 0.8.41 ... (open)
 - [E497](evidence.md#e497) Missed re-sync markers in the 0.8.41 plug-in are a race in the plug-in, not the unit or the audio (MED)
 - [E498](evidence.md#e498) The unit's +64 per sync and the stream slip with a kept broker, counted on the real TI2 Desktop (Linux, 44.1 ... (MED)
-- [E505](evidence.md#e505) How the original re-sends the song position, and where TI Revive differed (#30: the arpeggiator out of sync ... (open)
+- [E505](evidence.md#e505) How the original re-sends the song position, and where TI Revive differed (#30: the arpeggiator out of sync ... (MED; open)
 - [E506](evidence.md#e506) Hardware check of the E497 fix (d7a0d1f: a re-sync ping sent during a marker scan pass keeps its 5 s): plan B ... (open)
 - [E507](evidence.md#e507) #39 (timemachine70, same unit and setup as E399/E428: TI1 Keyboard, Apple Silicon, macOS Sequoia, Ableton ... (LOW; open)
 
@@ -1120,7 +1120,7 @@ Entries: 504. Marks after an entry: its lowest confidence level when below HIGH,
 - [E501](evidence.md#e501) #36: the Access driver as a cause ruled out
 - [E502](evidence.md#e502) Device check of the E499 fix and the sync page (Linux, TI2 Desktop, local build of round-0.8.41 incl
 - [E504](evidence.md#e504) #31 report (contributor vmunoz82, Windows 10 in VirtualBox, 1 vCPU, USB passthrough, Virus TI Snow OS ... (MED; open)
-- [E505](evidence.md#e505) How the original re-sends the song position, and where TI Revive differed (#30: the arpeggiator out of sync ... (open)
+- [E505](evidence.md#e505) How the original re-sends the song position, and where TI Revive differed (#30: the arpeggiator out of sync ... (MED; open)
 - [E507](evidence.md#e507) #39 (timemachine70, same unit and setup as E399/E428: TI1 Keyboard, Apple Silicon, macOS Sequoia, Ableton ... (LOW; open)
 
 ## Windows (166)
@@ -1468,7 +1468,7 @@ Entries: 504. Marks after an entry: its lowest confidence level when below HIGH,
 - [E493](evidence.md#e493) The Virus' audio froze in the middle of the first 48 kHz stream after a 44.1 kHz one, and stayed frozen ... (MED; open)
 - [E494](evidence.md#e494) First Intel Mac report (issue #33, user report): TI Revive 0.8.39 (universal broker, the fix of 0.8.39) on an ... (MED)
 - [E503](evidence.md#e503) #37 broker log (TI Desktop, macOS 10.15.7, Logic 10.6, Catalina test build of 0.8.41; 300 MB, 6.33 M lines): ... (open; not on hardware)
-- [E505](evidence.md#e505) How the original re-sends the song position, and where TI Revive differed (#30: the arpeggiator out of sync ... (open)
+- [E505](evidence.md#e505) How the original re-sends the song position, and where TI Revive differed (#30: the arpeggiator out of sync ... (MED; open)
 - [E507](evidence.md#e507) #39 (timemachine70, same unit and setup as E399/E428: TI1 Keyboard, Apple Silicon, macOS Sequoia, Ableton ... (LOW; open)
 
 ## Linux (206)
@@ -1677,7 +1677,7 @@ Entries: 504. Marks after an entry: its lowest confidence level when below HIGH,
 - [E498](evidence.md#e498) The unit's +64 per sync and the stream slip with a kept broker, counted on the real TI2 Desktop (Linux, 44.1 ... (MED)
 - [E499](evidence.md#e499) The Virus display during the start-up bank sync: TI Revive kept "Configuring Virus TI" up the whole time, the ... (open)
 - [E502](evidence.md#e502) Device check of the E499 fix and the sync page (Linux, TI2 Desktop, local build of round-0.8.41 incl
-- [E505](evidence.md#e505) How the original re-sends the song position, and where TI Revive differed (#30: the arpeggiator out of sync ... (open)
+- [E505](evidence.md#e505) How the original re-sends the song position, and where TI Revive differed (#30: the arpeggiator out of sync ... (MED; open)
 - [E506](evidence.md#e506) Hardware check of the E497 fix (d7a0d1f: a re-sync ping sent during a marker scan pass keeps its 5 s): plan B ... (open)
 
 ## Models: Snow, Polar, Keyboard, TI2 (215)
@@ -1894,11 +1894,11 @@ Entries: 504. Marks after an entry: its lowest confidence level when below HIGH,
 - [E500](evidence.md#e500) (1) Our TI2 Desktop now has a user-flashed ROM bank: the user flashed one of their own banks into ROM Z with ... (MED)
 - [E502](evidence.md#e502) Device check of the E499 fix and the sync page (Linux, TI2 Desktop, local build of round-0.8.41 incl
 - [E504](evidence.md#e504) #31 report (contributor vmunoz82, Windows 10 in VirtualBox, 1 vCPU, USB passthrough, Virus TI Snow OS ... (MED; open)
-- [E505](evidence.md#e505) How the original re-sends the song position, and where TI Revive differed (#30: the arpeggiator out of sync ... (open)
+- [E505](evidence.md#e505) How the original re-sends the song position, and where TI Revive differed (#30: the arpeggiator out of sync ... (MED; open)
 - [E506](evidence.md#e506) Hardware check of the E497 fix (d7a0d1f: a re-sync ping sent during a marker scan pass keeps its 5 s): plan B ... (open)
 - [E507](evidence.md#e507) #39 (timemachine70, same unit and setup as E399/E428: TI1 Keyboard, Apple Silicon, macOS Sequoia, Ableton ... (LOW; open)
 
-## DAWs (217)
+## DAWs (218)
 
 - [E031](evidence.md#e031) Ableton Live 11 + plugin, after clean re-attach (E030 procedure; Waveform buffer-size warning "use ... (MED)
 - [E033](evidence.md#e033) Preset switching after sync (Ableton, 180 s, user switched in plugin, on hardware, and ping-pong) (MED)
@@ -2116,6 +2116,7 @@ Entries: 504. Marks after an entry: its lowest confidence level when below HIGH,
 - [E499](evidence.md#e499) The Virus display during the start-up bank sync: TI Revive kept "Configuring Virus TI" up the whole time, the ... (open)
 - [E500](evidence.md#e500) (1) Our TI2 Desktop now has a user-flashed ROM bank: the user flashed one of their own banks into ROM Z with ... (MED)
 - [E503](evidence.md#e503) #37 broker log (TI Desktop, macOS 10.15.7, Logic 10.6, Catalina test build of 0.8.41; 300 MB, 6.33 M lines): ... (open; not on hardware)
+- [E505](evidence.md#e505) How the original re-sends the song position, and where TI Revive differed (#30: the arpeggiator out of sync ... (MED; open)
 - [E507](evidence.md#e507) #39 (timemachine70, same unit and setup as E399/E428: TI1 Keyboard, Apple Silicon, macOS Sequoia, Ableton ... (LOW; open)
 
 ## User reports (GitHub issues, forums) (99)
@@ -2217,7 +2218,7 @@ Entries: 504. Marks after an entry: its lowest confidence level when below HIGH,
 - [E501](evidence.md#e501) #36: the Access driver as a cause ruled out
 - [E503](evidence.md#e503) #37 broker log (TI Desktop, macOS 10.15.7, Logic 10.6, Catalina test build of 0.8.41; 300 MB, 6.33 M lines): ... (open; not on hardware)
 - [E504](evidence.md#e504) #31 report (contributor vmunoz82, Windows 10 in VirtualBox, 1 vCPU, USB passthrough, Virus TI Snow OS ... (MED; open)
-- [E505](evidence.md#e505) How the original re-sends the song position, and where TI Revive differed (#30: the arpeggiator out of sync ... (open)
+- [E505](evidence.md#e505) How the original re-sends the song position, and where TI Revive differed (#30: the arpeggiator out of sync ... (MED; open)
 - [E507](evidence.md#e507) #39 (timemachine70, same unit and setup as E399/E428: TI1 Keyboard, Apple Silicon, macOS Sequoia, Ableton ... (LOW; open)
 
 ## Safety (rule 2): sends that can hurt the Virus (63)
