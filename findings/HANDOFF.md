@@ -5,25 +5,44 @@ NEXT. At most 150 lines; the Stop hook (`.claude/hooks/handoff-check.sh`) refuse
 how goes into the dated log [`log/2026-11.md`](log/2026-11.md) (newest first); older logs are in [`log/`](log/).
 Device/protocol knowledge goes into [`evidence.md`](evidence.md). Update this file in the same commit as the work._
 
-Last update: 2026-11-13 late (rc6 out + Catalina build; macOS libusb-audio feasibility probe ready; #39 test clean).
+Last update: 2026-11-13 night (rc7 tagged: live-note stamps E512 for #39; rc6 out; libusb-audio branch paused).
 
 ## Round
 
+- **v0.8.41-rc7** pre-release 2026-11-13 20:45 UTC (tag on 2e0fed9: live-note stamps from the timeline, E512),
+  release CI 43503582943 all 8 jobs green, 6 assets, Latest stays 0.8.40; main 6cf8493 preview box; Linux rc7
+  installed. #39 asked to test rc7 (issuecomment-6864528067). Mac: still rc6 (verify E512 there with keystamp+klog).
 - **v0.8.41-rc6** pre-release 2026-11-13 19:28 UTC (tag on 8e9cf20: macOS slip restart E510), release CI
   43490921423 all green (the macOS branch compiles), 6 assets; main 4f0f061 preview box; Linux rc6 installed
   (plug-in 4cc924bc). Catalina build of rc6: catalina-test 77aa389 (round merged), dev-mac 43491758791 green,
-  artifact dev-mac-catalina (x86_64, minos 10.15, CC 10.15). #37 reply with both links posted. Open: Mac fake-slip test.
+  artifact dev-mac-catalina (x86_64, minos 10.15, CC 10.15). #37 reply with both links posted. Mac fake-slip test DONE (E510): restart path runs, new marker, rc6 pkg = installed.
 - **macOS without Apple's audio driver (option A, E511):** vtiaudioprobe on our Mac (macOS 27) WORKS as root: the
   Virus taken from usbaudiod, 20.5 s streamed with the broker's Linux code, C4 on USB 1, slip share 0.01-0.03, given
   back cleanly; as user LIBUSB_ERROR_ACCESS. Needs -usb (Global Mode 3 + Output Select 10, as the plug-in's start).
-  Open: Catalina (kernel AppleUSBAudio) via the #37 reporter; design (root broker, plug-in reads the ring) for 0.8.42+.
-- **v0.8.41-rc5** pre-release 2026-11-13 18:50 UTC (tag on 7f6d1be, release CI 43484666513 all 8 jobs green,
-  6 assets; Latest stays 0.8.40). main aee9e11 = preview-box lines only, site 43486622822 green, live page shows
-  "Preview: 0.8.41-rc5". Linux: rc5 installed by install.sh (plug-in 5726305b, broker 2e75801c). Open: rc5 reply
-  on #30 (draft with the user), win11 silent install, Mac install command.
-- Round **0.8.41** on branch `round-0.8.41` (pushed). Released before: **v0.8.41-rc4** pre-release
-  (2026-11-13 08:48 UTC, tag on 24c056e, release CI 43395373253 all green, 6 assets); **0.8.40 stays Latest**.
-  Site live with "Preview: 0.8.41-rc4" (main b9baa60 = box lines only, site run 43396293872).
+  Open: Catalina (kernel AppleUSBAudio) via the #37 reporter (probe in the Catalina artifact, dev-mac 43495785623);
+  discussion with the three reporters in #40; decision after the #37 report (user). Design for 0.8.42+.
+- **Branch `libusb-audio`** (user 2026-11-13: test build now, do not wait for #37/#40): broker side done
+  (VTI_BROKER_AUDIO on macOS, runtime only as root with VTI_LIBUSB_AUDIO=1; socket + ring named after and chowned to
+  SUDO_UID, owneruid.h with tests; vti_open captures the device before MIDI on macOS in that mode; Makefile mac
+  targets); plug-in accepts a root broker; plug-in side done (option mac-usb-audio, AudioIn::use_broker_ring, start/
+  restart/rate via the broker, no replug; 723 tests). Paused for #39 (user: live-stamp fix + key-pacing analysis
+  first). scripts/mac-libusb-test.command (stops the normal broker - no launchd agent since 0.8, the plug-in
+  spawns it -, sets mac-usb-audio.on, runs sudo VTI_LIBUSB_AUDIO=1 vtibroker -v -stay, log on the Desktop, option
+  off again at the end). CI 43505792317: mac green, native-linux/windows red (owneruid strtol on 32-bit long,
+  risk.json lacked the .command) -> fixed 5865382, CI 43506997752 running. Then test on our Mac.
+  Second test Mac: Intel MacBook, Big Sur 11.7.10 (kernel AppleUSBAudio, like #37's Catalina): scripts/mac.sh
+  MAC=bigsur (host/user only in ~/.config/tirevive/mac-bigsur.env); SSH works (key via a LAN script, home not
+  group-writable). Machine: Core 2 Duo P8700 (Penryn, an old MacBook on Big Sur), no Xcode CLT (use CI binaries).
+- First libusb run on our Mac (CI 43506997752 package, 22:13): broker captured the Virus and streamed, but the
+  plug-in got no audio (audio 0): macOS refuses fchown on POSIX shm (EINVAL), the ring stayed root's 0600; and the
+  plug-in's audio off/on released the interfaces, auto-detach re-attached Apple's driver = re-enumeration (MIDI cut,
+  recovered). Fixed on the branch: ring made as the user (seteuid, stale ring unlinked), auto-detach off after the
+  capture, explicit give-back at close (206ee80). Second try WORKS (E513): sound in Live, 0 drops, marker, keystamp
+  onsets 24000 +-64 frames apart, give-back to usbaudiod ok. Big Sur MacBook (TI2 there now, patched OCLP/Moraea
+  system): probe clean (E511) -> #37's zeros are Catalina/machine-specific. User: libusb test version for #37:
+  VTI_USBAUDIO_DIAG=1 per-second raw packet stats (probe sets it), branch libusb-catalina = catalina-test +
+  libusb-audio, dev-mac build (package + probe + test command). Old MacBook too slow for a DAW (user).
+- Round **0.8.41** on branch `round-0.8.41` (pushed); rc1-rc7 pre-releases, **0.8.40 stays Latest**.
 - In 0.8.41: experimental lower latency (option `low-latency`, off by default, E496), Control Center Options page,
   slip detector + automatic restart (`slip-restart`, on by default, E488), freeze alert page (E493), burst counter
   (E490), Mac pkg refuses macOS < 14.4, plug-in log on by default (`diag.off` switches it off), Rise Message 4 per
@@ -34,16 +53,16 @@ Last update: 2026-11-13 late (rc6 out + Catalina build; macOS libusb-audio feasi
   43369222561 (2026-11-13, all green) has it. Since then (user 2026-11-13: "Into 0.8.41 ... like the original"):
   transport restarts like the original (E505, #30 count-in arp): F2 from ppq + 256, 73 00 23 vv on the next tick,
   F8 grid rephased, FC at Stop, the original's jump limits (transport.h, test_transport.cpp, nativehost --count-in).
-- Branch `catalina-test` (worktree `../virus-ti-re-catalina`, e91ef17): untested x86_64 / macOS 10.15 build for
-  #37 only; dev-mac run 43278510379 green, link posted on #37. Never merged into main.
+- Branch `catalina-test` (worktree `../virus-ti-re-catalina`): x86_64 / macOS 10.15 build for #37, now rc6 code
+  + vtiaudioprobe (dev-mac 43495785623). Never merged into main.
 
 ## Machines and the Virus
 
-- Our TI2 Desktop: on the **Mac** USB bus since 2026-11-13 ~18:20 (#39 run1/run2); back to Linux for hil.sh. User flashed ROM Z on it in early November (E500).
+- Our TI2 Desktop: on the **Big Sur MacBook** USB bus since 2026-11-13 ~22:25 (before: the Mac) since 2026-11-13 ~18:20 (#39 run1/run2); back to Linux for hil.sh. User flashed ROM Z on it in early November (E500).
 - Linux: rc4 CI build (run 43377561345) installed (plug-in b18c102b, broker 2e75801c), `hil.sh` ALL PASS.
 - win11 VM: rc4 CI MSI installed (/quiet, exit 0, DisplayVersion 0.8.41, no Virus attached), shut down.
 - win10 VM: reverted to snapshot `pre-i36` (0.8.36); snapshots `pre-i36`, `pre-i36-access` kept.
-- Mac (macOS 27.2.1): rc4 CI package INSTALLED (2026-11-13 09:42 CET; VST3 b9674444, AU 04b9bae3, broker 4558a47e
+- Mac (macOS 27.2.1): rc6 package INSTALLED 2026-11-13 21:00 (VST3 22e2d9fc, broker 4558a47e = payload); before: rc4 CI package (2026-11-13 09:42 CET; VST3 b9674444, AU 04b9bae3, broker 4558a47e
   = the package payload). The count-in arp test is left to the #30 reporter (user 2026-11-13).
 
 ## Open issues (as of 2026-11-12 late; check GitHub only together with the user)
@@ -58,9 +77,10 @@ Last update: 2026-11-13 late (rc6 out + Catalina build; macOS libusb-audio feasi
 | #33 | Intel Mac: Ableton fine, Logic distorted | reporter (rc1: Logic log, rate, buffer) | 2026-11-10 |
 | #34 | TI2/Keyboard macOS Ableton crackle, right channel at full scale | reporter (2 Outs, 44.1 kHz, no hub, record input 3/4) | 2026-11-12 |
 | #36 | Windows Cubase bank sync 0/128 | reporter (rc2: display, hub/cable, 3 checks) | 2026-11-11 |
-| #37 | Catalina: crackle = byte-slipped audio in 9 of 22 starts (E510) | reporter (rc6 Catalina build, log after a crackle; issuecomment-6862985038) | 2026-11-13 |
+| #37 | Catalina: crackle = byte-slipped audio (E510); probe: data empty on Catalina but clean on our Big Sur MacBook (E511) = Catalina/machine-specific | reporter (stays on rc6 Catalina build) | 2026-11-13 |
 | #38 | macOS 27 Live: editor / AU crash | reporter (crash report, Access files) | 2026-11-10 |
-| #39 | = #29 reporter, TI1 Keyboard, Live 12.3.7: his keystamp test clean (120/120 within 0.25 ms) | reporter (early/late and how much, lower buffer; issuecomment-6862985428) | 2026-11-13 |
+| #39 | = #29 reporter, TI1 Keyboard: "notes pushed/stressed" = (1) our live stamps on Core Audio bursts, 8 ms (fixed in rc7, E512) + (2) the Virus' paced USB-MIDI link with aftertouch, 0-6 ms (firmware) | reporter (rc7 test; light touch vs aftertouch) | 2026-11-13 |
+| #40 | (ours) macOS: TI Revive takes the Virus' audio itself (libusb, E511) as an option? asks #30/#37/#39 reporters | reporters (audio interface use, admin rights, macOS/DAW) | 2026-11-13 |
 
 Every open issue waits on its reporter. Quiet-issue rule: 7 days after our last request, close with the AGENTS.md
 message, only in a joint check with the user (by the dates above: #28 from 2026-11-16, #33 and #38 from 2026-11-17; #32: look up its date first).
@@ -113,6 +133,8 @@ message, only in a joint check with the user (by the dates above: #28 from 2026-
 
 ## NEXT
 
+0a. Live-stamp fix (E512): in rc7 (user: "make a new RC and let him test", #39 has the setup); also verify on our Mac
+   (keystamp + klog: onsets 24000 frames apart). libusb-audio branch paused (plug-in side committed 300cdd4).
 0. #39 (user 2026-11-13: investigate before replying to #39 and #30): E507 = their log (no unit requests while
    playing), sim S127/S128 (unit holds keys only behind a dump reply), Mac run1 (Live on built-in output, two clocks)
    and run2 (Virus as Live's device) with native/tools/keystamp.c + scripts/als_notes.py: 120/120 notes within

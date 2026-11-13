@@ -68,6 +68,15 @@ inline int64_t live_stamp(int64_t newest, int64_t marker, double ratio)
     return newest - marker + (int64_t)(-1.0 * ratio) - 0x400;
 }
 
+// #39, E512: the same live stamp, but from the note's place on the plug-in's smoothed timeline (`tl_at` = tl_ +
+// offset; the timeline follows newest - S) instead of the ring's newest frame at send time. On macOS Core Audio fills
+// the ring in bursts of several hundred frames, and the ring-based stamp passed them on: one played rhythm sounded
+// 10.5 / 13.2 / 15.9 / 18.5 ms late in turn. Equal to live_stamp() when the ring is where the timeline expects it.
+inline int64_t live_stamp_tl(int64_t tl_at, int s, int64_t marker, double ratio)
+{
+    return live_stamp(tl_at + s, marker, ratio);
+}
+
 // Our one difference from the original's live path, by the user's word 2026-11-07: a flagged note-off goes at once only
 // when the last note-on of that key went at once. The original goes by the flag alone, so a flagged note-off of a clip
 // note still waiting on its lead lands first and the note hangs (simulator S065 C4, from about 35 ms before its due;

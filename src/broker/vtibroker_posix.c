@@ -37,13 +37,20 @@
 #include "vtikeyport_mac.h"
 #include <launch.h>
 #endif
-#ifdef __linux__
+// The Virus' audio streamed by the broker (libusb + shared ring): always on Linux; on macOS compiled in the
+// libusb-audio branch and used only when the broker runs as root with VTI_LIBUSB_AUDIO=1 (E511) - otherwise the
+// plug-in keeps reading Core Audio as before
+#if defined(__linux__) || defined(__APPLE__)
+#define VTI_BROKER_AUDIO 1
 #include "vtiaudioshm.h"
 #include "vtiusbaudio_libusb.h"
 #include "ratesw.h"
 #include <fcntl.h>
 #include <sys/mman.h>
 #endif
+#include "owneruid.h"
+static unsigned g_owner_uid; // the user served: getuid(), or SUDO_UID for the sudo broker (owneruid.h)
+static int g_usb_audio = 1;  // macOS: only with VTI_LIBUSB_AUDIO=1 (main)
 
 #define VTI_SOCK_FMT "/tmp/vtibroker-%u.sock"
 #ifdef MSG_NOSIGNAL
@@ -494,7 +501,7 @@ static void trace_rec(uint8_t kind, uint8_t ep, const void *a, int alen, const v
     pthread_mutex_unlock(&g_cs_trace);
 }
 
-#ifdef __linux__
+#ifdef VTI_BROKER_AUDIO
 static void f5_report(const uint8_t *p, int len);
 static void f5_second(void);
 #endif
@@ -532,7 +539,7 @@ static void on_rx(void *user, uint8_t ep, const uint8_t *data, int len)
         static unsigned n[2], bytes[2];
         static time_t last;
         n[ep == VTI_EP_MI04_IN]++, bytes[ep == VTI_EP_MI04_IN] += (unsigned)len;
-#ifdef __linux__
+#ifdef VTI_BROKER_AUDIO
         if (ep == VTI_EP_MI04_IN)
             f5_report(data, len);
 #endif
@@ -552,8 +559,8 @@ static void on_rx(void *user, uint8_t ep, const uint8_t *data, int len)
     }
 }
 
-#ifdef __linux__
-// ---- Linux: the Virus' audio function, streamed by the broker (port of vtibroker.c's audio ring) ----
+#ifdef VTI_BROKER_AUDIO
+// ---- Linux (and the macOS test, E511): the Virus' audio function, streamed by the broker (port of vtibroker.c's audio ring) ----
 static vti_audio_shm *g_shm;
 static pthread_mutex_t g_cs_tick = PTHREAD_MUTEX_INITIALIZER;
 static pthread_cond_t g_cv_tick = PTHREAD_COND_INITIALIZER;
@@ -571,20 +578,31 @@ static int shm_create(void)
     if (g_shm)
         return 0;
     char name[64];
-    snprintf(name, sizeof name, VTI_AUDIO_SHM_LINUX, (unsigned)getuid());
+    snprintf(name, sizeof name, VTI_AUDIO_SHM_LINUX, g_owner_uid);
+    // the sudo broker (E511): the ring must belong to the user it serves (the plug-in checks that, audioin.cpp), and
+    // macOS refuses fchown on POSIX shared memory (EINVAL, first Mac test) - so it is made as that user, after a
+    // stale one (root's from that test; macOS also sizes a shm object only once) is removed
+    const int as_owner = geteuid() == 0 && g_owner_uid != 0;
+    if (as_owner) {
+        shm_unlink(name);
+        if (seteuid((uid_t)g_owner_uid))
+            blog("audio: shared memory %s: seteuid %u: %s", name, g_owner_uid, strerror(errno));
+    }
     int fd = shm_open(name, O_RDWR | O_CREAT, 0600);
-    if (fd < 0 || ftruncate(fd, sizeof(vti_audio_shm))) {
-        blog("audio: shared memory %s: %s", name, strerror(errno));
-        if (fd >= 0)
-            close(fd);
+    const int bad = fd < 0 || ftruncate(fd, sizeof(vti_audio_shm));
+    const int err = errno;
+    void *m = bad ? MAP_FAILED : mmap(NULL, sizeof(vti_audio_shm), PROT_READ | PROT_WRITE, MAP_SHARED, fd, 0);
+    if (fd >= 0)
+        close(fd);
+    if (as_owner && seteuid(0)) // back to root for USB
+        blog("audio: seteuid 0: %s", strerror(errno));
+    if (bad) {
+        blog("audio: shared memory %s: %s", name, strerror(err));
         return -1;
     }
-    g_shm = mmap(NULL, sizeof(vti_audio_shm), PROT_READ | PROT_WRITE, MAP_SHARED, fd, 0);
-    close(fd);
-    if (g_shm == MAP_FAILED) {
-        g_shm = NULL;
+    if (m == MAP_FAILED)
         return -1;
-    }
+    g_shm = m;
     memset(g_shm, 0, sizeof *g_shm);
     g_shm->magic = VTI_AUDIO_MAGIC;
     g_shm->version = VTI_AUDIO_VERSION;
@@ -899,7 +917,7 @@ static void *device_thread(void *unused)
             send_states(1);
             pthread_mutex_unlock(&g_cs_clients);
         }
-#ifdef __linux__
+#ifdef VTI_BROKER_AUDIO
         // the Virus left the stream's rate (E175/E241: after a wake, a replug): the stream already sends it silent
         // packets of its size; a switch away and back makes its USB chip tell the DSPs again (E331)
         if (g_dev && g_shm && g_shm->streaming) {
@@ -1107,7 +1125,7 @@ static void *client_thread(void *arg)
                 pthread_mutex_lock(&g_cs_dev);
                 int r = g_dev ? vti_write(g_dev, buf[0], buf + 1, h.len - 1) : -1;
                 pthread_mutex_unlock(&g_cs_dev);
-#ifdef __linux__
+#ifdef VTI_BROKER_AUDIO
                 if (g_verbose && buf[0] == VTI_EP_MI04_OUT)
                     f5_note(buf + 1, h.len - 1);
                 if (g_verbose && g_shm) // note-ons (cable 2) with the device frame they were sent at
@@ -1179,8 +1197,8 @@ static void *client_thread(void *arg)
             if (c->observer)
                 break;
             int32_t r = 0;
-#ifdef __linux__
-            uint32_t on = h.len >= 4 ? *(uint32_t *)buf : 0;
+#ifdef VTI_BROKER_AUDIO
+            uint32_t on = h.len >= 4 && g_usb_audio ? *(uint32_t *)buf : 0; // macOS without the test switch: off
             pthread_mutex_lock(&g_cs_dev);
             pthread_mutex_lock(&g_cs_clients);
             int use = !waits(c), stop = vti_may_stop_audio(vti_is_plugin(c->name), c == g_owner, g_owner != NULL);
@@ -1263,7 +1281,12 @@ int main(int argc, char **argv)
         blog("tracing to %s", tp);
     }
     struct sockaddr_un sa = {.sun_family = AF_UNIX};
-    snprintf(sa.sun_path, sizeof sa.sun_path, VTI_SOCK_FMT, (unsigned)getuid());
+    g_owner_uid = vti_owner_uid((unsigned)geteuid(), (unsigned)getuid(), getenv("SUDO_UID"));
+#ifdef __APPLE__
+    // the macOS test of the broker's own audio (E511): root (Apple's driver lets only root take the Virus) and asked for
+    g_usb_audio = geteuid() == 0 && getenv("VTI_LIBUSB_AUDIO") && atoi(getenv("VTI_LIBUSB_AUDIO")) == 1;
+#endif
+    snprintf(sa.sun_path, sizeof sa.sun_path, VTI_SOCK_FMT, g_owner_uid);
     int s = -1;
 #ifdef __APPLE__
     // Started by launchd socket activation (LaunchAgent with a "Listeners" socket, scripts/mac-install-broker.sh):
@@ -1307,7 +1330,8 @@ int main(int argc, char **argv)
         close(s);
         unlink(sa.sun_path);
         s = socket(AF_UNIX, SOCK_STREAM, 0);
-        if (bind(s, (struct sockaddr *)&sa, sizeof sa) || chmod(sa.sun_path, 0600) || listen(s, 8)) {
+        if (bind(s, (struct sockaddr *)&sa, sizeof sa) || chmod(sa.sun_path, 0600) ||
+            (geteuid() == 0 && g_owner_uid != 0 && chown(sa.sun_path, (uid_t)g_owner_uid, (gid_t)-1)) || listen(s, 8)) {
             blog("socket %s: %s", sa.sun_path, strerror(errno));
             return 1;
         }
@@ -1346,9 +1370,11 @@ int main(int argc, char **argv)
     pthread_detach(t);
     pthread_create(&t, NULL, device_thread, NULL);
     pthread_detach(t);
-#ifdef __linux__
-    pthread_create(&t, NULL, tick_thread, NULL);
-    pthread_detach(t);
+#ifdef VTI_BROKER_AUDIO
+    if (g_usb_audio) {
+        pthread_create(&t, NULL, tick_thread, NULL);
+        pthread_detach(t);
+    }
 #endif
     struct pollfd pf[2] = {{.fd = s, .events = POLLIN}, {.fd = -1, .events = POLLIN}};
 #ifdef __linux__

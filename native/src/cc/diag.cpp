@@ -91,6 +91,12 @@ const std::vector<PluginOption> &plugin_options()
         // on by default since 0.8.41 (user 2026-11-10): the plug-in's log for bug reports; diag.off switches it off
         {"plugin-log", "diag.off", "Plug-in log for bug reports (stays on this computer)", true, "Plug-in log",
          "Writes what the plug-in does to diag.log on this computer, for bug reports. Nothing is sent anywhere."},
+        // libusb-audio test branch (E511, #37/#40): on macOS the plug-in reads the Virus' audio from the TI Revive
+        // service (which then has to run as root with VTI_LIBUSB_AUDIO=1) instead of Core Audio; no effect elsewhere
+        {"mac-usb-audio", "mac-usb-audio.on", "macOS: the Virus' audio directly from TI Revive's service (test)", false,
+         "Virus audio without Core Audio (macOS test)",
+         "Test build only: reads the Virus' audio from TI Revive's service instead of Apple's driver. Needs the "
+         "service started with the test command; the Virus is then no audio device in macOS."},
     };
     return opts;
 }

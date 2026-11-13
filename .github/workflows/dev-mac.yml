@@ -64,6 +64,8 @@ jobs:
           probe.wav, and at the end gives the Virus back to Apple's driver. It sends nothing else to the Virus and stores
           nothing on it. Please post the Terminal output and attach probe.wav (zipped) in the issue.
           EOF
+          # libusb-catalina (#37): the test of TI Revive's own Virus audio in the DAW (E513), off unless started with it
+          cp scripts/mac-libusb-test.command dev/ && chmod +x dev/mac-libusb-test.command
       - uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
         with:
           name: dev-mac-catalina
