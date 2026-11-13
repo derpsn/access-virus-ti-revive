@@ -82,6 +82,10 @@ TEST(diag_plugin_options)
     CHECK(std::string(opts[3].name) == "slip-restart" && std::string(opts[3].file) == "slip-restart.off");
     CHECK(opts[3].default_on);
     CHECK(plugin_option("slip-restart"));
+    // since rc6 the plug-in restarts it on macOS too (#37: 9 of 22 starts slipped on a Catalina Mac), so no option text
+    // may say it is Linux and Windows only or only logged on a Mac
+    for (const char *t : {opts[3].label, opts[3].hint})
+        CHECK(std::string(t).find("Linux") == std::string::npos && std::string(t).find("only logged") == std::string::npos);
     CHECK(std::string(opts[0].name) == "outdelay-changes" && std::string(opts[0].file) == "outdelay-changes.on");
     CHECK(std::string(opts[1].name) == "timing-classic" && std::string(opts[1].file) == "timing-classic.on");
     // live-notes is on by default since 0.8.39 (the original's VST3 does it always, E400/E402; user 2026-11-08): its

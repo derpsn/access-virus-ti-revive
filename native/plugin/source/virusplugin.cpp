@@ -690,11 +690,6 @@ void DeviceOut::run()
         scan_audio();
         if (slip_fired_) { // E488: the Virus delivers this stream byte-slipped - no marker, notes off time, until it restarts
             slip_fired_ = false;
-#ifdef __APPLE__
-            // the Core Audio path is not the device's 1:1 bytes (E488): logged only, nothing restarted
-            log("Virus TI native: the Virus' audio looks scrambled (byte slip, E488, ratio %.3f) - not restarted on macOS; "
-                "switch the Virus off and on if notes are off time\n", slip_.last_ratio());
-#else
             const int64_t now = std::chrono::duration_cast<std::chrono::milliseconds>(
                                     std::chrono::steady_clock::now().time_since_epoch()).count();
             if (!vti::cc::plugin_option("slip-restart"))
@@ -710,7 +705,15 @@ void DeviceOut::run()
                 log("Virus TI native: the Virus' audio arrives scrambled (byte slip, E488, ratio %.3f) - restarting "
                     "the stream (%d)\n", slip_.last_ratio(), slip_gate_.count());
                 close_audio();
+#ifdef __APPLE__
+                // macOS (#37, E510): Apple's driver owns the Virus' audio; stopping our Core Audio input lets the HAL
+                // stop the Virus' USB stream when no other program reads it, and starting it again starts a new
+                // stream, as alt 0/1 does on Linux. If the DAW uses the Virus as its own device the stream runs on:
+                // the detector fires again and the gate gives up after 5 tries.
+                std::this_thread::sleep_for(std::chrono::milliseconds(300));
+#else
                 broker_.audio(false);
+#endif
                 const int r = start_audio();
                 scanned_ = -1;
                 markers_.reset_stream();
@@ -718,7 +721,6 @@ void DeviceOut::run()
                 generation++;
                 log("Virus TI native: audio stream restarted -> %d\n", r);
             }
-#endif
         }
         // E493: the Virus' audio froze (the same frame for a second while a note was due); only a power cycle of the
         // Virus helped, so the editor tells the user (its alert page) - nothing is sent to the Virus
