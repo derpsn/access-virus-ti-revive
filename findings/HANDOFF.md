@@ -37,7 +37,9 @@ Last update: 2026-11-13 night (rc7 tagged: live-note stamps E512 for #39; rc6 ou
   plug-in got no audio (audio 0): macOS refuses fchown on POSIX shm (EINVAL), the ring stayed root's 0600; and the
   plug-in's audio off/on released the interfaces, auto-detach re-attached Apple's driver = re-enumeration (MIDI cut,
   recovered). Fixed on the branch: ring made as the user (seteuid, stale ring unlinked), auto-detach off after the
-  capture, explicit give-back at close. Retry with the Mac-built broker (no new package needed).
+  capture, explicit give-back at close (206ee80). Second try WORKS (E513): sound in Live, 0 drops, marker, keystamp
+  onsets 24000 +-64 frames apart, give-back to usbaudiod ok. Next: Big Sur MacBook (TI2 over), E512 alone on
+  Core Audio (rc7 on our Mac), smaller iso transfers on macOS (10.5 ms bursts).
 - Round **0.8.41** on branch `round-0.8.41` (pushed); rc1-rc7 pre-releases, **0.8.40 stays Latest**.
 - In 0.8.41: experimental lower latency (option `low-latency`, off by default, E496), Control Center Options page,
   slip detector + automatic restart (`slip-restart`, on by default, E488), freeze alert page (E493), burst counter

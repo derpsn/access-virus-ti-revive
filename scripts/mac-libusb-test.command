@@ -27,4 +27,4 @@ fi
 mkdir -p "$OPT" && touch "$OPT/mac-usb-audio.on"
 echo "Starting the TI Revive service with its own Virus audio. macOS asks for your password."
 echo "Leave this window open; Ctrl-C ends the test."
-sudo VTI_LIBUSB_AUDIO=1 "$BROKER" -v -stay 2>&1 | tee "$LOG"
+sudo VTI_LIBUSB_AUDIO=1 "$BROKER" -v -stay 2>&1 | tee -i "$LOG" # -i: Ctrl-C stops the broker, not the log before its last lines
