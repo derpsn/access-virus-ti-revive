@@ -184,3 +184,30 @@ TEST(stamp_plan_empty_message_reads_nothing)
     StampPlan p = stamp_plan(stale, 0, true, true, false);
     CHECK(!p.inherits && !p.stamp && !p.net);
 }
+
+// #39 (E512): a live note was stamped from the ring's newest frame at send time. On macOS Core Audio fills the ring in
+// bursts of several hundred frames, so the same played rhythm sounded 10.5 / 13.2 / 15.9 / 18.5 ms late in turn (klog,
+// our Mac, 2026-11-13). Stamped from the note's place on the smoothed timeline (st + S stands for the newest frame the
+// timeline follows), the spacing stays the spacing the player played.
+TEST(stamprule_live_stamp_from_the_timeline_is_steady)
+{
+    const int S = 5000;
+    const int64_t mk = 1000;
+    const double ratio = 1.0;
+    // the same frame as the ring-based stamp when the ring is exactly where the timeline expects it
+    CHECK(live_stamp_tl(100000, S, mk, ratio) == live_stamp(100000 + S, mk, ratio));
+    // notes every 24000 frames on the timeline; the ring's newest frame lags by 0..384 frames in turn (bursts)
+    const int64_t lag[4] = {0, 128, 256, 384};
+    int64_t prev_tl = -1, prev_ring = -1;
+    bool ring_uneven = false;
+    for (int i = 0; i < 8; i++) {
+        const int64_t tl = 200000 + 24000 * i;
+        const int64_t a = live_stamp_tl(tl, S, mk, ratio), b = live_stamp(tl + S - lag[i % 4], mk, ratio);
+        if (prev_tl >= 0) {
+            CHECK(a - prev_tl == 24000);       // the played spacing, exactly
+            ring_uneven |= b - prev_ring != 24000; // the old rule passed the bursts on
+        }
+        prev_tl = a, prev_ring = b;
+    }
+    CHECK(ring_uneven);
+}

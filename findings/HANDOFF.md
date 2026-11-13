@@ -5,10 +5,13 @@ NEXT. At most 150 lines; the Stop hook (`.claude/hooks/handoff-check.sh`) refuse
 how goes into the dated log [`log/2026-11.md`](log/2026-11.md) (newest first); older logs are in [`log/`](log/).
 Device/protocol knowledge goes into [`evidence.md`](evidence.md). Update this file in the same commit as the work._
 
-Last update: 2026-11-13 late (rc6 out + Catalina build; macOS libusb-audio feasibility probe ready; #39 test clean).
+Last update: 2026-11-13 night (rc7 tagged: live-note stamps E512 for #39; rc6 out; libusb-audio branch paused).
 
 ## Round
 
+- **v0.8.41-rc7** pre-release 2026-11-13 20:45 UTC (tag on 2e0fed9: live-note stamps from the timeline, E512),
+  release CI 43503582943 all 8 jobs green, 6 assets, Latest stays 0.8.40; main 6cf8493 preview box; Linux rc7
+  installed. #39 asked to test rc7 (issuecomment-6864528067). Mac: still rc6 (verify E512 there with keystamp+klog).
 - **v0.8.41-rc6** pre-release 2026-11-13 19:28 UTC (tag on 8e9cf20: macOS slip restart E510), release CI
   43490921423 all green (the macOS branch compiles), 6 assets; main 4f0f061 preview box; Linux rc6 installed
   (plug-in 4cc924bc). Catalina build of rc6: catalina-test 77aa389 (round merged), dev-mac 43491758791 green,
@@ -67,7 +70,7 @@ Last update: 2026-11-13 late (rc6 out + Catalina build; macOS libusb-audio feasi
 | #36 | Windows Cubase bank sync 0/128 | reporter (rc2: display, hub/cable, 3 checks) | 2026-11-11 |
 | #37 | Catalina: crackle = byte-slipped audio in 9 of 22 starts (E510) | reporter (rc6 Catalina build + vtiaudioprobe run, dev-mac 43495785623; asked 2026-11-13 ~20:00 UTC) | 2026-11-13 |
 | #38 | macOS 27 Live: editor / AU crash | reporter (crash report, Access files) | 2026-11-10 |
-| #39 | = #29 reporter, TI1 Keyboard, Live 12.3.7: test clean; A/B (own keys vs Fantom) slightly less even = likely monitoring latency (E507 7) | reporter (take A again with Local On + track monitor Off) | 2026-11-13 |
+| #39 | = #29 reporter, TI1 Keyboard: "notes pushed/stressed" = (1) our live stamps on Core Audio bursts, 8 ms (fixed in rc7, E512) + (2) the Virus' paced USB-MIDI link with aftertouch, 0-6 ms (firmware) | reporter (rc7 test; light touch vs aftertouch) | 2026-11-13 |
 | #40 | (ours) macOS: TI Revive takes the Virus' audio itself (libusb, E511) as an option? asks #30/#37/#39 reporters | reporters (audio interface use, admin rights, macOS/DAW) | 2026-11-13 |
 
 Every open issue waits on its reporter. Quiet-issue rule: 7 days after our last request, close with the AGENTS.md
@@ -121,6 +124,8 @@ message, only in a joint check with the user (by the dates above: #28 from 2026-
 
 ## NEXT
 
+0a. Live-stamp fix (E512): in rc7 (user: "make a new RC and let him test", #39 has the setup); also verify on our Mac
+   (keystamp + klog: onsets 24000 frames apart). libusb-audio branch paused (plug-in side committed 300cdd4).
 0. #39 (user 2026-11-13: investigate before replying to #39 and #30): E507 = their log (no unit requests while
    playing), sim S127/S128 (unit holds keys only behind a dump reply), Mac run1 (Live on built-in output, two clocks)
    and run2 (Virus as Live's device) with native/tools/keystamp.c + scripts/als_notes.py: 120/120 notes within
