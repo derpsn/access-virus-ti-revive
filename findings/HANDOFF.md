@@ -40,7 +40,8 @@ Last update: 2026-11-13 night (rc7 tagged: live-note stamps E512 for #39; rc6 ou
   Catalina/machine-specific. User: libusb test version for #37:
   VTI_USBAUDIO_DIAG=1 per-second raw packet stats (probe sets it), branch libusb-catalina = catalina-test +
   libusb-audio, dev-mac build (package + probe + test command). Old MacBook too slow for a DAW (user).
-  libusb-catalina f1bfee1 (merge, Makefile MAC_ARCH_FLAGS + vtiusbaudio_libusb.c), dev-mac 43512216308 running.
+  libusb-catalina f1bfee1 (merge, Makefile MAC_ARCH_FLAGS + vtiusbaudio_libusb.c), dev-mac 43512216308 green (pkg +
+  diag probe + test command), posted on #37.
 - Round **0.8.41** on branch `round-0.8.41` (pushed); rc1-rc7 pre-releases, **0.8.40 stays Latest**.
 - In 0.8.41: experimental lower latency (option `low-latency`, off by default, E496), Control Center Options page,
   slip detector + automatic restart (`slip-restart`, on by default, E488), freeze alert page (E493), burst counter
@@ -76,7 +77,7 @@ Last update: 2026-11-13 night (rc7 tagged: live-note stamps E512 for #39; rc6 ou
 | #33 | Intel Mac: Ableton fine, Logic distorted | reporter (rc1: Logic log, rate, buffer) | 2026-11-10 |
 | #34 | TI2/Keyboard macOS Ableton crackle, right channel at full scale | reporter (2 Outs, 44.1 kHz, no hub, record input 3/4) | 2026-11-12 |
 | #36 | Windows Cubase bank sync 0/128 | reporter (rc2: display, hub/cable, 3 checks) | 2026-11-11 |
-| #37 | Catalina: crackle = byte-slipped audio (E510); probe: data empty on Catalina but clean on our Big Sur MacBook (E511) = Catalina/machine-specific | reporter (stays on rc6 Catalina build) | 2026-11-13 |
+| #37 | Catalina: crackle = byte-slipped audio (E510); probe empty on Catalina, clean on Big Sur (E511) | reporter (diagnostic probe from libusb-catalina dev-mac 43512216308, Terminal text; issuecomment-6865694684) | 2026-11-13 |
 | #38 | macOS 27 Live: editor / AU crash | reporter (crash report, Access files) | 2026-11-10 |
 | #39 | TI1 Keyboard: (1) our live stamps fixed in rc7 (E512); (2) firmware pacing: his normal/soft/Fantom takes show soft playing ~ Fantom, pairs 6.0 ms apart (E512 (3)) | us: reply (draft with the user), then reporter (rc7 feel) | 2026-11-13 |
 | #40 | (ours) macOS: TI Revive takes the Virus' audio itself (libusb, E511) as an option? asks #30/#37/#39 reporters | reporters (audio interface use, admin rights, macOS/DAW) | 2026-11-13 |
