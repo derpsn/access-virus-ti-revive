@@ -12,7 +12,7 @@ Last update: 2026-11-13 late (rc6 out + Catalina build; macOS libusb-audio feasi
 - **v0.8.41-rc6** pre-release 2026-11-13 19:28 UTC (tag on 8e9cf20: macOS slip restart E510), release CI
   43490921423 all green (the macOS branch compiles), 6 assets; main 4f0f061 preview box; Linux rc6 installed
   (plug-in 4cc924bc). Catalina build of rc6: catalina-test 77aa389 (round merged), dev-mac 43491758791 green,
-  artifact dev-mac-catalina (x86_64, minos 10.15, CC 10.15). Open: #37 reply with both links; Mac fake-slip test.
+  artifact dev-mac-catalina (x86_64, minos 10.15, CC 10.15). #37 reply with both links posted. Open: Mac fake-slip test.
 - **macOS without Apple's audio driver (user's question, option A):** src/broker/vtiaudioprobe.c streams the Virus'
   audio with the broker's libusb code (vla_start) after libusb detaches the system driver (macOS: device capture,
   root), optional C4 per second; built on the Mac in ~/tirevive-test/audioprobe (libusb 1.0.30, Homebrew). Waits
@@ -59,9 +59,9 @@ Last update: 2026-11-13 late (rc6 out + Catalina build; macOS libusb-audio feasi
 | #33 | Intel Mac: Ableton fine, Logic distorted | reporter (rc1: Logic log, rate, buffer) | 2026-11-10 |
 | #34 | TI2/Keyboard macOS Ableton crackle, right channel at full scale | reporter (2 Outs, 44.1 kHz, no hub, record input 3/4) | 2026-11-12 |
 | #36 | Windows Cubase bank sync 0/128 | reporter (rc2: display, hub/cable, 3 checks) | 2026-11-11 |
-| #37 | Catalina: crackle = byte-slipped audio in 9 of 22 starts (E510); drivers gone, drop-outs were power-offs | us: rc6 (Catalina build) + reply |  2026-11-13 |
+| #37 | Catalina: crackle = byte-slipped audio in 9 of 22 starts (E510) | reporter (rc6 Catalina build, log after a crackle; issuecomment-6862985038) | 2026-11-13 |
 | #38 | macOS 27 Live: editor / AU crash | reporter (crash report, Access files) | 2026-11-10 |
-| #39 | = #29 reporter, TI1 Keyboard, Live 12.3.7: his keystamp test clean (120/120 within 0.25 ms, quantize off); "even I play right it's not on the right places" | us: reply (draft: early/late and how much, lower buffer) | 2026-11-13 |
+| #39 | = #29 reporter, TI1 Keyboard, Live 12.3.7: his keystamp test clean (120/120 within 0.25 ms) | reporter (early/late and how much, lower buffer; issuecomment-6862985428) | 2026-11-13 |
 
 Every open issue waits on its reporter. Quiet-issue rule: 7 days after our last request, close with the AGENTS.md
 message, only in a joint check with the user (by the dates above: #28 from 2026-11-16, #33 and #38 from 2026-11-17; #32: look up its date first).
