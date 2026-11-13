@@ -38,8 +38,10 @@ Last update: 2026-11-13 night (rc7 tagged: live-note stamps E512 for #39; rc6 ou
   plug-in's audio off/on released the interfaces, auto-detach re-attached Apple's driver = re-enumeration (MIDI cut,
   recovered). Fixed on the branch: ring made as the user (seteuid, stale ring unlinked), auto-detach off after the
   capture, explicit give-back at close (206ee80). Second try WORKS (E513): sound in Live, 0 drops, marker, keystamp
-  onsets 24000 +-64 frames apart, give-back to usbaudiod ok. Next: Big Sur MacBook (TI2 over), E512 alone on
-  Core Audio (rc7 on our Mac), smaller iso transfers on macOS (10.5 ms bursts).
+  onsets 24000 +-64 frames apart, give-back to usbaudiod ok. Big Sur MacBook (TI2 there now, patched OCLP/Moraea
+  system): probe clean (E511) -> #37's zeros are Catalina/machine-specific. User: libusb test version for #37:
+  VTI_USBAUDIO_DIAG=1 per-second raw packet stats (probe sets it), branch libusb-catalina = catalina-test +
+  libusb-audio, dev-mac build (package + probe + test command). Old MacBook too slow for a DAW (user).
 - Round **0.8.41** on branch `round-0.8.41` (pushed); rc1-rc7 pre-releases, **0.8.40 stays Latest**.
 - In 0.8.41: experimental lower latency (option `low-latency`, off by default, E496), Control Center Options page,
   slip detector + automatic restart (`slip-restart`, on by default, E488), freeze alert page (E493), burst counter
@@ -56,7 +58,7 @@ Last update: 2026-11-13 night (rc7 tagged: live-note stamps E512 for #39; rc6 ou
 
 ## Machines and the Virus
 
-- Our TI2 Desktop: on the **Mac** USB bus since 2026-11-13 ~18:20 (#39 run1/run2); back to Linux for hil.sh. User flashed ROM Z on it in early November (E500).
+- Our TI2 Desktop: on the **Big Sur MacBook** USB bus since 2026-11-13 ~22:25 (before: the Mac) since 2026-11-13 ~18:20 (#39 run1/run2); back to Linux for hil.sh. User flashed ROM Z on it in early November (E500).
 - Linux: rc4 CI build (run 43377561345) installed (plug-in b18c102b, broker 2e75801c), `hil.sh` ALL PASS.
 - win11 VM: rc4 CI MSI installed (/quiet, exit 0, DisplayVersion 0.8.41, no Virus attached), shut down.
 - win10 VM: reverted to snapshot `pre-i36` (0.8.36); snapshots `pre-i36`, `pre-i36-access` kept.
