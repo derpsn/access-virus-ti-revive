@@ -4604,3 +4604,13 @@ Hardware check of the E497 fix (d7a0d1f: a re-sync ping sent during a marker sca
 - **Method:** native/plugin/source/virusplugin.cpp (stats), native/src/model/otherdrivers.h, src/broker/vticore.c (E503)
 - **Confidence:** HIGH (2, 3, the logs' numbers; 4, the click statistics) / MED (1, 5, the reporter's words) / LOW (the reading)
 - **Hardware:** no (the reporter's unit only)
+
+### E509
+
+#30 (Snow, "the level meters in the plug-in don't show", Logic's own meters fine): the Snow skin's part meter is a different element than the TI's. Static, the user's Access files (Virus Control.dll, editorPR.xml / editor.xml read locally with vtimodel cat, nothing copied): editor.xml draws each part's volume as a VUSlider on BG_VU_Meter.png (16x), which TI Revive fills with MIDI activity (editorrender.cpp, meter()); editorPR.xml has no VUSlider in use (only in its component palette), its 4 part strips carry the volume and pan as plain HorizontalSlider (FDR_113_Uni_Simple.png) and the meter as a HorizontalSlider bound to the parameter "VirusControl/MIDI Indicator" (MTR_PR_Input.png, 121 x 6 px at 53/91 in the strip, Part 0..3); editor.xml does not use that parameter. TI Revive's code has no "VirusControl/MIDI Indicator" anywhere, so the slider stays at 0 and the Snow meter is empty. Runtime: the sim's virtual Snow (S129, USB/IP, Snow image) with the original Access Snow plug-in in win10ref (Windows 10 VM, user's observation: the meters react), and with the rc4 Linux plug-in (b18c102b) "TI Revive Virus Control (Snow)" in REAPER on the host (user: the meters do not react; broker found the Snow's bulk endpoints, 48 kHz audio, OS 5.1.7.00). Side note for that set-up: m4/kernel_session.sh stops our tirevive-broker.socket while it runs (for the VM pass-through); a test on the host needs `systemctl --user start tirevive-broker.socket`.
+
+- **Date:** 2026-11-13
+- **Pointer:** user's Access files (editorPR.xml, editor.xml), issue #30 comments 2026-11-13 17:49 / 18:00, virus-ti-sim S129, work/snow-sim/snow-sim.RPP
+- **Method:** native/src/editor/editorrender.cpp (VUSlider meter), native/plugin/source/virusplugin.cpp (meter_, tick_meters)
+- **Confidence:** HIGH (the skins, static; our code has no such parameter) / MED (the original's meters react on the virtual Snow, user's observation, model unit) / open (the original's exact value mapping for MIDI Indicator)
+- **Hardware:** no (virtual Snow on the simulator; the reporter's real Snow)
