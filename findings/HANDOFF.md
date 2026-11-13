@@ -31,8 +31,8 @@ Last update: 2026-11-13 09:55 (v0.8.41-rc4 released, site live with the rc4 box)
 - Linux: rc4 CI build (run 43377561345) installed (plug-in b18c102b, broker 2e75801c), `hil.sh` ALL PASS.
 - win11 VM: rc4 CI MSI installed (/quiet, exit 0, DisplayVersion 0.8.41, no Virus attached), shut down.
 - win10 VM: reverted to snapshot `pre-i36` (0.8.36); snapshots `pre-i36`, `pre-i36-access` kept.
-- Mac (macOS 27.2.1): rc4 package pushed to `~/Downloads/TI-Revive-0.8.41-rc4-mac/`; **the user installs it**
-  (not confirmed yet; rc3 not confirmed either).
+- Mac (macOS 27.2.1): rc4 CI package INSTALLED (2026-11-13 09:42 CET; VST3 b9674444, AU 04b9bae3, broker 4558a47e
+  = the package payload). Mac tests of the count-in arp in Logic/Live: with the user.
 
 ## Open issues (as of 2026-11-12 late; check GitHub only together with the user)
 
@@ -97,8 +97,6 @@ message, only in a joint check with the user (by the dates above: #28 from 2026-
 
 ## NEXT
 
-1. Post rc4 on #30 (draft work/replies/30-rc4.md: count-in arp, asks whether the arp starts with bar 1), with
-   the user's OK. Test machines run the tested rc4 CI build (43377561345), not the release build.
+1. rc4 posted on #30 (issuecomment-6848455763). Mac: the arp with a count-in in Logic + Live (with the user).
 2. Wait for the reporters; next joint issue check with the user.
-3. User: install rc4 on the Mac (double-click `Install test build.command`), then Mac checks if wanted.
 4. Then the "To do before the final 0.8.41" list.
