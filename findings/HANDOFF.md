@@ -5,7 +5,7 @@ NEXT. At most 150 lines; the Stop hook (`.claude/hooks/handoff-check.sh`) refuse
 how goes into the dated log [`log/2026-11.md`](log/2026-11.md) (newest first); older logs are in [`log/`](log/).
 Device/protocol knowledge goes into [`evidence.md`](evidence.md). Update this file in the same commit as the work._
 
-Last update: 2026-11-13 morning (joint issue check: #30 answered; E497 hardware run restarted).
+Last update: 2026-11-13 morning (#30 answered; transport restarts like the original in 0.8.41, E505; E497 run going).
 
 ## Round
 
@@ -17,7 +17,10 @@ Last update: 2026-11-13 morning (joint issue check: #30 answered; E497 hardware 
   fetched patch (E499/E502), LCD/sync page names each fetched patch, Windows broker error 433 = gone,
   libusb reader stall handling (E503), Windows setup unplug step (E504), and since rc3 (not in a build yet):
   E497 fix d7a0d1f (user 2026-11-12: "put E497 in 0.8.41") - a re-sync ping sent during a marker scan pass keeps
-  its 5 s (device/markerscan.h, test_markerscan.cpp; the two race tests failed on the old logic first).
+  its 5 s (device/markerscan.h, test_markerscan.cpp; the two race tests failed on the old logic first); CI run
+  43369222561 (2026-11-13, all green) has it. Since then (user 2026-11-13: "Into 0.8.41 ... like the original"):
+  transport restarts like the original (E505, #30 count-in arp): F2 from ppq + 256, 73 00 23 vv on the next tick,
+  F8 grid rephased, FC at Stop, the original's jump limits (transport.h, test_transport.cpp, nativehost --count-in).
 - Branch `catalina-test` (worktree `../virus-ti-re-catalina`, e91ef17): untested x86_64 / macOS 10.15 build for
   #37 only; dev-mac run 43278510379 green, link posted on #37. Never merged into main.
 
@@ -53,10 +56,14 @@ message, only in a joint check with the user (by the dates above: #28 from 2026-
 - E503 libusb reader stall handling (5660a93): unit tests only; macOS broker not built locally.
 - Windows broker error 433 = device gone (5af74bd): mingw build + unit test only.
 - Windows setup unplug step (c6313b4, E504): the unplug path never exercised (no Virus on the Access driver).
-- E497 fix d7a0d1f: hardware check RUNNING since 2026-11-13 morning: `work/latency/q-e497fix2.sh B 60` (local
-  build from d7a0d1f, no capture, ~75 min), results in `work/latency/e497fix2/run.meta`. Pass = markers ==
-  resyncs + 1 in every session (old code: 14 of 572 re-syncs missed, ~6 expected in 60). The Virus is busy until
-  it ends: no hil.sh in parallel.
+- E497 fix d7a0d1f: hardware check RUNNING since 2026-11-13 04:55 UTC: `work/latency/q-e497fix2.sh B 60` (no
+  capture, ~75 min), results in `work/latency/e497fix2/run.meta`. Pass = markers == resyncs + 1 in every session
+  (old code: 14 of 572 re-syncs missed). MIXED BUILD: build-native was rebuilt with the transport change at
+  05:24:17 UTC by mistake: B1-B24 plug-in 1fc39535 (d7a0d1f), B25 unclear, B26+ 2ce0a35b (+ transport). Report
+  the parts apart. Until it ends: build only in `build-transport/`, no hil.sh in parallel.
+- Transport restarts (E505): unit tests only. Hardware check planned: nativehost from build-transport with
+  `--transport 2 --count-in 1` + an arp patch, 48 kHz b512, low-latency on/off, usbmon: F2 + 73 23 vv + F8 at one
+  stamp, no restart at 0, FC at Stop, no late notes (safety-net count 0). Then Logic on the Mac (sim plan S125).
 - `python3 -I scripts/evidence.py list --no-hardware` lists the evidence entries marked this way.
 
 ## Open decisions for the user
@@ -77,9 +84,8 @@ message, only in a joint check with the user (by the dates above: #28 from 2026-
 ## Round 0.8.42 candidates (decided or proposed)
 
 - Decided: opt-in update check in the Control Center; "Prepare bug report" button (no telemetry).
-- Decided (user 2026-11-13, #30): the arpeggiator out of sync when Logic records with a 1-bar count-in (punch-in
-  fine): find how the original handles the count-in (REA, transport/E275 path); the plug-in's level meters in Logic
-  (details asked on #30).
+- Decided (user 2026-11-13, #30): the plug-in's level meters in Logic (details asked on #30). The count-in arp
+  moved into 0.8.41 (E505).
 - Proposed (sim list): freeze guard (73 00 10 vv vs stream rate), single re-sync after a detected +64 (E492/E498),
   burst guard, fewer broker resets (E495), lower safety-net floor (option B).
 
@@ -92,9 +98,9 @@ message, only in a joint check with the user (by the dates above: #28 from 2026-
 
 ## NEXT
 
-1. When the E497 run ends: write E505 (Hardware field) and send the count to
-   virus-ti-sim-47 (it waits for C3; it read the fix and found no hole). Windows/macOS builds of the fix come
-   with the next CI run.
+1. When the E497 run ends: write E506 (the two build parts apart) and send the count to the sim session
+   (now virus-ti-sim-99; it asked for the C3 count). Then the transport hardware check above, coverage + mutation
+   (risk.py), a new CI run with the transport change, and the full test round.
 2. Wait for the reporters; next joint issue check with the user.
 3. User: install rc3 on the Mac (double-click `Install test build.command`), then Mac checks if wanted.
 4. Then the "To do before the final 0.8.41" list.

@@ -1741,6 +1741,8 @@ tresult PLUGIN_API VirusPlugin::process(ProcessData &data)
             resync_.start(newest);
             tl_ = target;
             next_tick_ = (double)tl_;
+            transport_.reset(); // the new F8 grid is off the beat: the next playing block restarts on a tick (E505)
+            restart_.clear();
             tl_follow_.reset();
             bool new_stream = !tl_valid_;
             if (new_stream)
@@ -1759,6 +1761,7 @@ tresult PLUGIN_API VirusPlugin::process(ProcessData &data)
             const TimelineFollow::Move mv = tl_follow_.update(err, whole, out_->marker.load() >= 0);
             tl_ += mv.delta;
             next_tick_ += (double)mv.delta;
+            restart_.shift(mv.delta);
             if (mv.jump) {
                 out_->anchors.fetch_add(1, std::memory_order_relaxed);
                 // the resampled output (host rate != 44.1 kHz) jumps too: steering at 0.2 % took >10 s for the
@@ -1785,9 +1788,9 @@ tresult PLUGIN_API VirusPlugin::process(ProcessData &data)
         add(tl_ - M, &fe, 1);
         // and then every 300 ms (ActiveSensing): the DSP releases every voice ~1 s after the last FE it saw (E237)
         fe_.reset(tl_ - M + fe_.period);
-        int spp = 0; // song position (sixteenths) from the host, else 0
+        int spp = 0; // song position (sixteenths) from the host + 256 quarters like a restart (E505), else 0
         if (data.processContext && (data.processContext->state & ProcessContext::kProjectTimeMusicValid))
-            spp = (int)std::max(0.0, data.processContext->projectTimeMusic * 4.0);
+            spp = transport_start(data.processContext->projectTimeMusic, 1.0).spp;
         uint8_t f2[3] = {0xF2, (uint8_t)(spp & 0x7F), (uint8_t)((spp >> 7) & 0x7F)};
         add(tl_ - M, f2, 3);
         if (!env_no_ping()) { // the original's sync ping (73 00 22 00), stamped 3072 like the original: the Virus
@@ -1796,27 +1799,36 @@ tresult PLUGIN_API VirusPlugin::process(ProcessData &data)
             add(3072, ping, 11);
         }
     }
-    // Play and loop restarts (transport.h): like the original, the song position, the +1 clock tick and the per-part
-    // reset at the block's time, so the arpeggiator and clock-synced LFOs restart with the bar
-    bool restart = false;
-    uint8_t restart_f2[3] = {};
+    // MIDI clock at the host tempo (120 BPM without a process context), 24 ticks per quarter
+    const double tempo = clock_tempo(data.processContext && (data.processContext->state & ProcessContext::kTempoValid)
+                                         ? data.processContext->tempo
+                                         : 120.0); // 0 or negative made the tick loop endless (hostmidi.h)
+    const double per_tick = vrate * 60.0 / (tempo * 24.0); // 919 frames per tick at 44.1 kHz, 1000 at 48 (E323)
+    // Play, loop restarts, jumps and Stop (transport.h, E505): like the original, F2 and 73 00 23 vv from the host
+    // position + 256 quarters on the next clock tick, where the F8 grid restarts too, so the arpeggiator and
+    // clock-synced LFOs follow the bar (a count-in included); FC at Stop. The original's 16 part messages
+    // (6F <part> 7F 00) go out from the worker (send_output_delays, E344)
     if (tl_valid_ && data.processContext && (data.processContext->state & ProcessContext::kProjectTimeMusicValid)) {
         const bool playing = (data.processContext->state & ProcessContext::kPlaying) != 0;
-        const double tempo_qn = (data.processContext->state & ProcessContext::kTempoValid) ? data.processContext->tempo
-                                                                                          : 120.0;
         const double ppq = data.processContext->projectTimeMusic;
-        if (transport_.update(playing, ppq, (double)block_frames / vrate * tempo_qn / 60.0)) {
-            // F2 and the +1 tick, added after the block's events below; the original's 16 part messages
-            // (6F <part> 7F 00) go out from the worker (send_output_delays, E344)
-            transport_f2((int)std::max(0.0, std::floor(ppq * 4.0 + 1e-6)), restart_f2);
-            restart = true;
+        const auto ev = transport_.update(playing, ppq, (double)block_frames / vrate * tempo / 60.0,
+                                          (int64_t)data.processContext->projectTimeSamples, data.numSamples);
+        if (ev == TransportWatch::Start) {
+            const TransportStart st = transport_start(ppq, per_tick);
+            const int64_t at_tick = tl_ + (int64_t)std::lround(st.offset);
+            restart_.arm(st, at_tick); // goes out with the block that holds its tick (PendingRestart)
+            next_tick_ = (double)at_tick;
+        } else if (ev == TransportWatch::Stop) {
+            restart_.clear();
+            add(tl_, &TRANSPORT_STOP, 1);
         }
     }
-    if (tl_valid_) { // MIDI clock at the host tempo (120 BPM without a process context), 24 ticks per quarter
-        double tempo = clock_tempo(data.processContext && (data.processContext->state & ProcessContext::kTempoValid)
-                                       ? data.processContext->tempo
-                                       : 120.0); // 0 or negative made this loop endless (hostmidi.h)
-        double per_tick = vrate * 60.0 / (tempo * 24.0); // 919 frames per tick at 44.1 kHz, 1000 at 48 (E323)
+    if (tl_valid_) {
+        // the restart before the F8 at its stamp (stable sort), as the original: F2, 73 00 23 vv, then F8 (E505)
+        if (restart_.due(tl_ + block_frames)) {
+            add(restart_.stamp(), restart_.f2(), 3);
+            add(restart_.stamp(), restart_.tick(), 11);
+        }
         static const uint8_t f8 = 0xF8;
         while (next_tick_ < (double)(tl_ + block_frames)) {
             add((int64_t)std::lround(next_tick_), &f8, 1);
@@ -1921,12 +1933,6 @@ tresult PLUGIN_API VirusPlugin::process(ProcessData &data)
                 held_notes_.note_off(m[0] & 15, m[1]);
             }
         }
-    }
-    // the restart set after the block's controllers and notes at the same stamp, like the original (E280; the order
-    // made no difference to the sync reports at REAPER's Play, E373)
-    if (restart) {
-        add(tl_, restart_f2, 3);
-        add(tl_, TRANSPORT_TICK, 11);
     }
     // to the Virus in time order (clock ticks and events share the timeline); stable: at the same stamp automation
     // stays before the notes, so a note starts with the new values (insertion sort: stable, no allocation on the

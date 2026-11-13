@@ -794,7 +794,8 @@ private:
     double next_tick_ = 0;
     ActiveSensing fe_;  // FE every 300 ms on the timeline (the DSP's watchdog, E237)
     double tl_acc_ = 0; // fractional Virus frames of the timeline (host rate != the Virus' rate)
-    TransportWatch transport_; // Play and loop restarts: the original's F2 + 73 00 23 01 + 6F <part> 7F 00 (E275)
+    TransportWatch transport_; // Play, restarts, jumps, Stop: F2 + 73 00 23 vv on the next tick, FC (E275, E505)
+    PendingRestart restart_;   // a restart waits for the block that holds its tick (transport.h)
     double stat_acc_ = 0; // the same for the host-frames statistic
     int64_t stream_start_ = -1;
     TimelineFollow tl_follow_; // after the anchor: jumps and drift steps from the error over time, not per block (E337)
