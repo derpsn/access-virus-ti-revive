@@ -30,16 +30,14 @@ Last update: 2026-11-13 night (rc7 tagged: live-note stamps E512 for #39; rc6 ou
   spawns it -, sets mac-usb-audio.on, runs sudo VTI_LIBUSB_AUDIO=1 vtibroker -v -stay, log on the Desktop, option
   off again at the end). CI 43505792317: mac green, native-linux/windows red (owneruid strtol on 32-bit long,
   risk.json lacked the .command) -> fixed 5865382, CI 43506997752 running. Then test on our Mac.
-  Second test Mac: Intel MacBook, Big Sur 11.7.10 (kernel AppleUSBAudio, like #37's Catalina): scripts/mac.sh
-  MAC=bigsur (host/user only in ~/.config/tirevive/mac-bigsur.env); SSH works (key via a LAN script, home not
-  group-writable). Machine: Core 2 Duo P8700 (Penryn, an old MacBook on Big Sur), no Xcode CLT (use CI binaries).
+  Second test Mac (Big Sur MacBook): gone since 2026-11-13 night, not used for testing any more (user).
 - First libusb run on our Mac (CI 43506997752 package, 22:13): broker captured the Virus and streamed, but the
   plug-in got no audio (audio 0): macOS refuses fchown on POSIX shm (EINVAL), the ring stayed root's 0600; and the
   plug-in's audio off/on released the interfaces, auto-detach re-attached Apple's driver = re-enumeration (MIDI cut,
   recovered). Fixed on the branch: ring made as the user (seteuid, stale ring unlinked), auto-detach off after the
   capture, explicit give-back at close (206ee80). Second try WORKS (E513): sound in Live, 0 drops, marker, keystamp
-  onsets 24000 +-64 frames apart, give-back to usbaudiod ok. Big Sur MacBook (TI2 there now, patched OCLP/Moraea
-  system): probe clean (E511) -> #37's zeros are Catalina/machine-specific. User: libusb test version for #37:
+  onsets 24000 +-64 frames apart, give-back to usbaudiod ok. Big Sur probe clean (E511) -> #37's zeros are
+  Catalina/machine-specific. User: libusb test version for #37:
   VTI_USBAUDIO_DIAG=1 per-second raw packet stats (probe sets it), branch libusb-catalina = catalina-test +
   libusb-audio, dev-mac build (package + probe + test command). Old MacBook too slow for a DAW (user).
   libusb-catalina f1bfee1 (merge, Makefile MAC_ARCH_FLAGS + vtiusbaudio_libusb.c), dev-mac 43512216308 running.
@@ -59,7 +57,8 @@ Last update: 2026-11-13 night (rc7 tagged: live-note stamps E512 for #39; rc6 ou
 
 ## Machines and the Virus
 
-- Our TI2 Desktop: on the **Big Sur MacBook** USB bus since 2026-11-13 ~22:25 (before: the Mac) since 2026-11-13 ~18:20 (#39 run1/run2); back to Linux for hil.sh. User flashed ROM Z on it in early November (E500).
+- Our TI2 Desktop: location to confirm (was on the Big Sur MacBook, which is gone; before that the Mac); back to
+  Linux for hil.sh. User flashed ROM Z on it in early November (E500).
 - Linux: rc4 CI build (run 43377561345) installed (plug-in b18c102b, broker 2e75801c), `hil.sh` ALL PASS.
 - win11 VM: rc4 CI MSI installed (/quiet, exit 0, DisplayVersion 0.8.41, no Virus attached), shut down.
 - win10 VM: reverted to snapshot `pre-i36` (0.8.36); snapshots `pre-i36`, `pre-i36-access` kept.
