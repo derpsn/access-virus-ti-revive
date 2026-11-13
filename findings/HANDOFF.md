@@ -5,7 +5,7 @@ NEXT. At most 150 lines; the Stop hook (`.claude/hooks/handoff-check.sh`) refuse
 how goes into the dated log [`log/2026-11.md`](log/2026-11.md) (newest first); older logs are in [`log/`](log/).
 Device/protocol knowledge goes into [`evidence.md`](evidence.md). Update this file in the same commit as the work._
 
-Last update: 2026-11-13 evening (#39 investigated: E507 Mac keystamp run1 + run2 clean; reply posted on #39, #30 next).
+Last update: 2026-11-13 evening (#39 investigated: E507 Mac keystamp run1 + run2 clean; replies posted on #39 and #30).
 
 ## Round
 
@@ -40,7 +40,7 @@ Last update: 2026-11-13 evening (#39 investigated: E507 Mac keystamp run1 + run2
 |---|---|---|---|
 | #26 | Snow, Linux REAPER timing / clicks | reporter (REAPER audio system, pw-jack test, rc3) | 2026-11-12 |
 | #28 | numbers 100-127 moved 5 px | reporter (confirm, close on yes) | 2026-11-09 |
-| #30 | Snow, Logic: rc4 "nailed it, no latency anymore" (11-13 15:46); only the plug-in's level meters left | us: reply (ask which meters + screenshot, arp after count-in?) | 2026-11-13 |
+| #30 | Snow, Logic: rc4 "nailed it, no latency anymore" (11-13 15:46); only the plug-in's level meters left | reporter (which meters + screenshot, arp after count-in; asked issuecomment-6860709832) | 2026-11-13 |
 | #31 | Win10 VirtualBox, Snow, setup with Access drivers | reporter (rc3 setup with the unplug step) | 2026-11-12 |
 | #32 | (no change since 11-10) | reporter | before 11-10 |
 | #33 | Intel Mac: Ableton fine, Logic distorted | reporter (rc1: Logic log, rate, buffer) | 2026-11-10 |
@@ -107,7 +107,7 @@ message, only in a joint check with the user (by the dates above: #28 from 2026-
    0.29 ms each, no drift/step/2-bar effect. Live audio-device switches reproduce the reporter's three session-1
    moments (1+23..25 safety-net moves). Reply posted on #39 (issuecomment-6860658701, with keystamp build line
    pinned to 9e2632f, SDK fallback tested on our Mac); analyse their zip with als_notes.py when it comes.
-   #30 reply (meters + screenshot, arp after count-in) not posted yet. Data: work/latency/i39-keystamp.
+   #30 reply posted (issuecomment-6860709832: meters + screenshot, arp after count-in). Data: work/latency/i39-keystamp.
    TI2 is on the Mac USB now, not Linux. klog is still switched on on the Mac (harmless, diagnostic).
 1. rc4 posted on #30 (issuecomment-6848455763). The reporter answered 11-13 15:46: latency solved, meters open.
 2. User on bare-metal Windows testing rc4; afterwards read their plug-in log, and their call on the S126 fix.
