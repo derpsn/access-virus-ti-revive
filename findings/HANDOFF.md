@@ -5,7 +5,7 @@ NEXT. At most 150 lines; the Stop hook (`.claude/hooks/handoff-check.sh`) refuse
 how goes into the dated log [`log/2026-11.md`](log/2026-11.md) (newest first); older logs are in [`log/`](log/).
 Device/protocol knowledge goes into [`evidence.md`](evidence.md). Update this file in the same commit as the work._
 
-Last update: 2026-11-12 night (end of the day; user: "stop the test and we continue tomorrow").
+Last update: 2026-11-13 morning (joint issue check: #30 answered; E497 hardware run restarted).
 
 ## Round
 
@@ -36,7 +36,7 @@ Last update: 2026-11-12 night (end of the day; user: "stop the test and we conti
 |---|---|---|---|
 | #26 | Snow, Linux REAPER timing / clicks | reporter (REAPER audio system, pw-jack test, rc3) | 2026-11-12 |
 | #28 | numbers 100-127 moved 5 px | reporter (confirm, close on yes) | 2026-11-09 |
-| #30 | Snow, Logic latency on analog outs | reporter (switch the low-latency option on) | 2026-11-12 |
+| #30 | Snow, Logic latency: option on = "works better"; recording a few ms early, arp vs count-in, meters | reporter (what is recorded + how early, project via the web page, which meters) | 2026-11-13 |
 | #31 | Win10 VirtualBox, Snow, setup with Access drivers | reporter (rc3 setup with the unplug step) | 2026-11-12 |
 | #32 | (no change since 11-10) | reporter | before 11-10 |
 | #33 | Intel Mac: Ableton fine, Logic distorted | reporter (rc1: Logic log, rate, buffer) | 2026-11-10 |
@@ -53,11 +53,10 @@ message, only in a joint check with the user (by the dates above: #28 from 2026-
 - E503 libusb reader stall handling (5660a93): unit tests only; macOS broker not built locally.
 - Windows broker error 433 = device gone (5af74bd): mingw build + unit test only.
 - Windows setup unplug step (c6313b4, E504): the unplug path never exercised (no Virus on the Access driver).
-- E497 fix d7a0d1f: hardware check STOPPED by the user after 1 of 60 sessions (B1: 4 pings, 4 markers, 0 missed;
-  B2 interrupted 20:17 UTC, no result) = no evidence yet. To restart: a copy of `work/latency/q-runs.sh` with
-  `plugin=` the local build (`build-native/VST3/Release/TI Revive Virus Control.vst3`, rebuilt from d7a0d1f),
-  `out=$repo/work/latency/e497fix2`, the dumpcap line replaced by `:`; run `B 60` (~75 min, Virus on Linux USB).
-  Pass = markers == resyncs + 1 in every session (old code: 14 of 572 re-syncs missed, ~6 expected in 60).
+- E497 fix d7a0d1f: hardware check RUNNING since 2026-11-13 morning: `work/latency/q-e497fix2.sh B 60` (local
+  build from d7a0d1f, no capture, ~75 min), results in `work/latency/e497fix2/run.meta`. Pass = markers ==
+  resyncs + 1 in every session (old code: 14 of 572 re-syncs missed, ~6 expected in 60). The Virus is busy until
+  it ends: no hil.sh in parallel.
 - `python3 -I scripts/evidence.py list --no-hardware` lists the evidence entries marked this way.
 
 ## Open decisions for the user
@@ -78,6 +77,9 @@ message, only in a joint check with the user (by the dates above: #28 from 2026-
 ## Round 0.8.42 candidates (decided or proposed)
 
 - Decided: opt-in update check in the Control Center; "Prepare bug report" button (no telemetry).
+- Decided (user 2026-11-13, #30): the arpeggiator out of sync when Logic records with a 1-bar count-in (punch-in
+  fine): find how the original handles the count-in (REA, transport/E275 path); the plug-in's level meters in Logic
+  (details asked on #30).
 - Proposed (sim list): freeze guard (73 00 10 vv vs stream rate), single re-sync after a detected +64 (E492/E498),
   burst guard, fewer broker resets (E495), lower safety-net floor (option B).
 
@@ -90,7 +92,7 @@ message, only in a joint check with the user (by the dates above: #28 from 2026-
 
 ## NEXT
 
-1. Tomorrow: restart the E497 hardware run (above), then write E505 (Hardware field) and send the count to
+1. When the E497 run ends: write E505 (Hardware field) and send the count to
    virus-ti-sim-47 (it waits for C3; it read the fix and found no hole). Windows/macOS builds of the fix come
    with the next CI run.
 2. Wait for the reporters; next joint issue check with the user.
