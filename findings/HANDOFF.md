@@ -59,7 +59,7 @@ Last update: 2026-11-13 late (rc6 out + Catalina build; macOS libusb-audio feasi
 | #33 | Intel Mac: Ableton fine, Logic distorted | reporter (rc1: Logic log, rate, buffer) | 2026-11-10 |
 | #34 | TI2/Keyboard macOS Ableton crackle, right channel at full scale | reporter (2 Outs, 44.1 kHz, no hub, record input 3/4) | 2026-11-12 |
 | #36 | Windows Cubase bank sync 0/128 | reporter (rc2: display, hub/cable, 3 checks) | 2026-11-11 |
-| #37 | Catalina: crackle = byte-slipped audio in 9 of 22 starts (E510) | reporter (rc6 Catalina build, log after a crackle; issuecomment-6862985038) | 2026-11-13 |
+| #37 | Catalina: crackle = byte-slipped audio in 9 of 22 starts (E510) | reporter (rc6 Catalina build + vtiaudioprobe run, dev-mac 43495785623; asked 2026-11-13 ~20:00 UTC) | 2026-11-13 |
 | #38 | macOS 27 Live: editor / AU crash | reporter (crash report, Access files) | 2026-11-10 |
 | #39 | = #29 reporter, TI1 Keyboard, Live 12.3.7: his keystamp test clean (120/120 within 0.25 ms) | reporter (early/late and how much, lower buffer; issuecomment-6862985428) | 2026-11-13 |
 | #40 | (ours) macOS: TI Revive takes the Virus' audio itself (libusb, E511) as an option? asks #30/#37/#39 reporters | reporters (audio interface use, admin rights, macOS/DAW) | 2026-11-13 |
