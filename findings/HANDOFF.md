@@ -79,7 +79,7 @@ Last update: 2026-11-13 night (rc7 tagged: live-note stamps E512 for #39; rc6 ou
 | #36 | Windows Cubase bank sync 0/128 | reporter (rc2: display, hub/cable, 3 checks) | 2026-11-11 |
 | #37 | Catalina: crackle = byte-slipped audio (E510); probe empty on Catalina, clean on Big Sur (E511) | reporter (diagnostic probe from libusb-catalina dev-mac 43512216308, Terminal text; issuecomment-6865694684) | 2026-11-13 |
 | #38 | macOS 27 Live: editor / AU crash | reporter (crash report, Access files) | 2026-11-10 |
-| #39 | TI1 Keyboard: rc7 fixed our 8 ms (E512 1); pairs 6 ms = firmware, pressure only 1-3 ms by sim S130, rest = playing; Pressure Sensitivity -100 % stops pressure (model) | us: post conclusion (user decides now vs after his rc7 answer) | 2026-11-13 |
+| #39 | TI1 Keyboard: rc7 fixed our 8 ms (E512 1); pairs 6 ms + pressure 1-3 ms = firmware (E512 3/4); original Mac driver = same arrival stamps, no back-dating (E514) | sim (F1-F6 firmware deep look), then us: conclusion post | 2026-11-13 |
 | #40 | (ours) macOS: TI Revive takes the Virus' audio itself (libusb, E511) as an option? asks #30/#37/#39 reporters | reporters (audio interface use, admin rights, macOS/DAW) | 2026-11-13 |
 
 Every open issue waits on its reporter. Quiet-issue rule: 7 days after our last request, close with the AGENTS.md
