@@ -38,7 +38,7 @@ Entries: 510. Marks after an entry: its lowest confidence level when below HIGH,
 - [E459](evidence.md#e459) **Firmware/bootloader path of the original, seen on the wire, for TI Revive to NEVER send (AGENTS.md rule ... (open)
 - [E493](evidence.md#e493) The Virus' audio froze in the middle of the first 48 kHz stream after a 44.1 kHz one, and stayed frozen ... (MED; open)
 
-## USB transport: endpoints, iso streams, stalls, errors (253)
+## USB transport: endpoints, iso streams, stalls, errors (254)
 
 - [E003](evidence.md#e003) MSI custom action `UpdateFirmware` (CAInstallerHelperDeferred!UpdateTIOS) runs at InstallExecuteSequence 6598 ...
 - [E004](evidence.md#e004) Drivers are installed by CAInstallerHelperDeferred (Prepare/Install/FinishDriverInstall, imports ...
@@ -292,9 +292,10 @@ Entries: 510. Marks after an entry: its lowest confidence level when below HIGH,
 - [E509](evidence.md#e509) #30 (Snow, "the level meters in the plug-in don't show", Logic's own meters fine): the Snow skin's part meter ... (MED; open; not on hardware)
 - [E510](evidence.md#e510) #37 follow-up (2026-11-13 18:56 UTC, Catalina, TI Desktop): the reporter's answers: "2 Outs / No Input" does ... (LOW; open)
 - [E511](evidence.md#e511) macOS without Apple's USB audio driver, feasibility (user 2026-11-13: "prepare the feasibility test", after ... (open)
+- [E512](evidence.md#e512) #39 ("the program tries to push notes into place, the notes feel stressed", also with Local On and the track ... (MED; open)
 - [E513](evidence.md#e513) The broker's own audio on macOS works in a DAW (libusb-audio branch, E511): our Mac (macOS 27.2.1, Apple ... (open)
 
-## SysEx and parameter protocol (116)
+## SysEx and parameter protocol (117)
 
 - [E022](evidence.md#e022) After removing the stale devnode (port 19 gone after a guest reboot), plugin load works
 - [E024](evidence.md#e024) Cutoff = CC 40: hardware knob -> EP 0x85 c1 `1B B0 28 vv` (t=73.6-74.2, 105.8-106.2; also CC 42 at 106.7); ...
@@ -412,6 +413,7 @@ Entries: 510. Marks after an entry: its lowest confidence level when below HIGH,
 - [E499](evidence.md#e499) The Virus display during the start-up bank sync: TI Revive kept "Configuring Virus TI" up the whole time, the ... (open)
 - [E505](evidence.md#e505) How the original re-sends the song position, and where TI Revive differed (#30: the arpeggiator out of sync ... (MED; open)
 - [E511](evidence.md#e511) macOS without Apple's USB audio driver, feasibility (user 2026-11-13: "prepare the feasibility test", after ... (open)
+- [E512](evidence.md#e512) #39 ("the program tries to push notes into place, the notes feel stressed", also with Local On and the track ... (MED; open)
 
 ## Patch banks and start-up sync (149)
 
