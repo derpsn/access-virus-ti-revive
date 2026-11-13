@@ -61,7 +61,7 @@ Last update: 2026-11-13 late (rc6 out + Catalina build; macOS libusb-audio feasi
 | #36 | Windows Cubase bank sync 0/128 | reporter (rc2: display, hub/cable, 3 checks) | 2026-11-11 |
 | #37 | Catalina: crackle = byte-slipped audio in 9 of 22 starts (E510) | reporter (rc6 Catalina build + vtiaudioprobe run, dev-mac 43495785623; asked 2026-11-13 ~20:00 UTC) | 2026-11-13 |
 | #38 | macOS 27 Live: editor / AU crash | reporter (crash report, Access files) | 2026-11-10 |
-| #39 | = #29 reporter, TI1 Keyboard, Live 12.3.7: test clean; A/B (own keys vs Fantom) slightly less even = likely monitoring latency (E507 7) | reporter (take A again with Local On + track monitor Off) | 2026-11-13 |
+| #39 | = #29 reporter, TI1 Keyboard: "notes pushed/stressed" = (1) our live stamps on Core Audio bursts, 8 ms (fixed in the round, E512, not on hardware yet) + (2) the Virus' paced USB-MIDI link with heavy aftertouch, 0-6 ms (firmware) | us: reply (step 3), then a build with the fix | 2026-11-13 |
 | #40 | (ours) macOS: TI Revive takes the Virus' audio itself (libusb, E511) as an option? asks #30/#37/#39 reporters | reporters (audio interface use, admin rights, macOS/DAW) | 2026-11-13 |
 
 Every open issue waits on its reporter. Quiet-issue rule: 7 days after our last request, close with the AGENTS.md
@@ -115,6 +115,8 @@ message, only in a joint check with the user (by the dates above: #28 from 2026-
 
 ## NEXT
 
+0a. Live-stamp fix (E512, round): verify on our Mac with a CI build (keystamp + klog: onsets 24000 frames apart),
+   then into the next rc. libusb-audio branch paused (plug-in side committed 300cdd4).
 0. #39 (user 2026-11-13: investigate before replying to #39 and #30): E507 = their log (no unit requests while
    playing), sim S127/S128 (unit holds keys only behind a dump reply), Mac run1 (Live on built-in output, two clocks)
    and run2 (Virus as Live's device) with native/tools/keystamp.c + scripts/als_notes.py: 120/120 notes within

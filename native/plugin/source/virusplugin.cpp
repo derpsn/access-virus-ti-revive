@@ -898,7 +898,11 @@ void DeviceOut::run()
             bool live_stamped = false; // a real live stamp, not "no stamp yet"
             if (int64_t mk = marker.load(); st >= 0 && mk >= 0 && !ping && !inherits && plan.net) {
                 if (is_live && audio_ok()) { // no lead, no safety net (stamprule.h)
-                    st = live_stamp(audio_.newest_frame(), mk, live_ratio.load(std::memory_order_relaxed));
+                    // from the note's place on the smoothed timeline (E512, #39): the ring's newest frame jumps in
+                    // Core Audio's bursts on macOS and made one played rhythm uneven; without a timeline place as before
+                    const double r = live_ratio.load(std::memory_order_relaxed);
+                    st = from_process ? live_stamp_tl(st, live_s.load(std::memory_order_relaxed), mk, r)
+                                      : live_stamp(audio_.newest_frame(), mk, r);
                     live_stamped = true;
                 } else {
                     int64_t due = st + lead.load(); // the ring frame it sounds at
@@ -1842,6 +1846,7 @@ tresult PLUGIN_API VirusPlugin::process(ProcessData &data)
     auto at = [&](int32 offset) { return tl_valid_ ? tl_ + (int64_t)std::lround(offset * ratio) : -1; };
     if (live_notes_ && out_)
         out_->live_ratio.store(ratio, std::memory_order_relaxed);
+        out_->live_s.store(S, std::memory_order_relaxed);
     if (data.inputParameterChanges && out_) {
         for (int32 i = 0; i < data.inputParameterChanges->getParameterCount(); i++) {
             IParamValueQueue *q = data.inputParameterChanges->getParameterData(i);
