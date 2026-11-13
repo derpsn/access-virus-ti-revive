@@ -26,7 +26,9 @@ Last update: 2026-11-13 night (rc7 tagged: live-note stamps E512 for #39; rc6 ou
   SUDO_UID, owneruid.h with tests; vti_open captures the device before MIDI on macOS in that mode; Makefile mac
   targets); plug-in accepts a root broker; plug-in side done (option mac-usb-audio, AudioIn::use_broker_ring, start/
   restart/rate via the broker, no replug; 723 tests). Paused for #39 (user: live-stamp fix + key-pacing analysis
-  first). Next on the branch: launchd agent off/on in the test command file, CI Mac test build, test on our Mac.
+  first). scripts/mac-libusb-test.command (stops the normal broker - no launchd agent since 0.8, the plug-in
+  spawns it -, sets mac-usb-audio.on, runs sudo VTI_LIBUSB_AUDIO=1 vtibroker -v -stay, log on the Desktop, option
+  off again at the end). Next: CI Mac test build of the branch (build.yml by hand), test on our Mac.
 - **v0.8.41-rc5** pre-release 2026-11-13 18:50 UTC (tag on 7f6d1be, release CI 43484666513 all 8 jobs green,
   6 assets; Latest stays 0.8.40). main aee9e11 = preview-box lines only, site 43486622822 green, live page shows
   "Preview: 0.8.41-rc5". Linux: rc5 installed by install.sh (plug-in 5726305b, broker 2e75801c). Open: rc5 reply
