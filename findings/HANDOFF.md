@@ -5,7 +5,7 @@ NEXT. At most 150 lines; the Stop hook (`.claude/hooks/handoff-check.sh`) refuse
 how goes into the dated log [`log/2026-11.md`](log/2026-11.md) (newest first); older logs are in [`log/`](log/).
 Device/protocol knowledge goes into [`evidence.md`](evidence.md). Update this file in the same commit as the work._
 
-Last update: 2026-11-13 night (rc7 tagged: live-note stamps E512 for #39; rc6 out; libusb-audio branch paused).
+Last update: 2026-11-14 (#39: E516 the original's two latencies for Ableton Live + sim S132 final; rc7 crash fix on the round; rc7 out).
 
 ## Round
 
@@ -76,7 +76,7 @@ Last update: 2026-11-13 night (rc7 tagged: live-note stamps E512 for #39; rc6 ou
 | #36 | Windows Cubase bank sync 0/128 | reporter (rc2: display, hub/cable, 3 checks) | 2026-11-11 |
 | #37 | Catalina: crackle = byte-slipped audio (E510); probe empty on Catalina, clean on Big Sur (E511) | reporter (diagnostic probe from libusb-catalina dev-mac 43512216308, Terminal text; issuecomment-6865694684) | 2026-11-13 |
 | #38 | macOS 27 Live: editor / AU crash | reporter (crash report, Access files) | 2026-11-10 |
-| #39 | TI1 Keyboard in Ableton Live. NEW (E516): the original told Live two latencies (VST2 'AbLi' 6: delay + 2 x block); we report 77 ms while a played note takes 24 ms, so Live likely records takes ~53 ms off (not measured); his set: monitor Off, Virus takes 10-25 ms early. Before: rc7 fixed our 8 ms (E512), firmware pace 5.86 ms (E515), driver stamps as ours (E514) | user: Mac test in Live (keystamp, resample, play back); ask him: original as VST or AU, and which setup felt pushed (monitor In + Local Off, or Local On + monitor Off) | 2026-11-14 |
+| #39 | TI1 Keyboard in Ableton Live. NEW (E516): the original told Live two latencies (VST2 'AbLi' 6: delay + 2 x block); we report 77 ms while a played note takes 24 ms, so Live likely records takes ~53 ms off (not measured); his set: monitor Off, Virus takes 10-25 ms early. Before: rc7 fixed our 8 ms (E512), firmware pace 5.86 ms (E515), driver stamps as ours (E514) Sim S132: unit's share 8 ms with Local On, 16 ms through the host; d-orig captures = the VM's clock, no end-to-end comparison with the original | user decides: ask him first (original as VST or AU; which setup felt pushed: monitor In + Local Off, or Local On + monitor Off) or the Mac test in Live first | 2026-11-14 |
 | #40 | (ours) macOS: TI Revive takes the Virus' audio itself (libusb, E511) as an option? asks #30/#37/#39 reporters | reporters (audio interface use, admin rights, macOS/DAW) | 2026-11-13 |
 
 Every open issue waits on its reporter. Quiet-issue rule: 7 days after our last request, close with the AGENTS.md
@@ -134,6 +134,7 @@ message, only in a joint check with the user (by the dates above: #28 from 2026-
     plug-in track with monitor In; record MIDI + resample audio; play back, resample again; compare the two audio
     clips): live notes on (expect ~53 ms late at 48 kHz), Live Mode on (expect ~0), live notes off (expect ~0).
     Then decide: hint for Live users (Live Mode while recording), or played notes take the lead while the host records.
+    Original vs ours for a played note end to end: only on a real PC/Mac with the original (the VM captures cannot).
 0a. Live-stamp fix (E512): in rc7 (user: "make a new RC and let him test", #39 has the setup); also verify on our Mac
    (keystamp + klog: onsets 24000 frames apart). libusb-audio branch paused (plug-in side committed 300cdd4).
 0. #39 (user 2026-11-13: investigate before replying to #39 and #30): E507 = their log (no unit requests while
