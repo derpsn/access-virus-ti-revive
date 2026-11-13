@@ -13,11 +13,10 @@ Last update: 2026-11-13 late (rc6 out + Catalina build; macOS libusb-audio feasi
   43490921423 all green (the macOS branch compiles), 6 assets; main 4f0f061 preview box; Linux rc6 installed
   (plug-in 4cc924bc). Catalina build of rc6: catalina-test 77aa389 (round merged), dev-mac 43491758791 green,
   artifact dev-mac-catalina (x86_64, minos 10.15, CC 10.15). #37 reply with both links posted. Open: Mac fake-slip test.
-- **macOS without Apple's audio driver (user's question, option A):** src/broker/vtiaudioprobe.c streams the Virus'
-  audio with the broker's libusb code (vla_start) after libusb detaches the system driver (macOS: device capture,
-  root), optional C4 per second; built on the Mac in ~/tirevive-test/audioprobe (libusb 1.0.30, Homebrew). Waits
-  on the user: TI2 on/connected to the Mac, run as user then with sudo. Option C (AudioDriverKit) = macOS 12+ only,
-  still a Core Audio device, needs Apple's entitlements.
+- **macOS without Apple's audio driver (option A, E511):** vtiaudioprobe on our Mac (macOS 27) WORKS as root: the
+  Virus taken from usbaudiod, 20.5 s streamed with the broker's Linux code, C4 on USB 1, slip share 0.01-0.03, given
+  back cleanly; as user LIBUSB_ERROR_ACCESS. Needs -usb (Global Mode 3 + Output Select 10, as the plug-in's start).
+  Open: Catalina (kernel AppleUSBAudio) via the #37 reporter; design (root broker, plug-in reads the ring) for 0.8.42+.
 - **v0.8.41-rc5** pre-release 2026-11-13 18:50 UTC (tag on 7f6d1be, release CI 43484666513 all 8 jobs green,
   6 assets; Latest stays 0.8.40). main aee9e11 = preview-box lines only, site 43486622822 green, live page shows
   "Preview: 0.8.41-rc5". Linux: rc5 installed by install.sh (plug-in 5726305b, broker 2e75801c). Open: rc5 reply

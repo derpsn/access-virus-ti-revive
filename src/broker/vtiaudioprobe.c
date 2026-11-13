@@ -9,8 +9,11 @@
 // and writes the 6 input channels to a WAV. With -note it also claims the MIDI interfaces 3/4, sends the known
 // handshake (spec §3) and plays a C4 every second on EP 0x06, cable 2 (E056) - nothing else goes to the Virus. At the
 // end it stops the stream (alt 0), releases the interfaces and gives the device back to the system driver.
+// With -usb (implies -note) part 1's Output Select is set to 10 (USB 1) first, the value the plug-in sends at every
+// start (72 00 29 0A, E343; an edit-buffer parameter, nothing stored): without it the notes play on the analog outputs
+// only and USB 1 stays silent (first Mac run, 2026-11-13).
 //
-// usage: vtiaudioprobe [-note] [-rate 44100|48000] [seconds] [out.wav]      (macOS: sudo ./vtiaudioprobe ...)
+// usage: vtiaudioprobe [-note] [-usb] [-rate 44100|48000] [seconds] [out.wav]      (macOS: sudo ./vtiaudioprobe ...)
 #include "vticore.h"
 #include "vtiusbaudio_libusb.h"
 #include <libusb.h>
@@ -72,6 +75,16 @@ static void *drain(void *arg) // nobody draining EP 0x85/0x86 makes the Virus st
     return NULL;
 }
 
+static const uint8_t MODE3[11] = {0xF0, 0x00, 0x20, 0x33, 0x01, 0x10, 0x73, 0x00, 0x7A, 0x03, 0xF7}; // start (E391)
+static const uint8_t MODE0[11] = {0xF0, 0x00, 0x20, 0x33, 0x01, 0x10, 0x73, 0x00, 0x7A, 0x00, 0xF7}; // close (closeseq.h)
+
+static int send_sysex(const uint8_t msg[11]) // on cable 2 of EP 0x06, like the plug-in's SysEx (usbmidi.h)
+{
+    uint8_t pk[32];
+    int n = vti_pack_sysex(2, msg, 11, pk, sizeof pk), got = 0;
+    return n > 0 ? xfer(VTI_EP_MI04_OUT, pk, n, &got, 1000) : -1;
+}
+
 static void find_bulk(void)
 {
     struct libusb_config_descriptor *c;
@@ -107,13 +120,27 @@ static void say(const char *fmt, ...)
     fflush(stdout);
 }
 
+static void log_line(const char *fmt, ...) // vtiusbaudio_libusb.c's lines come without a newline (the broker adds it)
+{
+    va_list ap;
+    va_start(ap, fmt);
+    vprintf(fmt, ap);
+    va_end(ap);
+    if (fmt[0] && fmt[strlen(fmt) - 1] != '\n')
+        putchar('\n');
+    fflush(stdout);
+}
+
 int main(int argc, char **argv)
 {
-    int note = 0, rate = 44100, secs = 10;
+    int note = 0, usb = 0, rate = 44100, secs = 10;
     const char *out = "vtiaudioprobe.wav";
+    vti_log = log_line;
     for (int i = 1; i < argc; i++) {
         if (!strcmp(argv[i], "-note"))
             note = 1;
+        else if (!strcmp(argv[i], "-usb"))
+            note = usb = 1;
         else if (!strcmp(argv[i], "-rate") && i + 1 < argc)
             rate = atoi(argv[++i]);
         else if (atoi(argv[i]) > 0)
@@ -162,6 +189,17 @@ int main(int argc, char **argv)
             midi = xfer(VTI_EP_MI03_OUT, hs, 4, &got, 1000) == 0;
         }
         say("MIDI (interfaces 3/4, handshake): %s\n", midi ? "ok" : "FAILED - no notes");
+        if (midi && usb) {
+            // Part Output Select only counts in the mode the plug-in and the original start in: Global Mode 3 (73 00 7A
+            // 03, E391 from captures of the original); at their close they send Mode 0 (Single, closeseq.h), so after a
+            // plug-in session the Virus is in Single mode and the part's USB output does nothing (second Mac run)
+            say("Global Mode 3 (as at the plug-in's start): %s\n", send_sysex(MODE3) == 0 ? "sent" : "FAILED");
+            usleep(300000);
+            // part 1 to USB 1 (Output Select 10), as the plug-in at every start
+            const uint8_t os[11] = {0xF0, 0x00, 0x20, 0x33, 0x01, 0x10, 0x72, 0x00, 0x29, 0x0A, 0xF7};
+            say("part 1 Output Select -> USB 1 (10): %s\n", send_sysex(os) == 0 ? "sent" : "FAILED");
+            usleep(200000);
+        }
     }
 
     int sec_on = -1;
@@ -194,6 +232,8 @@ int main(int argc, char **argv)
         uint8_t m[4] = {0x2b, 0xb0, 0x7b, 0x00};
         int got;
         xfer(VTI_EP_MI04_OUT, m, 4, &got, 200);
+        if (usb) // back to Single mode, as the plug-in's and the original's close sequence
+            say("Global Mode 0 (Single, as at the plug-in's close): %s\n", send_sysex(MODE0) == 0 ? "sent" : "FAILED");
     }
     vla_stop();
     g_stop = 1;

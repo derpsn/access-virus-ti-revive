@@ -4624,3 +4624,13 @@ Hardware check of the E497 fix (d7a0d1f: a re-sync ping sent during a marker sca
 - **Method:** native/src/device/slipwatch.h, native/plugin/source/virusplugin.cpp (slip restart), native/src/cc/diag.cpp
 - **Confidence:** HIGH (the log's slip lines and counts) / MED (slips as the crackle's cause) / LOW (why Catalina) / open (the restart on a Mac)
 - **Hardware:** no (the reporter's unit; the macOS restart not run yet)
+
+### E511
+
+macOS without Apple's USB audio driver, feasibility (user 2026-11-13: "prepare the feasibility test", after #37's Catalina slips E510): src/broker/vtiaudioprobe.c on our Mac (macOS 27.2.1, Apple Silicon, TI2 Desktop on the Mac's USB, Homebrew libusb 1.0.30, no broker, no DAW). Before: the Virus' audio interfaces 0-2 report "kernel driver active = 1" and their UsbExclusiveOwner is "usbaudiod" (on macOS 27 Apple's USB audio runs as a user-space daemon; on Catalina it is the kernel driver AppleUSBAudio, E103-era ioreg). (1) As the normal user: claim interface 0 fails with LIBUSB_ERROR_ACCESS, nothing sent. (2) With sudo: libusb's auto-detach captures the device (it re-enumerates: IOUSBHostDevice id changed), vla_start (the Linux broker's code: alt 1 + SET_CUR) streams; 10 s = 441461 frames at 44.1 kHz, analog-input noise floor on channels 0/1. With -note (handshake, C4 per second on cable 2) the user heard the notes on the Virus' outputs but USB 1 stayed silent, also after Output Select 10 alone: the Virus was in Single mode after the last plug-in close (closeseq.h). (3) With -usb (Global Mode 3 = 73 00 7A 03 as at the plug-in's and the original's start, E391; part 1 Output Select 10 = 72 00 29 0A; C4 per second; Mode 0 at the end as the close sequence): 20.5 s = 904952 frames at 44.1 kHz, the C4 on USB 1 in every second (peak about 8992 both channels), SlipWatch's high-byte share 0.013-0.034 in all 40 half-second windows (normal < 0.5, slipped >= 0.99), no sample jump above 20000. After every run the Virus is back with usbaudiod and Core Audio lists "Virus TI". So on macOS 27 a root process can take the Virus' audio from Apple's stack, stream it with the broker's Linux code and give it back (HIGH, 3 runs). Open: Catalina (kernel AppleUSBAudio), a root broker's install and security, the plug-in reading the broker's ring on macOS, the Virus no longer being a Core Audio device while the broker holds it.
+
+- **Date:** 2026-11-13
+- **Pointer:** work/macaudio-probe (run2-note-analog.wav, run4-usb.wav), ~/tirevive-test/audioprobe on the Mac
+- **Method:** src/broker/vtiaudioprobe.c, src/broker/vtiusbaudio_libusb.c
+- **Confidence:** HIGH (macOS 27, as measured) / open (Catalina, a product design)
+- **Hardware:** yes (TI2 Desktop on the Mac, macOS 27.2.1)
