@@ -12,6 +12,11 @@ Last update: 2026-11-13 night (rc7 tagged: live-note stamps E512 for #39; rc6 ou
 - **v0.8.41-rc7** pre-release 2026-11-13 20:45 UTC (tag on 2e0fed9: live-note stamps from the timeline, E512),
   release CI 43503582943 all 8 jobs green, 6 assets, Latest stays 0.8.40; main 6cf8493 preview box; Linux rc7
   installed. #39 asked to test rc7 (issuecomment-6864528067). Mac: still rc6 (verify E512 there with keystamp+klog).
+- **rc7 bug, fixed on the round (2026-11-13 late):** without the user's Access files rc7 crashes the DAW in process()
+  (the E512 change put `out_->live_s.store` under an `if` without braces; out_ is null there). Test-first: ctest
+  no_access_files (nativehost, empty HOME) segfaulted, passes with the braces. Why unnoticed: plug-in sources got no
+  -Wall (relative path in the warning loop), now on; Linux -Werror clean, Clang 4 non-fatal warnings left. Must be in
+  the next rc/final; the three reporters have Access files (not hit).
 - **v0.8.41-rc6** pre-release 2026-11-13 19:28 UTC (tag on 8e9cf20: macOS slip restart E510), release CI
   43490921423 all green (the macOS branch compiles), 6 assets; main 4f0f061 preview box; Linux rc6 installed
   (plug-in 4cc924bc). Catalina build of rc6: catalina-test 77aa389 (round merged), dev-mac 43491758791 green,
