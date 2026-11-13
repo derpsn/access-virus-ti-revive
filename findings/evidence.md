@@ -4654,3 +4654,13 @@ The broker's own audio on macOS works in a DAW (libusb-audio branch, E511): our 
 - **Method:** src/broker/vtibroker_posix.c (shm_create), src/broker/vticore.c (capture, give-back), native/src/device/audioin.cpp (use_broker_ring), scripts/mac-libusb-test.command
 - **Confidence:** HIGH (as measured on macOS 27) / open (Catalina and Big Sur, E511; E512 alone on Core Audio; longer sessions, sleep)
 - **Hardware:** yes (TI2 Desktop on the Mac, macOS 27.2.1)
+
+### E514
+
+How the original Access software brings a Virus Keyboard's keys to the host on macOS (#39, user 2026-11-13: "find any clues in the original we overlooked"). REA/Ghidra 12.1.4 on the Mac MIDI driver ("Virus TI MIDI Driver.plugin", thinned x86_64 slice MidiDriver_x64, sha256 52a173fd...), static only. (1) Two input pipes with their own read loops: the public MIDI port (interface at device +0x40; read start 0xcfc0 "ReadPipeAsync", completion 0xd1e0 "USBMIDIDevice::ReadCallback") and the hidden port (interface at device +0x330; read start 0x76a0 "Hidden:ReadPipeAsync", completion 0x7250 "VirusTIUSBMIDIDevice::HiddenPortReadCallback"). (2) Public port: on a completed read 0xd1e0 calls vtable +0x38 = 0xcd20, which takes mach_absolute_time() at that moment (0xdaf0 -> 0xe110) and passes it with the buffer to the input handler (vtable +0x80 -> 0x40c0 -> 0x109a0); 0x109a0 walks the 4-byte USB-MIDI events, picks the CoreMIDI source by the cable nibble, and adds every event of that read with that one time stamp to a packet list for MIDIReceived. No device time, no back-dating, no latency correction. (3) Hidden port: 0x7250 -> vtable +0x68 = 0x71a0 (HandleHiddenPortInput) writes the raw words into the plug-in's MDR ring (E100) without any time stamp. (4) Each pipe has one read in flight; the next read is started after the completion has been handled (+0x28 / +0x50). So with the original on a Mac the keys reach the DAW only (the plug-in does not take them itself), time-stamped at USB read completion, exactly as TI Revive's broker port (vtikeyport_mac.c: mach_absolute_time() at MIDIReceived, one synchronous read per endpoint); nothing in the original's key path compensates the Virus' paced link (E512 (2)). VirusControl_x64 (the plug-in core) has no symbols; its handling of played notes is E449 (Windows DLL).
+
+- **Date:** 2026-11-13
+- **Pointer:** REA evidence ev_c07585e7 (0x109a0), ev_5299539754 (0xcd20), ev_da199f2c (0xd1e0), ev_941f5e8e (0xcfc0), ev_59133fcf (0x7250), ev_1590716c (0x76a0), ev_f2af05fc (0x71a0)
+- **Method:** src/broker/vtikeyport_mac.c, src/broker/vticore.c (reader)
+- **Confidence:** HIGH (static, the Mac driver) / open (the Windows driver vtimidi.sys, not read)
+- **Hardware:** no
