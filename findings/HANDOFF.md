@@ -5,7 +5,7 @@ NEXT. At most 150 lines; the Stop hook (`.claude/hooks/handoff-check.sh`) refuse
 how goes into the dated log [`log/2026-11.md`](log/2026-11.md) (newest first); older logs are in [`log/`](log/).
 Device/protocol knowledge goes into [`evidence.md`](evidence.md). Update this file in the same commit as the work._
 
-Last update: 2026-11-13 late (rc6 out + Catalina build; macOS libusb-audio feasibility probe ready; #39 test clean).
+Last update: 2026-11-13 night (rc7 tagged: live-note stamps E512 for #39; rc6 out; libusb-audio branch paused).
 
 ## Round
 
@@ -115,8 +115,8 @@ message, only in a joint check with the user (by the dates above: #28 from 2026-
 
 ## NEXT
 
-0a. Live-stamp fix (E512, round): verify on our Mac with a CI build (keystamp + klog: onsets 24000 frames apart),
-   then into the next rc. libusb-audio branch paused (plug-in side committed 300cdd4).
+0a. Live-stamp fix (E512): in rc7 (user: "make a new RC and let him test", #39 has the setup); also verify on our Mac
+   (keystamp + klog: onsets 24000 frames apart). libusb-audio branch paused (plug-in side committed 300cdd4).
 0. #39 (user 2026-11-13: investigate before replying to #39 and #30): E507 = their log (no unit requests while
    playing), sim S127/S128 (unit holds keys only behind a dump reply), Mac run1 (Live on built-in output, two clocks)
    and run2 (Virus as Live's device) with native/tools/keystamp.c + scripts/als_notes.py: 120/120 notes within

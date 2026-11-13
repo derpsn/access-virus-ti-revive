@@ -170,7 +170,7 @@ def downloads_line(releases):
 PREVIEW_NEW = {
     "0.8.41": "lower latency as an experimental option, an Options page in the Control Center, the plug-in restarts "
               "scrambled Virus audio by itself, the Virus display shows the bank sync like with the original, "
-              "the arpeggiator follows a count-in like with the original, the TI Snow's level meters work, and the plug-in log is on by default, so a bug report already has what we need.",
+              "the arpeggiator follows a count-in like with the original, the TI Snow's level meters work, on a Mac notes you play keep their rhythm, and the plug-in log is on by default, so a bug report already has what we need.",
 }
 
 
