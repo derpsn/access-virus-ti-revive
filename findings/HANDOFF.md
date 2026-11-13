@@ -36,8 +36,7 @@ Last update: 2026-11-14 (#39: E516 the original's two latencies for Ableton Live
   onsets 24000 +-64 frames apart, give-back to usbaudiod ok. Big Sur probe clean (E511) -> #37's zeros are
   Catalina/machine-specific. User: libusb test version for #37:
   VTI_USBAUDIO_DIAG=1 per-second raw packet stats (probe sets it), branch libusb-catalina = catalina-test +
-  libusb-audio, dev-mac build (package + probe + test command). Old MacBook too slow for a DAW (user).
-  libusb-catalina f1bfee1 (merge, Makefile MAC_ARCH_FLAGS + vtiusbaudio_libusb.c), dev-mac 43512216308 green (pkg +
+  libusb-audio (f1bfee1: Makefile MAC_ARCH_FLAGS + vtiusbaudio_libusb.c), dev-mac 43512216308 green (package +
   diag probe + test command), posted on #37.
 - Round **0.8.41** on branch `round-0.8.41` (pushed); rc1-rc7 pre-releases, **0.8.40 stays Latest**.
 - In 0.8.41: experimental lower latency (option `low-latency`, off by default, E496), Control Center Options page,
