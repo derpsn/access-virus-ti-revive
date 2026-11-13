@@ -5,7 +5,7 @@ NEXT. At most 150 lines; the Stop hook (`.claude/hooks/handoff-check.sh`) refuse
 how goes into the dated log [`log/2026-11.md`](log/2026-11.md) (newest first); older logs are in [`log/`](log/).
 Device/protocol knowledge goes into [`evidence.md`](evidence.md). Update this file in the same commit as the work._
 
-Last update: 2026-11-13 morning (#30 answered; transport restarts like the original in 0.8.41, E505; E497 run going).
+Last update: 2026-11-13 07:20 (E497 fix + transport checked on the TI2; rc4 after the tests).
 
 ## Round
 
@@ -56,14 +56,11 @@ message, only in a joint check with the user (by the dates above: #28 from 2026-
 - E503 libusb reader stall handling (5660a93): unit tests only; macOS broker not built locally.
 - Windows broker error 433 = device gone (5af74bd): mingw build + unit test only.
 - Windows setup unplug step (c6313b4, E504): the unplug path never exercised (no Virus on the Access driver).
-- E497 fix d7a0d1f: hardware check RUNNING since 2026-11-13 04:55 UTC: `work/latency/q-e497fix2.sh B 60` (no
-  capture, ~75 min), results in `work/latency/e497fix2/run.meta`. Pass = markers == resyncs + 1 in every session
-  (old code: 14 of 572 re-syncs missed). MIXED BUILD: build-native was rebuilt with the transport change at
-  05:24:17 UTC by mistake: B1-B24 plug-in 1fc39535 (d7a0d1f), B25 unclear, B26+ 2ce0a35b (+ transport). Report
-  the parts apart. Until it ends: build only in `build-transport/`, no hil.sh in parallel.
-- Transport restarts (E505): unit tests only. Hardware check planned: nativehost from build-transport with
-  `--transport 2 --count-in 1` + an arp patch, 48 kHz b512, low-latency on/off, usbmon: F2 + 73 23 vv + F8 at one
-  stamp, no restart at 0, FC at Stop, no late notes (safety-net count 0). Then Logic on the Mac (sim plan S125).
+- E497 fix: DONE on the TI2 (E506): 0 of 239 re-syncs missed in 60 sessions (mixed build, both parts 0).
+- Transport restarts (E505): DONE on the TI2 for wire + note timing (count-in, between ticks, low-latency on,
+  FC; rc3 baseline sends F2 00 00). The arpeggiator itself not heard: sim model (asked) and Logic on the Mac.
+- Rule 2 incident (sim session, 2026-11-13 07:11:20): a sim nativehost run reached the real broker for 1.4 s and
+  sent the default state + close sequence (no store); no overlap with our runs; sim now uses m4/run.py only.
 - `python3 -I scripts/evidence.py list --no-hardware` lists the evidence entries marked this way.
 
 ## Open decisions for the user
@@ -98,9 +95,9 @@ message, only in a joint check with the user (by the dates above: #28 from 2026-
 
 ## NEXT
 
-1. When the E497 run ends: write E506 (the two build parts apart) and send the count to the sim session
-   (now virus-ti-sim-99; it asked for the C3 count). Then the transport hardware check above, coverage + mutation
-   (risk.py), a new CI run with the transport change, and the full test round.
+1. Coverage + mutation (risk.py), a new CI run with the transport change, hil.sh with the CI build on Linux,
+   win11 silent install, Mac package push; then tag v0.8.41-rc4 (user 2026-11-13: "tag it as rc4 after the
+   tests"; release text in build.yml first).
 2. Wait for the reporters; next joint issue check with the user.
 3. User: install rc3 on the Mac (double-click `Install test build.command`), then Mac checks if wanted.
 4. Then the "To do before the final 0.8.41" list.
