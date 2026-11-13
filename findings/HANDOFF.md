@@ -5,7 +5,7 @@ NEXT. At most 150 lines; the Stop hook (`.claude/hooks/handoff-check.sh`) refuse
 how goes into the dated log [`log/2026-11.md`](log/2026-11.md) (newest first); older logs are in [`log/`](log/).
 Device/protocol knowledge goes into [`evidence.md`](evidence.md). Update this file in the same commit as the work._
 
-Last update: 2026-11-13 (rc4 out; mutation survivors of the round done: 434 of 461, all others equivalent).
+Last update: 2026-11-13 (rc4 out; mutation survivors done 434 of 461; sim S126: arp off grid with a note at Play).
 
 ## Round
 
@@ -76,6 +76,9 @@ message, only in a joint check with the user (by the dates above: #28 from 2026-
       hand: sleep), `scripts/hil.sh` on Linux, checklist artifact via `scripts/checklist.py`.
 - [ ] Release text heredoc in `.github/workflows/build.yml` ("New in 0.8.41") checked before the tag.
 - [ ] #34 second session "bank sync failed in 11.9 s" (RAM B -1) after "paused 2.6 s for notes": not looked into.
+- [ ] #30 note at the Play moment (sim S126, model): the note-on is stamped one tick before the F2 restart, the arp
+      then stays off grid by half ticks (10 of 10); count-in case on grid (5 of 5). Check the original (REA) and the
+      TI2, then decide a fix (restart before the Play block's notes?). Log 2026-11-13 afternoon.
 - [ ] Library scan skips patches as "damaged or unknown format" (#36 log: BC2001 36, Incubation V3 97): check the
       format.
 
