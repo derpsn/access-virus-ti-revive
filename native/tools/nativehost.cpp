@@ -239,6 +239,9 @@ int main(int argc, char **argv)
     bool notes = false, editor = false, editor2 = false, stress = false, stress_notes = true, stress_params = true, scan = false;
     double stress_stop = 1e9;
     double transport_at = -1, loop_bars = 0; // --transport / --loop: a playing DAW transport for process()
+    double count_in_bars = 0; // --count-in: with --transport, play from -4 x N quarters through 0 (Logic, #30)
+    bool list_params = false;
+    double stop_at = 1e9;
     double duplicate = 0; // --duplicate T: remove the first of two instances after T s
     double sc_sine = 0; // --sidechain-sine HZ: a sine (-6 dBFS) on the Sidechain bus (input bus 1)
     std::vector<std::pair<double, double>> aheads; // (at s, ms)
@@ -284,6 +287,12 @@ int main(int argc, char **argv)
             transport_at = atof(argv[++i]);
         else if (!strcmp(argv[i], "--loop") && i + 1 < argc) // with --transport: jump back to bar 1 every N bars
             loop_bars = atof(argv[++i]);
+        else if (!strcmp(argv[i], "--count-in") && i + 1 < argc) // with --transport: N bars of count-in before bar 1
+            count_in_bars = atof(argv[++i]);
+        else if (!strcmp(argv[i], "--stop-at") && i + 1 < argc) // with --transport: stop playing at T s (FC, E505)
+            stop_at = atof(argv[++i]);
+        else if (!strcmp(argv[i], "--list-params")) // id, title and part of every parameter, then exit (no activation)
+            list_params = true;
         else if (!strcmp(argv[i], "--notes"))
             notes = true;
         else if (!strcmp(argv[i], "--live") && i + 1 < argc) // the --notes flagged as played live: "alt" odd seconds, "all"
@@ -426,6 +435,20 @@ int main(int argc, char **argv)
     FUnknownPtr<IEditController> ctl(comp);
     if (ctl)
         printf("parameters: %d\n", (int)ctl->getParameterCount());
+    if (list_params && ctl) { // no activation, like --scan: nothing reaches the Virus
+        for (int32 k = 0; k < ctl->getParameterCount(); k++) {
+            ParameterInfo pi{};
+            if (ctl->getParameterInfo(k, pi) != kResultOk)
+                continue;
+            char title[256] = {};
+            for (int c = 0; c < 255 && pi.title[c]; c++)
+                title[c] = pi.title[c] < 128 ? (char)pi.title[c] : '?';
+            printf("param 0x%x steps %d %s\n", (unsigned)pi.id, (int)pi.stepCount, title);
+        }
+        printf("terminate -> %d\n", (int)comp->terminate());
+        comp->release();
+        return 0;
+    }
     if (scan) { // no activation: the plug-in must not have touched the Virus (broker log: no client)
         std::this_thread::sleep_for(std::chrono::seconds(2));
         printf("terminate -> %d\n", (int)comp->terminate());
@@ -596,8 +619,10 @@ int main(int argc, char **argv)
             double qn = t >= transport_at ? (t - transport_at) * 2.0 : 0.0;
             if (loop_bars > 0)
                 qn = std::fmod(qn, loop_bars * 4.0);
+            qn -= 4.0 * count_in_bars; // a count-in runs on through 0, as a DAW's playing pre-roll
             pctx.projectTimeMusic = qn;
-            if (t >= transport_at)
+            pctx.projectTimeSamples = (TSamples)std::llround(qn / 2.0 * clk.rate); // 120 BPM: 2 quarters a second
+            if (t >= transport_at && t < stop_at)
                 pctx.state |= ProcessContext::kPlaying;
             data.processContext = &pctx;
         }

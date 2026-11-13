@@ -158,3 +158,29 @@ TEST(stamprule_timing_mode_takes_the_experimental_lead_as_its_base)
     CHECK_EQ(timing_mode(false, 3, experimental_lead(128, 44100), 128).a, 1280);
     CHECK(timing_mode(true, 3, experimental_lead(128, 44100), 128).a == LIVE_A);
 }
+
+// The safety net's edges. Ring frame 0 is a real newest frame (the first one of a stream), so a stamp behind it gets
+// the reserve too; a stamp exactly at the reserve is not "moved" (the count goes to diag.log and would report moves
+// that did not happen); and a jump of exactly one second back (48000 frames) is a new timeline, accepted as it is,
+// while one frame less is still held in order (a stamp behind the DSP's newest one can raise a Sync Information
+// Event, E251)
+TEST(stamp_floor_edges)
+{
+    StampFloor f;
+    CHECK(f.apply(10, 0, 1024) == 1024 && f.moved == 1); // newest frame 0: the reserve still counts
+    StampFloor g;
+    CHECK(g.apply(9024, 8000, 1024) == 9024 && g.moved == 0); // exactly at the reserve: not moved
+    StampFloor h;
+    CHECK(h.apply(100000, -1, 1024) == 100000);
+    CHECK(h.apply(100000 - 47999, -1, 1024) == 100000);         // just under a second behind: in order
+    CHECK(h.apply(100000 - 48000, -1, 1024) == 100000 - 48000); // a full second behind: a new timeline
+}
+
+// An empty message from process() has no status byte: the plan must not read one (a stale byte in the buffer would
+// make it inherit the last F5), it gets neither its own stamp nor the inherited one
+TEST(stamp_plan_empty_message_reads_nothing)
+{
+    const uint8_t stale[3] = {0xB0, 0x7B, 0x00};
+    StampPlan p = stamp_plan(stale, 0, true, true, false);
+    CHECK(!p.inherits && !p.stamp && !p.net);
+}

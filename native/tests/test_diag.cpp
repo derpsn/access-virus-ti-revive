@@ -82,6 +82,10 @@ TEST(diag_plugin_options)
     CHECK(std::string(opts[3].name) == "slip-restart" && std::string(opts[3].file) == "slip-restart.off");
     CHECK(opts[3].default_on);
     CHECK(plugin_option("slip-restart"));
+    // since rc6 the plug-in restarts it on macOS too (#37: 9 of 22 starts slipped on a Catalina Mac), so no option text
+    // may say it is Linux and Windows only or only logged on a Mac
+    for (const char *t : {opts[3].label, opts[3].hint})
+        CHECK(std::string(t).find("Linux") == std::string::npos && std::string(t).find("only logged") == std::string::npos);
     CHECK(std::string(opts[0].name) == "outdelay-changes" && std::string(opts[0].file) == "outdelay-changes.on");
     CHECK(std::string(opts[1].name) == "timing-classic" && std::string(opts[1].file) == "timing-classic.on");
     // live-notes is on by default since 0.8.39 (the original's VST3 does it always, E400/E402; user 2026-11-08): its
@@ -197,4 +201,52 @@ TEST(diag_collect_logs)
     err.clear();
     CHECK(!collect_logs(h.dir.string(), "0.0.1", err) && !err.empty());
 }
+
+// a flag file that cannot be written or removed (here: a folder with something in it sits at its name) is reported,
+// so the Control Center does not show a switch as changed when it is not
+TEST(diag_flag_file_errors)
+{
+    Home h("vtester");
+    const fs::path f = fs::path(plugin_dir()) / "outdelay-changes.on";
+    fs::create_directories(f);
+    std::ofstream(f / "inside").put('\n');
+    std::string err;
+    CHECK(!set_plugin_option("outdelay-changes", true, err) && !err.empty());
+    err.clear();
+    CHECK(!set_plugin_option("outdelay-changes", false, err) && !err.empty());
+    CHECK(fs::exists(f / "inside"));
+}
+
+// the boundaries of anonymize(): a home folder of "/" (e.g. a service account) is not replaced, or every slash in the
+// report would become "~"; a user name of 3 characters is replaced (only 1-2 are too short)
+TEST(diag_anonymize_boundaries)
+{
+    Home h("bob");
+    CHECK(anonymize("owner bob") == "owner <user>");
+    setenv("HOME", "/", 1);
+    CHECK(anonymize("/usr/lib/x") == "/usr/lib/x");
+    setenv("HOME", h.dir.string().c_str(), 1);
+}
+
+#ifndef __APPLE__
+// Linux reads the broker's log from the user journal: each line arrives with its line end (LF, or CR LF), which goes,
+// and nothing else of the line; the last line may come without one. A stand-in journalctl in PATH prints known lines.
+TEST(diag_broker_log_tail_line_ends)
+{
+    Home h("vtester");
+    const fs::path bin = h.dir / "bin";
+    fs::create_directories(bin);
+    {
+        std::ofstream o(bin / "journalctl");
+        o << "#!/bin/sh\nprintf 'one\\r\\ntwo\\n\\nlast'\n";
+    }
+    fs::permissions(bin / "journalctl", fs::perms::owner_all);
+    const char *p = getenv("PATH");
+    const std::string old_path = p ? p : "";
+    setenv("PATH", bin.string().c_str(), 1);
+    const std::vector<std::string> lines = broker_log_tail(10);
+    p ? setenv("PATH", old_path.c_str(), 1) : unsetenv("PATH");
+    CHECK((lines == std::vector<std::string>{"one", "two", "", "last"}));
+}
+#endif
 #endif

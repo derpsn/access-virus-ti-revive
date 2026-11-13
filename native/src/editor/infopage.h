@@ -78,7 +78,11 @@ inline const std::vector<ChangeNote> &changelog()
           "it arrives, and its time left counts only what is really missing.",
           "Windows: fixed a case where the TI Revive service could keep a connection to a Virus that had disappeared "
           "from Windows for a moment, instead of connecting again (#36).",
-          "The plug-in's log keeps its first lines on a fresh install."}},
+          "The plug-in's log keeps its first lines on a fresh install.",
+          "Windows setup asks you to unplug a Virus that is still on the old Access driver before it removes that "
+          "driver (#31). Afterwards switch the Virus off and on once.",
+          "macOS and Linux: a stalled USB connection no longer fills the log; the TI Revive service resets it and "
+          "connects again (#37)."}},
         {"0.8.40",
          {"Windows: a patch library or template file whose name has letters outside Windows' old code page "
           "(Japanese or Cyrillic on a Western Windows, accents copied from a Mac, emoji) no longer makes the plug-in "

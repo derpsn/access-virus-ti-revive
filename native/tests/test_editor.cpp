@@ -1166,3 +1166,44 @@ TEST(editor_arp_grab_zones)
     CHECK(a.step < 0);
     CHECK(EditorRenderer::arp_cell(*h.element, h.x, cx + 25) == 1); // Alt+click: the cell under the mouse
 }
+
+// #30, E509: the Snow skin (editorPR.xml) draws each part's meter as a HorizontalSlider bound to
+// "VirusControl/MIDI Indicator" (a 128-frame strip, 6 px per frame), not as the TI skin's VUSlider. The original fills
+// it with the part's MIDI activity; TI Revive left it at 0, so the Snow's meters stayed empty.
+static const char *SNOW_METER_LAYOUT = R"(<?xml version="1.0"?>
+<Editor>
+ <Frame width="300" height="100">
+  <Container><Size left="0" top="0" width="300" height="100"/>
+   <HorizontalSlider Parameter="Part/Volume" Part="0" NormalBack="vu.png"><Size left="10" top="5" width="50" height="6"/></HorizontalSlider>
+   <HorizontalSlider Parameter="VirusControl/MIDI Indicator" Part="0" NormalBack="mtr.png"><Size left="10" top="20" width="121" height="6"/></HorizontalSlider>
+   <HorizontalSlider Parameter="VirusControl/MIDI Indicator" Part="1" NormalBack="mtr.png"><Size left="150" top="20" width="121" height="6"/></HorizontalSlider>
+  </Container>
+ </Frame>
+</Editor>)";
+
+TEST(editor_snow_midi_indicator_meter)
+{
+    Rig g;
+    EditorLayout snow;
+    std::string err;
+    CHECK(snow.load(Bytes(SNOW_METER_LAYOUT, SNOW_METER_LAYOUT + strlen(SNOW_METER_LAYOUT)), err));
+    EditorRenderer r(snow, *g.cond, g.dev, g.ed);
+    r.values = g.r->values;
+    r.meter = [](int ch) { return ch == 0 ? 100 : 0; }; // part 1 (channel 1) active, part 2 quiet
+    g.canvas.imgs["mtr.png"] = {121, 768};               // 128 frames of 6 px
+    r.render(g.canvas);
+    auto a = g.canvas.at("mtr.png", 10, 20), b = g.canvas.at("mtr.png", 150, 20);
+    CHECK(a.size() == 1 && a[0].sy == 100 * 6); // the activity picks the frame, like the VUSlider's level strip
+    CHECK(b.size() == 1 && b[0].sy == 0);
+    // the meter is a display: no drag, no hit
+    CHECK(!r.hit_test(20, 22).element);
+    CHECK(r.hit_test(20, 7).element); // the volume slider next to it still takes the mouse
+
+    // where a meter change must be repainted, per part: the Snow's indicators here, the TI's VUSlider in LAYOUT
+    auto m = r.meter_rects();
+    CHECK(m.size() == 2);
+    CHECK(m[0] == (std::array<int, 5>{0, 10, 20, 121, 6}));
+    CHECK(m[1] == (std::array<int, 5>{1, 150, 20, 121, 6}));
+    auto ti = g.r->meter_rects();
+    CHECK(ti.size() == 1 && ti[0] == (std::array<int, 5>{2, 5, 35, 50, 6}));
+}

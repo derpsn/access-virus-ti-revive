@@ -109,3 +109,19 @@ TEST(startprogress_sync_eta_counts_only_what_is_missing)
     CHECK_EQ(sync_eta_s(60, 20000, 20), 60);              // measured: 1 s each
     CHECK_EQ(sync_eta_s(0, 20000, 20), 0);
 }
+
+// every letter goes to the page's capitals, the last of the alphabet too
+TEST(startprogress_sync_page_capitals_include_z)
+{
+    CHECK(sync_page_item("RAM C", 7, "zaz") == "RAM C 7 / 128: ZAZ");
+}
+
+// the measured pace counts from the 8th fetch on, and only with time measured: fewer fetches or no worked time keep
+// the 1.03 s estimate (a pace from one or two fetches, or 0 ms, would show a wrong or zero time left)
+TEST(startprogress_sync_eta_needs_eight_measured_fetches)
+{
+    CHECK_EQ(sync_eta_s(10, 8 * 2000, 8), 20); // 8 measured: 2 s each
+    CHECK_EQ(sync_eta_s(10, 7 * 2000, 7), 10); // 7: still the estimate
+    CHECK_EQ(sync_eta_s(10, 2 * 3000, 2), 10);
+    CHECK_EQ(sync_eta_s(10, 0, 8), 10); // no time measured: the estimate, not zero
+}

@@ -79,10 +79,11 @@ const std::vector<PluginOption> &plugin_options()
         {"live-notes", "live-notes.off", "Notes played live skip the lead, like the original (#30)", true, "Live notes",
          "Notes you play live skip the lead, like the original: about 22 ms instead of 76 ms at 48 kHz (#30)."},
         // on by default since 0.8.41: restart the Virus' audio once when it arrives byte-slipped (slipwatch.h, E488)
-        {"slip-restart", "slip-restart.off", "Restart the Virus' audio when it arrives scrambled (Linux, Windows)", true,
+        // macOS too since 0.8.41-rc6 (#37: 9 of 22 starts slipped on a Catalina Mac, E510)
+        {"slip-restart", "slip-restart.off", "Restart the Virus' audio when it arrives scrambled", true,
          "Restart scrambled audio",
-         "When the Virus' audio arrives scrambled (about 1 in 250 starts), restart it once. Linux and Windows; on a Mac "
-         "it is only logged."},
+         "When the Virus' audio arrives scrambled (crackle, notes off time), restart it. On a Mac this helps when the "
+         "DAW does not use the Virus as its own audio device."},
         // off by default (0.8.41, #30): the lead per host block measured exact on the TI2 (stamprule.h, E496)
         {"low-latency", "low-latency.on", "Lower latency, experimental (#30)", false, "Lower latency (experimental)",
          "About 36-48 ms instead of 76-87 ms at buffers up to 256 (55-59 ms at 512, unchanged above). It leaves "

@@ -151,3 +151,25 @@ TEST(repluggate_once_a_minute)
     CHECK(g.allow(1000 + 60000));  // a minute later
     CHECK(!g.allow(1000 + 60001));
 }
+
+// A stream whose rate is not known yet (0) must neither divide by zero nor fire: StallWatch then counts the whole
+// gap as standing still, ClampWatch never acts (it would start a new timeline on the first pulled-back read)
+TEST(stallwatch_and_clampwatch_without_a_rate)
+{
+    StallWatch s;
+    CHECK(!s.update(100, 0, 0));
+    CHECK(!s.update(200, 10, 0));
+    CHECK(s.update(300, 10 + StallWatch::LIMIT_MS, 0));
+    ClampWatch c;
+    for (int i = 0; i < 10; i++)
+        CHECK(!c.update(true, 64, 0));
+}
+
+// The gap also holds after a first replug at clock 0 (a steady clock may start there): the next one waits a minute
+TEST(repluggate_first_replug_at_clock_zero)
+{
+    ReplugGate g;
+    CHECK(g.allow(0));
+    CHECK(!g.allow(100));
+    CHECK(g.allow(ReplugGate::GAP_MS));
+}

@@ -1,6 +1,6 @@
 #!/usr/bin/env bash
 # build-msi.sh - cross-build our binaries on Linux, build "TI Revive.msi" with WiX in the win11 VM, fetch it to
-# work/release/. The VM needs C:\build\dotnet + C:\build\wix (see findings/HANDOFF.md M6).
+# work/release/. The VM needs C:\build\dotnet + C:\build\wix (see findings/log/, item M6).
 set -euo pipefail
 cd "$(dirname "$0")/../.."
 export VM=win11

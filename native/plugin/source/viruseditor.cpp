@@ -1121,19 +1121,16 @@ public:
             // last branch above and froze while a host automated a parameter - user, W block)
             if (int changed = plugin_->tick_meters(2)) { // the original: -1 per ~25 ms idle tick; 2 per 50 ms
                 // repaint only the changed meters, merged into one area (a repaint per meter made hosts sluggish)
-                if (meter_rects_.empty()) { // the VU sliders (one per part), top to bottom = part 1..16
-                    for (auto &rc : renderer_.param_rects("Internal MIDI Standard Parameters/07 Volume"))
-                        meter_rects_.push_back(CRect(rc[0], rc[1], rc[0] + rc[2], rc[1] + rc[3]));
-                    std::sort(meter_rects_.begin(), meter_rects_.end(),
-                              [](const CRect &a, const CRect &b) { return a.top < b.top; });
-                }
-                CRect area;
-                for (int ch = 0; ch < 16 && ch < (int)meter_rects_.size(); ch++)
-                    if (changed & (1 << ch)) {
+                if (meter_rects_.empty()) // the part meters: TI VU sliders or the Snow's MIDI Indicators (E509)
+                    meter_rects_ = renderer_.meter_rects();
+                CRect area; // part n listens on channel n (the plug-in's fixed multi)
+                for (auto &m : meter_rects_)
+                    if (m[0] >= 0 && m[0] < 16 && (changed & (1 << m[0]))) {
+                        const CRect rc(m[1], m[2], m[1] + m[3], m[2] + m[4]);
                         if (area.isEmpty())
-                            area = meter_rects_[ch];
+                            area = rc;
                         else
-                            area.unite(meter_rects_[ch]);
+                            area.unite(rc);
                     }
                 if (!area.isEmpty())
                     invalidRect(area);
@@ -2336,7 +2333,7 @@ private:
     int edit_part_ = 0;
     std::string edit_param_; // edit_name: the REMOTE page field being edited, empty for a patch name
     int edit_bank_ = -1, edit_prog_ = -1; // edit_browser_name: the RAM slot being renamed (-1: none)
-    std::vector<CRect> meter_rects_; // the part strips' meters
+    std::vector<std::array<int, 5>> meter_rects_; // the part strips' meters, {part, x, y, w, h}
     EditorRenderer::Deps deps_;      // what the controls read (filled by full repaints)
     struct StaticLayer {
         std::vector<const Element *> key; // the visible conditional static elements (page, modes, ...)

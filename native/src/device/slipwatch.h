@@ -7,7 +7,7 @@
 // full-scale glitches included), slipped 0.99 and up in every window (simulator S120, all captures). Two slipped
 // windows in a row count; a window with almost no change decides nothing (a slip is inaudible in silence).
 // Header only: the plug-in's device worker and the tests use it. It reads the ring as the device delivers it: on the
-// Mac the samples come through Core Audio (not a 1:1 copy, E488), where it only logs.
+// Mac the samples come through Core Audio; a slip shows there too (#37, E510) and is restarted the same way.
 #pragma once
 #include <cstdint>
 #include <cstdlib>

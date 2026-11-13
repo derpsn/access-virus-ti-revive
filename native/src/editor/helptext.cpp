@@ -42,7 +42,8 @@ const Entry ENTRIES[] = {
     {"Multi Part Bits/Part Enable", "Part on/off",
      "Switches this part on or off. A part that is off does not play, even if notes arrive on its channel."},
     {"Internal MIDI Standard Parameters/Volume", "Part volume and activity",
-     "The part's channel volume (MIDI CC 7). The bar behind the handle lights up while the part receives notes."},
+     "The part's channel volume (MIDI CC 7). The part's activity bar lights up while the part receives notes: "
+     "behind the handle on the TI, as its own thin bar in the part strip on the Snow."},
     {"Single Patch Name/Name", "Patch name",
      "The name of the part's current patch. Double-click to rename it; drag it onto another part strip to copy "
      "the whole patch there."},

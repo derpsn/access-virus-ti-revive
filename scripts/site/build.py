@@ -169,8 +169,8 @@ def downloads_line(releases):
 # preview box. The README's "Preview" block at the top says the same (unit test); remove it there at the final release.
 PREVIEW_NEW = {
     "0.8.41": "lower latency as an experimental option, an Options page in the Control Center, the plug-in restarts "
-              "scrambled Virus audio by itself (Linux and Windows), the Virus display shows the bank sync like with the original, "
-              "and the plug-in log is on by default, so a bug report already has what we need.",
+              "scrambled Virus audio by itself, the Virus display shows the bank sync like with the original, "
+              "the arpeggiator follows a count-in like with the original, the TI Snow's level meters work, and the plug-in log is on by default, so a bug report already has what we need.",
 }
 
 

@@ -12,6 +12,7 @@
 #include "device/automation.h"
 #include "device/broker.h"
 #include "device/keepalive.h"
+#include "device/markerscan.h"
 #include "device/memsync.h"
 #include "device/resync.h"
 #include "device/slipwatch.h"
@@ -157,15 +158,11 @@ public:
     // unknown, -2 = not found: stamps stay relative to the ring like before)
     // Every ping RESETS that clock, and the Virus can answer seconds late (Windows: start-up dumps still being
     // digested), so a ping waits up to 5 s for its marker and the newest marker always wins
-    void calibrate(int64_t from, bool new_stream)
-    {
-        marker_from_ = from;
-        pings_out_.fetch_add(1);
-        if (new_stream || marker.load() < 0) // a new audio stream (start, the Virus came back): the old one is void
-            marker = -1;
-    }
-    bool calibrating() const { return pings_out_.load() > 0; }
-    std::atomic<int64_t> marker{-2};
+    // (the bookkeeping is MarkerScan, markerscan.h; a new audio stream voids the old marker)
+    void calibrate(int64_t from, bool new_stream) { markers_.calibrate(from, new_stream); }
+    bool calibrating() const { return markers_.calibrating(); }
+    MarkerScan markers_;
+    std::atomic<int64_t> &marker = markers_.marker;
     std::atomic<int> rate{44100}; // the Virus' sample rate (44100; 48000 when it follows the host, E323)
     // rate following (design-rate.md step 5): the Virus rate this instance wants (the host rate mapped like the
     // original, virusrate.h) - the audio start asks for it; request_rate() asks now and waits until the worker did
@@ -263,9 +260,6 @@ private:
     char diag_path_[1024] = {};
     std::atomic<bool> diag_on_{false};
     void scan_audio(); // worker: silence tracking + marker search
-    std::atomic<int64_t> marker_from_{-1};
-    std::atomic<int> pings_out_{0}; // pings sent whose marker has not been seen yet
-    int64_t marker_skip_ = -1;      // worker: frames up to here belong to the last marker
     int64_t scanned_ = -1; // ring frames up to here were looked at
     bool elsewhere_seen_ = false; // worker: broker state 2 seen (another program's plug-in has the Virus)
     struct Queued {
@@ -800,7 +794,8 @@ private:
     double next_tick_ = 0;
     ActiveSensing fe_;  // FE every 300 ms on the timeline (the DSP's watchdog, E237)
     double tl_acc_ = 0; // fractional Virus frames of the timeline (host rate != the Virus' rate)
-    TransportWatch transport_; // Play and loop restarts: the original's F2 + 73 00 23 01 + 6F <part> 7F 00 (E275)
+    TransportWatch transport_; // Play, restarts, jumps, Stop: F2 + 73 00 23 vv on the next tick, FC (E275, E505)
+    PendingRestart restart_;   // a restart waits for the block that holds its tick (transport.h)
     double stat_acc_ = 0; // the same for the host-frames statistic
     int64_t stream_start_ = -1;
     TimelineFollow tl_follow_; // after the anchor: jumps and drift steps from the error over time, not per block (E337)

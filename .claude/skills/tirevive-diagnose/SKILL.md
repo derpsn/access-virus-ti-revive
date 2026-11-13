@@ -25,7 +25,8 @@ TI Revive version. Then make sure you have the logs (CONTRIBUTING.md lists where
 
 ## 2. Match against known causes
 
-Search `findings/evidence.md` and `findings/HANDOFF.md` for the exact error text first. The most common ones:
+Search `findings/evidence.md` (topic list: `findings/evidence-index.md`), `findings/HANDOFF.md` and the logs in
+`findings/log/` for the exact error text first. The most common ones:
 
 | Symptom / log line | Cause | Evidence | What the user does |
 |---|---|---|---|
