@@ -9,9 +9,10 @@ Last update: 2026-11-13 evening (rc5 tagged: Snow level meters E509; #39/#37/#30
 
 ## Round
 
-- **v0.8.41-rc5** tagged 2026-11-13 19:38 CET on 7f6d1be (Snow part meters E509 = 7efe0e4 + release text);
-  release CI 43484666513 running; then: main preview-box lines, rc5 reply on #30, install rc5 on Linux (the local
-  dev build 13271f03 is in ~/.vst3 now, rc4 backup in ~/.local/share/tirevive/vst3-backup-rc4-20261113-1935).
+- **v0.8.41-rc5** pre-release 2026-11-13 18:50 UTC (tag on 7f6d1be, release CI 43484666513 all 8 jobs green,
+  6 assets; Latest stays 0.8.40). main aee9e11 = preview-box lines only, site 43486622822 green, live page shows
+  "Preview: 0.8.41-rc5". Linux: rc5 installed by install.sh (plug-in 5726305b, broker 2e75801c). Open: rc5 reply
+  on #30 (draft with the user), win11 silent install, Mac install command.
 - Round **0.8.41** on branch `round-0.8.41` (pushed). Released before: **v0.8.41-rc4** pre-release
   (2026-11-13 08:48 UTC, tag on 24c056e, release CI 43395373253 all green, 6 assets); **0.8.40 stays Latest**.
   Site live with "Preview: 0.8.41-rc4" (main b9baa60 = box lines only, site run 43396293872).
