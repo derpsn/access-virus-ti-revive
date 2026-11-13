@@ -69,7 +69,7 @@ Last update: 2026-11-13 night (rc7 tagged: live-note stamps E512 for #39; rc6 ou
 | #36 | Windows Cubase bank sync 0/128 | reporter (rc2: display, hub/cable, 3 checks) | 2026-11-11 |
 | #37 | Catalina: crackle = byte-slipped audio (E510); probe: data empty on Catalina but clean on our Big Sur MacBook (E511) = Catalina/machine-specific | reporter (stays on rc6 Catalina build) | 2026-11-13 |
 | #38 | macOS 27 Live: editor / AU crash | reporter (crash report, Access files) | 2026-11-10 |
-| #39 | TI1 Keyboard: rc7 fixed our 8 ms (E512 1); pairs 6 ms + pressure 1-3 ms = firmware pace 5.86 ms/event, FIFO, no key time (E515, sim S131); original Mac driver = same arrival stamps (E514); his takes: no wheels, pressure only in normal takes | user: post the conclusion? reporter: rc7 feel | 2026-11-13 |
+| #39 | TI1 Keyboard in Ableton Live. NEW (E516): the original told Live two latencies (VST2 'AbLi' 6: delay + 2 x block); we report 77 ms while a played note takes 24 ms, so Live likely records takes ~53 ms off (not measured); his set: monitor Off, Virus takes 10-25 ms early. Before: rc7 fixed our 8 ms (E512), firmware pace 5.86 ms (E515), driver stamps as ours (E514) | user: Mac test in Live (keystamp, resample, play back); then reply | 2026-11-13 |
 | #40 | (ours) macOS: TI Revive takes the Virus' audio itself (libusb, E511) as an option? asks #30/#37/#39 reporters | reporters (audio interface use, admin rights, macOS/DAW) | 2026-11-13 |
 
 Every open issue waits on its reporter. Quiet-issue rule: 7 days after our last request, close with the AGENTS.md
@@ -123,6 +123,10 @@ message, only in a joint check with the user (by the dates above: #28 from 2026-
 
 ## NEXT
 
+00. #39 / E516: measure Live's recording placement on our Mac (TI2 to the Mac, Live 12, keystamp through the armed
+    plug-in track with monitor In; record MIDI + resample audio; play back, resample again; compare the two audio
+    clips): live notes on (expect ~53 ms late at 48 kHz), Live Mode on (expect ~0), live notes off (expect ~0).
+    Then decide: hint for Live users (Live Mode while recording), or played notes take the lead while the host records.
 0a. Live-stamp fix (E512): in rc7 (user: "make a new RC and let him test", #39 has the setup); also verify on our Mac
    (keystamp + klog: onsets 24000 frames apart). libusb-audio branch paused (plug-in side committed 300cdd4).
 0. #39 (user 2026-11-13: investigate before replying to #39 and #30): E507 = their log (no unit requests while
