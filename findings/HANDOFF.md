@@ -38,13 +38,7 @@ Last update: 2026-11-13 night (rc7 tagged: live-note stamps E512 for #39; rc6 ou
   plug-in's audio off/on released the interfaces, auto-detach re-attached Apple's driver = re-enumeration (MIDI cut,
   recovered). Fixed on the branch: ring made as the user (seteuid, stale ring unlinked), auto-detach off after the
   capture, explicit give-back at close. Retry with the Mac-built broker (no new package needed).
-- **v0.8.41-rc5** pre-release 2026-11-13 18:50 UTC (tag on 7f6d1be, release CI 43484666513 all 8 jobs green,
-  6 assets; Latest stays 0.8.40). main aee9e11 = preview-box lines only, site 43486622822 green, live page shows
-  "Preview: 0.8.41-rc5". Linux: rc5 installed by install.sh (plug-in 5726305b, broker 2e75801c). Open: rc5 reply
-  on #30 (draft with the user), win11 silent install, Mac install command.
-- Round **0.8.41** on branch `round-0.8.41` (pushed). Released before: **v0.8.41-rc4** pre-release
-  (2026-11-13 08:48 UTC, tag on 24c056e, release CI 43395373253 all green, 6 assets); **0.8.40 stays Latest**.
-  Site live with "Preview: 0.8.41-rc4" (main b9baa60 = box lines only, site run 43396293872).
+- Round **0.8.41** on branch `round-0.8.41` (pushed); rc1-rc7 pre-releases, **0.8.40 stays Latest**.
 - In 0.8.41: experimental lower latency (option `low-latency`, off by default, E496), Control Center Options page,
   slip detector + automatic restart (`slip-restart`, on by default, E488), freeze alert page (E493), burst counter
   (E490), Mac pkg refuses macOS < 14.4, plug-in log on by default (`diag.off` switches it off), Rise Message 4 per
@@ -55,8 +49,8 @@ Last update: 2026-11-13 night (rc7 tagged: live-note stamps E512 for #39; rc6 ou
   43369222561 (2026-11-13, all green) has it. Since then (user 2026-11-13: "Into 0.8.41 ... like the original"):
   transport restarts like the original (E505, #30 count-in arp): F2 from ppq + 256, 73 00 23 vv on the next tick,
   F8 grid rephased, FC at Stop, the original's jump limits (transport.h, test_transport.cpp, nativehost --count-in).
-- Branch `catalina-test` (worktree `../virus-ti-re-catalina`, e91ef17): untested x86_64 / macOS 10.15 build for
-  #37 only; dev-mac run 43278510379 green, link posted on #37. Never merged into main.
+- Branch `catalina-test` (worktree `../virus-ti-re-catalina`): x86_64 / macOS 10.15 build for #37, now rc6 code
+  + vtiaudioprobe (dev-mac 43495785623). Never merged into main.
 
 ## Machines and the Virus
 
