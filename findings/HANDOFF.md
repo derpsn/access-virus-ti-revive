@@ -5,7 +5,7 @@ NEXT. At most 150 lines; the Stop hook (`.claude/hooks/handoff-check.sh`) refuse
 how goes into the dated log [`log/2026-11.md`](log/2026-11.md) (newest first); older logs are in [`log/`](log/).
 Device/protocol knowledge goes into [`evidence.md`](evidence.md). Update this file in the same commit as the work._
 
-Last update: 2026-11-13 07:20 (E497 fix + transport checked on the TI2; rc4 after the tests).
+Last update: 2026-11-13 07:35 (rc4 prep: CI + mutation running; release text and preview box in).
 
 ## Round
 
@@ -95,9 +95,11 @@ message, only in a joint check with the user (by the dates above: #28 from 2026-
 
 ## NEXT
 
-1. Coverage + mutation (risk.py), a new CI run with the transport change, hil.sh with the CI build on Linux,
-   win11 silent install, Mac package push; then tag v0.8.41-rc4 (user 2026-11-13: "tag it as rc4 after the
-   tests"; release text in build.yml first).
+1. rc4 (user 2026-11-13: "tag it as rc4 after the tests"): coverage 96.5 % done; mutation run going
+   (work/mutation-0.8.41.log, worktree /home/datoml/tirevive-mut, 15 files incl. transport.h); CI 43377561345
+   (bbdc53b) going. Then: install the Linux CI build + hil.sh, win11 silent install, Mac package push; tag
+   v0.8.41-rc4 on round-0.8.41 (release text 753279a and README/site preview box rc4 are in); site rebuild by
+   hand (main gets the box line); post rc4 on #30 (count-in) when out.
 2. Wait for the reporters; next joint issue check with the user.
 3. User: install rc3 on the Mac (double-click `Install test build.command`), then Mac checks if wanted.
 4. Then the "To do before the final 0.8.41" list.
