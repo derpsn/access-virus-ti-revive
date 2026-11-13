@@ -5,11 +5,14 @@ NEXT. At most 150 lines; the Stop hook (`.claude/hooks/handoff-check.sh`) refuse
 how goes into the dated log [`log/2026-11.md`](log/2026-11.md) (newest first); older logs are in [`log/`](log/).
 Device/protocol knowledge goes into [`evidence.md`](evidence.md). Update this file in the same commit as the work._
 
-Last update: 2026-11-13 evening (#39 investigated: E507 Mac keystamp run1 + run2 clean; replies posted on #39 and #30).
+Last update: 2026-11-13 evening (rc5 tagged: Snow level meters E509; #39/#37/#30 replies posted).
 
 ## Round
 
-- Round **0.8.41** on branch `round-0.8.41` (pushed). Released so far: **v0.8.41-rc4** pre-release
+- **v0.8.41-rc5** tagged 2026-11-13 19:38 CET on 7f6d1be (Snow part meters E509 = 7efe0e4 + release text);
+  release CI 43484666513 running; then: main preview-box lines, rc5 reply on #30, install rc5 on Linux (the local
+  dev build 13271f03 is in ~/.vst3 now, rc4 backup in ~/.local/share/tirevive/vst3-backup-rc4-20261113-1935).
+- Round **0.8.41** on branch `round-0.8.41` (pushed). Released before: **v0.8.41-rc4** pre-release
   (2026-11-13 08:48 UTC, tag on 24c056e, release CI 43395373253 all green, 6 assets); **0.8.40 stays Latest**.
   Site live with "Preview: 0.8.41-rc4" (main b9baa60 = box lines only, site run 43396293872).
 - In 0.8.41: experimental lower latency (option `low-latency`, off by default, E496), Control Center Options page,
@@ -40,7 +43,7 @@ Last update: 2026-11-13 evening (#39 investigated: E507 Mac keystamp run1 + run2
 |---|---|---|---|
 | #26 | Snow, Linux REAPER timing / clicks | reporter (REAPER audio system, pw-jack test, rc3) | 2026-11-12 |
 | #28 | numbers 100-127 moved 5 px | reporter (confirm, close on yes) | 2026-11-09 |
-| #30 | Snow, Logic: rc4 "nailed it"; arp after 1-bar count-in confirmed (18:00, E505); only the plug-in window's meters (Logic's are fine) | us: Snow meters = cause found (E509: Snow skin meter is HorizontalSlider "VirusControl/MIDI Indicator", never set by us); fix (TDD) waits on the user's round decision | 2026-11-13 |
+| #30 | Snow, Logic: rc4 "nailed it"; arp after 1-bar count-in confirmed (18:00, E505); only the plug-in window's meters (Logic's are fine) | us: rc5 with the Snow meter fix (E509), reply when the release is out | 2026-11-13 |
 | #31 | Win10 VirtualBox, Snow, setup with Access drivers | reporter (rc3 setup with the unplug step) | 2026-11-12 |
 | #32 | (no change since 11-10) | reporter | before 11-10 |
 | #33 | Intel Mac: Ableton fine, Logic distorted | reporter (rc1: Logic log, rate, buffer) | 2026-11-10 |
