@@ -32,7 +32,7 @@ Last update: 2026-11-13 09:55 (v0.8.41-rc4 released, site live with the rc4 box)
 - win11 VM: rc4 CI MSI installed (/quiet, exit 0, DisplayVersion 0.8.41, no Virus attached), shut down.
 - win10 VM: reverted to snapshot `pre-i36` (0.8.36); snapshots `pre-i36`, `pre-i36-access` kept.
 - Mac (macOS 27.2.1): rc4 CI package INSTALLED (2026-11-13 09:42 CET; VST3 b9674444, AU 04b9bae3, broker 4558a47e
-  = the package payload). Mac tests of the count-in arp in Logic/Live: with the user.
+  = the package payload). The count-in arp test is left to the #30 reporter (user 2026-11-13).
 
 ## Open issues (as of 2026-11-12 late; check GitHub only together with the user)
 
@@ -97,6 +97,7 @@ message, only in a joint check with the user (by the dates above: #28 from 2026-
 
 ## NEXT
 
-1. rc4 posted on #30 (issuecomment-6848455763). Mac: the arp with a count-in in Logic + Live (with the user).
+1. rc4 posted on #30 (issuecomment-6848455763). The arp with a count-in: the reporter tests it in Logic (user:
+   "he has the setup to test it. so we wait"); no own Mac test planned.
 2. Wait for the reporters; next joint issue check with the user.
 4. Then the "To do before the final 0.8.41" list.
