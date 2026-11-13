@@ -38,7 +38,7 @@ Entries: 513. Marks after an entry: its lowest confidence level when below HIGH,
 - [E459](evidence.md#e459) **Firmware/bootloader path of the original, seen on the wire, for TI Revive to NEVER send (AGENTS.md rule ... (open)
 - [E493](evidence.md#e493) The Virus' audio froze in the middle of the first 48 kHz stream after a 44.1 kHz one, and stayed frozen ... (MED; open)
 
-## USB transport: endpoints, iso streams, stalls, errors (256)
+## USB transport: endpoints, iso streams, stalls, errors (257)
 
 - [E003](evidence.md#e003) MSI custom action `UpdateFirmware` (CAInstallerHelperDeferred!UpdateTIOS) runs at InstallExecuteSequence 6598 ...
 - [E004](evidence.md#e004) Drivers are installed by CAInstallerHelperDeferred (Prepare/Install/FinishDriverInstall, imports ...
@@ -296,6 +296,7 @@ Entries: 513. Marks after an entry: its lowest confidence level when below HIGH,
 - [E513](evidence.md#e513) The broker's own audio on macOS works in a DAW (libusb-audio branch, E511): our Mac (macOS 27.2.1, Apple ... (open)
 - [E514](evidence.md#e514) How the original Access software brings a Virus Keyboard's keys to the host on macOS (#39, user 2026-11-13: ... (open; not on hardware)
 - [E515](evidence.md#e515) #39 joint deep look, the unit's side (user 2026-11-13: "find any clues ... in the firmware if there is ... (MED; not on hardware)
+- [E516](evidence.md#e516) The original tells Ableton Live two latencies; TI Revive can tell a host only one (#39, user 2026-11-13: ... (MED; open)
 
 ## SysEx and parameter protocol (118)
 
@@ -775,7 +776,7 @@ Entries: 513. Marks after an entry: its lowest confidence level when below HIGH,
 - [E513](evidence.md#e513) The broker's own audio on macOS works in a DAW (libusb-audio branch, E511): our Mac (macOS 27.2.1, Apple ... (open)
 - [E514](evidence.md#e514) How the original Access software brings a Virus Keyboard's keys to the host on macOS (#39, user 2026-11-13: ... (open; not on hardware)
 - [E515](evidence.md#e515) #39 joint deep look, the unit's side (user 2026-11-13: "find any clues ... in the firmware if there is ... (MED; not on hardware)
-- [E516](evidence.md#e516) The original tells Ableton Live two latencies; TI Revive can tell a host only one (#39, user 2026-11-13: ... (MED; open; not on hardware)
+- [E516](evidence.md#e516) The original tells Ableton Live two latencies; TI Revive can tell a host only one (#39, user 2026-11-13: ... (MED; open)
 
 ## Sound problems: crackle, silence, dropouts (159)
 
@@ -1508,7 +1509,7 @@ Entries: 513. Marks after an entry: its lowest confidence level when below HIGH,
 - [E512](evidence.md#e512) #39 ("the program tries to push notes into place, the notes feel stressed", also with Local On and the track ... (MED; open)
 - [E513](evidence.md#e513) The broker's own audio on macOS works in a DAW (libusb-audio branch, E511): our Mac (macOS 27.2.1, Apple ... (open)
 - [E514](evidence.md#e514) How the original Access software brings a Virus Keyboard's keys to the host on macOS (#39, user 2026-11-13: ... (open; not on hardware)
-- [E516](evidence.md#e516) The original tells Ableton Live two latencies; TI Revive can tell a host only one (#39, user 2026-11-13: ... (MED; open; not on hardware)
+- [E516](evidence.md#e516) The original tells Ableton Live two latencies; TI Revive can tell a host only one (#39, user 2026-11-13: ... (MED; open)
 
 ## Linux (209)
 
@@ -1722,7 +1723,7 @@ Entries: 513. Marks after an entry: its lowest confidence level when below HIGH,
 - [E510](evidence.md#e510) #37 follow-up (2026-11-13 18:56 UTC, Catalina, TI Desktop): the reporter's answers: "2 Outs / No Input" does ... (LOW; open)
 - [E511](evidence.md#e511) macOS without Apple's USB audio driver, feasibility (user 2026-11-13: "prepare the feasibility test", after ... (open)
 
-## Models: Snow, Polar, Keyboard, TI2 (222)
+## Models: Snow, Polar, Keyboard, TI2 (223)
 
 - [E013](evidence.md#e013) Remotedevice XML (3 blobs) embedded in Virus Control.dll at file offsets 0xc248a4, 0xcbee00 (TI ...
 - [E091](evidence.md#e091) macOS installer recon (originals/Virus TI Software Suite 5.1.7.00.pkg, xar from 2017, payloads unpacked to ...
@@ -1946,6 +1947,7 @@ Entries: 513. Marks after an entry: its lowest confidence level when below HIGH,
 - [E513](evidence.md#e513) The broker's own audio on macOS works in a DAW (libusb-audio branch, E511): our Mac (macOS 27.2.1, Apple ... (open)
 - [E514](evidence.md#e514) How the original Access software brings a Virus Keyboard's keys to the host on macOS (#39, user 2026-11-13: ... (open; not on hardware)
 - [E515](evidence.md#e515) #39 joint deep look, the unit's side (user 2026-11-13: "find any clues ... in the firmware if there is ... (MED; not on hardware)
+- [E516](evidence.md#e516) The original tells Ableton Live two latencies; TI Revive can tell a host only one (#39, user 2026-11-13: ... (MED; open)
 
 ## DAWs (224)
 
@@ -2172,7 +2174,7 @@ Entries: 513. Marks after an entry: its lowest confidence level when below HIGH,
 - [E510](evidence.md#e510) #37 follow-up (2026-11-13 18:56 UTC, Catalina, TI Desktop): the reporter's answers: "2 Outs / No Input" does ... (LOW; open)
 - [E512](evidence.md#e512) #39 ("the program tries to push notes into place, the notes feel stressed", also with Local On and the track ... (MED; open)
 - [E513](evidence.md#e513) The broker's own audio on macOS works in a DAW (libusb-audio branch, E511): our Mac (macOS 27.2.1, Apple ... (open)
-- [E516](evidence.md#e516) The original tells Ableton Live two latencies; TI Revive can tell a host only one (#39, user 2026-11-13: ... (MED; open; not on hardware)
+- [E516](evidence.md#e516) The original tells Ableton Live two latencies; TI Revive can tell a host only one (#39, user 2026-11-13: ... (MED; open)
 
 ## User reports (GitHub issues, forums) (107)
 
@@ -2282,7 +2284,7 @@ Entries: 513. Marks after an entry: its lowest confidence level when below HIGH,
 - [E512](evidence.md#e512) #39 ("the program tries to push notes into place, the notes feel stressed", also with Local On and the track ... (MED; open)
 - [E514](evidence.md#e514) How the original Access software brings a Virus Keyboard's keys to the host on macOS (#39, user 2026-11-13: ... (open; not on hardware)
 - [E515](evidence.md#e515) #39 joint deep look, the unit's side (user 2026-11-13: "find any clues ... in the firmware if there is ... (MED; not on hardware)
-- [E516](evidence.md#e516) The original tells Ableton Live two latencies; TI Revive can tell a host only one (#39, user 2026-11-13: ... (MED; open; not on hardware)
+- [E516](evidence.md#e516) The original tells Ableton Live two latencies; TI Revive can tell a host only one (#39, user 2026-11-13: ... (MED; open)
 
 ## Safety (rule 2): sends that can hurt the Virus (63)
 
