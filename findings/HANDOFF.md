@@ -77,8 +77,9 @@ message, only in a joint check with the user (by the dates above: #28 from 2026-
 - [ ] Release text heredoc in `.github/workflows/build.yml` ("New in 0.8.41") checked before the tag.
 - [ ] #34 second session "bank sync failed in 11.9 s" (RAM B -1) after "paused 2.6 s for notes": not looked into.
 - [ ] #30 note at the Play moment (sim S126, model): the note-on is stamped one tick before the F2 restart, the arp
-      then stays off grid by half ticks (10 of 10); count-in case on grid (5 of 5). Check the original (REA) and the
-      TI2, then decide a fix (restart before the Play block's notes?). Log 2026-11-13 afternoon.
+      then stays off grid by half ticks (10 of 10); count-in case on grid (5 of 5). REA: the original has the same
+      order (MED). Waits on the user: keep like the original (proposed) or restart at the block start (0.8.42 cand.,
+      model then TI2). Also open: B2 note-on without a stamp (shared stamp?). Log 2026-11-13 afternoon.
 - [ ] Library scan skips patches as "damaged or unknown format" (#36 log: BC2001 36, Incubation V3 97): check the
       format.
 
@@ -101,5 +102,6 @@ message, only in a joint check with the user (by the dates above: #28 from 2026-
 
 1. rc4 posted on #30 (issuecomment-6848455763). The arp with a count-in: the reporter tests it in Logic (user:
    "he has the setup to test it. so we wait"); no own Mac test planned.
-2. Wait for the reporters; next joint issue check with the user.
+2. User on bare-metal Windows testing rc4; afterwards read their plug-in log, and their call on the S126 fix.
+3. Wait for the reporters; next joint issue check with the user.
 4. Then the "To do before the final 0.8.41" list.
