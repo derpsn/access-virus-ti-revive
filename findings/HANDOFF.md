@@ -28,7 +28,10 @@ Last update: 2026-11-13 night (rc7 tagged: live-note stamps E512 for #39; rc6 ou
   restart/rate via the broker, no replug; 723 tests). Paused for #39 (user: live-stamp fix + key-pacing analysis
   first). scripts/mac-libusb-test.command (stops the normal broker - no launchd agent since 0.8, the plug-in
   spawns it -, sets mac-usb-audio.on, runs sudo VTI_LIBUSB_AUDIO=1 vtibroker -v -stay, log on the Desktop, option
-  off again at the end). Next: CI Mac test build of the branch (build.yml by hand), test on our Mac.
+  off again at the end). CI 43505792317: mac green, native-linux/windows red (owneruid strtol on 32-bit long,
+  risk.json lacked the .command) -> fixed 5865382, CI 43506997752 running. Then test on our Mac.
+  Second test Mac: Intel MacBook, Big Sur 11.7.10 (kernel AppleUSBAudio, like #37's Catalina): scripts/mac.sh
+  MAC=bigsur (host/user only in ~/.config/tirevive/mac-bigsur.env); waits on ssh-copy-id by the user.
 - **v0.8.41-rc5** pre-release 2026-11-13 18:50 UTC (tag on 7f6d1be, release CI 43484666513 all 8 jobs green,
   6 assets; Latest stays 0.8.40). main aee9e11 = preview-box lines only, site 43486622822 green, live page shows
   "Preview: 0.8.41-rc5". Linux: rc5 installed by install.sh (plug-in 5726305b, broker 2e75801c). Open: rc5 reply
