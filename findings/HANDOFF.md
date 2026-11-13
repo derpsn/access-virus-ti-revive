@@ -5,12 +5,13 @@ NEXT. At most 150 lines; the Stop hook (`.claude/hooks/handoff-check.sh`) refuse
 how goes into the dated log [`log/2026-11.md`](log/2026-11.md) (newest first); older logs are in [`log/`](log/).
 Device/protocol knowledge goes into [`evidence.md`](evidence.md). Update this file in the same commit as the work._
 
-Last update: 2026-11-13 09:50 (rc4 tests done: CI, Linux hil, win11, coverage, mutation; tag next).
+Last update: 2026-11-13 09:55 (v0.8.41-rc4 released, site live with the rc4 box).
 
 ## Round
 
-- Round **0.8.41** on branch `round-0.8.41` (pushed). Released so far: **v0.8.41-rc3** pre-release
-  (2026-11-12 19:18 UTC, tag on 796e1ad); **0.8.40 stays Latest**. Site live with "Preview: 0.8.41-rc3".
+- Round **0.8.41** on branch `round-0.8.41` (pushed). Released so far: **v0.8.41-rc4** pre-release
+  (2026-11-13 08:48 UTC, tag on 24c056e, release CI 43395373253 all green, 6 assets); **0.8.40 stays Latest**.
+  Site live with "Preview: 0.8.41-rc4" (main b9baa60 = box lines only, site run 43396293872).
 - In 0.8.41: experimental lower latency (option `low-latency`, off by default, E496), Control Center Options page,
   slip detector + automatic restart (`slip-restart`, on by default, E488), freeze alert page (E493), burst counter
   (E490), Mac pkg refuses macOS < 14.4, plug-in log on by default (`diag.off` switches it off), Rise Message 4 per
@@ -96,10 +97,8 @@ message, only in a joint check with the user (by the dates above: #28 from 2026-
 
 ## NEXT
 
-1. rc4 (user 2026-11-13: "tag it as rc4 after the tests"): tests done - coverage 96.5 %, CI 43377561345 green,
-   Linux hil ALL PASS, win11 silent install, mutation 74 % (transport.h + markerscan.h: all behaviour-changing
-   mutants killed, testing.md). Next: tag v0.8.41-rc4 on round-0.8.41, check the release (pre-release, 0.8.40
-   Latest), site rebuild by hand (main gets the box line), post rc4 on #30 (count-in).
+1. Post rc4 on #30 (draft work/replies/30-rc4.md: count-in arp, asks whether the arp starts with bar 1), with
+   the user's OK. Test machines run the tested rc4 CI build (43377561345), not the release build.
 2. Wait for the reporters; next joint issue check with the user.
 3. User: install rc4 on the Mac (double-click `Install test build.command`), then Mac checks if wanted.
 4. Then the "To do before the final 0.8.41" list.
