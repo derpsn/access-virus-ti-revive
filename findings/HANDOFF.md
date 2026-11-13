@@ -5,7 +5,7 @@ NEXT. At most 150 lines; the Stop hook (`.claude/hooks/handoff-check.sh`) refuse
 how goes into the dated log [`log/2026-11.md`](log/2026-11.md) (newest first); older logs are in [`log/`](log/).
 Device/protocol knowledge goes into [`evidence.md`](evidence.md). Update this file in the same commit as the work._
 
-Last update: 2026-11-13 07:35 (rc4 prep: CI + mutation running; release text and preview box in).
+Last update: 2026-11-13 09:50 (rc4 tests done: CI, Linux hil, win11, coverage, mutation; tag next).
 
 ## Round
 
@@ -27,11 +27,11 @@ Last update: 2026-11-13 07:35 (rc4 prep: CI + mutation running; release text and
 ## Machines and the Virus
 
 - Our TI2 Desktop: on the **Linux** USB bus. User flashed ROM Z on it in early November (E500).
-- Linux: rc3 CI build installed (plug-in 0cf9a408, broker 2e75801c), `hil.sh` ALL PASS.
-- win11 VM: rc3 installed (/quiet, exit 0, no Virus attached), shut down.
+- Linux: rc4 CI build (run 43377561345) installed (plug-in b18c102b, broker 2e75801c), `hil.sh` ALL PASS.
+- win11 VM: rc4 CI MSI installed (/quiet, exit 0, DisplayVersion 0.8.41, no Virus attached), shut down.
 - win10 VM: reverted to snapshot `pre-i36` (0.8.36); snapshots `pre-i36`, `pre-i36-access` kept.
-- Mac (macOS 27.2.1): rc3 package pushed to `~/Downloads/TI-Revive-0.8.41-rc3-mac/`; **the user installs it**
-  (not confirmed yet).
+- Mac (macOS 27.2.1): rc4 package pushed to `~/Downloads/TI-Revive-0.8.41-rc4-mac/`; **the user installs it**
+  (not confirmed yet; rc3 not confirmed either).
 
 ## Open issues (as of 2026-11-12 late; check GitHub only together with the user)
 
@@ -71,6 +71,7 @@ message, only in a joint check with the user (by the dates above: #28 from 2026-
 
 - [ ] README + site: new features, Intel Mac line only once #33 confirms Logic; remove the README "Preview" block.
 - [ ] `tirevive-site-check` over the whole round.
+- [ ] Mutation: the 107 unchecked survivors in the rc1-rc3 files (testing.md, 2026-11-13): a test or a note each.
 - [ ] Full test round on all three platforms: `python3 scripts/risk.py --round 0.8.41` (class C everywhere; Mac by
       hand: sleep), `scripts/hil.sh` on Linux, checklist artifact via `scripts/checklist.py`.
 - [ ] Release text heredoc in `.github/workflows/build.yml` ("New in 0.8.41") checked before the tag.
@@ -95,11 +96,10 @@ message, only in a joint check with the user (by the dates above: #28 from 2026-
 
 ## NEXT
 
-1. rc4 (user 2026-11-13: "tag it as rc4 after the tests"): coverage 96.5 % done; mutation run going
-   (work/mutation-0.8.41.log, worktree /home/datoml/tirevive-mut, 15 files incl. transport.h); CI 43377561345
-   (bbdc53b) going. Then: install the Linux CI build + hil.sh, win11 silent install, Mac package push; tag
-   v0.8.41-rc4 on round-0.8.41 (release text 753279a and README/site preview box rc4 are in); site rebuild by
-   hand (main gets the box line); post rc4 on #30 (count-in) when out.
+1. rc4 (user 2026-11-13: "tag it as rc4 after the tests"): tests done - coverage 96.5 %, CI 43377561345 green,
+   Linux hil ALL PASS, win11 silent install, mutation 74 % (transport.h + markerscan.h: all behaviour-changing
+   mutants killed, testing.md). Next: tag v0.8.41-rc4 on round-0.8.41, check the release (pre-release, 0.8.40
+   Latest), site rebuild by hand (main gets the box line), post rc4 on #30 (count-in).
 2. Wait for the reporters; next joint issue check with the user.
-3. User: install rc3 on the Mac (double-click `Install test build.command`), then Mac checks if wanted.
+3. User: install rc4 on the Mac (double-click `Install test build.command`), then Mac checks if wanted.
 4. Then the "To do before the final 0.8.41" list.

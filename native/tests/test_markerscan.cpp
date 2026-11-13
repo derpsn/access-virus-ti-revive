@@ -119,3 +119,22 @@ TEST(markerscan_resync_ping_during_a_pass_still_times_out_on_its_own)
     CHECK(!pass(m, -1, B + 5 * R + 1)); // timed out; the old marker stays, so no "not found" line
     CHECK(!m.calibrating() && m.marker.load() == 1000);
 }
+
+// the edges (mutation run 2026-11-13): a marker at ring frame 0 is a found marker, and with no ping out (the stream
+// was reset after the ping) the timeout has nothing to judge
+TEST(markerscan_marker_at_frame_0_and_no_ping_out)
+{
+    MarkerScan m;
+    m.calibrate(0, true);
+    pass(m, 0, 100);
+    CHECK(m.marker.load() == 0);
+    m.calibrate(200, false); // a re-sync ping: the known marker at 0 stays until a newer one
+    CHECK(m.marker.load() == 0);
+    CHECK(!pass(m, -1, 200 + 5 * R + 1)); // it times out, but a marker is known: no log line
+    CHECK(m.marker.load() == 0);
+    MarkerScan r;
+    r.calibrate(0, true);
+    r.reset_stream(); // no ping out any more, the marker still unknown
+    CHECK(!r.end(10 * R, R));
+    CHECK(r.marker.load() == -1);
+}

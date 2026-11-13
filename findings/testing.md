@@ -220,3 +220,15 @@ resetguard.h:19 (`fd > 0`: fd 0 only with stdin closed), resampler.h:32 (the Kai
 
 Note: several survivors were reads past a message's end (usbmidi_pack); a plain unit test sees them only when the
 bytes past the end are known, so the test leaves a marker in the vector's spare capacity.
+
+**2026-11-13, round 0.8.41** (copy of 19df199, the 15 files `risk.py` names for the round; 461 mutants, log
+`work/mutation-0.8.41.log`): **342 of 461 killed (74 %)**. The two files new since rc3 first: transport.h (transport
+restarts like the original, E505) 20 of 29, markerscan.h (E497 fix) 19 of 22. Their 12 survivors checked in the
+code: 8 were missing tests, now added and each killed when applied by hand in the copy - the jump limits at exactly
+0.05 quarter, exactly -128 samples and exactly one tick (transport.h:36), the 1e6 guard (:67), a restart that fires
+only once (:124); a marker at ring frame 0 that a re-sync ping and a timeout must keep (markerscan.h:23, :63), and a
+timeout with no ping out after a stream reset (:61, `out > 0`). 4 are equivalent: transport.h:71 and :74 (`< 0` vs
+`<= 0` clamps 0 to 0), :77 (`offset >= 0` vs `> 0` sets 0 to 0) and :79 (`>` vs `>=` sets frames_per_tick to itself).
+**transport.h and markerscan.h: every behaviour-changing mutant killed.** The 107 survivors in the 13 files from
+rc1-rc3 (infopage.h 31, memsync.cpp 15, editormenus.h 12, stamprule.h 10, diag.cpp 9, freezewatch.h 8, slipwatch.h 8,
+startprogress.h 7, stallwatch.h 6, diag.h 1) are not checked yet: on the list before the final 0.8.41.

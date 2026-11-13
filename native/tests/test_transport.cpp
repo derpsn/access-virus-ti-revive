@@ -53,6 +53,23 @@ TEST(transport_jump_limits_like_the_original)
     CHECK(g.update(true, 0.25 - 0.051, 0.25, 64, 64) == TransportWatch::Start); // 0.051 behind due
 }
 
+// the limits themselves (mutation run 2026-11-13): exactly 0.05 quarter is no jump, exactly -128 samples is none
+// either, exactly one tick with the samples off counts
+TEST(transport_jump_limits_at_their_edges)
+{
+    TransportWatch a;
+    a.update(true, -0.25, 0.25, 0, 64); // due at 0
+    CHECK(a.update(true, 0.05, 0.25, 64, 64) == TransportWatch::None);
+    TransportWatch b;
+    b.update(true, -0.25, 0.25, 0, 64);
+    CHECK(b.update(true, 0.045, 0.25, 64 - 128, 64) == TransportWatch::None);
+    TransportWatch c;
+    c.update(true, -0.25, 0.25, 0, 64);
+    CHECK(c.update(true, 1.0 / 24.0, 0.25, 64 + 129, 64) == TransportWatch::Start);
+    CHECK(transport_start(1e6, FPT).spp == 0); // a million quarters is out of range already
+    CHECK(transport_start(999999.0, FPT).spp != 0);
+}
+
 // backwards against the last block's start restarts even inside the jump limit (short blocks)
 TEST(transport_backwards_by_a_hair_restarts)
 {
@@ -155,6 +172,7 @@ TEST(transport_restart_waits_for_its_block)
     CHECK(!p.due(1064)); // the block ending at 1064 does not hold it
     CHECK(!p.due(1917)); // a block ending at the stamp does not either
     CHECK(p.due(1918));  // this one does
+    CHECK(!p.due(1918)); // and only once
     CHECK(p.f2()[0] == 0xF2 && p.f2()[1] == (1056 & 0x7F) && p.f2()[2] == (1056 >> 7));
     CHECK(p.tick()[8] == 0x23 && p.tick()[9] == 1 && p.tick()[10] == 0xF7);
     p.clear();
