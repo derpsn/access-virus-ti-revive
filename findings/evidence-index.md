@@ -1151,7 +1151,7 @@ Entries: 513. Marks after an entry: its lowest confidence level when below HIGH,
 - [E510](evidence.md#e510) #37 follow-up (2026-11-13 18:56 UTC, Catalina, TI Desktop): the reporter's answers: "2 Outs / No Input" does ... (LOW; open)
 - [E511](evidence.md#e511) macOS without Apple's USB audio driver, feasibility (user 2026-11-13: "prepare the feasibility test", after ... (open)
 
-## Windows (170)
+## Windows (171)
 
 - [E001](evidence.md#e001) MSI baseline SHA256 = f9a6f5c929ec894f872052082be9b4abec07e627499549d21c1f362a55e0a466 (47,767,552 B)
 - [E003](evidence.md#e003) MSI custom action `UpdateFirmware` (CAInstallerHelperDeferred!UpdateTIOS) runs at InstallExecuteSequence 6598 ...
@@ -1323,6 +1323,7 @@ Entries: 513. Marks after an entry: its lowest confidence level when below HIGH,
 - [E509](evidence.md#e509) #30 (Snow, "the level meters in the plug-in don't show", Logic's own meters fine): the Snow skin's part meter ... (MED; open; not on hardware)
 - [E510](evidence.md#e510) #37 follow-up (2026-11-13 18:56 UTC, Catalina, TI Desktop): the reporter's answers: "2 Outs / No Input" does ... (LOW; open)
 - [E514](evidence.md#e514) How the original Access software brings a Virus Keyboard's keys to the host on macOS (#39, user 2026-11-13: ... (open; not on hardware)
+- [E516](evidence.md#e516) The original tells Ableton Live two latencies; TI Revive can tell a host only one (#39, user 2026-11-13: ... (MED; open)
 
 ## macOS and Audio Unit (184)
 
