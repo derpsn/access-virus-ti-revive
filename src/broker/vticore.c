@@ -45,6 +45,7 @@ struct vti {
     uint8_t rd_ep[2];
     uint8_t bulk[16];       // by endpoint number: 1 = bulk (Virus TI Snow), 0 = interrupt (TI/TI2 Desktop, E021) - E387
     unsigned long idle;     // FF FE 00 00 packets dropped on a bulk EP 0x85 (E387)
+    int captured;           // macOS libusb-audio test: taken from Apple's audio driver (E511), given back at close
 };
 
 // The Snow has bulk endpoints 05/85/06/86 where the TI2 Desktop has interrupt ones (E021, E387). Linux usbfs rejects
@@ -160,6 +161,13 @@ vti *vti_open(vti_rx_cb cb, void *user)
     if (geteuid() == 0 && getenv("VTI_LIBUSB_AUDIO") && atoi(getenv("VTI_LIBUSB_AUDIO")) == 1) {
         int c = libusb_detach_kernel_driver(v->h, 0);
         vti_log("vti: Virus taken from Apple's audio driver (capture): %s\n", c ? libusb_error_name(c) : "ok");
+        if (c == 0) {
+            // keep it until vti_close: with auto-detach on, every release of the audio interfaces (the plug-in's
+            // audio off/on at a DAW restart) re-attached Apple's driver, which re-enumerates the whole device and
+            // cut MIDI off for a moment (first Mac test: LIBUSB_ERROR_IO, then NOT_FOUND)
+            libusb_set_auto_detach_kernel_driver(v->h, 0);
+            v->captured = 1;
+        }
     }
 #endif
     find_bulk_endpoints(v);
@@ -218,6 +226,11 @@ void vti_close(vti *v)
 #else
     for (int i = 3; i <= 4; i++)
         libusb_release_interface(v->h, i);
+#endif
+#ifdef __APPLE__
+    if (v->captured) // back to Apple's audio driver: the Virus is a Core Audio device again
+        vti_log("vti: Virus given back to Apple's audio driver: %s\n",
+                libusb_attach_kernel_driver(v->h, 0) ? "failed (replug it)" : "ok");
 #endif
     libusb_close(v->h);
     libusb_exit(v->ctx);

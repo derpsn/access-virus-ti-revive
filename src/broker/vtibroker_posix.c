@@ -579,22 +579,30 @@ static int shm_create(void)
         return 0;
     char name[64];
     snprintf(name, sizeof name, VTI_AUDIO_SHM_LINUX, g_owner_uid);
+    // the sudo broker (E511): the ring must belong to the user it serves (the plug-in checks that, audioin.cpp), and
+    // macOS refuses fchown on POSIX shared memory (EINVAL, first Mac test) - so it is made as that user, after a
+    // stale one (root's from that test; macOS also sizes a shm object only once) is removed
+    const int as_owner = geteuid() == 0 && g_owner_uid != 0;
+    if (as_owner) {
+        shm_unlink(name);
+        if (seteuid((uid_t)g_owner_uid))
+            blog("audio: shared memory %s: seteuid %u: %s", name, g_owner_uid, strerror(errno));
+    }
     int fd = shm_open(name, O_RDWR | O_CREAT, 0600);
-    // the sudo broker (E511): the ring belongs to the user it serves, the plug-in checks that (audioin.cpp)
-    if (fd >= 0 && geteuid() == 0 && g_owner_uid != 0 && fchown(fd, (uid_t)g_owner_uid, (gid_t)-1))
-        blog("audio: shared memory %s: chown to %u: %s", name, g_owner_uid, strerror(errno));
-    if (fd < 0 || ftruncate(fd, sizeof(vti_audio_shm))) {
-        blog("audio: shared memory %s: %s", name, strerror(errno));
-        if (fd >= 0)
-            close(fd);
+    const int bad = fd < 0 || ftruncate(fd, sizeof(vti_audio_shm));
+    const int err = errno;
+    void *m = bad ? MAP_FAILED : mmap(NULL, sizeof(vti_audio_shm), PROT_READ | PROT_WRITE, MAP_SHARED, fd, 0);
+    if (fd >= 0)
+        close(fd);
+    if (as_owner && seteuid(0)) // back to root for USB
+        blog("audio: seteuid 0: %s", strerror(errno));
+    if (bad) {
+        blog("audio: shared memory %s: %s", name, strerror(err));
         return -1;
     }
-    g_shm = mmap(NULL, sizeof(vti_audio_shm), PROT_READ | PROT_WRITE, MAP_SHARED, fd, 0);
-    close(fd);
-    if (g_shm == MAP_FAILED) {
-        g_shm = NULL;
+    if (m == MAP_FAILED)
         return -1;
-    }
+    g_shm = m;
     memset(g_shm, 0, sizeof *g_shm);
     g_shm->magic = VTI_AUDIO_MAGIC;
     g_shm->version = VTI_AUDIO_VERSION;
