@@ -52,7 +52,7 @@ Last update: 2026-11-13 evening (rc5 tagged: Snow level meters E509; #39/#37/#30
 | #36 | Windows Cubase bank sync 0/128 | reporter (rc2: display, hub/cable, 3 checks) | 2026-11-11 |
 | #37 | Catalina, Logic 10.6: CC opens now; crackle (512-grid clicks), no sound as audio interface, 2 USB drop-outs, Access driver still found (E508) | reporter (2 Outs / No Input, folder contents, unplugged?, other port/cable; issuecomment-6861206002) | 2026-11-13 |
 | #38 | macOS 27 Live: editor / AU crash | reporter (crash report, Access files) | 2026-11-10 |
-| #39 | = #29 reporter, TI1 Keyboard, Live 12: rc4 notes "stuck" after ~10 s, back to 0.8.39; log analysed (E507) | reporter (Live + version per session, keys or external, one device only, optional keystamp run) | 2026-11-13 |
+| #39 | = #29 reporter, TI1 Keyboard, Live 12.3.7: notes "jump"; steady rc4 session clean, clips on the 1/16 grid = Live's record quantize (E507) | reporter (record with Record Quantization None; issuecomment-6862326923) | 2026-11-13 |
 
 Every open issue waits on its reporter. Quiet-issue rule: 7 days after our last request, close with the AGENTS.md
 message, only in a joint check with the user (by the dates above: #28 from 2026-11-16, #33 and #38 from 2026-11-17; #32: look up its date first).
