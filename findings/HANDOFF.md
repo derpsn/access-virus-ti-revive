@@ -27,9 +27,7 @@ Last update: 2026-11-13 night (rc7 tagged: live-note stamps E512 for #39; rc6 ou
   restart/rate via the broker, no replug; 723 tests). Paused for #39 (user: live-stamp fix + key-pacing analysis
   first). scripts/mac-libusb-test.command (stops the normal broker - no launchd agent since 0.8, the plug-in
   spawns it -, sets mac-usb-audio.on, runs sudo VTI_LIBUSB_AUDIO=1 vtibroker -v -stay, log on the Desktop, option
-  off again at the end). CI 43505792317: mac green, native-linux/windows red (owneruid strtol on 32-bit long,
-  risk.json lacked the .command) -> fixed 5865382, CI 43506997752 running. Then test on our Mac.
-  Second test Mac (Big Sur MacBook): gone since 2026-11-13 night, not used for testing any more (user).
+  off again at the end). Big Sur MacBook: gone since 2026-11-13 night, not used for testing any more (user).
 - First libusb run on our Mac (CI 43506997752 package, 22:13): broker captured the Virus and streamed, but the
   plug-in got no audio (audio 0): macOS refuses fchown on POSIX shm (EINVAL), the ring stayed root's 0600; and the
   plug-in's audio off/on released the interfaces, auto-detach re-attached Apple's driver = re-enumeration (MIDI cut,
