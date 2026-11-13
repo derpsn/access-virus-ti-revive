@@ -154,6 +154,14 @@ vti *vti_open(vti_rx_cb cb, void *user)
         goto fail;
     }
     libusb_set_auto_detach_kernel_driver(v->h, 1);
+#ifdef __APPLE__
+    // the broker's own audio on macOS (test, E511): libusb takes the Virus from Apple's audio driver by capturing the
+    // whole device, which re-enumerates it - so before the MIDI interfaces are claimed, as in vtiaudioprobe's order
+    if (geteuid() == 0 && getenv("VTI_LIBUSB_AUDIO") && atoi(getenv("VTI_LIBUSB_AUDIO")) == 1) {
+        int c = libusb_detach_kernel_driver(v->h, 0);
+        vti_log("vti: Virus taken from Apple's audio driver (capture): %s\n", c ? libusb_error_name(c) : "ok");
+    }
+#endif
     find_bulk_endpoints(v);
     for (int i = 3; i <= 4; i++)
         if ((r = libusb_claim_interface(v->h, i))) {

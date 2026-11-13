@@ -1,6 +1,7 @@
 // broker.cpp - see broker.h (POSIX: Unix socket; Windows: the broker's named pipe, overlapped I/O).
 #include "broker.h"
 extern "C" {
+#include "owneruid.h"
 #include "vtiproto.h"
 }
 #include <algorithm>
@@ -232,7 +233,7 @@ static intptr_t os_connect(const std::string &endpoint, std::string &error)
     if (getsockopt(fd, SOL_SOCKET, SO_PEERCRED, &cr, &cl) == 0)
         peer = cr.uid;
 #endif
-    if (peer != getuid()) {
+    if (!vti_peer_trusted((unsigned)peer, (unsigned)getuid())) { // ours, or root's (the sudo broker, owneruid.h)
         error = std::string("the TI Revive broker socket ") + sa.sun_path + " belongs to another user";
         ::close(fd);
         return -1;

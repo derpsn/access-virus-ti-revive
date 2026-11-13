@@ -18,6 +18,11 @@ Last update: 2026-11-13 late (rc6 out + Catalina build; macOS libusb-audio feasi
   back cleanly; as user LIBUSB_ERROR_ACCESS. Needs -usb (Global Mode 3 + Output Select 10, as the plug-in's start).
   Open: Catalina (kernel AppleUSBAudio) via the #37 reporter (probe in the Catalina artifact, dev-mac 43495785623);
   discussion with the three reporters in #40; decision after the #37 report (user). Design for 0.8.42+.
+- **Branch `libusb-audio`** (user 2026-11-13: test build now, do not wait for #37/#40): broker side done
+  (VTI_BROKER_AUDIO on macOS, runtime only as root with VTI_LIBUSB_AUDIO=1; socket + ring named after and chowned to
+  SUDO_UID, owneruid.h with tests; vti_open captures the device before MIDI on macOS in that mode; Makefile mac
+  targets); plug-in accepts a root broker. Next: plug-in reads the broker ring on macOS behind an option, launchd
+  agent off/on in the test command file, CI Mac test build of the branch, test on our Mac.
 - **v0.8.41-rc5** pre-release 2026-11-13 18:50 UTC (tag on 7f6d1be, release CI 43484666513 all 8 jobs green,
   6 assets; Latest stays 0.8.40). main aee9e11 = preview-box lines only, site 43486622822 green, live page shows
   "Preview: 0.8.41-rc5". Linux: rc5 installed by install.sh (plug-in 5726305b, broker 2e75801c). Open: rc5 reply
