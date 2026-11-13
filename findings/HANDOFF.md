@@ -46,7 +46,7 @@ Last update: 2026-11-13 evening (#39 investigated: E507 Mac keystamp run1 + run2
 | #33 | Intel Mac: Ableton fine, Logic distorted | reporter (rc1: Logic log, rate, buffer) | 2026-11-10 |
 | #34 | TI2/Keyboard macOS Ableton crackle, right channel at full scale | reporter (2 Outs, 44.1 kHz, no hub, record input 3/4) | 2026-11-12 |
 | #36 | Windows Cubase bank sync 0/128 | reporter (rc2: display, hub/cable, 3 checks) | 2026-11-11 |
-| #37 | Catalina, Logic 10.6: stall + crackle | reporter (new Catalina build, crackle checks, logs) | 2026-11-12 |
+| #37 | Catalina, Logic 10.6: CC opens now; crackle (512-grid clicks), no sound as audio interface, 2 USB drop-outs, Access driver still found (E508) | reporter (2 Outs / No Input, folder contents, unplugged?, other port/cable; issuecomment-6861206002) | 2026-11-13 |
 | #38 | macOS 27 Live: editor / AU crash | reporter (crash report, Access files) | 2026-11-10 |
 | #39 | = #29 reporter, TI1 Keyboard, Live 12: rc4 notes "stuck" after ~10 s, back to 0.8.39; log analysed (E507) | reporter (Live + version per session, keys or external, one device only, optional keystamp run) | 2026-11-13 |
 
