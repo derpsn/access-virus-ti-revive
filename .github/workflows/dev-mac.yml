@@ -38,6 +38,32 @@ jobs:
         run: |
           mkdir dev && cp out/TI-Revive-*-mac.zip dev/
           cd dev && for f in *.zip; do mv "$f" "${f%-mac.zip}-catalina-test-mac.zip"; done
+      # #37, E511: the feasibility test (the Virus' audio through libusb instead of Apple's driver) for a Catalina Mac,
+      # linked against the static libusb the package step built for the broker, so the tester needs nothing else
+      - name: vtiaudioprobe for Catalina (x86_64, macOS 10.15)
+        run: |
+          set -x
+          L="$PWD/$(ls -d out/libusb-*-macos10.15-x86_64 | head -1)"
+          test -f "$L/lib/libusb-1.0.a"
+          (cd src/broker && clang -O2 -Wall -Wextra -arch x86_64 -mmacosx-version-min=10.15 -I"$L/include/libusb-1.0" \
+            -o "$PWD/../../dev/vtiaudioprobe" vtiaudioprobe.c vtiusbaudio_libusb.c vticore_midi.c "$L/lib/libusb-1.0.a" \
+            -lpthread -framework IOKit -framework CoreFoundation -framework Security)
+          lipo -info dev/vtiaudioprobe
+          otool -l dev/vtiaudioprobe | grep -A4 -E "LC_BUILD_VERSION|LC_VERSION_MIN_MACOSX" | grep -E "minos 10.15|version 10.15"
+          if otool -L dev/vtiaudioprobe | grep -q libusb; then echo "libusb must be linked statically"; exit 1; fi
+          cat > dev/vtiaudioprobe-README.txt <<'EOF'
+          TI Revive feasibility test (issue #37): can the Virus' audio reach the Mac without Apple's USB audio driver?
+          Quit Logic and the TI Revive Control Center first and wait 30 s. Then in Terminal, in the unpacked folder:
+
+            xattr -d com.apple.quarantine vtiaudioprobe
+            chmod +x vtiaudioprobe
+            sudo ./vtiaudioprobe -usb 20 probe.wav
+
+          It asks for your password (it needs root to take the Virus' audio from Apple's driver for 20 seconds). It puts
+          the Virus in the mode TI Revive's plug-in uses, plays a C4 every second, records what comes over USB into
+          probe.wav, and at the end gives the Virus back to Apple's driver. It sends nothing else to the Virus and stores
+          nothing on it. Please post the Terminal output and attach probe.wav (zipped) in the issue.
+          EOF
       - uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
         with:
           name: dev-mac-catalina
