@@ -5,7 +5,7 @@ NEXT. At most 150 lines; the Stop hook (`.claude/hooks/handoff-check.sh`) refuse
 how goes into the dated log [`log/2026-11.md`](log/2026-11.md) (newest first); older logs are in [`log/`](log/).
 Device/protocol knowledge goes into [`evidence.md`](evidence.md). Update this file in the same commit as the work._
 
-Last update: 2026-11-13 (rc4 out; mutation survivors done 434 of 461; sim S126: arp off grid with a note at Play).
+Last update: 2026-11-13 evening (#39 investigated: E507 Mac keystamp run1 clean; run2 with two clocks running).
 
 ## Round
 
@@ -27,7 +27,7 @@ Last update: 2026-11-13 (rc4 out; mutation survivors done 434 of 461; sim S126: 
 
 ## Machines and the Virus
 
-- Our TI2 Desktop: on the **Linux** USB bus. User flashed ROM Z on it in early November (E500).
+- Our TI2 Desktop: on the **Mac** USB bus since 2026-11-13 ~18:20 (#39 run1/run2); back to Linux for hil.sh. User flashed ROM Z on it in early November (E500).
 - Linux: rc4 CI build (run 43377561345) installed (plug-in b18c102b, broker 2e75801c), `hil.sh` ALL PASS.
 - win11 VM: rc4 CI MSI installed (/quiet, exit 0, DisplayVersion 0.8.41, no Virus attached), shut down.
 - win10 VM: reverted to snapshot `pre-i36` (0.8.36); snapshots `pre-i36`, `pre-i36-access` kept.
@@ -40,7 +40,7 @@ Last update: 2026-11-13 (rc4 out; mutation survivors done 434 of 461; sim S126: 
 |---|---|---|---|
 | #26 | Snow, Linux REAPER timing / clicks | reporter (REAPER audio system, pw-jack test, rc3) | 2026-11-12 |
 | #28 | numbers 100-127 moved 5 px | reporter (confirm, close on yes) | 2026-11-09 |
-| #30 | Snow, Logic latency: option on = "works better"; recording a few ms early, arp vs count-in, meters | reporter (what is recorded + how early, project via the web page, which meters) | 2026-11-13 |
+| #30 | Snow, Logic: rc4 "nailed it, no latency anymore" (11-13 15:46); only the plug-in's level meters left | us: reply (ask which meters + screenshot, arp after count-in?) | 2026-11-13 |
 | #31 | Win10 VirtualBox, Snow, setup with Access drivers | reporter (rc3 setup with the unplug step) | 2026-11-12 |
 | #32 | (no change since 11-10) | reporter | before 11-10 |
 | #33 | Intel Mac: Ableton fine, Logic distorted | reporter (rc1: Logic log, rate, buffer) | 2026-11-10 |
@@ -48,6 +48,7 @@ Last update: 2026-11-13 (rc4 out; mutation survivors done 434 of 461; sim S126: 
 | #36 | Windows Cubase bank sync 0/128 | reporter (rc2: display, hub/cable, 3 checks) | 2026-11-11 |
 | #37 | Catalina, Logic 10.6: stall + crackle | reporter (new Catalina build, crackle checks, logs) | 2026-11-12 |
 | #38 | macOS 27 Live: editor / AU crash | reporter (crash report, Access files) | 2026-11-10 |
+| #39 | = #29 reporter, TI1 Keyboard, Live 12: rc4 notes "stuck" after ~10 s, back to 0.8.39; log analysed (E507) | us: reply after run2 (DAW + version per session, device/buffer switched?, one device only) | 2026-11-13 |
 
 Every open issue waits on its reporter. Quiet-issue rule: 7 days after our last request, close with the AGENTS.md
 message, only in a joint check with the user (by the dates above: #28 from 2026-11-16, #33 and #38 from 2026-11-17; #32: look up its date first).
@@ -100,8 +101,14 @@ message, only in a joint check with the user (by the dates above: #28 from 2026-
 
 ## NEXT
 
-1. rc4 posted on #30 (issuecomment-6848455763). The arp with a count-in: the reporter tests it in Logic (user:
-   "he has the setup to test it. so we wait"); no own Mac test planned.
+0. #39 (user 2026-11-13: investigate before replying to #39 and #30): E507 = their log (host-side moments only,
+   no unit requests while playing), sim S127/S128 (unit holds keys only behind a dump reply), Mac run1 with
+   native/tools/keystamp.c + scripts/als_notes.py (120/120 notes within 0.29 ms, no drift/step/2-bar effect).
+   Running: run2 = Live on the built-in output, plug-in on the Virus (two clocks; ~/tirevive-test/keystamp on the
+   Mac, data in work/latency/i39-keystamp). Then: amend E507, reply on #39 and #30 (drafts in this session's
+   notes: ask DAW/version per session, device or buffer switched, one device only; #30 meters + arp).
+   TI2 is on the Mac USB now, not Linux. klog is still switched on on the Mac (harmless, diagnostic).
+1. rc4 posted on #30 (issuecomment-6848455763). The reporter answered 11-13 15:46: latency solved, meters open.
 2. User on bare-metal Windows testing rc4; afterwards read their plug-in log, and their call on the S126 fix.
 3. Wait for the reporters; next joint issue check with the user.
 4. Then the "To do before the final 0.8.41" list.
