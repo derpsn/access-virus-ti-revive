@@ -5,10 +5,14 @@ NEXT. At most 150 lines; the Stop hook (`.claude/hooks/handoff-check.sh`) refuse
 how goes into the dated log [`log/2026-11.md`](log/2026-11.md) (newest first); older logs are in [`log/`](log/).
 Device/protocol knowledge goes into [`evidence.md`](evidence.md). Update this file in the same commit as the work._
 
-Last update: 2026-11-13 evening (rc5 tagged: Snow level meters E509; #39/#37/#30 replies posted).
+Last update: 2026-11-13 evening (rc6 tagged: macOS slip restart E510; rc5 out; #39 quantize, #37 slips).
 
 ## Round
 
+- **v0.8.41-rc6** tagged on 8e9cf20 (macOS restarts byte-slipped audio like Linux/Windows, #37, E510;
+  option text, release text, preview rc6); release CI 43490921423 running. Then: release check, main preview lines,
+  Linux install, Mac test with VTI_NATIVE_FAKE_SLIP (TI2 is on the Mac), Catalina build of rc6 for #37 (ask),
+  #37 reply (draft in the session: slips in 9 of 22 starts, rc6).
 - **v0.8.41-rc5** pre-release 2026-11-13 18:50 UTC (tag on 7f6d1be, release CI 43484666513 all 8 jobs green,
   6 assets; Latest stays 0.8.40). main aee9e11 = preview-box lines only, site 43486622822 green, live page shows
   "Preview: 0.8.41-rc5". Linux: rc5 installed by install.sh (plug-in 5726305b, broker 2e75801c). Open: rc5 reply
@@ -50,9 +54,9 @@ Last update: 2026-11-13 evening (rc5 tagged: Snow level meters E509; #39/#37/#30
 | #33 | Intel Mac: Ableton fine, Logic distorted | reporter (rc1: Logic log, rate, buffer) | 2026-11-10 |
 | #34 | TI2/Keyboard macOS Ableton crackle, right channel at full scale | reporter (2 Outs, 44.1 kHz, no hub, record input 3/4) | 2026-11-12 |
 | #36 | Windows Cubase bank sync 0/128 | reporter (rc2: display, hub/cable, 3 checks) | 2026-11-11 |
-| #37 | Catalina, Logic 10.6: CC opens now; crackle (512-grid clicks), no sound as audio interface, 2 USB drop-outs, Access driver still found (E508) | reporter (2 Outs / No Input, folder contents, unplugged?, other port/cable; issuecomment-6861206002) | 2026-11-13 |
+| #37 | Catalina: crackle = byte-slipped audio in 9 of 22 starts (E510); drivers gone, drop-outs were power-offs | us: rc6 (Catalina build) + reply |  2026-11-13 |
 | #38 | macOS 27 Live: editor / AU crash | reporter (crash report, Access files) | 2026-11-10 |
-| #39 | = #29 reporter, TI1 Keyboard, Live 12.3.7: notes "jump"; steady rc4 session clean, clips on the 1/16 grid = Live's record quantize (E507) | reporter (record with Record Quantization None; issuecomment-6862326923) | 2026-11-13 |
+| #39 | = #29 reporter, TI1 Keyboard, Live 12.3.7: notes "jump" = Live's record quantize (E507); MP3: no dropouts | reporter (record with Record Quantization None; issuecomment-6862326923) | 2026-11-13 |
 
 Every open issue waits on its reporter. Quiet-issue rule: 7 days after our last request, close with the AGENTS.md
 message, only in a joint check with the user (by the dates above: #28 from 2026-11-16, #33 and #38 from 2026-11-17; #32: look up its date first).
