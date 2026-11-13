@@ -31,7 +31,8 @@ Last update: 2026-11-13 night (rc7 tagged: live-note stamps E512 for #39; rc6 ou
   off again at the end). CI 43505792317: mac green, native-linux/windows red (owneruid strtol on 32-bit long,
   risk.json lacked the .command) -> fixed 5865382, CI 43506997752 running. Then test on our Mac.
   Second test Mac: Intel MacBook, Big Sur 11.7.10 (kernel AppleUSBAudio, like #37's Catalina): scripts/mac.sh
-  MAC=bigsur (host/user only in ~/.config/tirevive/mac-bigsur.env); waits on ssh-copy-id by the user.
+  MAC=bigsur (host/user only in ~/.config/tirevive/mac-bigsur.env); SSH works (key via a LAN script, home not
+  group-writable). Machine: Core 2 Duo P8700 (Penryn, an old MacBook on Big Sur), no Xcode CLT (use CI binaries).
 - **v0.8.41-rc5** pre-release 2026-11-13 18:50 UTC (tag on 7f6d1be, release CI 43484666513 all 8 jobs green,
   6 assets; Latest stays 0.8.40). main aee9e11 = preview-box lines only, site 43486622822 green, live page shows
   "Preview: 0.8.41-rc5". Linux: rc5 installed by install.sh (plug-in 5726305b, broker 2e75801c). Open: rc5 reply
