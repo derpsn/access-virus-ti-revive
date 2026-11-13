@@ -57,8 +57,7 @@ Last update: 2026-11-13 night (rc7 tagged: live-note stamps E512 for #39; rc6 ou
 
 ## Machines and the Virus
 
-- Our TI2 Desktop: location to confirm (was on the Big Sur MacBook, which is gone; before that the Mac); back to
-  Linux for hil.sh. User flashed ROM Z on it in early November (E500).
+- Our TI2 Desktop: on **Linux** again since 2026-11-13 night (user); before that the Mac and the Big Sur MacBook. User flashed ROM Z on it in early November (E500).
 - Linux: rc4 CI build (run 43377561345) installed (plug-in b18c102b, broker 2e75801c), `hil.sh` ALL PASS.
 - win11 VM: rc4 CI MSI installed (/quiet, exit 0, DisplayVersion 0.8.41, no Virus attached), shut down.
 - win10 VM: reverted to snapshot `pre-i36` (0.8.36); snapshots `pre-i36`, `pre-i36-access` kept.
