@@ -221,6 +221,11 @@ if(CMAKE_SYSTEM_NAME STREQUAL "Linux")
     add_test(NAME gui_controlcenter_close
              COMMAND sh ${CMAKE_CURRENT_SOURCE_DIR}/tests/gui_test.sh ccclose $<TARGET_FILE:TIReviveControlCenter>
                      $<TARGET_FILE:xclose>)
+    # the plug-in without the user's Access files: an empty instance, the host keeps running (rc7 crashed it)
+    add_test(NAME no_access_files
+             COMMAND ${CMAKE_COMMAND} -DHOST=$<TARGET_FILE:nativehost> -DBUNDLE=$<TARGET_FILE_DIR:VirusTINative>/../..
+                     -DDIR=${CMAKE_CURRENT_BINARY_DIR}/no_access_home -P ${CMAKE_CURRENT_SOURCE_DIR}/tests/no_access_files.cmake)
+    set_tests_properties(no_access_files PROPERTIES TIMEOUT 60)
     set_tests_properties(gui_duplicate_editors gui_controlcenter_close PROPERTIES SKIP_RETURN_CODE 77 TIMEOUT 120)
 endif()
 
@@ -269,7 +274,10 @@ if(NOT MSVC)
         foreach(_s ${_srcs})
             cmake_path(ABSOLUTE_PATH _s BASE_DIRECTORY ${_dir} OUTPUT_VARIABLE _abs)
             if(NOT _abs MATCHES "/external/" AND _abs MATCHES "\\.(c|cpp|mm)$")
-                set_property(SOURCE ${_s} DIRECTORY ${_dir} APPEND PROPERTY COMPILE_OPTIONS ${_vti_warn})
+                # the absolute path: a relative one is read against this folder, so the plug-in's own sources
+                # (plugin/source/*.cpp, listed relative to plugin/) got no warnings and a misleading `if` without
+                # braces in process() went unnoticed into rc7 (no_access_files)
+                set_property(SOURCE ${_abs} DIRECTORY ${_dir} APPEND PROPERTY COMPILE_OPTIONS ${_vti_warn})
             endif()
         endforeach()
     endforeach()

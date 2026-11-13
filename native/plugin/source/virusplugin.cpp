@@ -1861,9 +1861,10 @@ tresult PLUGIN_API VirusPlugin::process(ProcessData &data)
         fe_.run(tl_ + block_frames, [&](int64_t t) { add(t, &fe, 1); });
     }
     auto at = [&](int32 offset) { return tl_valid_ ? tl_ + (int64_t)std::lround(offset * ratio) : -1; };
-    if (live_notes_ && out_)
+    if (live_notes_ && out_) { // both under the test: without the Access files out_ is null (no_access_files)
         out_->live_ratio.store(ratio, std::memory_order_relaxed);
         out_->live_s.store(S, std::memory_order_relaxed);
+    }
     if (data.inputParameterChanges && out_) {
         for (int32 i = 0; i < data.inputParameterChanges->getParameterCount(); i++) {
             IParamValueQueue *q = data.inputParameterChanges->getParameterData(i);
