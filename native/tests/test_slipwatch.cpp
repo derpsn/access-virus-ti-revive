@@ -138,3 +138,95 @@ TEST(sliprestartgate_spacing_and_limit)
     CHECK(!g.allow(51000)); // no sixth in this session
     CHECK_EQ(g.count(), 5);
 }
+
+namespace {
+
+// a window with exactly `changes` frames that differ from the one before: channel 0 steps up by 257 (both bytes move)
+// at frames 1..changes and then holds; everything at `base` plus that step
+int feed_steps(SlipWatch &w, int frames, int changes, int16_t base = 0)
+{
+    int fired = 0;
+    for (int i = 0; i < frames; i++) {
+        int16_t fr[6] = {base, base, base, base, base, base};
+        fr[0] = (int16_t)(base + 257 * (i < changes ? i : changes));
+        fired += w.feed(fr);
+    }
+    return fired;
+}
+
+} // namespace
+
+TEST(slipwatch_a_window_is_decided_from_one_percent_changed_frames)
+{
+    // the 1 % rule: one step into or out of silence decides nothing, but 1 % of the frames moving does (48 kHz: a
+    // window of 24000 frames, 240 changes)
+    SlipWatch w;
+    w.set_rate(48000);
+    feed_steps(w, 24000, 240);
+    CHECK(w.last_state() == 0);
+    SlipWatch v;
+    v.set_rate(48000);
+    feed_steps(v, 24000, 239);
+    CHECK(v.last_state() == -1);
+}
+
+TEST(slipwatch_a_new_stream_is_not_compared_with_the_old_one)
+{
+    // the first frame after a stream start has no predecessor: the jump from the old stream's last frame is not a
+    // change of the new stream (it would push a quiet window over the 1 % line)
+    SlipWatch w;
+    w.set_rate(48000);
+    feed_steps(w, 100, 0, 5000); // the old stream ends on 5000 in every channel
+    w.reset();
+    feed_steps(w, 24000, 239); // the new one starts at 0: 239 changes of its own
+    CHECK(w.last_state() == -1);
+
+    // the same for a watch that never saw a frame: its first frame is not compared with anything (default window
+    // 22050 frames, where 221 changes decide and 220 do not)
+    SlipWatch fresh;
+    feed_steps(fresh, 22050, 220, 1000);
+    CHECK(fresh.last_state() == -1);
+    SlipWatch fresh2;
+    feed_steps(fresh2, 22050, 221, 1000);
+    CHECK(fresh2.last_state() == 0);
+}
+
+TEST(slipwatch_an_unknown_rate_falls_back_to_the_44100_window)
+{
+    // set_rate before the device reported its rate (0) or with a bad value: half a second at 44.1 kHz, never a
+    // window of no frames that would decide on every frame
+    for (int rate : {0, -1}) {
+        SlipWatch w;
+        w.set_rate(rate);
+        CHECK_EQ(feed(w, 0, 22050 * 2 - 1, true), 0);
+        CHECK_EQ(feed(w, 22050 * 2 - 1, 1, true), 1);
+    }
+}
+
+TEST(slipwatch_a_ratio_exactly_at_the_threshold_is_normal)
+{
+    // slipped means above 0.9: every frame moves the high byte by 9 and the low byte by 1, a ratio of exactly 0.9
+    SlipWatch w;
+    w.set_rate(48000);
+    for (int i = 0; i < 24000 * 2; i++) {
+        const int16_t v = (int16_t)(i % 2 ? 0x0901 : 0);
+        const int16_t fr[6] = {v, 0, 0, 0, 0, 0};
+        CHECK(!w.feed(fr));
+    }
+    CHECK(w.last_ratio() == 0.9);
+    CHECK(w.last_state() == 0);
+}
+
+TEST(slipwatch_noise_in_the_low_bytes_alone_is_decided)
+{
+    // the analog inputs' noise floor alone (all else silent) moves only the low bytes: a frame with only a low byte
+    // change is a changed frame, so the window is decided, and normal
+    SlipWatch w;
+    w.set_rate(44100);
+    for (int i = 0; i < 22050; i++) {
+        const int16_t fr[6] = {(int16_t)(4 + i % 3), (int16_t)(2 + i % 2), 0, 0, 0, 0};
+        w.feed(fr);
+    }
+    CHECK(w.last_state() == 0);
+    CHECK(w.last_ratio() == 0.0);
+}

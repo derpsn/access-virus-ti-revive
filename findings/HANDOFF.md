@@ -5,7 +5,7 @@ NEXT. At most 150 lines; the Stop hook (`.claude/hooks/handoff-check.sh`) refuse
 how goes into the dated log [`log/2026-11.md`](log/2026-11.md) (newest first); older logs are in [`log/`](log/).
 Device/protocol knowledge goes into [`evidence.md`](evidence.md). Update this file in the same commit as the work._
 
-Last update: 2026-11-13 09:55 (v0.8.41-rc4 released, site live with the rc4 box).
+Last update: 2026-11-13 (rc4 out; mutation survivors of the round done: 434 of 461, all others equivalent).
 
 ## Round
 
@@ -72,7 +72,6 @@ message, only in a joint check with the user (by the dates above: #28 from 2026-
 
 - [ ] README + site: new features, Intel Mac line only once #33 confirms Logic; remove the README "Preview" block.
 - [ ] `tirevive-site-check` over the whole round.
-- [ ] Mutation: the 107 unchecked survivors in the rc1-rc3 files (testing.md, 2026-11-13): a test or a note each.
 - [ ] Full test round on all three platforms: `python3 scripts/risk.py --round 0.8.41` (class C everywhere; Mac by
       hand: sleep), `scripts/hil.sh` on Linux, checklist artifact via `scripts/checklist.py`.
 - [ ] Release text heredoc in `.github/workflows/build.yml` ("New in 0.8.41") checked before the tag.

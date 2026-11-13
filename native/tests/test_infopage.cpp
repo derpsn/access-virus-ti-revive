@@ -169,3 +169,154 @@ TEST(infopage_log_notice_once_for_news_off)
     CHECK(all.find("? > Detailed Log") != std::string::npos && all.find("Options page") != std::string::npos);
     CHECK(all.find("nothing is sent") != std::string::npos || all.find("Nothing is sent") != std::string::npos);
 }
+
+// the buttons are hit tested with contains(): the first pixel row and column belong to a button, the one just past
+// its width or height does not (else a click between OK and Don't show again could hit both or neither)
+TEST(infopage_rect_edges)
+{
+    const InfoRect r = kInfoOk;
+    CHECK(r.contains(r.x, r.y));
+    CHECK(r.contains(r.x + r.w - 1, r.y + r.h - 1));
+    CHECK(!r.contains(r.x - 1, r.y) && !r.contains(r.x, r.y - 1));
+    CHECK(!r.contains(r.x + r.w, r.y) && !r.contains(r.x, r.y + r.h));
+}
+
+// "" (no version seen yet) is older than any version, also 0; and a shorter version is older than a longer one with
+// the same start, so 0.8 counts as before 0.8.0
+TEST(infopage_version_compare_edges)
+{
+    CHECK(version_cmp("", "0") < 0 && version_cmp("0", "") > 0);
+    CHECK(version_cmp("0.8", "0.8.0") < 0 && version_cmp("0.8.0", "0.8") > 0);
+    CHECK(version_cmp("", "") == 0);
+}
+
+// What's New: the version lines are headings, the notes under them plain; nothing on the page is a warning, and the
+// welcome and log pages are plain text too (the editor draws headings bold and warnings in red)
+TEST(infopage_paragraph_kinds)
+{
+    InfoPage p = whats_new_page("0.8.38", "0.8.41");
+    int headings = 0;
+    for (auto &q : p.paras) {
+        CHECK(!q.warn);
+        if (q.text.compare(0, 8, "Version ") == 0) {
+            CHECK(q.bold);
+            headings++;
+        } else {
+            CHECK(!q.bold && q.text.compare(0, 2, "- ") == 0);
+        }
+    }
+    CHECK(headings == 3);
+    for (auto &q : welcome_page("0.8.41").paras)
+        CHECK(!q.bold && !q.warn);
+    for (auto &q : log_notice_page().paras)
+        CHECK(!q.bold && !q.warn);
+}
+
+// each "off" of the state file is read back on its own: What's New switched off stays off after a restart
+TEST(infopage_state_news_off_read_back)
+{
+    InfoState s;
+    s.news_off = true;
+    InfoState t = info_state_parse(info_state_text(s));
+    CHECK(t.news_off && !t.welcome_off);
+    CHECK(info_state_parse("news=off\n").news_off);
+}
+
+// closing a page: OK switches nothing off; Don't show again switches off only the page it was pressed on; the log
+// notice counts as seen only from the version that switched the log on
+TEST(infopage_closed_switches_off_only_its_page)
+{
+    InfoState s;
+    s.last_version = "0.8.39";
+    InfoState t = info_closed(s, InfoStart::Welcome, "0.8.41", false);
+    CHECK(!t.welcome_off && !t.news_off);
+    t = info_closed(s, InfoStart::WhatsNew, "0.8.41", false);
+    CHECK(!t.welcome_off && !t.news_off);
+    t = info_closed(s, InfoStart::Welcome, "0.8.41", true);
+    CHECK(t.welcome_off && !t.news_off);
+    t = info_closed(s, InfoStart::WhatsNew, "0.8.41", true);
+    CHECK(t.news_off && !t.welcome_off);
+    t = info_closed(s, InfoStart::LogNotice, "0.8.41", true);
+    CHECK(!t.welcome_off && !t.news_off);
+    // before 0.8.41 the pages did not say it, so it is still to be told after an update
+    t = info_closed(s, InfoStart::Welcome, "0.8.40", false);
+    CHECK(!t.log_notice_seen && t.last_version == "0.8.40");
+    CHECK(!info_closed(s, InfoStart::None, "0.8.41", false).log_notice_seen);
+}
+
+namespace {
+InfoPage fake_news(const std::vector<int> &lines_per_version)
+{
+    InfoPage p;
+    int v = (int)lines_per_version.size();
+    for (int n : lines_per_version) {
+        p.paras.push_back({"Version 1." + std::to_string(v--), true, false});
+        for (int i = 0; i < n; i++)
+            p.paras.push_back({"- note " + std::to_string(i), false, false});
+    }
+    return p;
+}
+} // namespace
+
+// several versions that fit at 11 pt (the smallest size for more than one) all stay, at 11 pt
+TEST(infopage_fit_several_versions_at_11)
+{
+    InfoPage p = fake_news({2, 1, 2});
+    InfoFit f = fit_info_page(p, p.paras.size() * (11 + 4), fake_height);
+    CHECK(f.size == 11 && f.page.paras.size() == p.paras.size());
+}
+
+// one version that fits at 10 pt is shown at 10, not at the 9 pt of the fallback; one that fits nowhere stays whole
+TEST(infopage_fit_one_version_sizes)
+{
+    InfoPage p = fake_news({3});
+    InfoFit f = fit_info_page(p, p.paras.size() * (10 + 4), fake_height);
+    CHECK(f.size == 10 && f.page.paras.size() == p.paras.size());
+    f = fit_info_page(p, 1, fake_height);
+    CHECK(f.size == 9 && f.page.paras.size() == p.paras.size());
+    CHECK(f.page.paras.back().text == "- note 2");
+}
+
+// a version with one line, before the oldest: only the oldest goes when the rest fits; the pointer line is plain text
+TEST(infopage_fit_drops_only_the_oldest)
+{
+    InfoPage p = fake_news({2, 1, 2}); // 1.3 (2 lines), 1.2 (1 line), 1.1 (2 lines)
+    const double room = (3 + 2 + 1) * (11 + 4); // 1.3, 1.2 and the pointer line at 11 pt
+    InfoFit f = fit_info_page(p, room, fake_height);
+    CHECK(f.size == 11 && f.page.paras.size() == 6);
+    CHECK(f.page.paras[3].text == "Version 1.2" && f.page.paras[4].text == "- note 0");
+    CHECK(f.page.paras.back().text.find("Earlier versions") == 0);
+    CHECK(!f.page.paras.back().bold && !f.page.paras.back().warn);
+}
+
+// an oldest version without lines (only its heading) goes alone, the one before it stays
+TEST(infopage_fit_drops_a_heading_only_version)
+{
+    // headings are taller than lines here, so the page without 1.1's heading but with the pointer line is smaller
+    auto tall_headings = [](const std::vector<InfoPara> &paras, double size) {
+        double h = 0;
+        for (auto &q : paras)
+            h += size + (q.bold ? 8 : 4);
+        return h;
+    };
+    InfoPage p = fake_news({2, 2, 0}); // 1.3, 1.2, then 1.1 with no lines
+    const double room = 2 * (11 + 8) + 5 * (11 + 4); // 1.3, 1.2 and the pointer line at 11 pt
+    InfoFit f = fit_info_page(p, room, tall_headings);
+    CHECK(f.size == 11 && f.page.paras.size() == 7 && f.page.paras[3].text == "Version 1.2");
+}
+
+// a bold line inside a version that is not a version heading (a sub-heading) neither counts as a version nor stops
+// the oldest version from going whole
+TEST(infopage_fit_sub_headings_are_not_versions)
+{
+    InfoPage one = fake_news({2});
+    one.paras.push_back({"Known issues", true, false});
+    InfoFit f = fit_info_page(one, one.paras.size() * (9 + 4), fake_height); // one version: may go down to 9 pt
+    CHECK(f.size == 9 && f.page.paras.size() == one.paras.size());
+    InfoPage p = fake_news({2, 2});
+    p.paras.push_back({"Known issues", true, false}); // under 1.1
+    p.paras.push_back({"- issue", false, false});
+    // room for all but the sub-heading's part: 1.1 still goes whole
+    InfoFit g = fit_info_page(p, (6 + 1) * (11 + 4), fake_height);
+    CHECK(g.page.paras.size() == 4 && g.page.paras[2].text == "- note 1");
+}

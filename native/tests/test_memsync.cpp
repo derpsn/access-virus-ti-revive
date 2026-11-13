@@ -8,6 +8,10 @@
 #include <cstdio>
 #include <filesystem>
 #include <thread>
+#ifndef _WIN32
+#include <csignal>
+#include <sys/resource.h>
+#endif
 
 using namespace vti;
 using Bytes = std::vector<uint8_t>;
@@ -522,4 +526,162 @@ TEST(memsync_read_missing_stops)
     sync.before_request = nullptr;
     std::atomic<bool> stop{true};
     CHECK_EQ(sync.read_missing(5, cache, nullptr, &stop), -2);
+}
+
+// Only an Access SysEx (F0 00 20 33) longer than 8 bytes is a reply: other manufacturers' SysEx and cut-short Access
+// messages whose bytes 6.. happen to look like the reply must not be taken for it (the plug-in feeds every SysEx from
+// the Virus in, also MIDI-port traffic)
+TEST(memsync_transact_skips_lookalike_messages)
+{
+    MemorySync *ms = nullptr;
+    const Bytes good = {0xF0, 0x00, 0x20, 0x33, 0x01, 0x10, 0x14, 0x01, 0x00, 0x55, 0xF7};
+    MemorySync sync([&](const Bytes &) {
+        ms->feed({0xF1, 0x00, 0x20, 0x33, 0x01, 0x10, 0x14, 0x01, 0x00, 0xF7}); // not a SysEx start
+        ms->feed({0xF0, 0x01, 0x20, 0x33, 0x01, 0x10, 0x14, 0x01, 0x00, 0xF7}); // another manufacturer (each byte)
+        ms->feed({0xF0, 0x00, 0x21, 0x33, 0x01, 0x10, 0x14, 0x01, 0x00, 0xF7});
+        ms->feed({0xF0, 0x00, 0x20, 0x34, 0x01, 0x10, 0x14, 0x01, 0x00, 0xF7});
+        ms->feed({0xF0, 0x00, 0x20, 0x33, 0x01, 0x10, 0x14, 0x01}); // 8 bytes: cut short
+        ms->feed(good);
+        return true;
+    });
+    ms = &sync;
+    Dump r = sync.transact({0xF0, 0x00, 0x20, 0x33, 0x01, 0x10, 0x39, 0x01, 0xF7}, {0x14, 0x01}, 500, 1);
+    CHECK(r == good);
+}
+
+// the match is a prefix of bytes 6..: a reply that ends right after the matched bytes still counts
+TEST(memsync_transact_reply_just_long_enough)
+{
+    MemorySync *ms = nullptr;
+    const Bytes nine = {0xF0, 0x00, 0x20, 0x33, 0x01, 0x10, 0x10, 0x00, 0x05};
+    MemorySync sync([&](const Bytes &) {
+        ms->feed(nine);
+        return true;
+    });
+    ms = &sync;
+    CHECK(sync.transact({0xF0, 0x00, 0x20, 0x33, 0x01, 0x10, 0x30, 0x00, 0x05, 0xF7}, {0x10, 0x00, 0x05}, 300, 1) ==
+          nine);
+}
+
+// a single dump of the wrong size is asked for again, but bounded: 3 requests, then single() gives up (each extra
+// request costs ~1 s on the Virus and delays its notes)
+TEST(memsync_single_gives_up_after_three_wrong_sizes)
+{
+    MemorySync *ms = nullptr;
+    int requests = 0;
+    MemorySync sync([&](const Bytes &m) {
+        requests++;
+        ms->feed({0xF0, 0x00, 0x20, 0x33, 0x01, 0x10, 0x10, m[7], m[8], 0x00, 0xF7}); // cut short
+        return true;
+    });
+    ms = &sync;
+    CHECK(sync.single(1, 7).empty());
+    CHECK_EQ(requests, 3);
+}
+
+// a ROM bank has 128 programs (0..127): read_missing must never ask for a program number 128 (0x80 is not even a
+// valid data byte in a SysEx). The bank sits in front of an empty dump so that a read one past its end would find an
+// empty slot and ask for it.
+TEST(memsync_read_missing_never_asks_past_program_127)
+{
+    struct {
+        Bank bank;
+        Dump after;
+    } cache;
+    MemorySync *ms = nullptr;
+    int singles = 0, bad = 0;
+    MemorySync sync([&](const Bytes &m) {
+        if (m.size() >= 9 && m[6] == 0x30) {
+            singles++;
+            bad += m[8] > 0x7F;
+            ms->feed(fake_single(m[7], m[8], 1));
+        }
+        return true;
+    });
+    ms = &sync;
+    CHECK_EQ(sync.read_missing(5, cache.bank), 128);
+    CHECK_EQ(singles, 128);
+    CHECK_EQ(bad, 0);
+}
+
+namespace {
+struct TempDir {
+    std::filesystem::path dir;
+    explicit TempDir(const char *name) : dir(std::filesystem::temp_directory_path() / name)
+    {
+        std::filesystem::remove_all(dir);
+        std::filesystem::create_directories(dir);
+    }
+    ~TempDir()
+    {
+        std::error_code ec;
+        std::filesystem::remove_all(dir, ec);
+    }
+    std::string write(const std::string &name, const Bytes &b) const
+    {
+        FILE *f = fopen((dir / name).string().c_str(), "wb");
+        fwrite(b.data(), 1, b.size(), f);
+        fclose(f);
+        return (dir / name).string();
+    }
+};
+} // namespace
+
+// a cache file holds exactly 128 programs: whatever follows them is not read (and cannot make the load fail), and a
+// dump of up to 4096 bytes is accepted (only longer ones are taken as a broken file)
+TEST(memsync_bank_file_limits)
+{
+    TempDir t("vtitests-memsync-limits");
+    Bytes full = {'M', 'I', 'D', 'I', 0, 1, 8, 0};
+    for (int p = 0; p < 128; p++) {
+        Dump d = fake_single(1, p, p);
+        full.insert(full.end(), {0x00, 0x00, 0x02, 0x0C});
+        full.insert(full.end(), d.begin(), d.end());
+    }
+    full.insert(full.end(), {0xFF, 0xFF, 0xFF, 0xFF, 0x01, 0x02}); // trailing bytes after program 128
+    Bank in;
+    CHECK(load_bank_file(t.write("trailing.bin", full), in));
+    CHECK(in[127] == fake_single(1, 127, 127));
+
+    Bytes big(12 + 4096, 0x11);
+    const uint8_t head[12] = {'M', 'I', 'D', 'I', 0, 1, 8, 0, 0x00, 0x00, 0x10, 0x00}; // one dump of 4096 bytes
+    std::copy(head, head + 12, big.begin());
+    Bank b;
+    CHECK(load_bank_file(t.write("4096.bin", big), b));
+    CHECK_EQ(b[0].size(), 4096u);
+}
+
+// a save that cannot be done reports it, and an existing cache file at the path is never left half-written
+TEST(memsync_bank_file_save_errors)
+{
+    TempDir t("vtitests-memsync-save");
+    Bank bank;
+    bank[0] = fake_single(1, 0, 0);
+    CHECK(!save_bank_file((t.dir / "no-such-folder" / "bank.bin").string(), bank)); // the temp file cannot be made
+    // the rename at the end fails (a non-empty folder is in the way): the folder stays as it was
+    const std::filesystem::path in_way = t.dir / "bank.bin";
+    std::filesystem::create_directories(in_way);
+    t.write("bank.bin/keep", {1});
+    CHECK(!save_bank_file(in_way.string(), bank));
+    CHECK(std::filesystem::is_directory(in_way) && std::filesystem::exists(in_way / "keep"));
+#ifndef _WIN32
+    // the disk is full when the buffered data is written at fclose (the writes before it all succeed): simulated
+    // with a file size limit of 100 bytes (SIGXFSZ ignored, so the write fails with EFBIG instead)
+    {
+        Bank empty; // 8 + 128 x 4 = 520 bytes: all in stdio's buffer until fclose
+        const std::string path = (t.dir / "full.bin").string();
+        const std::string old = t.write("full.bin", {'o', 'l', 'd'});
+        struct rlimit was;
+        getrlimit(RLIMIT_FSIZE, &was);
+        void (*was_sig)(int) = signal(SIGXFSZ, SIG_IGN);
+        struct rlimit small = was;
+        small.rlim_cur = 100;
+        setrlimit(RLIMIT_FSIZE, &small);
+        const bool ok = save_bank_file(path, empty);
+        setrlimit(RLIMIT_FSIZE, &was);
+        signal(SIGXFSZ, was_sig);
+        CHECK(!ok);
+        CHECK_EQ(std::filesystem::file_size(old), 3u); // the old file is kept
+    }
+#endif
 }

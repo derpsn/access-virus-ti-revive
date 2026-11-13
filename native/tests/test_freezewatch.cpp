@@ -108,3 +108,37 @@ TEST(freezewatch_three_outputs_with_usb3_silent_and_notes_on_usb1_never_fires)
             CHECK(!w.check(f * 1000 / 44100, (f / 44100) * 1000, 44100));
     }
 }
+
+TEST(freezewatch_frozen_from_exactly_one_second)
+{
+    // "the same non-zero frame for at least a second": rate frames in a row are enough, one fewer is not
+    FreezeWatch w;
+    feed_n(w, kFrozen, 44099);
+    CHECK(!w.frozen(44100));
+    w.feed(kFrozen);
+    CHECK(w.frozen(44100));
+}
+
+TEST(freezewatch_an_unknown_rate_never_alarms)
+{
+    // before the stream's rate is known (0) there is no second to measure: never frozen, and check() does not divide
+    FreezeWatch w;
+    feed_n(w, kFrozen, 44100 * 2);
+    CHECK(!w.frozen(0));
+    CHECK(!w.check(10000, 9400, 0));
+}
+
+TEST(freezewatch_note_timing_boundaries)
+{
+    // a run of exactly one second ending at 10000 ms began at 9000 ms. A note at that very moment was not sent
+    // during the run (it may have sounded before the freeze); a note exactly 500 ms ago is due
+    FreezeWatch a;
+    feed_n(a, kFrozen, 44100);
+    CHECK(!a.check(10000, 9000, 44100));
+    CHECK(a.check(10000, 9001, 44100));
+
+    FreezeWatch b;
+    feed_n(b, kFrozen, 44100);
+    CHECK(!b.check(10000, 9501, 44100)); // 499 ms ago: maybe still on its way
+    CHECK(b.check(10000, 9500, 44100));
+}

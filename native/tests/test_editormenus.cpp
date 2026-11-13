@@ -238,3 +238,50 @@ TEST(editormenus_edit_menu_randomize)
     CHECK(m.items[first].text == "Randomize Unlocked Sections: Subtle (10 %)");
     CHECK(m.items[first + 2].text == "Randomize Unlocked Sections: Strong (50 %)");
 }
+
+// the defaults: a fresh "?" menu has Panic off (no Virus yet) and the TI's manual names; the manual entries, the
+// randomize amounts and the sizes can always be chosen
+TEST(editormenus_defaults_and_enabled_entries)
+{
+    HelpMenuState s;
+    s.manuals = {kManualReference};
+    BuiltMenu m = help_menu(s);
+    CHECK(!m.items[index_of(m, MenuAction::Panic)].enabled);
+    int i = index_of(m, MenuAction::Manual);
+    CHECK(m.items[i].text == "Virus TI Reference Manual (PDF)" && m.items[i].enabled);
+    EditMenuState e;
+    e.part = 0;
+    BuiltMenu em = edit_menu(e);
+    for (size_t k = 0; k < em.actions.size(); k++)
+        if (em.actions[k] == MenuAction::Randomize || em.actions[k] == MenuAction::Size)
+            CHECK(em.items[k].enabled);
+}
+
+// a size counts as the current one only within 0.01 of it (the tolerance absorbs rounding); 0.01 away it is not
+TEST(editormenus_edit_menu_size_tolerance)
+{
+    EditMenuState s;
+    s.zoom = kEditorSizes[0].zoom + 0.01;
+    CHECK(edit_menu(s).checked == -1);
+    s.zoom = kEditorSizes[1].zoom - 0.01;
+    CHECK(edit_menu(s).checked == -1);
+    s.zoom = kEditorSizes[1].zoom + 0.005;
+    BuiltMenu m = edit_menu(s);
+    CHECK(m.arg_at(m.checked) == 1);
+}
+
+// a click past the menu's ends stands for nothing; the vectors' spare capacity holds a marker so that a read past
+// the end would be seen; the first entry's argument is read like any other
+TEST(editormenus_action_and_arg_out_of_range)
+{
+    BuiltMenu m;
+    m.add(MenuAction::Size, "Size 175 %", true, 3);
+    m.add(MenuAction::Size, "Size 200 %", true, 4);
+    m.actions.push_back(MenuAction::Panic);
+    m.actions.pop_back();
+    m.args.push_back(7);
+    m.args.pop_back();
+    CHECK(m.arg_at(0) == 3 && m.arg_at(1) == 4);
+    CHECK(m.action_at(2) == MenuAction::None && m.arg_at(2) == 0);
+    CHECK(m.action_at(-1) == MenuAction::None && m.arg_at(-1) == 0);
+}

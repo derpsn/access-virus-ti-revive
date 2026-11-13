@@ -229,6 +229,19 @@ code: 8 were missing tests, now added and each killed when applied by hand in th
 only once (:124); a marker at ring frame 0 that a re-sync ping and a timeout must keep (markerscan.h:23, :63), and a
 timeout with no ping out after a stream reset (:61, `out > 0`). 4 are equivalent: transport.h:71 and :74 (`< 0` vs
 `<= 0` clamps 0 to 0), :77 (`offset >= 0` vs `> 0` sets 0 to 0) and :79 (`>` vs `>=` sets frames_per_tick to itself).
-**transport.h and markerscan.h: every behaviour-changing mutant killed.** The 107 survivors in the 13 files from
-rc1-rc3 (infopage.h 31, memsync.cpp 15, editormenus.h 12, stamprule.h 10, diag.cpp 9, freezewatch.h 8, slipwatch.h 8,
-startprogress.h 7, stallwatch.h 6, diag.h 1) are not checked yet: on the list before the final 0.8.41.
+**transport.h and markerscan.h: every behaviour-changing mutant killed.** The 107 survivors in the 10 files from rc1-rc3 were then checked
+by four agents in parallel worktrees (each claimed kill applied by hand), and the tool itself confirmed the result
+on copies with all new tests (`work/mutation-0.8.41-rerun1.log`, `-rerun2.log`; 38 new tests, 720 in all). 88 more
+are killed now: infopage.h 72 of 76, editormenus.h 22 of 22, memsync.cpp 59 of 60, diag.cpp 34 of 35, stamprule.h
+83 of 87, stallwatch.h 26 of 29, startprogress.h 20 of 23, freezewatch.h 19 of 23, slipwatch.h 25 of 27. The 21 that
+survive (with transport.h's 4, 27 of 461) change no behaviour: same value at the boundary (infopage.h:41, :206;
+stamprule.h:85, :171, :172, :216 `due < last`; stallwatch.h:79, :91; startprogress.h:24, :26, :44, the earlier run's
+:19/:21/:38; diag.cpp:239, a tail of 0 lines reads nothing; slipwatch.h:56, a changed frame always adds to the sum),
+initial values the first call overwrites (stallwatch.h:45; freezewatch.h:20, :25, :58, :59; diag.h:30, every option
+sets `default_on`), a loop guard that cannot be reached (infopage.h:257 `last > 0`) or a pop the later resize does
+anyway (:261); 2 write one element past an array into padding or spare heap bytes (memsync.cpp:147 `bank_info`,
+slipwatch.h:49 `prev_`): only a sanitizer build sees them (not run). **Result: 434 of 461 killed (94 %), every
+surviving mutant equivalent or sanitizer-only.** No survivor was a bug. Notes: memsync's
+`read_missing_never_asks_past_program_127` kills its mutant through the memory layout (an empty dump placed after
+the bank), the past-the-end reads in infopage/editormenus through a marker in the vectors' spare capacity; a build
+without a build type has libstdc++ bounds assertions on (GCC 15), so run the tool on a Release build as before.
