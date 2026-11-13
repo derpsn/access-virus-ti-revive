@@ -66,7 +66,7 @@ TEST(diag_plugin_options)
 {
     Home h("vtester");
     const auto &opts = plugin_options();
-    CHECK(opts.size() == 6);
+    CHECK(opts.size() == 7);
     // plugin-log (0.8.41): the plug-in's log for bug reports, ON by default; diag.off switches it off, so the plug-in's
     // own Options page can do it (the user is told on What's New and the welcome page)
     CHECK(std::string(opts[5].name) == "plugin-log" && std::string(opts[5].file) == "diag.off");
@@ -82,6 +82,10 @@ TEST(diag_plugin_options)
     CHECK(std::string(opts[3].name) == "slip-restart" && std::string(opts[3].file) == "slip-restart.off");
     CHECK(opts[3].default_on);
     CHECK(plugin_option("slip-restart"));
+    // libusb-audio test (E511): the broker streams the Virus' audio itself on macOS - off unless switched on
+    CHECK(std::string(opts[6].name) == "mac-usb-audio" && std::string(opts[6].file) == "mac-usb-audio.on");
+    CHECK(!opts[6].default_on);
+    CHECK(!plugin_option("mac-usb-audio"));
     // since rc6 the plug-in restarts it on macOS too (#37: 9 of 22 starts slipped on a Catalina Mac), so no option text
     // may say it is Linux and Windows only or only logged on a Mac
     for (const char *t : {opts[3].label, opts[3].hint})

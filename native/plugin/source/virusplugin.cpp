@@ -253,10 +253,18 @@ void DeviceOut::close_audio()
 // worker: start the Virus audio stream at the asked rate and take the rate it runs at - the first start and the retries
 // alike (the retry path skipped the rate: a Virus switched on after the DAW streamed at 48 kHz while the plug-in
 // counted 44.1, the timeline re-anchored twice a second, sync errors at every Play; user, REAPER, 2026-10-25, E352)
+// macOS libusb-audio test (E511): the option mac-usb-audio reads the broker's ring (the broker, run as root with
+// VTI_LIBUSB_AUDIO=1, streams the Virus itself) instead of Core Audio; elsewhere the broker's ring is the only path
+#ifdef __APPLE__
+static bool mac_broker_audio() { return vti::cc::plugin_option("mac-usb-audio"); }
+#endif
+
 int DeviceOut::start_audio()
 {
 #ifdef __APPLE__
-    const int r = 1; // macOS: the plug-in reads the Virus' Core Audio input itself (the broker carries MIDI)
+    audio_.use_broker_ring(mac_broker_audio());
+    // macOS: the plug-in reads the Virus' Core Audio input itself (the broker carries MIDI), or the broker's ring
+    const int r = audio_.broker_ring() ? broker_.audio(true, 3000, (uint32_t)want_rate.load()) : 1;
 #else
     const int r = broker_.audio(true, 3000, (uint32_t)want_rate.load()); // the broker sets it (rate following)
 #endif
@@ -706,6 +714,9 @@ void DeviceOut::run()
                     "the stream (%d)\n", slip_.last_ratio(), slip_gate_.count());
                 close_audio();
 #ifdef __APPLE__
+                if (audio_.broker_ring()) // the libusb-audio test: the broker restarts it as on Linux (E511)
+                    broker_.audio(false);
+                else
                 // macOS (#37, E510): Apple's driver owns the Virus' audio; stopping our Core Audio input lets the HAL
                 // stop the Virus' USB stream when no other program reads it, and starting it again starts a new
                 // stream, as alt 0/1 does on Linux. If the DAW uses the Virus as its own device the stream runs on:
@@ -743,7 +754,8 @@ void DeviceOut::run()
 #ifdef __APPLE__
             // E472: macOS may keep the Virus' stream gapped after a sleep until it re-enumerates the device (a replug
             // cured it every time); ask the broker for that software replug, at most once a minute (ReplugGate)
-            if (replug_gate_.allow(std::chrono::duration_cast<std::chrono::milliseconds>(
+            if (!audio_.broker_ring() && // the libusb-audio test: the broker holds the device, no replug (E511)
+                replug_gate_.allow(std::chrono::duration_cast<std::chrono::milliseconds>(
                                        std::chrono::steady_clock::now().time_since_epoch()).count()) &&
                 broker_.reenumerate())
                 log("Virus TI native: asked the broker to re-enumerate the Virus after the sleep (E472)\n");
@@ -772,8 +784,13 @@ void DeviceOut::run()
         if (int req = rate_req_.exchange(0); req) {
             if (audio_ok()) {
 #ifdef __APPLE__
-                const int now = audio_.request_rate(req);
-                log("Virus TI native: %d Hz asked on the Core Audio device -> %d Hz\n", req, now);
+                if (!audio_.broker_ring()) {
+                    const int now = audio_.request_rate(req);
+                    log("Virus TI native: %d Hz asked on the Core Audio device -> %d Hz\n", req, now);
+                } else { // the libusb-audio test: the broker sets the rate, as on Linux (E511)
+                    const int r = broker_.audio(true, 3000, (uint32_t)req);
+                    log("Virus TI native: %d Hz asked from the broker -> %d, ring %d Hz\n", req, r, audio_.rate());
+                }
 #else
                 const int r = broker_.audio(true, 3000, (uint32_t)req);
                 log("Virus TI native: %d Hz asked from the broker -> %d, ring %d Hz\n", req, r, audio_.rate());
