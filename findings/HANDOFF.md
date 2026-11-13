@@ -5,7 +5,7 @@ NEXT. At most 150 lines; the Stop hook (`.claude/hooks/handoff-check.sh`) refuse
 how goes into the dated log [`log/2026-11.md`](log/2026-11.md) (newest first); older logs are in [`log/`](log/).
 Device/protocol knowledge goes into [`evidence.md`](evidence.md). Update this file in the same commit as the work._
 
-Last update: 2026-11-13 evening (#39 investigated: E507 Mac keystamp run1 clean; run2 with two clocks running).
+Last update: 2026-11-13 evening (#39 investigated: E507 Mac keystamp run1 + run2 clean; replies on #39/#30 next).
 
 ## Round
 
@@ -48,7 +48,7 @@ Last update: 2026-11-13 evening (#39 investigated: E507 Mac keystamp run1 clean;
 | #36 | Windows Cubase bank sync 0/128 | reporter (rc2: display, hub/cable, 3 checks) | 2026-11-11 |
 | #37 | Catalina, Logic 10.6: stall + crackle | reporter (new Catalina build, crackle checks, logs) | 2026-11-12 |
 | #38 | macOS 27 Live: editor / AU crash | reporter (crash report, Access files) | 2026-11-10 |
-| #39 | = #29 reporter, TI1 Keyboard, Live 12: rc4 notes "stuck" after ~10 s, back to 0.8.39; log analysed (E507) | us: reply after run2 (DAW + version per session, device/buffer switched?, one device only) | 2026-11-13 |
+| #39 | = #29 reporter, TI1 Keyboard, Live 12: rc4 notes "stuck" after ~10 s, back to 0.8.39; log analysed (E507) | us: reply (E507 done; drafts with the user) | 2026-11-13 |
 
 Every open issue waits on its reporter. Quiet-issue rule: 7 days after our last request, close with the AGENTS.md
 message, only in a joint check with the user (by the dates above: #28 from 2026-11-16, #33 and #38 from 2026-11-17; #32: look up its date first).
@@ -101,12 +101,13 @@ message, only in a joint check with the user (by the dates above: #28 from 2026-
 
 ## NEXT
 
-0. #39 (user 2026-11-13: investigate before replying to #39 and #30): E507 = their log (host-side moments only,
-   no unit requests while playing), sim S127/S128 (unit holds keys only behind a dump reply), Mac run1 with
-   native/tools/keystamp.c + scripts/als_notes.py (120/120 notes within 0.29 ms, no drift/step/2-bar effect).
-   Running: run2 = Live on the built-in output, plug-in on the Virus (two clocks; ~/tirevive-test/keystamp on the
-   Mac, data in work/latency/i39-keystamp). Then: amend E507, reply on #39 and #30 (drafts in this session's
-   notes: ask DAW/version per session, device or buffer switched, one device only; #30 meters + arp).
+0. #39 (user 2026-11-13: investigate before replying to #39 and #30): E507 = their log (no unit requests while
+   playing), sim S127/S128 (unit holds keys only behind a dump reply), Mac run1 (Live on built-in output, two clocks)
+   and run2 (Virus as Live's device) with native/tools/keystamp.c + scripts/als_notes.py: 120/120 notes within
+   0.29 ms each, no drift/step/2-bar effect. Live audio-device switches reproduce the reporter's three session-1
+   moments (1+23..25 safety-net moves). Next: reply on #39 (device switches explain the log events; ask DAW +
+   TI Revive version per session, Virus keys or external keyboard, one device for a whole session, a short
+   recording of the stuck moment) and #30 (meters + screenshot, arp after count-in). Data: work/latency/i39-keystamp.
    TI2 is on the Mac USB now, not Linux. klog is still switched on on the Mac (harmless, diagnostic).
 1. rc4 posted on #30 (issuecomment-6848455763). The reporter answered 11-13 15:46: latency solved, meters open.
 2. User on bare-metal Windows testing rc4; afterwards read their plug-in log, and their call on the S126 fix.
