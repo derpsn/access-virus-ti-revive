@@ -11,9 +11,9 @@ static inline unsigned vti_owner_uid(unsigned euid, unsigned uid, const char *su
 {
     if (euid != 0 || !sudo_uid || !*sudo_uid)
         return uid;
-    char *end = NULL;
-    long v = strtol(sudo_uid, &end, 10);
-    if (*end || v <= 0 || v > 0x7fffffffL)
+    char *end = NULL; // long long: a 32-bit long (Windows) saturates instead of failing the range check
+    long long v = strtoll(sudo_uid, &end, 10);
+    if (*end || v <= 0 || v > 0x7fffffffLL)
         return uid;
     return (unsigned)v;
 }

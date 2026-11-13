@@ -17,6 +17,8 @@ TEST(owneruid_sudo_broker_serves_the_calling_user)
     CHECK(vti_owner_uid(0, 0, "0") == 0);
     CHECK(vti_owner_uid(0, 0, "-5") == 0);
     CHECK(vti_owner_uid(0, 0, "99999999999") == 0);
+    CHECK(vti_owner_uid(0, 0, "2147483648") == 0); // just above 32 bits: long is 32-bit on Windows (CI caught it)
+    CHECK(vti_owner_uid(0, 0, "2147483647") == 2147483647u);
 }
 
 TEST(owneruid_plugin_trusts_its_user_or_root)
