@@ -69,7 +69,7 @@ Last update: 2026-11-13 night (rc7 tagged: live-note stamps E512 for #39; rc6 ou
 | #36 | Windows Cubase bank sync 0/128 | reporter (rc2: display, hub/cable, 3 checks) | 2026-11-11 |
 | #37 | Catalina: crackle = byte-slipped audio (E510); probe: data empty on Catalina but clean on our Big Sur MacBook (E511) = Catalina/machine-specific | reporter (stays on rc6 Catalina build) | 2026-11-13 |
 | #38 | macOS 27 Live: editor / AU crash | reporter (crash report, Access files) | 2026-11-10 |
-| #39 | = #29 reporter, TI1 Keyboard: "notes pushed/stressed" = (1) our live stamps on Core Audio bursts, 8 ms (fixed in rc7, E512) + (2) the Virus' paced USB-MIDI link with aftertouch, 0-6 ms (firmware) | reporter (rc7 test; light touch vs aftertouch) | 2026-11-13 |
+| #39 | TI1 Keyboard: rc7 fixed our 8 ms (E512 1); pairs 6 ms + pressure 1-3 ms = firmware pace 5.86 ms/event, FIFO, no key time (E515, sim S131); original Mac driver = same arrival stamps (E514); his takes: no wheels, pressure only in normal takes | user: post the conclusion? reporter: rc7 feel | 2026-11-13 |
 | #40 | (ours) macOS: TI Revive takes the Virus' audio itself (libusb, E511) as an option? asks #30/#37/#39 reporters | reporters (audio interface use, admin rights, macOS/DAW) | 2026-11-13 |
 
 Every open issue waits on its reporter. Quiet-issue rule: 7 days after our last request, close with the AGENTS.md
