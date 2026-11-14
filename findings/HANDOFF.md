@@ -135,6 +135,6 @@ message, only in a joint check with the user (by the dates above: #28 from 2026-
     Check issues only together with the user. #30's own case (count-in) is fixed and confirmed; the sim's
     note-at-Play case matches the original (S126 + REA) and stays as it is (dropped from the to-do 11-14).
 0a. rc8: CI result, main preview box, installs (Linux, win11 silent, Mac command), then the #39 hint reply with the user.
-0b. MIDI In port: dev-mac CI, then see the port on the Mac (to-do list above).
+0b. MIDI In port: dev-mac 43568159285 green; on the Mac: does "Virus TI MIDI" show up (with the next Mac install). Sim feeds its MIDI In packing through vti_dinport_filter (F6 tune request may be packed as 2 bytes).
 0c. E517 (2)/(3) answered (E521). E503 level 1 done (E522); level 2 with the user. No USB-MIDI interface here (user).
 1. Then the "To do before the final 0.8.41" list.
