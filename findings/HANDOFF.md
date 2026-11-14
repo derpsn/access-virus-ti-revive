@@ -61,7 +61,7 @@ Last update: 2026-11-14 night: round 0.8.42 started; libusb package for #37 buil
 | #33 | Intel Mac 0.8.39: Logic distorted until a buffer change; log clean on the way in, not a slip (E532) | reporter: Logic output device, distortion on the unit's outputs?, 0.8.41 log | 2026-11-14 |
 | #34 | TI2/Keyboard macOS crackle, bank sync failed 11.9 s (E529) | reporter: new log with 0.8.41 | 2026-11-14 |
 | #36 | Windows Cubase bank sync 0/128 | reporter: BC2001.syx, new log with 0.8.41 | 2026-11-14 |
-| #37 | Catalina: libusb test build WORKS (no crackle 64-1024, one slip at 512 healed by the stream restart); exit: give-back to Apple fails + libusb refcnt assertion | us: a test build that installs like the normal package (no Terminal) before 0.8.42; user promised official Catalina support in 0.8.42 | 2026-11-14 |
+| #37 | Catalina: libusb test WORKED (E535); 0.8.42-rc1 libusb package (installer, no Terminal) posted | reporter: install rc1 libusb zip, crackle?, after a restart?, Save logs | 2026-11-14 |
 | #38 | macOS 27 Live: AU/editor crash, not reproduced | reporter: crash report + log with 0.8.41 | 2026-11-14 |
 | #40 | (ours) macOS libusb audio as an option? | #39 reporter; #37 = first real data point (works) | 2026-11-13 |
 
@@ -112,8 +112,9 @@ others from 2026-11-21 (#40 is ours: no closing; #32: look up its date first).
 
 ## NEXT
 
-1. v0.8.42-rc1 tagged on round-0.8.42 (user 2026-11-14: "tag it and post to the user"); #37 note: draft shown to
-   the user first, then posted. build.yml "New in 0.8.42" written for rc1 (libusb package); rewrite before the final.
+1. v0.8.42-rc1 RELEASED as pre-release (tag on 5a83f34, CI 43645282349 all green, 7 assets incl.
+   TI-Revive-0.8.42-mac-libusb.zip); #37 install steps posted (issuecomment-6884879936). Wait for #37's report
+   (crackle, after a Mac restart, Save logs). build.yml "New in 0.8.42" = rc1 text: rewrite before the final.
 2. Mac awake: push the 0.8.41 release package or the round's normal package (see Machines), the user installs it.
 3. Then live-later 160 + its Mac test, Linux MIDI ports.
 3. Waiting on reporters (table above); check issues only together with the user.
