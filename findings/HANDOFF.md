@@ -5,7 +5,7 @@ NEXT. At most 150 lines; the Stop hook (`.claude/hooks/handoff-check.sh`) refuse
 how goes into the dated log [`log/2026-11.md`](log/2026-11.md) (newest first); older logs are in [`log/`](log/).
 Device/protocol knowledge goes into [`evidence.md`](evidence.md). Update this file in the same commit as the work._
 
-Last update: 2026-11-14: #37 libusb Logic test: first try with the old broker, reinstall asked (E511 Later).
+Last update: 2026-11-14 evening: 0.8.41 final test round; Linux + VM done, Mac in progress (pkg 7a631315).
 
 ## Round
 
