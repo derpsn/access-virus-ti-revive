@@ -5,7 +5,7 @@ NEXT. At most 150 lines; the Stop hook (`.claude/hooks/handoff-check.sh`) refuse
 how goes into the dated log [`log/2026-11.md`](log/2026-11.md) (newest first); older logs are in [`log/`](log/).
 Device/protocol knowledge goes into [`evidence.md`](evidence.md). Update this file in the same commit as the work._
 
-Last update: 2026-11-14 night: round 0.8.42 started (libusb package for #37 written, not built on a Mac yet).
+Last update: 2026-11-14 night: round 0.8.42 started; libusb package for #37 built by CI (green), rc1 next.
 
 ## Where things stand
 
@@ -24,7 +24,8 @@ Last update: 2026-11-14 night: round 0.8.42 started (libusb package for #37 writ
   service; the uninstaller too. Broker: VTI_OWNER_UID (owneruid.h vti_owner_env), clients other than the owner/root
   refused on macOS (vti_client_allowed), give-back without the abort (macgiveback.h, E535 (6)), gap timers reset at
   audio stop. Plug-in: mac-usb-audio is no Options switch any more (cc::mac_usb_audio()). CI: build.yml job
-  `mac-libusb` (macos-15-intel) + release asset. Built: Linux broker, plug-in, 760 tests; NOT built on a Mac yet.
+  `mac-libusb` (macos-15-intel) + release asset. CI 43644097519 (ff629fd, version 0.8.42) ALL GREEN incl. mac and
+  mac-libusb (its package checks: plain pkg, marker, no UTI, CC min 10.15). Not run on any Mac yet.
 - Test round of 0.8.41: checklist https://claude.ai/artifact/7j2tvTcAc19iNynNjfnSwM (spec
   scripts/checklists/round-0.8.41.json). Linux L1-L4 + LC4 pass (hil.sh ALL PASS); Mac hil-mac ALL PASS, M1-M3,
   MC4, MC5 pass; VM W2, W3 pass, WC4 skipped, W1 passed by the user as VM-related (E533). Found and fixed in the
@@ -111,7 +112,7 @@ others from 2026-11-21 (#40 is ours: no closing; #32: look up its date first).
 
 ## NEXT
 
-1. CI build.yml on round-0.8.42 (both Mac jobs compile the macOS-only code for the first time); fix what breaks.
+1. rc1 pre-release (v0.8.42-rc1, user's go) with the libusb zip, then the #37 note (with the user).
 2. Mac awake: push the 0.8.41 release package or the round's normal package (see Machines), the user installs it.
-3. rc1 pre-release with the libusb zip, reply on #37; then live-later 160 + its Mac test, Linux MIDI ports.
+3. Then live-later 160 + its Mac test, Linux MIDI ports.
 3. Waiting on reporters (table above); check issues only together with the user.
