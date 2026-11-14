@@ -16,14 +16,13 @@ Last update: 2026-11-14: #37 libusb Logic test: first try with the old broker, r
   libusb reader with 8 transfers pending + its fixes (E525-E527, last 2d69cc8), unlink like the original (E524,
   E526), option live-later (E519). hil.sh ALL PASS on the TI2 with the round broker (E526); Linux re-link by
   snd-usb-audio accepted and documented (E527).
-- rc7 (11-13 20:45, 2e0fed9, E512 live stamps), rc6 (11-13 19:28, 8e9cf20, macOS slip restart E510; Catalina
-  build of rc6 on catalina-test, dev-mac 43491758791) - details in log/2026-11.md.
 - **macOS without Apple's audio driver (option A, E511):** vtiaudioprobe on our Mac (macOS 27) WORKS as root: the
   Virus taken from usbaudiod, 20.5 s streamed with the broker's Linux code, C4 on USB 1, slip share 0.01-0.03, given
   back cleanly; as user LIBUSB_ERROR_ACCESS. Needs -usb (Global Mode 3 + Output Select 10, as the plug-in's start).
   Open: Catalina (kernel AppleUSBAudio) via the #37 reporter (probe in the Catalina artifact, dev-mac 43495785623);
   discussion with the three reporters in #40; decision after the #37 report (user). Design for 0.8.42+.
-- Round **0.8.41** on branch `round-0.8.41` (pushed); **0.8.40 stays Latest**; earlier rcs in log/2026-11.md.
+- Round **0.8.41** on branch `round-0.8.41` (pushed); **final planned for 2026-11-14** (user): CI test build of the
+  round head, checklist, release; 0.8.40 Latest until then; earlier rcs in log/2026-11.md.
 - In 0.8.41: experimental lower latency (option `low-latency`, off by default, E496), Control Center Options page,
   slip detector + automatic restart (`slip-restart`, on by default, E488), freeze alert page (E493), burst counter
   (E490), Mac pkg refuses macOS < 14.4, plug-in log on by default (`diag.off` switches it off), Rise Message 4 per
@@ -117,6 +116,10 @@ message, only in a joint check with the user (by the dates above: #28 from 2026-
 
 - Mac audio (user 2026-11-14): Core Audio stays the main path; libusb as root (branch libusb-audio) only as an
   opt-in workaround for old unmaintained macOS, users accept sudo; no DriverKit for now (E528, log 2026-11-14).
+  The libusb path (#37 Catalina test) is finished in 0.8.42, not in 0.8.41 (user 2026-11-14).
+- Decided (user 2026-11-14): MIDI ports on Linux (ALSA sequencer virtual ports from the broker, keyport.h filter;
+  first) and Windows (Windows MIDI Services virtual devices on Win11 25H2+, design-midi-ports.md option A; option
+  C, a forwarding VST3, as the fallback for Windows 10).
 
 - Decided: opt-in update check in the Control Center; "Prepare bug report" button (no telemetry).
 - Decided (user 2026-11-14, #39): option 3, report the short latency while played notes come in (Live re-syncs).
