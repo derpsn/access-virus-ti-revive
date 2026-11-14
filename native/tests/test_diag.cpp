@@ -91,6 +91,7 @@ TEST(diag_plugin_options)
         CHECK(std::string(o.name) != "mac-usb-audio");
     CHECK(!plugin_option("mac-usb-audio"));
     CHECK(!mac_usb_audio());
+    fs::create_directories(h.dir / ".local/share/virus-ti-native");
     std::ofstream(h.dir / ".local/share/virus-ti-native/mac-usb-audio.on").put('\n');
     CHECK(mac_usb_audio());
     fs::remove(h.dir / ".local/share/virus-ti-native/mac-usb-audio.on");

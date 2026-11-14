@@ -109,6 +109,8 @@ static const PluginOption *find_option(const std::string &name)
     return nullptr;
 }
 
+bool mac_usb_audio() { return flag("mac-usb-audio.on"); }
+
 bool plugin_option(const std::string &name)
 {
     const PluginOption *o = find_option(name);

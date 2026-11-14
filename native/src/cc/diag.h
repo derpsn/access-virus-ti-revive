@@ -34,6 +34,11 @@ const std::vector<PluginOption> &plugin_options();
 bool plugin_option(const std::string &name);                                  // false for an unknown name
 bool set_plugin_option(const std::string &name, bool on, std::string &error); // refuses an unknown name
 
+// macOS libusb audio (E511, #37): the plug-in reads the Virus' audio from TI Revive's root service instead of Core
+// Audio. No Options page switch: only the separate libusb package writes mac-usb-audio.on (with its service), so the
+// normal package never takes this path.
+bool mac_usb_audio();
+
 // Where the broker logs: a file on Windows (%TEMP%\vtibroker.log) and macOS (/tmp/tirevive-vtibroker.log), the user
 // journal on Linux (systemd unit tirevive-broker). For display.
 std::string broker_log_location();

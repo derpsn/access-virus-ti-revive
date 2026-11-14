@@ -256,7 +256,7 @@ void DeviceOut::close_audio()
 // macOS libusb-audio test (E511): the option mac-usb-audio reads the broker's ring (the broker, run as root with
 // VTI_LIBUSB_AUDIO=1, streams the Virus itself) instead of Core Audio; elsewhere the broker's ring is the only path
 #ifdef __APPLE__
-static bool mac_broker_audio() { return vti::cc::plugin_option("mac-usb-audio"); }
+static bool mac_broker_audio() { return vti::cc::mac_usb_audio(); } // set by the libusb package only
 #endif
 
 int DeviceOut::start_audio()
