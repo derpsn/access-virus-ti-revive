@@ -5,19 +5,18 @@ NEXT. At most 150 lines; the Stop hook (`.claude/hooks/handoff-check.sh`) refuse
 how goes into the dated log [`log/2026-11.md`](log/2026-11.md) (newest first); older logs are in [`log/`](log/).
 Device/protocol knowledge goes into [`evidence.md`](evidence.md). Update this file in the same commit as the work._
 
-Last update: 2026-11-14 morning (#39: Live placement measured E518, reply with 3 options posted; #37 libusb test in Logic asked; E517 MIDI In; fresh context from here).
+Last update: 2026-11-14 midday (rc8 tagged; Live Mode hint; E519 live-stamp edge, E520 sim S134; MIDI In port next).
 
 ## Round
 
+- **v0.8.41-rc8** tag 2026-11-14 on 8bc8de7 (user: "build it with the crash fix and release rc8"): the rc7 crash fix
+  without Access files (dbf8bed) + Live Mode hint (helptext.cpp, README, site build.py: switch it on to record a
+  played part into Live, E518). Linux build + ctest 6/6 green locally; release CI 43567076613. Then: main preview
+  box, Linux install, Mac push, #39 reply with the hint when the user says so.
 - **v0.8.41-rc7** pre-release 2026-11-13 20:45 UTC (tag on 2e0fed9: live-note stamps from the timeline, E512),
   release CI 43503582943 all 8 jobs green, 6 assets, Latest stays 0.8.40; main 6cf8493 preview box; Linux rc7
   installed. #39 asked to test rc7 (issuecomment-6864528067). Mac: rc7 installed 11-14, Live
   placement test done there (E518).
-- **rc7 bug, fixed on the round (2026-11-13 late):** without the user's Access files rc7 crashes the DAW in process()
-  (the E512 change put `out_->live_s.store` under an `if` without braces; out_ is null there). Test-first: ctest
-  no_access_files (nativehost, empty HOME) segfaulted, passes with the braces. Why unnoticed: plug-in sources got no
-  -Wall (relative path in the warning loop), now on; Linux -Werror clean, Clang 4 non-fatal warnings left. Must be in
-  the next rc/final; the three reporters have Access files (not hit).
 - **v0.8.41-rc6** pre-release 2026-11-13 19:28 UTC (tag on 8e9cf20: macOS slip restart E510), release CI
   43490921423 all green (the macOS branch compiles), 6 assets; main 4f0f061 preview box; Linux rc6 installed
   (plug-in 4cc924bc). Catalina build of rc6: catalina-test 77aa389 (round merged), dev-mac 43491758791 green,
@@ -62,7 +61,7 @@ Last update: 2026-11-14 morning (#39: Live placement measured E518, reply with 3
 |---|---|---|---|
 | #26 | Snow, Linux REAPER timing / clicks | reporter (REAPER audio system, pw-jack test, rc3) | 2026-11-12 |
 | #28 | numbers 100-127 moved 5 px | reporter (confirm, close on yes) | 2026-11-09 |
-| #30 | Snow, Logic: rc4 "nailed it"; arp after 1-bar count-in confirmed (18:00, E505); only the plug-in window's meters (Logic's are fine) | us: rc5 with the Snow meter fix (E509), reply when the release is out | 2026-11-13 |
+| #30 | Snow, Logic: rc4 "nailed it"; arp after 1-bar count-in confirmed (18:00, E505); only the plug-in window's meters (Logic's are fine) | reporter: rc5 posted 11-13 18:53 (meters on a real Snow?) | 2026-11-13 |
 | #31 | Win10 VirtualBox, Snow, setup with Access drivers | reporter (rc3 setup with the unplug step) | 2026-11-12 |
 | #32 | (no change since 11-10) | reporter | before 11-10 |
 | #33 | Intel Mac: Ableton fine, Logic distorted | reporter (rc1: Logic log, rate, buffer) | 2026-11-10 |
@@ -78,7 +77,9 @@ message, only in a joint check with the user (by the dates above: #28 from 2026-
 
 ## Not verified on hardware yet
 
-- E503 libusb reader stall handling (5660a93): unit tests only; macOS broker not built locally.
+- E503 libusb reader stall handling (5660a93): unit tests only. Sim level 1 run asked 11-14 (our broker on its
+  virtual TI + stand-in libusb, STALL cases on 0x85/0x86/0x06, our claims C1-C8 sent); level 2 (usbip, real libusb)
+  needs sudo with the user.
 - Windows broker error 433 = device gone (5af74bd): mingw build + unit test only.
 - Windows setup unplug step (c6313b4, E504): the unplug path never exercised (no Virus on the Access driver).
 - E497 fix: DONE on the TI2 (E506): 0 of 239 re-syncs missed in 60 sessions (mixed build, both parts 0).
@@ -90,7 +91,11 @@ message, only in a joint check with the user (by the dates above: #28 from 2026-
 
 ## Open decisions for the user
 
-- Restart of the killed sim plan runs (A/B extra) only with the user's OK and streaming decoders (memory).
+- Sim runs: only B144 was killed (2026-11-10, memory guard); plan A and B1-B143 complete and read (S122, S123);
+  the extra plan B (s094c) never started, needs the user's OK for the real TI2 (purpose: tighter +64 rate).
+- E520 (6)/(7): send 73 00 52 00 at close so a keyed unit plays stand-alone again? A global: own Virus first (rule 2);
+  check what the original's driver does at release first (REA). Pause the bank sync while keys come in?
+- E519: aim live stamps 64-128 frames later (1.3-2.7 ms) so the Virus always meets them?
 
 ## To do before the final 0.8.41
 
@@ -100,10 +105,9 @@ message, only in a joint check with the user (by the dates above: #28 from 2026-
       hand: sleep), `scripts/hil.sh` on Linux, checklist artifact via `scripts/checklist.py`.
 - [ ] Release text heredoc in `.github/workflows/build.yml` ("New in 0.8.41") checked before the tag.
 - [ ] #34 second session "bank sync failed in 11.9 s" (RAM B -1) after "paused 2.6 s for notes": not looked into.
-- [ ] #30 note at the Play moment (sim S126, model): the note-on is stamped one tick before the F2 restart, the arp
-      then stays off grid by half ticks (10 of 10); count-in case on grid (5 of 5). REA: the original has the same
-      order (MED). Waits on the user: keep like the original (proposed) or restart at the block start (0.8.42 cand.,
-      model then TI2). Also open: B2 note-on without a stamp (shared stamp?). Log 2026-11-13 afternoon.
+- [ ] MIDI In port (user 11-14: "close the gap", E517 (6)): a second CoreMIDI source "Virus TI MIDI" for cable 0
+      next to "Virus TI Synth" (cable 1), as the original's Mac driver (E391 (4)); which cable feeds which entity
+      there: check by REA first. Windows/Linux have no key port at all (README "Windows MIDI ports").
 - [ ] Library scan skips patches as "damaged or unknown format" (#36 log: BC2001 36, Incubation V3 97): check the
       format.
 
@@ -124,22 +128,11 @@ message, only in a joint check with the user (by the dates above: #28 from 2026-
 
 ## NEXT
 
-00. START HERE (fresh context 2026-11-14). Waiting on reporters: #39 (Live button? remedy 1/2/3), #37 (libusb test in
-    Logic, two questions), #30 (Snow meters in rc5), #40 views. Check issues only together with the user.
-0a. E518 remedy, after #39's view and the user's call. My recommendation: hint now (helptext.cpp Live Mode text +
-    README), the 'short latency while playing' variant as a feature later (untested: hosts re-sync on a latency change).
-0b. Open from E518 (4): played notes in rc7 are spaced up to +-128 frames in Live on the Mac (E512 aimed lower, E513
-    saw +-64 on the libusb path). Look at live_stamp_tl with the Mac's diag.log/klog of 11-14 06:54-07:06.
-0c. Open from E517 (sim S133): (1) TI Revive's MIDI port passes only cable 1; a keyboard on the Virus' MIDI In (cable
-    0) reaches no DAW while the plug-in is connected: gap vs the original's second port, decide with the user. (2)
-    Compare how the original's driver and our broker keep reads pending on EP 0x85 (sim: a 20 ms read gap delays keys
-    to 30 ms). (3) Compare the key globals each plug-in sends (0x3B, 0x40, 0x41, 0x46, 0x3E, 0x42-0x45). (4) TI2 run
-    with a USB-MIDI interface on MIDI In (sim's plan in S133): asked the user 11-14 whether one is here, no answer yet.
-    Sim S134 running (virtual TI1 Keyboard + our broker/plug-in, model only): first result, during the start-up bank
-    sync with an empty cache all keys came out but 34-984 ms late, 9-14 ms afterwards. Not in evidence yet: wait for S134.
-0d. rc8: the rc7 crash fix without Access files (dbf8bed) is only on the round; user's call when to build it.
-    Sim repo history (raw firmware bytes in an old commit of the private repo): user's call on a force push.
-1. rc4 posted on #30 (issuecomment-6848455763). The reporter answered 11-13 15:46: latency solved, meters open.
-2. User on bare-metal Windows testing rc4; afterwards read their plug-in log, and their call on the S126 fix.
-3. Wait for the reporters; next joint issue check with the user.
-4. Then the "To do before the final 0.8.41" list.
+00. Waiting on reporters: #39 (Live button? remedy), #37 (libusb test in Logic), #30 (Snow meters, rc5), #40 views.
+    Check issues only together with the user. #30's own case (count-in) is fixed and confirmed; the sim's
+    note-at-Play case matches the original (S126 + REA) and stays as it is (dropped from the to-do 11-14).
+0a. rc8: CI result, main preview box, installs (Linux, win11 silent, Mac command), then the #39 hint reply with the user.
+0b. MIDI In port (to-do list above), after the REA check of the original's Mac driver entities.
+0c. E517 (2)/(3): agent running (reads on EP 0x85, key globals, original vs ours); result into evidence.
+0d. Sim: E503 level 1 run, results as claims. S134 done (E520). No USB-MIDI interface here (user): E517 (4) not possible.
+1. Then the "To do before the final 0.8.41" list.

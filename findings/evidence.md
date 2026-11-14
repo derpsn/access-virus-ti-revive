@@ -4705,3 +4705,23 @@ Measured: with TI Revive in Ableton Live a part played through a monitored track
 - **Confidence:** HIGH (1)-(3), one run each / MED (4) / the reading (5) fits all three runs, Live's inner rule is inferred
 - **Hardware:** yes (TI2 Desktop on our Mac)
 
+
+### E519
+
+Why rc7's played notes in Live sit up to +-128 frames apart (E518 (4)), from the plug-in's klog lines of the same Mac runs (diag.log 2026-11-14 05:55-06:11 UTC, klog = for each stamped note-on the onset in the Virus' USB 1 audio minus the stamp, K, plus the frame it was sent at; 48 kHz, block 128, keystamp 500 ms apart). (1) Run A pass 1 (live notes, played): the 40 live stamps are 24000 +-1 frames apart, so the timeline-based stamp of E512 is even; but K is not fixed: 5438 to 5566 in steps of 64 for the first 22 notes (onset spacing 23872 to 24128, as E518 measured in Live's recording), then 5441 to 5443 for the last 18 (spacing exactly 24000). The send moment against the stamp ran a sawtooth of 4489 to 5000 frames (64-frame steps, Core Audio's delivery) in both stretches and does not line up with the late notes. (2) Pass 2 (the take played back, lead path): K 8072 for all 40, spacing 23999 to 24001. (3) Run B (Live Mode, no stamps): K 5742 to 5810, spacing 23936 to 24064, the 64-frame grid of a note played on arrival. (4) Reading: a live stamp lies about 330 frames before an unstamped note's onset (A 5440 against B 5775), so the Virus does hold the stamp, but it sits close to the earliest time the Virus can still meet. A note that arrives a little later plays 64 or 128 frames late, in the Virus' 64-frame steps. Why the first 22 arrived later than the last 18 is not known (no USB capture of that run). Possible change: aim the live stamp one or two 64-frame steps later (1.3 to 2.7 ms more delay for played notes) so it is always met; not tried. Whether the original has the same edge: its live stamp uses the same offset (0x400 behind the newest frame, E449), not measured.
+
+- **Date:** 2026-11-14
+- **Pointer:** the Mac's ~/Library/Application Support/virus-ti-native/diag.log (copy in the session scratchpad, not in git); native/src/device/stamprule.h live_stamp_tl, native/plugin/source/virusplugin.cpp klog_check
+- **Method:** klog lines grouped per pass with a short Python script
+- **Confidence:** HIGH (1)-(3) from the log / MED (4) the reading, LOW the cause of the late stretch
+- **Hardware:** yes (TI2 Desktop on our Mac, rc7)
+
+### E520
+
+A keyed unit with TI Revive on the model (simulator S134, virus-ti-sim 6aa0ea3; virtual TI1 Keyboard played through the panel socket; our broker built from 27e4653 against the sim's stand-in libusb, our plug-in build of 2026-11-13 23:19 in nativehost via m4/run.py, isolation clean in all 4 runs; claims C16-C22 taken from the sim's FINDINGS, not repeated here). (1) Warm bank cache: keys reach the broker 9.4 to 17.5 ms after they are played (median 11.4 single, 15.4 in pairs, the pair's notes 6.0 ms apart), cable 1; MIDI In notes 4.4 to 14.5 ms on cable 0; with Local on 35 of 35 key notes sound, 0 of 20 MIDI In notes (E517 (1)). (2) During the plug-in's bank sync every key is late: 34 to 984 ms (median 535-627) while RAM A was fetched with an empty cache, 10.5 to 964.5 ms (median 435.5) over a full sync of RAM A-D (512 programs, 518.9 s); none lost (55/55, 30/30). The unit sent 162-178 events/s on EP 0x86 cable 3 throughout; a key waits behind what is left of the dump in the unit's queue (E515). (3) After the host closes, the Keyboard is silent stand-alone (0 of 10, also with Local on during the session) and its keys still go to USB; after a power-up it sounds (10/10). (4) From the broker's trace: at start Mode 7A = 03 first, then among 23 more 40 = 00, 41 = 00, 52 = 01 and 3B/3C/3A = 01/02/03; at close 3B, 3A, 3C = 01 and 7A = 00 twice, no 0x40 and no 0x52. (5) Sim's reading: 0x52 stays 1 from the handshake, so the link bit stays set and keys go to USB; leaving REMOTE restores the globals saved at 7A = 03, which had Local off. (6) 73 00 52 00 sent after the close brings the Keyboard back (keys stop going to USB and sound 10/10, MIDI In 5/5). (7) Sim's candidates (guess): send 0x52 = 0 at close or when the broker releases the unit; pause the bank sync while key events come in. What the original's driver does at release: not known.
+
+- **Date:** 2026-11-14
+- **Pointer:** virus-ti-sim FINDINGS S134 (6aa0ea3), m4/keyed_e2e.sh runs keyed-a-localoff, keyed-b-sync, keyed-c-warm-localon, keyed-d-close52; tools/keyed_check.py
+- **Method:** model runs of the sim (8051 firmware + DSP model), our broker and plug-in code
+- **Confidence:** MED (1)-(4), (6) model only / LOW (5), (7)
+- **Hardware:** no
