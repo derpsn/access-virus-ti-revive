@@ -23,9 +23,7 @@ Last update: 2026-11-14: #39 doubled-note test on the sim set up (nativehost --m
   back cleanly; as user LIBUSB_ERROR_ACCESS. Needs -usb (Global Mode 3 + Output Select 10, as the plug-in's start).
   Open: Catalina (kernel AppleUSBAudio) via the #37 reporter (probe in the Catalina artifact, dev-mac 43495785623);
   discussion with the three reporters in #40; decision after the #37 report (user). Design for 0.8.42+.
-- Round **0.8.41** on branch `round-0.8.41` (pushed). Released before: **v0.8.41-rc4** pre-release
-  (2026-11-13 08:48 UTC, tag on 24c056e, release CI 43395373253 all green, 6 assets); **0.8.40 stays Latest**.
-  Site live with "Preview: 0.8.41-rc4" (main b9baa60 = box lines only, site run 43396293872).
+- Round **0.8.41** on branch `round-0.8.41` (pushed); **0.8.40 stays Latest**; earlier rcs in log/2026-11.md.
 - In 0.8.41: experimental lower latency (option `low-latency`, off by default, E496), Control Center Options page,
   slip detector + automatic restart (`slip-restart`, on by default, E488), freeze alert page (E493), burst counter
   (E490), Mac pkg refuses macOS < 14.4, plug-in log on by default (`diag.off` switches it off), Rise Message 4 per
@@ -36,7 +34,6 @@ Last update: 2026-11-14: #39 doubled-note test on the sim set up (nativehost --m
   43369222561 (2026-11-13, all green) has it. Since then (user 2026-11-13: "Into 0.8.41 ... like the original"):
   transport restarts like the original (E505, #30 count-in arp): F2 from ppq + 256, 73 00 23 vv on the next tick,
   F8 grid rephased, FC at Stop, the original's jump limits (transport.h, test_transport.cpp, nativehost --count-in).
-- Branch `catalina-test` (worktree `../virus-ti-re-catalina`): x86_64 / macOS 10.15 build for #37, never in main.
 
 ## Machines and the Virus
 
@@ -44,6 +41,7 @@ Last update: 2026-11-14: #39 doubled-note test on the sim set up (nativehost --m
   switched it on again). User flashed ROM Z on it in early November (E500).
 - Linux: rc8 CI build installed (plug-in 7e3bdd83, broker 2e75801c = rc8's, restored after the round-broker run).
 - win11 VM: rc8 MSI installed (/quiet, exit 0, VST3 3d9f7dbf), shut down. win10 VM: snapshot `pre-i36` (0.8.36).
+- Branch `catalina-test` (../virus-ti-re-catalina): x86_64 / 10.15 build for #37, never in main.
 - Mac (macOS 27.2.1): rc7 installed; rc8 package + install command in ~/Downloads/TI-Revive-0.8.41-rc8 (user to
   install). Live 12 Suite, keystamp in ~/tirevive-test/keystamp; klog.on, noteprobe.on set (harmless).
 - Branch `libusb-audio` (Mac libusb path, opt-in for old macOS): last merged round state before rc8; merge the
@@ -108,7 +106,6 @@ message, only in a joint check with the user (by the dates above: #28 from 2026-
       vticore.c (async transfers, event thread, rxqueue.h + 8 tests; reader keeps the E503 rules). Sim S138 (E525):
       rules hold, keys a bit faster; faults fixed in ce60145 (S139 ok) and in the
       close-drain commit cb73ca7; S140 on cb73ca7: all clean on the model (E525). hil.sh ALL PASS on the TI2 (E526); the kernel's halt with 8 pending = level 2 (sim's M12, needs sudo).
-- User 11-14: a message lost to an OUT stall stays lost (no resend), fine.
 - [ ] Unlink like the original (E524; user 11-14 "if it's like the original, yes"): linkrule.h + 3 tests; both
       brokers send raw 4E 73 52 00 when the last non-observer client leaves and at vti_close, and 4E 73 52 01 again
       before the next client write. Linux + mingw build clean; sim S138: keyed unit plays stand-alone after the
@@ -143,10 +140,9 @@ message, only in a joint check with the user (by the dates above: #28 from 2026-
     #36 (BC2001.syx, asked 11-14).
     Check issues only together with the user.
 0. #39 doubled notes on the sim (user 11-14: press the keys in the sim panel and hear it): sim (virus-ti-sim-35)
-   writes key tap + keyed_live.sh + double_check.py, one keyplay run (4 cases: Local On/Off x echo/none), then
-   the user's GUI session. Ours: nativehost --midi-in FIFO [--midi-in-delay MS] (tools/midiin.h, 4 tests).
-   Help text for the Live button (Local On + monitor off; "twice") + test written, NOT committed until the sim
-   confirms. #39 reply drafted (in the session); option 3 "tight" = 0.8.42 candidate (user).
+   writes key tap + keyed_live.sh + double_check.py, a keyplay run (4 cases), then the user's GUI session.
+   Ours: nativehost --midi-in (032837d). Help text for the Live button (Local On + monitor off; "twice") + test written, NOT committed until the sim
+   confirms. #39 reply drafted in the session (to post after the sim result).
 0a. live-later on the Mac: switch it on in the CC, keystamp run like E518 A, spacing should be 24000 +-1 (E519).
 0b. Level 2 done twice (E527). Linux re-link accepted, in README + site. One-probe fix 2d69cc8: sim stand-in OK
     (S144, at most 1 pending during a stall; kernel run not done, optional). Then the Mac: rc8 + "Virus TI MIDI" + live-later check with a round build
