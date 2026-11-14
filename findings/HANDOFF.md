@@ -5,7 +5,7 @@ NEXT. At most 150 lines; the Stop hook (`.claude/hooks/handoff-check.sh`) refuse
 how goes into the dated log [`log/2026-11.md`](log/2026-11.md) (newest first); older logs are in [`log/`](log/).
 Device/protocol knowledge goes into [`evidence.md`](evidence.md). Update this file in the same commit as the work._
 
-Last update: 2026-11-14 afternoon, ready for a fresh context (rc8 out; round has MIDI In port, async reader, unlink, live-later; sim checks done except the one-probe fix).
+Last update: 2026-11-14 afternoon, ready for a fresh context (rc8 out; round has MIDI In port, async reader, unlink, live-later; all sim checks done).
 
 ## Round
 
@@ -138,6 +138,6 @@ message, only in a joint check with the user (by the dates above: #28 from 2026-
 00. Waiting on reporters: #39 (Live button? remedy), #37 (libusb test in Logic), #30 (Snow meters, rc5), #40 views.
     Check issues only together with the user.
 0a. live-later on the Mac: switch it on in the CC, keystamp run like E518 A, spacing should be 24000 +-1 (E519).
-0b. Level 2 done twice (E527). Linux re-link accepted, in README + site. One-probe fix after a stall: sim stand-in
-    check asked (both queue modes). Then the Mac: rc8 + "Virus TI MIDI" + live-later check with a round build.
+0b. Level 2 done twice (E527). Linux re-link accepted, in README + site. One-probe fix 2d69cc8: sim stand-in OK
+    (S144, at most 1 pending during a stall; kernel run not done, optional). Then the Mac: rc8 + "Virus TI MIDI" + live-later check with a round build.
 1. Then the "To do before the final 0.8.41" list.
