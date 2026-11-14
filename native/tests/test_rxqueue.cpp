@@ -108,3 +108,14 @@ TEST(rxqueue_after_a_give_up_data_still_goes_on_errors_do_not)
     CHECK(!vti_rx_hand_on_after_giveup(-9));
     CHECK(!vti_rx_hand_on_after_giveup(-4));
 }
+
+TEST(rxqueue_a_completion_while_closing_is_handed_on_not_resubmitted)
+{
+    // S139: between the close's stop and its cancels the Virus kept sending (a dump at ~172 events/s), and what the
+    // transfers brought then was dropped: a dump across a recovery reopen came back 8 packets short. Now the close
+    // cancels first and the readers hand on what still completes; nothing goes out again.
+    CHECK_EQ(vti_rx_done_action(0, 0), VTI_RX_QUEUE_RESUBMIT); // normal: queue the data, read again
+    CHECK_EQ(vti_rx_done_action(0, -9), VTI_RX_ERROR);         // an error: the reader decides
+    CHECK_EQ(vti_rx_done_action(1, 0), VTI_RX_QUEUE);          // closing: the data still goes on
+    CHECK_EQ(vti_rx_done_action(1, -1), VTI_RX_DROP);          // closing: a cancelled transfer brings nothing
+}

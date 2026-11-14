@@ -71,6 +71,7 @@ struct vti {
     int started;            // rx_start ran: rx_stop on close
     int linked;             // the last link message sent (E524)
     int leak;               // transfers still out after the close: keep this struct (rx_stop)
+    volatile int closing;   // rx_stop runs: transfers cancelled, nothing resubmitted, readers still draining
     uint8_t bulk[16];       // by endpoint number: 1 = bulk (Virus TI Snow), 0 = interrupt (TI/TI2 Desktop, E021) - E387
     unsigned long idle;     // FF FE 00 00 packets dropped on a bulk EP 0x85 (E387)
 };
@@ -143,18 +144,25 @@ static void LIBUSB_CALL rx_done(struct libusb_transfer *t)
     pthread_mutex_lock(&e->mu);
     e->busy[slot] = 0;
     e->inflight--;
-    if (!e->v->stop) {
-        const int err = vti_xfer_err(t->status);
-        if (err)
-            vti_rxq_push(&e->q, slot, err, NULL, 0); // fits: queued + inflight <= RX_QCAP
-        else {
-            if (t->actual_length > 0)
-                vti_rxq_push(&e->q, slot, 0, t->buffer, t->actual_length);
-            if (!vti_rxq_may_resubmit(&e->q, (unsigned)e->inflight + 1))
-                vti_park(&e->parked, slot);
-            else if (rx_submit(e, slot))
-                vti_rxq_push(&e->q, slot, -4, NULL, 0); // a failed resubmit: the device is going, the reader decides
-        }
+    const int err = vti_xfer_err(t->status);
+    switch (vti_rx_done_action(e->v->closing, err)) {
+    case VTI_RX_ERROR:
+        vti_rxq_push(&e->q, slot, err, NULL, 0); // fits: queued + inflight <= RX_QCAP
+        break;
+    case VTI_RX_QUEUE: // the close: hand it on, read no more
+        if (t->actual_length > 0)
+            vti_rxq_push(&e->q, slot, 0, t->buffer, t->actual_length);
+        break;
+    case VTI_RX_QUEUE_RESUBMIT:
+        if (t->actual_length > 0)
+            vti_rxq_push(&e->q, slot, 0, t->buffer, t->actual_length);
+        if (!vti_rxq_may_resubmit(&e->q, (unsigned)e->inflight + 1))
+            vti_park(&e->parked, slot);
+        else if (rx_submit(e, slot))
+            vti_rxq_push(&e->q, slot, -4, NULL, 0); // a failed resubmit: the device is going, the reader decides
+        break;
+    default:
+        break;
     }
     pthread_cond_broadcast(&e->cv);
     pthread_mutex_unlock(&e->mu);
@@ -186,7 +194,7 @@ static int rx_take(rxep *e, vti_rx_rec *rec)
     }
     int r = vti_rxq_pop(&e->q, rec);
     int slot; // room again: the transfers parked for lack of it go out first
-    while (r == 0 && !e->v->stop && e->parked && vti_rxq_may_resubmit(&e->q, (unsigned)e->inflight + 1) &&
+    while (r == 0 && !e->v->closing && e->parked && vti_rxq_may_resubmit(&e->q, (unsigned)e->inflight + 1) &&
            (slot = vti_unpark(&e->parked)) >= 0)
         if (rx_submit(e, slot))
             vti_rxq_push(&e->q, slot, -4, NULL, 0);
@@ -202,9 +210,12 @@ static void *reader(void *p)
     int fails = 0, last = 0; // errors in a row and the last one (vtireaderr.h)
     int gave_up = 0;
     vti_rx_rec rec;
-    while (!v->stop) {
-        if (rx_take(e, &rec))
+    for (;;) { // after stop, until the queue is empty: the close hands on what still came (S139)
+        if (rx_take(e, &rec)) {
+            if (v->stop)
+                break;
             continue;
+        }
         if (gave_up && !vti_rx_hand_on_after_giveup(rec.err))
             continue;
         if (rec.err && !gave_up) {
@@ -218,13 +229,14 @@ static void *reader(void *p)
                         libusb_error_name(r));
                 v->dead = 1;
                 gave_up = 1; // keep handing on what the other transfers bring until the close (S138)
+                fails = 0;   // so the next data record writes no "then read again" line (S139)
                 continue;
             }
             if (vti_libusb_stalled(r)) // the standard CLEAR_FEATURE(ENDPOINT_HALT), as WinUsb_ResetPipe on Windows
                 libusb_clear_halt(v->h, ep);
             usleep(10000); // never a tight loop on errors (#37: ~25000 a second, 300 MB of log)
             pthread_mutex_lock(&e->mu); // the failed transfer goes out again (fits: its record was just taken)
-            if (!v->stop && rx_submit(e, rec.slot))
+            if (!v->closing && rx_submit(e, rec.slot))
                 vti_rxq_push(&e->q, rec.slot, -4, NULL, 0);
             pthread_mutex_unlock(&e->mu);
             continue;
@@ -272,11 +284,11 @@ static int rx_start(vti *v)
     return 0;
 }
 
-// after stop: readers gone, every transfer cancelled and back, then the event thread
+// the close: cancel every transfer while the readers still hand on what completes, wait for all of them, then stop
+// the readers (they empty their queue first) and the event thread (S139)
 static void rx_stop(vti *v)
 {
-    for (int i = 0; i < 2; i++)
-        pthread_join(v->rd[i], NULL);
+    v->closing = 1;
     for (int i = 0; i < 2; i++) {
         rxep *e = &v->rx[i];
         pthread_mutex_lock(&e->mu);
@@ -300,6 +312,9 @@ static void rx_stop(vti *v)
         else
             v->leak = 1; // a late callback may still use e: vti_close keeps v (never seen with the clock wait)
     }
+    v->stop = 1;
+    for (int i = 0; i < 2; i++)
+        pthread_join(v->rd[i], NULL);
     v->ev_stop = 1;
     pthread_join(v->ev, NULL);
     if (!v->leak)
@@ -368,9 +383,9 @@ void vti_close(vti *v)
         return;
     if (v->linked && !v->dead) // the original's driver unlinks when it lets the Virus go (E524); readers still drain
         vti_link(v, 0);
-    v->stop = 1;
     if (v->started)
-        rx_stop(v);
+        rx_stop(v); // sets stop after the transfers are back
+    v->stop = 1;
     if (v->idle)
         vti_log("vti: %lu idle packets (FF FE 00 00) dropped on bulk EP 0x85\n", v->idle);
 #ifdef __linux__
