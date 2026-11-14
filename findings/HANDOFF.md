@@ -5,7 +5,7 @@ NEXT. At most 150 lines; the Stop hook (`.claude/hooks/handoff-check.sh`) refuse
 how goes into the dated log [`log/2026-11.md`](log/2026-11.md) (newest first); older logs are in [`log/`](log/).
 Device/protocol knowledge goes into [`evidence.md`](evidence.md). Update this file in the same commit as the work._
 
-Last update: 2026-11-14 evening: 0.8.41 released and Latest; nothing running; next is round 0.8.42.
+Last update: 2026-11-14 late evening: 0.8.41 Latest; #37 libusb audio works on Catalina, #30 closed; next round 0.8.42.
 
 ## Where things stand
 
@@ -47,17 +47,17 @@ Last update: 2026-11-14 evening: 0.8.41 released and Latest; nothing running; ne
 |---|---|---|---|
 | #26 | Snow, Linux REAPER timing | reporter: pw-jack test; 0.8.41 note | 2026-11-14 |
 | #28 | numbers 100-127 moved 5 px | reporter: confirm, close on yes | 2026-11-09 |
-| #30 | Snow, Logic: count-in arp confirmed; plug-in meters on a real Snow? | reporter; 0.8.41 note | 2026-11-14 |
 | #31 | Win10 VirtualBox, Snow, setup with the Access driver | reporter: setup unplug step report; 0.8.41 note | 2026-11-14 |
 | #32 | (no change since 11-10) | reporter | before 11-10 |
 | #33 | Intel Mac 0.8.39: Logic distorted until a buffer change; log clean on the way in, not a slip (E532) | reporter: Logic output device, distortion on the unit's outputs?, 0.8.41 log | 2026-11-14 |
 | #34 | TI2/Keyboard macOS crackle, bank sync failed 11.9 s (E529) | reporter: new log with 0.8.41 | 2026-11-14 |
 | #36 | Windows Cubase bank sync 0/128 | reporter: BC2001.syx, new log with 0.8.41 | 2026-11-14 |
-| #37 | Catalina: rc6 restarts the slips, faint crackle remains; libusb Logic test: 1st try ran the old broker, 2nd closed Terminal without Ctrl-C (E511 Later) | reporter: recovery + test again (issuecomment-6882056552); stays on dev-mac-catalina (0.8.41 pkg refuses Catalina) | 2026-11-14 |
+| #37 | Catalina: libusb test build WORKS (no crackle 64-1024, one slip at 512 healed by the stream restart); exit: give-back to Apple fails + libusb refcnt assertion | us: a test build that installs like the normal package (no Terminal) before 0.8.42; user promised official Catalina support in 0.8.42 | 2026-11-14 |
 | #38 | macOS 27 Live: AU/editor crash, not reproduced | reporter: crash report + log with 0.8.41 | 2026-11-14 |
-| #40 | (ours) macOS libusb audio as an option? | #30/#39 reporters; #37's answer in | 2026-11-13 |
+| #40 | (ours) macOS libusb audio as an option? | #39 reporter; #37 = first real data point (works) | 2026-11-13 |
 
-#39 closed by the reporter (doubled notes = Local On + Monitor In, E530/E531). Quiet-issue rule: 7 days after our
+#39 closed by the reporter (doubled notes = Local On + Monitor In, E530/E531). #30 closed by us 2026-11-14 with the
+user: all works, Snow meters visible in the plug-in (evidence entry still to write). Quiet-issue rule: 7 days after our
 last request, close with the AGENTS.md message, only in a joint check with the user: #28 from 2026-11-16, the
 others from 2026-11-21 (#40 is ours: no closing; #32: look up its date first).
 
@@ -79,10 +79,12 @@ others from 2026-11-21 (#40 is ours: no closing; #32: look up its date first).
 - MIDI ports: Linux first (ALSA sequencer virtual ports from the broker, keyport.h filter), then Windows (Windows
   MIDI Services virtual devices on Win11 25H2+, design-midi-ports.md option A; option C, a forwarding VST3, for
   Windows 10).
-- macOS libusb audio path as an opt-in for old macOS (#37, E511; Core Audio stays the main path, E528); the
-  mac-libusb-test.command should refuse a broker that is not the test build (#37's first try).
+- FIRST: macOS libusb audio path as an opt-in for old macOS, official Catalina package (x86_64, 10.15) without the
+  Terminal steps; test build to #37 before the release. Fix the exit give-back (attach fails, then libusb
+  refcnt assertion; vticore.c vti_close), the cosmetic `usb block late` after a reconnect, and make
+  mac-libusb-test.command refuse a non-test broker. Evidence entry for #37's run (log 2026-11-14 late evening).
 - Opt-in update check in the Control Center; "Prepare bug report" button (no telemetry).
-- #39: report the short latency while played notes come in (Live re-syncs). #30: the plug-in's meters in Logic.
+- #39: report the short latency while played notes come in (Live re-syncs).
 - Windows VM: hil-win on the tuned VM; if fresh-broker sessions still miss the probe, A/B against 0.8.40 (E533).
 - Proposed (sim list): freeze guard (73 00 10 vv vs stream rate), single re-sync after a detected +64 (E492/E498),
   burst guard, fewer broker resets (E495), lower safety-net floor.
@@ -103,5 +105,5 @@ others from 2026-11-21 (#40 is ours: no closing; #32: look up its date first).
 
 1. Mac awake: push the 0.8.41 release package (see Machines), the user installs it.
 2. Start round 0.8.42 from `origin/main` + merge `origin/round-0.8.41` (see "Where things stand"), pick the first items with the user
-   (my suggestion: live-later 160 + its Mac test, Linux MIDI ports, the libusb path for #37).
+   (first: the libusb path + Catalina package for #37, then live-later 160 + its Mac test, Linux MIDI ports).
 3. Waiting on reporters (table above); check issues only together with the user.
