@@ -130,3 +130,14 @@ TEST(rxqueue_before_a_clear_the_endpoints_transfers_come_back_and_wait)
     CHECK_EQ(vti_rx_done_action(0, 1, -9), VTI_RX_PARK); // failed on the halt before its cancel: the clear covers it
     CHECK_EQ(vti_rx_done_action(1, 1, 0), VTI_RX_QUEUE); // the close wins
 }
+
+TEST(rxqueue_after_a_stall_one_probe_then_the_rest_after_data)
+{
+    // S143 (real kernel): every cancel-clear-resubmit round put all 8 transfers out again into a halt that stayed,
+    // 375 stalled transfers in one 51-error run (73380bd: 58) and 196 vhci "already given back" lines. Now a failed
+    // transfer goes out again only when none is out (one probe), and the parked ones follow the first data.
+    CHECK(vti_rx_probe_now(0));
+    CHECK(!vti_rx_probe_now(1)); // a probe is already out: wait parked
+    CHECK(vti_rx_unpark_after(0));   // data came: the endpoint works again
+    CHECK(!vti_rx_unpark_after(-9)); // an error: keep them parked
+}

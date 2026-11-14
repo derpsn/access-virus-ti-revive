@@ -5,7 +5,7 @@ NEXT. At most 150 lines; the Stop hook (`.claude/hooks/handoff-check.sh`) refuse
 how goes into the dated log [`log/2026-11.md`](log/2026-11.md) (newest first); older logs are in [`log/`](log/).
 Device/protocol knowledge goes into [`evidence.md`](evidence.md). Update this file in the same commit as the work._
 
-Last update: 2026-11-14 afternoon (level 2 with the sim done, E527: rules hold on the real kernel; clear on a quiet endpoint fixed; Linux snd-usb-audio re-links after our unlink: user to decide).
+Last update: 2026-11-14 afternoon (Linux re-link confirmed and accepted, E527 (5); one-probe fix after a stall; Mac: Core Audio main, libusb+sudo opt-in for old systems).
 
 ## Round
 
@@ -122,8 +122,8 @@ message, only in a joint check with the user (by the dates above: #28 from 2026-
 
 ## Round 0.8.42 candidates (decided or proposed)
 
-- Mac audio without Apple's driver: libusb as root (branch libusb-audio) or a DriverKit dext (E528: the original
-  used its own kext; DriverKit needs Apple's entitlement per VID/PID, prototype first; log 2026-11-14). Not decided.
+- Mac audio (user 2026-11-14): Core Audio stays the main path; libusb as root (branch libusb-audio) only as an
+  opt-in workaround for old unmaintained macOS, users accept sudo; no DriverKit for now (E528, log 2026-11-14).
 
 - Decided: opt-in update check in the Control Center; "Prepare bug report" button (no telemetry).
 - Decided (user 2026-11-13, #30): the plug-in's level meters in Logic (details asked on #30). The count-in arp
@@ -143,8 +143,6 @@ message, only in a joint check with the user (by the dates above: #28 from 2026-
 00. Waiting on reporters: #39 (Live button? remedy), #37 (libusb test in Logic), #30 (Snow meters, rc5), #40 views.
     Check issues only together with the user.
 0a. live-later on the Mac: switch it on in the CC, keystamp run like E518 A, spacing should be 24000 +-1 (E519).
-0b. Level 2 done (E527). Open: Linux snd-usb-audio's boot quirk links the TI again at every bind, so our unlink
-    does not stick on Linux (E527 (4)): user to choose (unlink after the give-back / keep 0-2 / confirm first by a
-    rerun with OUT logging). Then the Mac: rc8 + "Virus TI MIDI" check with the next round build.
-0c. rc8 #39 hint reply: with the user.
+0b. Level 2 done twice (E527). Linux re-link accepted, in README + site. One-probe fix after a stall: sim stand-in
+    check asked (both queue modes). Then the Mac: rc8 + "Virus TI MIDI" + live-later check with a round build.
 1. Then the "To do before the final 0.8.41" list.

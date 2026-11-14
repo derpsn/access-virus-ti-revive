@@ -90,6 +90,11 @@ static inline int vti_rx_done_action(int closing, int quiet, int err)
     return err ? VTI_RX_ERROR : VTI_RX_QUEUE_RESUBMIT;
 }
 
+// After an error only one transfer probes the endpoint, the others wait parked until data comes back (S143: every
+// round put all 8 out into a halt that stayed, 375 stalled transfers in one give-up run).
+static inline int vti_rx_probe_now(int inflight) { return inflight == 0; }
+static inline int vti_rx_unpark_after(int err) { return err == 0; }
+
 // libusb_transfer_status -> the libusb error code the reader's rules use (plain numbers, testable without libusb)
 static inline int vti_xfer_err(int status)
 {

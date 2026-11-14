@@ -202,8 +202,8 @@ static int rx_take(rxep *e, vti_rx_rec *rec)
         pthread_cond_timedwait(&e->cv, &e->mu, &until);
     }
     int r = vti_rxq_pop(&e->q, rec);
-    int slot; // room again: the transfers parked for lack of it go out first
-    while (r == 0 && !e->v->closing && e->parked && vti_rxq_may_resubmit(&e->q, (unsigned)e->inflight + 1) &&
+    int slot; // data again (room, or the endpoint works after a stall): the parked transfers go out
+    while (r == 0 && vti_rx_unpark_after(rec->err) && !e->v->closing && e->parked && vti_rxq_may_resubmit(&e->q, (unsigned)e->inflight + 1) &&
            (slot = vti_unpark(&e->parked)) >= 0)
         if (rx_submit(e, slot))
             vti_rxq_push(&e->q, slot, -4, NULL, 0);
@@ -267,14 +267,13 @@ static void *reader(void *p)
             if (vti_libusb_stalled(r)) // the standard CLEAR_FEATURE(ENDPOINT_HALT), as WinUsb_ResetPipe on Windows
                 rx_clear_halt(e);
             usleep(10000); // never a tight loop on errors (#37: ~25000 a second, 300 MB of log)
-            pthread_mutex_lock(&e->mu); // the failed transfer goes out again (fits: its record was just taken)
-            if (!v->closing && rx_submit(e, rec.slot))
-                vti_rxq_push(&e->q, rec.slot, -4, NULL, 0);
-            int s; // and those parked for the clear or for room
-            while (!v->closing && e->parked && vti_rxq_may_resubmit(&e->q, (unsigned)e->inflight + 1) &&
-                   (s = vti_unpark(&e->parked)) >= 0)
-                if (rx_submit(e, s))
-                    vti_rxq_push(&e->q, s, -4, NULL, 0);
+            pthread_mutex_lock(&e->mu); // one probe: the failed transfer goes out again only when none is out (S143)
+            if (!v->closing) {
+                if (!vti_rx_probe_now(e->inflight))
+                    vti_park(&e->parked, rec.slot);
+                else if (rx_submit(e, rec.slot))
+                    vti_rxq_push(&e->q, rec.slot, -4, NULL, 0);
+            }
             pthread_mutex_unlock(&e->mu);
             continue;
         }
