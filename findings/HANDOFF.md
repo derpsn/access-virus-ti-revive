@@ -5,7 +5,7 @@ NEXT. At most 150 lines; the Stop hook (`.claude/hooks/handoff-check.sh`) refuse
 how goes into the dated log [`log/2026-11.md`](log/2026-11.md) (newest first); older logs are in [`log/`](log/).
 Device/protocol knowledge goes into [`evidence.md`](evidence.md). Update this file in the same commit as the work._
 
-Last update: 2026-11-14 evening: 0.8.41 final test round; Linux + VM done, Mac in progress (pkg 7a631315).
+Last update: 2026-11-14 ~19:15 UTC: 0.8.41 tagged and pushed (release CI running).
 
 ## Round
 
@@ -21,8 +21,7 @@ Last update: 2026-11-14 evening: 0.8.41 final test round; Linux + VM done, Mac i
   back cleanly; as user LIBUSB_ERROR_ACCESS. Needs -usb (Global Mode 3 + Output Select 10, as the plug-in's start).
   Open: Catalina (kernel AppleUSBAudio) via the #37 reporter (probe in the Catalina artifact, dev-mac 43495785623);
   discussion with the three reporters in #40; decision after the #37 report (user). Design for 0.8.42+.
-- Round **0.8.41** on branch `round-0.8.41` (pushed); **final planned for 2026-11-14** (user): CI test build of the
-  round head, checklist, release; 0.8.40 Latest until then; earlier rcs in log/2026-11.md.
+- Round **0.8.41** on branch `round-0.8.41` (pushed); **released 2026-11-14** (tag v0.8.41 on main 266cb46, see NEXT); earlier rcs in log/2026-11.md.
 - In 0.8.41: experimental lower latency (option `low-latency`, off by default, E496), Control Center Options page,
   slip detector + automatic restart (`slip-restart`, on by default, E488), freeze alert page (E493), burst counter
   (E490), Mac pkg refuses macOS < 14.4, plug-in log on by default (`diag.off` switches it off), Rise Message 4 per
@@ -138,13 +137,8 @@ message, only in a joint check with the user (by the dates above: #28 from 2026-
 
 00. Waiting on reporters: #37 (libusb test in Logic, 0.8.42 work), #30 (Snow meters), #40, #36 (BC2001.syx).
     Check issues only together with the user.
-0. 0.8.41 FINAL TODAY (user): CI test build 43617677008 (8df3a01) green; Linux installed (plug-in 64ba56a8, broker
-   728db830), hil.sh ALL PASS = L1 (work/hil/0.8.41-final); win11 installed (/quiet exit 0, VST3 52A4CA3F, no Virus
-   yet); Mac pkg b24b3a77 in ~/Downloads/TI-Revive-0.8.41-mac (user installs; hil-mac in hil-mac/hil/);
-   Linux L1-L4 + LC4 PASS (user 17:08). Options page fix (user screenshot: 7th row cut off, status line on it,
-   no scrollbar): cc/optionslayout.h + scroll view, 4 tests; CI 43620201798 = the build to ship (b7b6779).
-   VM: W2, W3 pass, WC4 skipped, W1 passed by the user (hil-win silent first sessions = VM, E533); VM tuned
-   (pinning etc., E533), hil-win on the tuned VM open. Mac: pkg 7a631315 in ~/Downloads, user testing now; user tests by the checklist
-   https://claude.ai/artifact/7j2tvTcAc19iNynNjfnSwM (spec scripts/checklists/round-0.8.41.json; M2 = the
-   live-later keystamp check, M1 = "Virus TI MIDI" listed). Meanwhile: README/site, build.yml "New in 0.8.41",
-   site check. Then merge -F, verify, tag, release CI, site rebuild.
+0. 0.8.41 RELEASED (user: "Ship it", 2026-11-14 ~19:15 UTC): main 266cb46 = merge 6e4c632 (5fc470c + e5f84e8) +
+   README fix (main's rc8 preview block survived the merge); tree = round e5f84e8. Tag v0.8.41 pushed, release CI
+   43625111066 running. NEXT: check release (6 assets, Latest), site rebuild (gh workflow run site.yml), install the
+   release on Linux + win11, Mac pkg + install command, post 'out now' only with the user; start round 0.8.42
+   from main (candidates in "Round 0.8.42"; first: live-later 160 frames E534, MIDI ports Linux/Windows, libusb #37).
