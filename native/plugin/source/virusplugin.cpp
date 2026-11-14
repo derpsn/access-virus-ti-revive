@@ -1163,6 +1163,7 @@ tresult PLUGIN_API VirusPlugin::initialize(FUnknown *context)
         out_->send(m);
         return true;
     });
+    sync_->log = [this](const std::string &line) { out_->log("Virus TI native: %s\n", line.c_str()); }; // #34
     out_->on_reply([this](const std::vector<uint8_t> &m) { sync_->feed(m); });
     out_->on_waiting([this](bool waiting) { // worker thread
         // the original's page for a Virus that another program holds (SystemStatus/Error 2 = "VDM not Master":
@@ -3089,12 +3090,14 @@ void VirusPlugin::load_banks()
     for (auto &root : library_roots())
         for (auto &lib : load_libraries(root.dir, files_ ? files_->default_page_b() : std::vector<uint8_t>())) {
             if (lib.skipped > 0) { // the original skips them silently (E356); the name only, no path (rule 5)
-                fprintf(stderr, "Virus TI native: library %s/%s: %d patch(es) skipped (damaged or unknown format)\n",
-                        root.menu.c_str(), lib.name.c_str(), lib.skipped);
+                const std::string why = skip_summary(lib); // sizes / versions (#36)
+                fprintf(stderr, "Virus TI native: library %s/%s: %d patch(es) skipped (damaged or unknown format: %s)\n",
+                        root.menu.c_str(), lib.name.c_str(), lib.skipped, why.c_str());
                 if (diag_enabled())
                     if (FILE *f = vti::u8fopen(own_cache_dir() + "/../diag.log", "a")) {
-                        fprintf(f, "%ld Virus TI native: library %s/%s: %d patch(es) skipped (damaged or unknown format)\n",
-                                (long)std::time(nullptr), root.menu.c_str(), lib.name.c_str(), lib.skipped);
+                        fprintf(f, "%ld Virus TI native: library %s/%s: %d patch(es) skipped (damaged or unknown format: %s)\n",
+                                (long)std::time(nullptr), root.menu.c_str(), lib.name.c_str(), lib.skipped,
+                                why.c_str());
                         fclose(f);
                     }
             }

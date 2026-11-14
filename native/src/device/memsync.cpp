@@ -136,12 +136,26 @@ bool MemorySync::was_cancelled()
     return cancelled_;
 }
 
+void MemorySync::note_reply(const char *what, int bank, int program, size_t got, size_t want, int t)
+{
+    if (!log || got == want || (got == 0 && was_cancelled()))
+        return;
+    std::string where = bank >= 1 && bank <= 4 ? std::string("RAM ") + (char)('A' + bank - 1) : "bank " + std::to_string(bank);
+    if (program >= 0)
+        where += " " + std::to_string(program);
+    log(std::string(what) + " " + where + ": " +
+        (got == 0 ? std::string("no reply")
+                  : "reply " + std::to_string(got) + " bytes, expected " + std::to_string(want) + " (try " +
+                        std::to_string(t + 1) + " of 3)"));
+}
+
 std::vector<int> MemorySync::bank_info(int bank)
 {
     // a reply of the wrong size is a packet lost on the way: ask again as single() does, one lost packet must not end
     // the whole sync
     for (int t = 0; t < 3; t++) {
         Dump r = transact({0xF0, 0x00, 0x20, 0x33, 0x01, (uint8_t)dev_, 0x39, (uint8_t)bank, 0xF7}, {0x14, (uint8_t)bank});
+        note_reply("bank info", bank, -1, r.size(), BANKINFO_SIZE, t);
         if (r.size() == BANKINFO_SIZE) {
             std::vector<int> v(128);
             for (int p = 0; p < 128; p++)
@@ -159,6 +173,7 @@ Dump MemorySync::single(int bank, int program)
     for (int t = 0; t < 3; t++) {
         Dump r = transact({0xF0, 0x00, 0x20, 0x33, 0x01, (uint8_t)dev_, 0x30, (uint8_t)bank, (uint8_t)program, 0xF7},
                           {0x10, (uint8_t)bank, (uint8_t)program});
+        note_reply("single", bank, program, r.size(), SINGLE_SIZE, t);
         if (r.size() == SINGLE_SIZE)
             return r;
         if (r.empty())

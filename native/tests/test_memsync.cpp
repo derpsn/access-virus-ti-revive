@@ -215,6 +215,41 @@ TEST(memsync_bank_info_gives_up_on_wrong_sizes)
     CHECK_EQ(v.requests.size(), 3u); // bounded, like single()
 }
 
+// #34: a "bank sync failed" log could not tell cut-short replies (lost packets) from no reply at all (2026-11-14)
+TEST(memsync_logs_wrong_size_replies)
+{
+    FakeVirus v;
+    MemorySync sync(v.send());
+    v.sync = &sync;
+    std::vector<std::string> lines;
+    sync.log = [&](const std::string &s) { lines.push_back(s); };
+    v.short_info = 1;
+    CHECK_EQ(sync.bank_info(2).size(), 128u);
+    CHECK_EQ(lines.size(), 1u);
+    if (!lines.empty())
+        CHECK(lines[0] == std::string("bank info RAM B: reply 11 bytes, expected 267 (try 1 of 3)"));
+
+    lines.clear();
+    v.ram[2][5] = fake_single(2, 5, 5);
+    CHECK_EQ(sync.single(2, 5).size(), 524u);
+    CHECK(lines.empty()); // a good reply logs nothing
+}
+
+TEST(memsync_logs_no_reply_but_not_a_cancel)
+{
+    std::vector<std::string> lines;
+    MemorySync sync([](const Bytes &) { return false; }); // empty at once, like a reply that never comes
+    sync.log = [&](const std::string &s) { lines.push_back(s); };
+    CHECK(sync.single(3, 7).empty());
+    CHECK_EQ(lines.size(), 1u);
+    if (!lines.empty())
+        CHECK(lines[0] == std::string("single RAM C 7: no reply"));
+    lines.clear();
+    sync.cancel();
+    CHECK(sync.bank_info(1).empty());
+    CHECK(lines.empty()); // the plug-in closing is not a Virus that did not answer
+}
+
 TEST(memsync_sync_bank_survives_one_wrong_size_bank_info)
 {
     FakeVirus v;

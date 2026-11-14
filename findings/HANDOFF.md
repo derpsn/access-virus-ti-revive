@@ -5,7 +5,7 @@ NEXT. At most 150 lines; the Stop hook (`.claude/hooks/handoff-check.sh`) refuse
 how goes into the dated log [`log/2026-11.md`](log/2026-11.md) (newest first); older logs are in [`log/`](log/).
 Device/protocol knowledge goes into [`evidence.md`](evidence.md). Update this file in the same commit as the work._
 
-Last update: 2026-11-14 afternoon, ready for a fresh context (rc8 out; round has MIDI In port, async reader, unlink, live-later; all sim checks done).
+Last update: 2026-11-14 evening: #34/#36 looked into (E529, reply-size and skip-reason logging on the round).
 
 ## Round
 
@@ -60,14 +60,14 @@ Last update: 2026-11-14 afternoon, ready for a fresh context (rc8 out; round has
 | #32 | (no change since 11-10) | reporter | before 11-10 |
 | #33 | Intel Mac: Ableton fine, Logic distorted | reporter (rc1: Logic log, rate, buffer) | 2026-11-10 |
 | #34 | TI2/Keyboard macOS Ableton crackle, right channel at full scale | reporter (2 Outs, 44.1 kHz, no hub, record input 3/4) | 2026-11-12 |
-| #36 | Windows Cubase bank sync 0/128 | reporter (rc2: display, hub/cable, 3 checks) | 2026-11-11 |
+| #36 | Windows Cubase bank sync 0/128 | reporter (rc2: display, hub/cable, 3 checks; BC2001.syx asked 11-14) | 2026-11-14 |
 | #37 | Catalina: crackle = byte-slipped audio (E510); libusb probe run 2 (E511 Later): 1000/1000 iso packets ok and real data, but only an idle floor on USB 1, no C4; AppleUSBAudio stays attached next to libusb; interface 1 without driver afterwards | reporter: heard the C4s on the Virus' outputs? Virus ok in Logic since? then the libusb test in Logic from his download (asked 11-14, issuecomment-6872527194): broker log + plug-in log | 2026-11-14 |
 | #38 | macOS 27 Live: editor / AU crash | reporter (crash report, Access files) | 2026-11-10 |
 | #39 | TI1 Keyboard in Ableton Live. Settled: the unit's pace and shares (E515, E516 6), the original on Win 10 in Live 10 as VST2 showed almost the same although it makes both 'AbLi' calls (E516 7, 8), so his symptom is the unit, not us. Measured on our Mac (E518): with monitor In a played take comes back 54.6 ms late by default, 0 with Live Mode on. His three logs: Live Mode off throughout. Posted 11-14 (issuecomment-6872942887): the measurement, did he ever try the Live button, his view on 3 remedies (hint only / played notes take the lead while recording / report the short latency while playing). | reporter: Live button tried? which remedy | 2026-11-14 |
 | #40 | (ours) macOS: TI Revive takes the Virus' audio itself (libusb, E511) as an option? asks #30/#37/#39 reporters | reporters (audio interface use, admin rights, macOS/DAW) | 2026-11-13 |
 
 Every open issue waits on its reporter. Quiet-issue rule: 7 days after our last request, close with the AGENTS.md
-message, only in a joint check with the user (by the dates above: #28 from 2026-11-16, #33 and #38 from 2026-11-17; #32: look up its date first).
+message, only in a joint check with the user (by the dates above: #28 from 2026-11-16, #33 and #38 from 2026-11-17, #36 from 2026-11-21; #32: look up its date first).
 
 ## Not verified on hardware yet
 
@@ -98,7 +98,8 @@ message, only in a joint check with the user (by the dates above: #28 from 2026-
 - [ ] Full test round on all three platforms: `python3 scripts/risk.py --round 0.8.41` (class C everywhere; Mac by
       hand: sleep), `scripts/hil.sh` on Linux, checklist artifact via `scripts/checklist.py`.
 - [ ] Release text heredoc in `.github/workflows/build.yml` ("New in 0.8.41") checked before the tag.
-- [ ] #34 second session "bank sync failed in 11.9 s" (RAM B -1) after "paused 2.6 s for notes": not looked into.
+- [x] #34 "bank sync failed in 11.9 s" looked into (E529): timing fits cut-short bank info replies (flaky USB), not
+      the note pause; memsync now logs wrong-size / missing replies (MemorySync::log).
 - [ ] MIDI In port "Virus TI MIDI" (user 11-14: "close the gap"): done on the round (keyport.h vti_dinport_filter
       as the original's "MIDI" entity, E521 (4); vtikeyport_mac.c second source "VTI0"; 4 tests; README + site).
       Mac build via dev-mac CI; not run yet (Mac check: the port shows up; no MIDI-In device here). Windows/Linux
@@ -112,8 +113,8 @@ message, only in a joint check with the user (by the dates above: #28 from 2026-
       brokers send raw 4E 73 52 00 when the last non-observer client leaves and at vti_close, and 4E 73 52 01 again
       before the next client write. Linux + mingw build clean; sim S138: keyed unit plays stand-alone after the
       close, next session fine, CC keeps the link (E525). TI2: link off/on lines, sessions after fine (E526).
-- [ ] Library scan skips patches as "damaged or unknown format" (#36 log: BC2001 36, Incubation V3 97): check the
-      format.
+- [x] Library skips (#36, E529): same counts as ours except BC2001/HS Extras = the reporter's .syx files (asked for
+      BC2001.syx 11-14, issuecomment-6875745545); the log line names the reasons (skip_summary), vtimodel libs fixed.
 
 ## Round 0.8.42 candidates (decided or proposed)
 

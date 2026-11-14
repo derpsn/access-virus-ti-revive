@@ -186,8 +186,10 @@ int main(int argc, char **argv)
         printf("%s, default page B %zu bytes\n", vti::library_dir().c_str(), pb.size());
         for (auto &l : vti::load_libraries(vti::library_dir(), pb)) {
             printf("%-40s %3zu dumps", l.name.c_str(), l.dumps.size());
-            if (!l.dumps.empty())
+            if (!l.dumps.empty() && l.dumps[0].size() == 524) // position 0 can be a gap (E298)
                 printf("  first \"%.10s\" version %d", (const char *)&l.dumps[0][249], l.dumps[0][9]);
+            if (l.skipped > 0) // the plug-in's diag.log line names the same (#36)
+                printf("  skipped %d: %s", l.skipped, vti::skip_summary(l).c_str());
             printf("\n");
         }
     } else if (cmd == "libdump" && args.size() >= 3) { // patch N of a library file, upgraded like the plug-in loads it
