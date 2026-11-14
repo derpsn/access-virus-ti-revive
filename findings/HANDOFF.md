@@ -5,31 +5,24 @@ NEXT. At most 150 lines; the Stop hook (`.claude/hooks/handoff-check.sh`) refuse
 how goes into the dated log [`log/2026-11.md`](log/2026-11.md) (newest first); older logs are in [`log/`](log/).
 Device/protocol knowledge goes into [`evidence.md`](evidence.md). Update this file in the same commit as the work._
 
-Last update: 2026-11-14 afternoon (Linux re-link confirmed and accepted, E527 (5); one-probe fix after a stall; Mac: Core Audio main, libusb+sudo opt-in for old systems).
+Last update: 2026-11-14 afternoon, ready for a fresh context (rc8 out; round has MIDI In port, async reader, unlink, live-later; sim checks done except the one-probe fix).
 
 ## Round
 
-- **v0.8.41-rc8** tag 2026-11-14 on 8bc8de7 (user: "build it with the crash fix and release rc8"): the rc7 crash fix
-  without Access files (dbf8bed) + Live Mode hint (helptext.cpp, README, site build.py: switch it on to record a
-  played part into Live, E518). Linux build + ctest 6/6 green locally; release CI 43567076613. Then: main preview
-  box, Linux install, Mac push, #39 reply with the hint when the user says so.
-- **v0.8.41-rc7** pre-release 2026-11-13 20:45 UTC (tag on 2e0fed9: live-note stamps from the timeline, E512),
-  release CI 43503582943 all 8 jobs green, 6 assets, Latest stays 0.8.40; main 6cf8493 preview box; Linux rc7
-  installed. #39 asked to test rc7 (issuecomment-6864528067). Mac: rc7 installed 11-14, Live
-  placement test done there (E518).
-- **v0.8.41-rc6** pre-release 2026-11-13 19:28 UTC (tag on 8e9cf20: macOS slip restart E510), release CI
-  43490921423 all green (the macOS branch compiles), 6 assets; main 4f0f061 preview box; Linux rc6 installed
-  (plug-in 4cc924bc). Catalina build of rc6: catalina-test 77aa389 (round merged), dev-mac 43491758791 green,
-  artifact dev-mac-catalina (x86_64, minos 10.15, CC 10.15). #37 reply with both links posted. Mac fake-slip test DONE (E510): restart path runs, new marker, rc6 pkg = installed.
+- **v0.8.41-rc8** pre-release 2026-11-14 (tag on 8bc8de7): rc7 crash fix without Access files + Live Mode hint
+  (E518). Release CI 43567076613 all green, 6 assets, Latest stays 0.8.40; main 5fc470c preview box. Open: #39
+  reply with the hint, together with the user.
+- **On the round since rc8 (not in a build yet; next rc or final):** "Virus TI MIDI" input on macOS (E521/E523),
+  libusb reader with 8 transfers pending + its fixes (E525-E527, last 2d69cc8), unlink like the original (E524,
+  E526), option live-later (E519). hil.sh ALL PASS on the TI2 with the round broker (E526); Linux re-link by
+  snd-usb-audio accepted and documented (E527).
+- rc7 (11-13 20:45, 2e0fed9, E512 live stamps), rc6 (11-13 19:28, 8e9cf20, macOS slip restart E510; Catalina
+  build of rc6 on catalina-test, dev-mac 43491758791) - details in log/2026-11.md.
 - **macOS without Apple's audio driver (option A, E511):** vtiaudioprobe on our Mac (macOS 27) WORKS as root: the
   Virus taken from usbaudiod, 20.5 s streamed with the broker's Linux code, C4 on USB 1, slip share 0.01-0.03, given
   back cleanly; as user LIBUSB_ERROR_ACCESS. Needs -usb (Global Mode 3 + Output Select 10, as the plug-in's start).
   Open: Catalina (kernel AppleUSBAudio) via the #37 reporter (probe in the Catalina artifact, dev-mac 43495785623);
   discussion with the three reporters in #40; decision after the #37 report (user). Design for 0.8.42+.
-- **v0.8.41-rc5** pre-release 2026-11-13 18:50 UTC (tag on 7f6d1be, release CI 43484666513 all 8 jobs green,
-  6 assets; Latest stays 0.8.40). main aee9e11 = preview-box lines only, site 43486622822 green, live page shows
-  "Preview: 0.8.41-rc5". Linux: rc5 installed by install.sh (plug-in 5726305b, broker 2e75801c). Open: rc5 reply
-  on #30 (draft with the user), win11 silent install, Mac install command.
 - Round **0.8.41** on branch `round-0.8.41` (pushed). Released before: **v0.8.41-rc4** pre-release
   (2026-11-13 08:48 UTC, tag on 24c056e, release CI 43395373253 all green, 6 assets); **0.8.40 stays Latest**.
   Site live with "Preview: 0.8.41-rc4" (main b9baa60 = box lines only, site run 43396293872).
@@ -47,12 +40,14 @@ Last update: 2026-11-14 afternoon (Linux re-link confirmed and accepted, E527 (5
 
 ## Machines and the Virus
 
-- Our TI2 Desktop: on the **Mac** USB bus (2026-11-14, Live placement test); back to Linux for hil.sh. User flashed ROM Z on it in early November (E500).
-- Linux: rc4 CI build (run 43377561345) installed (plug-in b18c102b, broker 2e75801c), `hil.sh` ALL PASS.
-- win11 VM: rc4 CI MSI installed (/quiet, exit 0, DisplayVersion 0.8.41, no Virus attached), shut down.
-- win10 VM: reverted to snapshot `pre-i36` (0.8.36); snapshots `pre-i36`, `pre-i36-access` kept.
-- Mac (macOS 27.2.1): **rc7** package installed 2026-11-14 06:46 (by the user; ~/Downloads/TI-Revive-0.8.41-rc7). Live 12 Suite there; keystamp in
-  ~/tirevive-test/keystamp, starter ~/Downloads/'Live placement test.command'; sets ~/Desktop/placement-A/B/C. live-notes option back on; klog.on, noteprobe.on still set (harmless).
+- Our TI2 Desktop: back on **Linux** (2026-11-14, after hil.sh and two level-2 slots with it unplugged; the user
+  switched it on again). User flashed ROM Z on it in early November (E500).
+- Linux: rc8 CI build installed (plug-in 7e3bdd83, broker 2e75801c = rc8's, restored after the round-broker run).
+- win11 VM: rc8 MSI installed (/quiet, exit 0, VST3 3d9f7dbf), shut down. win10 VM: snapshot `pre-i36` (0.8.36).
+- Mac (macOS 27.2.1): rc7 installed; rc8 package + install command in ~/Downloads/TI-Revive-0.8.41-rc8 (user to
+  install). Live 12 Suite, keystamp in ~/tirevive-test/keystamp; klog.on, noteprobe.on set (harmless).
+- Branch `libusb-audio` (Mac libusb path, opt-in for old macOS): last merged round state before rc8; merge the
+  round again before its next build.
 
 ## Open issues (as of 2026-11-14 morning; check GitHub only together with the user)
 
