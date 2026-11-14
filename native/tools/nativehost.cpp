@@ -10,6 +10,9 @@
 // hear whether the Virus applies a change to a held note.
 // --live-after N: with --notes, a C4 flagged as played live N frames after each clip note-off, held 300 ms (S065 C5:
 // does the clip's off, sent first but stamped later, cut the played note?).
+// --midi-in FIFO [--midi-in-delay MS] (Linux/macOS): notes from outside ("ns status data1 data2" lines, CLOCK_MONOTONIC
+// ns, e.g. the simulator's key tap), each given to the plug-in as played (kIsLive) in the first block that starts at
+// least MS after its ns: Ableton Live's Monitor In passing a Keyboard's key back to the plug-in (#39 doubled notes).
 // --cid HEX: load that class (e.g. the original Access id D9909FB45F730543AC5397BE8958CD31, E221), else the first.
 // --duplicate T: a second instance runs next to the first from the start (a DAW's duplicated track, issue #6) with
 // the same notes; at T s the first is removed and the second takes over the Virus. --editor2 with it: the
@@ -28,6 +31,12 @@
 #include "pluginterfaces/gui/iplugview.h"
 #include "pluginterfaces/vst/ivsteditcontroller.h"
 #include "hostclock.h"
+#include "midiin.h"
+#ifndef _WIN32
+#include <fcntl.h>
+#include <time.h>
+#include <unistd.h>
+#endif
 #ifdef __linux__
 #include <X11/Xlib.h>
 #include <X11/Xutil.h>
@@ -265,6 +274,8 @@ int main(int argc, char **argv)
     int parts = 1; // --parts N: the chord's notes spread over channels 1..N
     double hold = -1; // --hold: note on at this time, never off
     double live_after = -1; // --live-after N: a played C4 N frames after each clip note-off, held 300 ms
+    const char *midi_in = nullptr; // --midi-in FIFO
+    double midi_in_delay_ms = 0;   // --midi-in-delay MS
     double notes_off_from = -1, notes_off_to = -1; // --notes-off A:B: no --notes in [A, B) s (a DAW stopped after a render)
     long cycle_on = 0, cycle_off = 0;              // --notes-cycle ON:OFF
     struct TimedChange {
@@ -313,6 +324,10 @@ int main(int argc, char **argv)
             hold = atof(argv[++i]);
         else if (!strcmp(argv[i], "--live-after") && i + 1 < argc)
             live_after = atof(argv[++i]);
+        else if (!strcmp(argv[i], "--midi-in") && i + 1 < argc)
+            midi_in = argv[++i];
+        else if (!strcmp(argv[i], "--midi-in-delay") && i + 1 < argc)
+            midi_in_delay_ms = atof(argv[++i]);
         else if (!strcmp(argv[i], "--param-at") && i + 1 < argc) {
             double t = 0, v = 0;
             unsigned id = 0;
@@ -549,6 +564,44 @@ int main(int argc, char **argv)
     ParameterChanges pc, outpc;
     EventList ev;
     std::vector<int16_t> pcm;
+#ifndef _WIN32
+    MidiInTap midi_tap;
+    int midi_fd = -1; // opened non-blocking, so a FIFO without a writer yet does not hold the host; again after EOF
+    auto midi_in_events = [&](EventList &out, long block_no) {
+        if (!midi_in)
+            return;
+        if (midi_fd < 0)
+            midi_fd = open(midi_in, O_RDONLY | O_NONBLOCK);
+        char buf[4096];
+        for (ssize_t n; midi_fd >= 0 && (n = read(midi_fd, buf, sizeof buf)) != 0;) {
+            if (n < 0)
+                break; // EAGAIN: nothing more now
+            midi_tap.feed(buf, (size_t)n);
+        }
+        timespec ts;
+        clock_gettime(CLOCK_MONOTONIC, &ts);
+        const int64_t now = (int64_t)ts.tv_sec * 1000000000 + ts.tv_nsec;
+        std::vector<MidiInEvent> due;
+        midi_tap.take_due(now, (int64_t)(midi_in_delay_ms * 1e6), due);
+        for (const MidiInEvent &m : due) {
+            Event e{};
+            e.sampleOffset = 0;
+            e.flags = Event::kIsLive;
+            if (midiin_is_note_on(m)) {
+                e.type = Event::kNoteOnEvent;
+                e.noteOn = {(int16)midiin_channel(m), (int16)m.data1, 0, m.data2 / 127.f, 0, -1};
+            } else if (midiin_is_note_off(m)) {
+                e.type = Event::kNoteOffEvent;
+                e.noteOff = {(int16)midiin_channel(m), (int16)m.data1, 0.f, -1, 0};
+            } else
+                continue;
+            out.addEvent(e);
+            printf("midi-in: %lld %d %d %d -> block %ld (now %lld)\n", (long long)m.ns, m.status, m.data1, m.data2,
+                   block_no, (long long)now);
+            fflush(stdout);
+        }
+    };
+#endif
     float peak = 0;
     HostClock clk{rate, block};
     auto running = [&](int b) { return clk.seconds(b + 1) <= seconds + 1e-9; }; // block b ends within --seconds
@@ -699,6 +752,9 @@ int main(int argc, char **argv)
                 ev.addEvent(e);
             }
         }
+#ifndef _WIN32
+        midi_in_events(ev, b);
+#endif
         data.inputEvents = &ev;
         pc.clearQueue();
         if (stress && stress_params && ctl && clk.seconds(b) < stress_stop) { // 32 automatable parameters moving every block

@@ -5,7 +5,7 @@ NEXT. At most 150 lines; the Stop hook (`.claude/hooks/handoff-check.sh`) refuse
 how goes into the dated log [`log/2026-11.md`](log/2026-11.md) (newest first); older logs are in [`log/`](log/).
 Device/protocol knowledge goes into [`evidence.md`](evidence.md). Update this file in the same commit as the work._
 
-Last update: 2026-11-14 evening: decisions E520 (7) + plan B taken; issues checked (#39 replied, #40 one view).
+Last update: 2026-11-14: #39 doubled-note test on the sim set up (nativehost --midi-in); help hint waits on it.
 
 ## Round
 
@@ -122,6 +122,7 @@ message, only in a joint check with the user (by the dates above: #28 from 2026-
   opt-in workaround for old unmaintained macOS, users accept sudo; no DriverKit for now (E528, log 2026-11-14).
 
 - Decided: opt-in update check in the Control Center; "Prepare bug report" button (no telemetry).
+- Decided (user 2026-11-14, #39): option 3, report the short latency while played notes come in (Live re-syncs).
 - Decided (user 2026-11-13, #30): the plug-in's level meters in Logic (details asked on #30). The count-in arp
   moved into 0.8.41 (E505).
 - Proposed (sim list): freeze guard (73 00 10 vv vs stream rate), single re-sync after a detected +64 (E492/E498),
@@ -141,6 +142,11 @@ message, only in a joint check with the user (by the dates above: #28 from 2026-
 00. Our turn on #39 (reply 11-14: Live button a bit better, "doubling notes" when recording). Waiting on reporters: #37 (libusb test in Logic), #30 (Snow meters, rc5), #40 (#30/#39 views),
     #36 (BC2001.syx, asked 11-14).
     Check issues only together with the user.
+0. #39 doubled notes on the sim (user 11-14: press the keys in the sim panel and hear it): sim (virus-ti-sim-35)
+   writes key tap + keyed_live.sh + double_check.py, one keyplay run (4 cases: Local On/Off x echo/none), then
+   the user's GUI session. Ours: nativehost --midi-in FIFO [--midi-in-delay MS] (tools/midiin.h, 4 tests).
+   Help text for the Live button (Local On + monitor off; "twice") + test written, NOT committed until the sim
+   confirms. #39 reply drafted (in the session); option 3 "tight" = 0.8.42 candidate (user).
 0a. live-later on the Mac: switch it on in the CC, keystamp run like E518 A, spacing should be 24000 +-1 (E519).
 0b. Level 2 done twice (E527). Linux re-link accepted, in README + site. One-probe fix 2d69cc8: sim stand-in OK
     (S144, at most 1 pending during a stall; kernel run not done, optional). Then the Mac: rc8 + "Virus TI MIDI" + live-later check with a round build
