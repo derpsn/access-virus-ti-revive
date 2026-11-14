@@ -13,9 +13,10 @@ Last update: 2026-11-14 evening: 0.8.41 released and Latest; nothing running; ne
   (main 5fc470c + round e5f84e8) + one commit that drops main's rc8 preview block from the README (it survived the
   merge without a conflict: check that at every round merge). Release CI 43625111066 green, 6 assets. Site rebuilt
   by hand (site.yml 43625667337): Download 0.8.41, no preview box, 753 tests, coverage 96.4 %.
-- **Where the newest files are:** branch `round-0.8.41` = main + HANDOFF/log commits only (from 74c8832 on). Start
-  round 0.8.42 from `origin/round-0.8.41` (or merge it into a branch from main) so this HANDOFF comes along. New
-  branch: push with an explicit refspec (`<b>:refs/heads/<b>`), check origin/main unchanged.
+- **Where the newest files are:** after the merge, `round-0.8.41` got HANDOFF/log commits only (74c8832 on); its tree
+  is main's plus those docs, but it lacks main's merge commit. Start round 0.8.42 as a branch from `origin/main`, then
+  `git merge origin/round-0.8.41` (docs only) so this HANDOFF comes along. Push the new branch with an explicit
+  refspec (`<b>:refs/heads/<b>`), check origin/main unchanged.
 - Test round of 0.8.41: checklist https://claude.ai/artifact/7j2tvTcAc19iNynNjfnSwM (spec
   scripts/checklists/round-0.8.41.json). Linux L1-L4 + LC4 pass (hil.sh ALL PASS); Mac hil-mac ALL PASS, M1-M3,
   MC4, MC5 pass; VM W2, W3 pass, WC4 skipped, W1 passed by the user as VM-related (E533). Found and fixed in the
@@ -101,6 +102,6 @@ others from 2026-11-21 (#40 is ours: no closing; #32: look up its date first).
 ## NEXT
 
 1. Mac awake: push the 0.8.41 release package (see Machines), the user installs it.
-2. Start round 0.8.42 from `origin/round-0.8.41` (see "Where things stand"), pick the first items with the user
+2. Start round 0.8.42 from `origin/main` + merge `origin/round-0.8.41` (see "Where things stand"), pick the first items with the user
    (my suggestion: live-later 160 + its Mac test, Linux MIDI ports, the libusb path for #37).
 3. Waiting on reporters (table above); check issues only together with the user.
