@@ -66,7 +66,7 @@ Last update: 2026-11-14 evening: 0.8.41 final test round; Linux + VM done, Mac i
 Every open issue waits on its reporter. Quiet-issue rule: 7 days after our last request, close with the AGENTS.md
 message, only in a joint check with the user (by the dates above: #28 from 2026-11-16, #38 from 2026-11-17, #33 from 2026-11-21, #36 from 2026-11-21; #32: look up its date first).
 
-## Not verified on hardware yet
+## Not verified on hardware yet (all: `evidence.py list --no-hardware`)
 
 - E503 libusb reader stall handling (5660a93): sim level 1 DONE (E522, C1-C7 held on the model: our broker on its
   virtual TI + stand-in libusb, STALL cases on 0x85/0x86/0x06); level 2 (usbip, real libusb)
@@ -76,7 +76,6 @@ message, only in a joint check with the user (by the dates above: #28 from 2026-
 - E497 fix: DONE on the TI2 (E506): 0 of 239 re-syncs missed in 60 sessions (mixed build, both parts 0).
 - Transport restarts (E505): DONE on the TI2 for wire + note timing (count-in, between ticks, low-latency on,
   FC; rc3 baseline sends F2 00 00). The arpeggiator itself not heard: sim model (asked) and Logic on the Mac.
-- `python3 -I scripts/evidence.py list --no-hardware` lists the evidence entries marked this way.
 
 ## Open decisions for the user
 
