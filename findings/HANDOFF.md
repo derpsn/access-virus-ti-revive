@@ -144,7 +144,9 @@ message, only in a joint check with the user (by the dates above: #28 from 2026-
    728db830), hil.sh ALL PASS = L1 (work/hil/0.8.41-final); win11 installed (/quiet exit 0, VST3 52A4CA3F, no Virus
    yet); Mac pkg b24b3a77 in ~/Downloads/TI-Revive-0.8.41-mac (user installs; hil-mac in hil-mac/hil/);
    Linux L1-L4 + LC4 PASS (user 17:08). Options page fix (user screenshot: 7th row cut off, status line on it,
-   no scrollbar): cc/optionslayout.h + scroll view, 4 tests; new CI build for Mac/VM; user tests by the checklist
+   no scrollbar): cc/optionslayout.h + scroll view, 4 tests; CI 43620201798 = the build to ship (b7b6779).
+   VM: W2, W3 pass, WC4 skipped, W1 passed by the user (hil-win silent first sessions = VM, E533); VM tuned
+   (pinning etc., E533), hil-win on the tuned VM open. Mac: pkg 7a631315 in ~/Downloads, user testing now; user tests by the checklist
    https://claude.ai/artifact/7j2tvTcAc19iNynNjfnSwM (spec scripts/checklists/round-0.8.41.json; M2 = the
    live-later keystamp check, M1 = "Virus TI MIDI" listed). Meanwhile: README/site, build.yml "New in 0.8.41",
    site check. Then merge -F, verify, tag, release CI, site rebuild.

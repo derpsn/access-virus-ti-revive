@@ -4849,3 +4849,13 @@ How the original Access software reached the Virus' USB audio on macOS (REA/Ghid
 - **Method:** the plug-in log's stats lines (raw peaks, host/virus frames, drops, read margin) per session
 - **Confidence:** HIGH (no slip, no rate mismatch, no dropouts in the log) / open (the cause)
 - **Hardware:** no (the reporter's unit)
+
+### E533
+
+hil-win with the 0.8.41 final test builds on the win11 VM (2026-11-14 18:18-18:35 local, TI2 Desktop passed through by usb hostdev, scheduled task in the console session). Run 1 (CI 43617677008): H1, H2-1, H2-2 silent, H3 1 of 42 notes lost and 1 off the grid (export 0.98x), H6 pass (max 2.56 ms). Run 2 (CI 43620201798, plug-in code identical): H1 and H2-1 silent, H2-2, H3, H6 pass. Every silent stage is the first session on a freshly started broker and has the same signature: `Virus ready after 11.5 s (no reply to the probe)`, then no notes in the recording, bank sync stopped early, and the Virus' bank-info replies (`6f 0n 7e`) reaching the plug-in only in a burst after its close sequence. Stages on a broker that was already running answered the probe within 1.7-1.8 s. The broker log is normal in all of them (handshake = link on at open, link off at every close, link on before a session on a kept broker; W3 confirms the unlink on Windows). The user's Live sessions in the same VM on a fresh broker started normally (ready 1.6-2.2 s); one of them got RAM D bank-info replies cut short three times (249/231/114 of 267 bytes), the E529 kind. The same signature was seen in the first hil-win runs on 0.8.31 (E320 era, 2026-10-22: "no reply to the probe, ready after 11.5 s"), read then as the VM's irregular USB passthrough; 0.8.40's run passed apart from drift. Not A/B-tested against 0.8.40 in this VM state: the user judged it VM-related and passed W1 (2026-11-14). Same outward symptom as #36 (real Windows, no SysEx replies); the cause there is still open. The VM was tuned afterwards (vCPUs pinned to P-cores 4-7, emulator 2-3, 2x2 topology, no emulated sound, no SPICE USB redirect, no balloon, evmcs/avic off, ISOs detached; guest: High performance, USB selective suspend off on AC; backup work/vm/win11-before-tuning-20261114.xml); a hil-win run on the tuned VM is open.
+
+- **Date:** 2026-11-14
+- **Pointer:** work/hil/win-0.8.41-final, work/hil/win-0.8.41-final2 (git-ignored), the VM's vtibroker.log and diag.log
+- **Method:** scripts/hil-win.ps1 + hil_check.py, the broker and plug-in logs
+- **Confidence:** HIGH (the measurements and the signature) / LOW (VM as the cause: not A/B-tested)
+- **Hardware:** yes (TI2 Desktop through the win11 VM)
