@@ -11,10 +11,10 @@ Last update: 2026-11-14 (#39: E516 the original's two latencies for Ableton Live
 
 - **v0.8.41-rc7** pre-release 2026-11-13 20:45 UTC (tag on 2e0fed9: live-note stamps from the timeline, E512),
   release CI 43503582943 all 8 jobs green, 6 assets, Latest stays 0.8.40; main 6cf8493 preview box; Linux rc7
-  installed. #39 asked to test rc7 (issuecomment-6864528067). Mac: still rc6 (verify E512 there with keystamp+klog).
-- **rc7 bug, fixed on the round dbf8bed:** without the Access files rc7 crashes the DAW in process() (unbraced `if`
-  from E512, out_ null). ctest no_access_files; plug-in sources now get -Wall. Must be in the next rc/final; the
-  three reporters have Access files (not hit).
+  installed. #39 asked to test rc7 (issuecomment-6864528067). Mac: rc6 installed, rc7 pushed 11-14 to
+  ~/Downloads/TI-Revive-0.8.41-rc7 (user installs; then the Live placement test, NEXT 00, also checks E512).
+- **rc7 bug, fixed on the round dbf8bed:** without the Access files rc7 crashes the DAW in process() (E512's unbraced
+  `if`, out_ null). ctest no_access_files; plug-in sources get -Wall now. Must be in the next rc/final (reporters not hit).
 - **macOS without Apple's audio driver (option A, E511):** vtiaudioprobe on our Mac (macOS 27) WORKS as root: the
   Virus taken from usbaudiod, 20.5 s streamed with the broker's Linux code, C4 on USB 1, slip share 0.01-0.03, given
   back cleanly; as user LIBUSB_ERROR_ACCESS. Needs -usb (Global Mode 3 + Output Select 10, as the plug-in's start).
@@ -75,7 +75,7 @@ Last update: 2026-11-14 (#39: E516 the original's two latencies for Ableton Live
 | #36 | Windows Cubase bank sync 0/128 | reporter (rc2: display, hub/cable, 3 checks) | 2026-11-11 |
 | #37 | Catalina: crackle = byte-slipped audio (E510); libusb probe run 2 (E511 Later): 1000/1000 iso packets ok and real data, but only an idle floor on USB 1, no C4; AppleUSBAudio stays attached next to libusb; interface 1 without driver afterwards | us: reply drafted with the user (did he hear the notes? then the libusb test in Logic or a probe with a longer wait) | 2026-11-13 |
 | #38 | macOS 27 Live: editor / AU crash | reporter (crash report, Access files) | 2026-11-10 |
-| #39 | TI1 Keyboard in Ableton Live. Our summary posted (issuecomment-6867329556). Reporter 11-13 23:22: his Win 10 test of the ORIGINAL was in Live 10 with the VST (not VST3), and it showed almost the same (E516 7, 8: the Windows core holds the 'AbLi' tag too, so the two-latency call is not what he feels; the unit's pace E515 and the monitor Off placement remain). | us: short closing answer with the user; Mac test in Live only for recorded placement (E516 3) | 2026-11-14 |
+| #39 | TI1 Keyboard in Ableton Live. Our summary posted (issuecomment-6867329556). Reporter 11-13 23:22: his Win 10 test of the ORIGINAL was in Live 10 with the VST (not VST3), and it showed almost the same (E516 7, 8: the Windows core makes both 'AbLi' calls for any host named Live, read 11-14, so the two-latency call is not what he feels; the unit's pace E515 and the monitor Off placement remain). | us: short closing answer with the user; Mac test in Live only for recorded placement (E516 3) | 2026-11-14 |
 | #40 | (ours) macOS: TI Revive takes the Virus' audio itself (libusb, E511) as an option? asks #30/#37/#39 reporters | reporters (audio interface use, admin rights, macOS/DAW) | 2026-11-13 |
 
 Every open issue waits on its reporter. Quiet-issue rule: 7 days after our last request, close with the AGENTS.md
