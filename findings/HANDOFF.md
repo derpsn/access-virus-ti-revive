@@ -5,7 +5,7 @@ NEXT. At most 150 lines; the Stop hook (`.claude/hooks/handoff-check.sh`) refuse
 how goes into the dated log [`log/2026-11.md`](log/2026-11.md) (newest first); older logs are in [`log/`](log/).
 Device/protocol knowledge goes into [`evidence.md`](evidence.md). Update this file in the same commit as the work._
 
-Last update: 2026-11-14 midday (TI2 back on Linux: hil.sh ALL PASS with the round build, E526; option live-later added; sim asks for level 2).
+Last update: 2026-11-14 afternoon (level 2 with the sim done, E527: rules hold on the real kernel; clear on a quiet endpoint fixed; Linux snd-usb-audio re-links after our unlink: user to decide).
 
 ## Round
 
@@ -141,7 +141,8 @@ message, only in a joint check with the user (by the dates above: #28 from 2026-
 00. Waiting on reporters: #39 (Live button? remedy), #37 (libusb test in Logic), #30 (Snow meters, rc5), #40 views.
     Check issues only together with the user.
 0a. live-later on the Mac: switch it on in the CC, keystamp run like E518 A, spacing should be 24000 +-1 (E519).
-0b. Level 2 with the sim (M12): real kernel + libusb, virtual TI2 over usbip; the real TI2 unplugged; sudo steps
-    by the user from the sim's command list. Then the Mac: rc8 + "Virus TI MIDI" check with the next round build.
+0b. Level 2 done (E527). Open: Linux snd-usb-audio's boot quirk links the TI again at every bind, so our unlink
+    does not stick on Linux (E527 (4)): user to choose (unlink after the give-back / keep 0-2 / confirm first by a
+    rerun with OUT logging). Then the Mac: rc8 + "Virus TI MIDI" check with the next round build.
 0c. rc8 #39 hint reply: with the user.
 1. Then the "To do before the final 0.8.41" list.

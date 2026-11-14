@@ -51,6 +51,7 @@ typedef struct rxep {
     uint8_t busy[RX_PENDING]; // submitted, its callback not run yet
     int inflight;
     unsigned parked;          // not resubmitted for lack of room: the reader resubmits them
+    int quiet;                // the reader clears a halt: transfers cancelled, parked until the clear (S142)
     vti_rx_rec recs[RX_QCAP];
     vti_rxq q;
     pthread_mutex_t mu;
@@ -145,7 +146,7 @@ static void LIBUSB_CALL rx_done(struct libusb_transfer *t)
     e->busy[slot] = 0;
     e->inflight--;
     const int err = vti_xfer_err(t->status);
-    switch (vti_rx_done_action(e->v->closing, err)) {
+    switch (vti_rx_done_action(e->v->closing, e->quiet, err)) {
     case VTI_RX_ERROR:
         vti_rxq_push(&e->q, slot, err, NULL, 0); // fits: queued + inflight <= RX_QCAP
         break;
@@ -160,6 +161,14 @@ static void LIBUSB_CALL rx_done(struct libusb_transfer *t)
             vti_park(&e->parked, slot);
         else if (rx_submit(e, slot))
             vti_rxq_push(&e->q, slot, -4, NULL, 0); // a failed resubmit: the device is going, the reader decides
+        break;
+    case VTI_RX_QUEUE_PARK:
+        if (t->actual_length > 0)
+            vti_rxq_push(&e->q, slot, 0, t->buffer, t->actual_length);
+        vti_park(&e->parked, slot);
+        break;
+    case VTI_RX_PARK:
+        vti_park(&e->parked, slot);
         break;
     default:
         break;
@@ -202,6 +211,29 @@ static int rx_take(rxep *e, vti_rx_rec *rec)
     return r;
 }
 
+// a halt is cleared on a quiet endpoint: the kernel warns about CLEAR_HALT with transfers queued (S142, 125 lines).
+// Cancel the endpoint's transfers, wait for them (data still handed on), clear, then the reader resubmits them.
+// Real TI2 firmware refuses the clear anyway (sim S141); the reset at the give-up ends a halt.
+static void rx_clear_halt(rxep *e)
+{
+    pthread_mutex_lock(&e->mu);
+    e->quiet = 1;
+    for (int s = 0; s < RX_PENDING; s++)
+        if (e->busy[s])
+            libusb_cancel_transfer(e->t[s]);
+    struct timeval now;
+    gettimeofday(&now, NULL);
+    long ns = (now.tv_usec + 500000) * 1000L; // 0.5 s at most
+    const struct timespec until = {now.tv_sec + ns / 1000000000L, ns % 1000000000L};
+    while (e->inflight > 0 && pthread_cond_timedwait(&e->cv, &e->mu, &until) != ETIMEDOUT)
+        ;
+    pthread_mutex_unlock(&e->mu);
+    libusb_clear_halt(e->v->h, e->ep);
+    pthread_mutex_lock(&e->mu);
+    e->quiet = 0;
+    pthread_mutex_unlock(&e->mu);
+}
+
 static void *reader(void *p)
 {
     rxep *e = p;
@@ -233,11 +265,16 @@ static void *reader(void *p)
                 continue;
             }
             if (vti_libusb_stalled(r)) // the standard CLEAR_FEATURE(ENDPOINT_HALT), as WinUsb_ResetPipe on Windows
-                libusb_clear_halt(v->h, ep);
+                rx_clear_halt(e);
             usleep(10000); // never a tight loop on errors (#37: ~25000 a second, 300 MB of log)
             pthread_mutex_lock(&e->mu); // the failed transfer goes out again (fits: its record was just taken)
             if (!v->closing && rx_submit(e, rec.slot))
                 vti_rxq_push(&e->q, rec.slot, -4, NULL, 0);
+            int s; // and those parked for the clear or for room
+            while (!v->closing && e->parked && vti_rxq_may_resubmit(&e->q, (unsigned)e->inflight + 1) &&
+                   (s = vti_unpark(&e->parked)) >= 0)
+                if (rx_submit(e, s))
+                    vti_rxq_push(&e->q, s, -4, NULL, 0);
             pthread_mutex_unlock(&e->mu);
             continue;
         }

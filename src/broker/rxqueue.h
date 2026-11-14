@@ -78,11 +78,15 @@ static inline int vti_rx_hand_on_after_giveup(int err) { return err == 0; }
 
 // What a completed transfer does (rx_done). While the close runs (`closing`: transfers cancelled, readers still
 // draining) data still goes on but nothing is resubmitted (S139: a dump across a recovery reopen lost 8 packets).
-enum { VTI_RX_QUEUE_RESUBMIT, VTI_RX_ERROR, VTI_RX_QUEUE, VTI_RX_DROP };
-static inline int vti_rx_done_action(int closing, int err)
+// While the reader clears a halt (`quiet`: the endpoint's transfers cancelled first, the kernel warns about a clear on
+// an endpoint with transfers queued, S142) what comes back is parked for the resubmit after the clear; data still on.
+enum { VTI_RX_QUEUE_RESUBMIT, VTI_RX_ERROR, VTI_RX_QUEUE, VTI_RX_DROP, VTI_RX_QUEUE_PARK, VTI_RX_PARK };
+static inline int vti_rx_done_action(int closing, int quiet, int err)
 {
     if (closing)
         return err ? VTI_RX_DROP : VTI_RX_QUEUE;
+    if (quiet)
+        return err ? VTI_RX_PARK : VTI_RX_QUEUE_PARK;
     return err ? VTI_RX_ERROR : VTI_RX_QUEUE_RESUBMIT;
 }
 

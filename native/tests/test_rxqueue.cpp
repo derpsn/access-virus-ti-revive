@@ -114,8 +114,19 @@ TEST(rxqueue_a_completion_while_closing_is_handed_on_not_resubmitted)
     // S139: between the close's stop and its cancels the Virus kept sending (a dump at ~172 events/s), and what the
     // transfers brought then was dropped: a dump across a recovery reopen came back 8 packets short. Now the close
     // cancels first and the readers hand on what still completes; nothing goes out again.
-    CHECK_EQ(vti_rx_done_action(0, 0), VTI_RX_QUEUE_RESUBMIT); // normal: queue the data, read again
-    CHECK_EQ(vti_rx_done_action(0, -9), VTI_RX_ERROR);         // an error: the reader decides
-    CHECK_EQ(vti_rx_done_action(1, 0), VTI_RX_QUEUE);          // closing: the data still goes on
-    CHECK_EQ(vti_rx_done_action(1, -1), VTI_RX_DROP);          // closing: a cancelled transfer brings nothing
+    CHECK_EQ(vti_rx_done_action(0, 0, 0), VTI_RX_QUEUE_RESUBMIT); // normal: queue the data, read again
+    CHECK_EQ(vti_rx_done_action(0, 0, -9), VTI_RX_ERROR);         // an error: the reader decides
+    CHECK_EQ(vti_rx_done_action(1, 0, 0), VTI_RX_QUEUE);          // closing: the data still goes on
+    CHECK_EQ(vti_rx_done_action(1, 0, -1), VTI_RX_DROP);          // closing: a cancelled transfer brings nothing
+}
+
+TEST(rxqueue_before_a_clear_the_endpoints_transfers_come_back_and_wait)
+{
+    // S142 (real kernel): 125 x "called USBDEVFS_CLEAR_HALT for active endpoint": the reader cleared a halt while the
+    // endpoint's other transfers were still queued. Now they are cancelled first; what comes back waits (parked) for
+    // the clear and goes out after it, data still handed on.
+    CHECK_EQ(vti_rx_done_action(0, 1, 0), VTI_RX_QUEUE_PARK);
+    CHECK_EQ(vti_rx_done_action(0, 1, -1), VTI_RX_PARK); // cancelled for the clear
+    CHECK_EQ(vti_rx_done_action(0, 1, -9), VTI_RX_PARK); // failed on the halt before its cancel: the clear covers it
+    CHECK_EQ(vti_rx_done_action(1, 1, 0), VTI_RX_QUEUE); // the close wins
 }
