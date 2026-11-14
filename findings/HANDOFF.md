@@ -92,8 +92,7 @@ message, only in a joint check with the user (by the dates above: #28 from 2026-
 
 - [ ] README + site: new features, Intel Mac line only once #33 confirms Logic; remove the README "Preview" block.
 - [ ] `tirevive-site-check` over the whole round.
-- [ ] Full test round on all three platforms: `python3 scripts/risk.py --round 0.8.41` (class C everywhere; Mac by
-      hand: sleep), `scripts/hil.sh` on Linux, checklist artifact via `scripts/checklist.py`.
+- [ ] Full test round: checklist artifact published (core LC4/WC4/MC4/MC5 + L1-L4, W1-W2, M1-M3), runs pending.
 - [ ] Release text heredoc in `.github/workflows/build.yml` ("New in 0.8.41") checked before the tag.
 - [x] #34 "bank sync failed in 11.9 s" looked into (E529): timing fits cut-short bank info replies (flaky USB), not
       the note pause; memsync now logs wrong-size / missing replies (MemorySync::log).
@@ -139,11 +138,10 @@ message, only in a joint check with the user (by the dates above: #28 from 2026-
 
 ## NEXT
 
-00. Waiting on reporters: #37 (libusb test in Logic), #30 (Snow meters, rc5), #40 (#30/#39 views),
-    #36 (BC2001.syx, asked 11-14).
+00. Waiting on reporters: #37 (libusb test in Logic, 0.8.42 work), #30 (Snow meters), #40, #36 (BC2001.syx).
     Check issues only together with the user.
-0a. live-later on the Mac: switch it on in the CC, keystamp run like E518 A, spacing should be 24000 +-1 (E519).
-0b. Level 2 done twice (E527). Linux re-link accepted, in README + site. One-probe fix 2d69cc8: sim stand-in OK
-    (S144, at most 1 pending during a stall; kernel run not done, optional). Then the Mac: rc8 + "Virus TI MIDI" + live-later check with a round build
-    (rc9 = everything since rc8 incl. E529's new log lines).
-1. Then the "To do before the final 0.8.41" list.
+0. 0.8.41 FINAL TODAY (user): CI test build 43617677008 (8df3a01) running; then install on Linux + hil.sh (L1),
+   win11 /quiet, Mac pkg + install command; user tests by the checklist
+   https://claude.ai/artifact/7j2tvTcAc19iNynNjfnSwM (spec scripts/checklists/round-0.8.41.json; M2 = the
+   live-later keystamp check, M1 = "Virus TI MIDI" listed). Meanwhile: README/site, build.yml "New in 0.8.41",
+   site check. Then merge -F, verify, tag, release CI, site rebuild.
