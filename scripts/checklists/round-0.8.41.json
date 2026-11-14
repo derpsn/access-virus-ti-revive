@@ -1,0 +1,128 @@
+{
+ "round": "0.8.41",
+ "core": "core.json",
+ "core_items": [
+  "LC4",
+  "WC4",
+  "MC4",
+  "MC5"
+ ],
+ "lead": "Final test of 0.8.41 before today's release: the CI test build 43617677008 of the round head (8df3a01), with everything since rc8 (Mac MIDI input \"Virus TI MIDI\", 8 reads pending per MIDI endpoint, unlink at the DAW's close, option live-later, new sync log lines). risk.py: class C on all three systems, so the automated core runs (Linux hil.sh: cold, reopen, export, sleep; Mac hil-mac and the VM hil-win: cold, reopen, export), by hand Virus off/on everywhere and sleep on the Mac. The round's own items cover what no rc test showed yet. The libusb audio path (#37) is not in this release. Mark each item and add a note where something looks different; Claude reads the marks from this page.",
+ "rules": [
+  "Order: Linux first (the Virus is there), then the Mac, then the Windows VM. Close the DAW before the Virus moves.",
+  "Never power-cycle the Virus while it is attached to the VM.",
+  "Use a disposable project. Nothing in this round stores to the Virus.",
+  "No game or other heavy program running during the timing items."
+ ],
+ "sections": [
+  {
+   "id": "linux",
+   "title": "Linux",
+   "where": "This PC, REAPER, the 0.8.41 CI build (installed by Claude)",
+   "prep": [
+    "Nothing to install. The Virus is on Linux. Claude runs hil.sh first and posts the result here."
+   ],
+   "items": [
+    {
+     "id": "L1",
+     "title": "Automated core run (Claude runs it)",
+     "steps": [
+      "Claude runs <code>scripts/hil.sh</code> with the installed CI build."
+     ],
+     "expect": "ALL PASS (cold start, two reopens after the idle exit, export, broker killed while playing). The broker journal has <code>link off</code> after each session and no <code>vti: read ep</code> errors."
+    },
+    {
+     "id": "L2",
+     "title": "Options page",
+     "steps": [
+      "Open the Control Center, page Options.",
+      "Check the list, switch <b>Even rhythm for played notes</b> on, open the plug-in in REAPER, then switch it off again."
+     ],
+     "expect": "All options listed with their texts (lower latency, slip restart, live notes, even rhythm, plug-in log ...); the plug-in log shows the option on for that session (Claude checks)."
+    },
+    {
+     "id": "L3",
+     "title": "Arpeggiator after a 1-bar count-in (#30)",
+     "steps": [
+      "REAPER, a patch with the arpeggiator on, a MIDI item holding a chord from bar 2.",
+      "Record or play with a 1-bar count-in (Options, Metronome, count-in before playback), three times; then once from the middle of a bar."
+     ],
+     "expect": "The arpeggio starts on the beat with the click each time, also after the count-in; no stumble at the restart."
+    },
+    {
+     "id": "L4",
+     "title": "Close and reopen REAPER",
+     "steps": [
+      "Close REAPER with the plug-in loaded, wait 10 s, open the project again and play."
+     ],
+     "expect": "It plays as before after the reopen (unlink at the close and link again before the next session). No hanging notes."
+    }
+   ]
+  },
+  {
+   "id": "vm",
+   "title": "Windows 11 VM",
+   "where": "win11 VM, Ableton Live, the 0.8.41 CI build (installed by Claude, setup.exe /quiet)",
+   "prep": [
+    "Claude passes the Virus through to the VM and runs <code>hil-win</code> for the automated core items."
+   ],
+   "items": [
+    {
+     "id": "W1",
+     "title": "Automated core run (Claude runs it)",
+     "steps": [
+      "Claude runs hil-win in the VM."
+     ],
+     "expect": "Pass on cold start, reopen and export (drift up to about 120 ppm is the VM, accepted before)."
+    },
+    {
+     "id": "W2",
+     "title": "Plays in Live; Options page and lower latency",
+     "steps": [
+      "Open the plug-in in Live, play a clip 30 s.",
+      "In the Control Center, Options: switch <b>lower latency</b> on, reload the plug-in, play again; then off."
+     ],
+     "expect": "Plays cleanly both times; with lower latency on, Live shows a smaller plug-in delay. VM USB timing is not exact, so crackle here proves little, missing notes do."
+    }
+   ]
+  },
+  {
+   "id": "mac",
+   "title": "macOS",
+   "where": "MacBook Air M3, Ableton Live 12 and Logic Pro, the 0.8.41 CI build (you install the package; Claude pushes it)",
+   "prep": [
+    "Quit the DAW, then double-click <code>Install test build.command</code> in <code>~/Downloads/TI-Revive-0.8.41-mac</code>, or paste: <code>sudo installer -pkg \"$HOME/Downloads/TI-Revive-0.8.41-mac/TI Revive.pkg\" -target /</code>",
+    "Move the Virus' USB cable to the Mac and switch it on if needed. Claude checks the installed version with pkgutil before trusting a result.",
+    "Run <code>hil-mac.command</code> from the package for the automated core items (cold start, reopen, export)."
+   ],
+   "items": [
+    {
+     "id": "M1",
+     "title": "MIDI ports \"Virus TI Synth\" and \"Virus TI MIDI\"",
+     "steps": [
+      "With the plug-in loaded in Live: Settings, Link/Tempo/MIDI. Then Logic, MIDI settings or a track's input menu."
+     ],
+     "expect": "Both inputs are listed, \"Virus TI Synth\" and the new \"Virus TI MIDI\" (the DIN MIDI In). Nothing on DIN to test with, so only that they show up."
+    },
+    {
+     "id": "M2",
+     "title": "Even rhythm for played notes (live-later)",
+     "steps": [
+      "Control Center, Options: switch <b>Even rhythm for played notes</b> on.",
+      "Live, plug-in track armed, monitor In: run keystamp from <code>~/tirevive-test/keystamp</code> as in the E518 test (run A), then switch the option off again."
+     ],
+     "expect": "Played notes sound evenly spaced; Claude reads the plug-in's klog lines: spacing 24000 +-1 frames for every note (with the option off it was up to +-128)."
+    },
+    {
+     "id": "M3",
+     "title": "Logic: arpeggiator after a 1-bar count-in (#30)",
+     "steps": [
+      "Logic, the Audio Unit on a track, an arp patch, a region with a chord from bar 2.",
+      "Record with a 1-bar count-in three times."
+     ],
+     "expect": "The arpeggio starts on the beat with the click every time (the #30 reporter confirmed it on a Snow with rc5; this is our own check)."
+    }
+   ]
+  }
+ ]
+}
