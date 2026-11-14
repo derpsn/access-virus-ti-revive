@@ -7,6 +7,7 @@
 #include <string.h>
 #include "writeretry.h" // all platforms: vti_write (Linux and macOS)
 #include "vtireaderr.h" // when a reader clears a stall, waits, or gives up (#37)
+#include "linkrule.h"   // link at open, unlink at close like the original driver (E524)
 #include "rxqueue.h"   // 8 reads pending per MIDI endpoint, the callback only queues (E521)
 #include <errno.h>
 #include <sys/time.h>
@@ -68,6 +69,7 @@ struct vti {
     pthread_t ev;           // handles libusb events for the transfers (sync calls elsewhere handle them too)
     volatile int ev_stop;
     int started;            // rx_start ran: rx_stop on close
+    int linked;             // the last link message sent (E524)
     uint8_t bulk[16];       // by endpoint number: 1 = bulk (Virus TI Snow), 0 = interrupt (TI/TI2 Desktop, E021) - E387
     unsigned long idle;     // FF FE 00 00 packets dropped on a bulk EP 0x85 (E387)
 };
@@ -342,6 +344,7 @@ vti *vti_open(vti_rx_cb cb, void *user)
         vti_close(v);
         return NULL;
     }
+    v->linked = 1;
     return v;
 fail:
     if (v->h)
@@ -355,6 +358,8 @@ void vti_close(vti *v)
 {
     if (!v)
         return;
+    if (v->linked && !v->dead) // the original's driver unlinks when it lets the Virus go (E524); readers still drain
+        vti_link(v, 0);
     v->stop = 1;
     if (v->started)
         rx_stop(v);
@@ -442,6 +447,21 @@ int vti_audio(vti *v, int on, const char *event_name) // broker audio exists onl
     (void)event_name;
     return -1;
 }
+
+int vti_link(vti *v, int on)
+{
+    if (!v || v->dead)
+        return -1;
+    uint8_t m[4];
+    vti_link_msg(m, on);
+    int r = vti_write(v, VTI_EP_MI03_OUT, m, sizeof m);
+    if (!r)
+        v->linked = on;
+    vti_log("vti: link %s (4E 73 52 %02X) -> %d\n", on ? "on" : "off", m[3], r);
+    return r;
+}
+
+int vti_linked(vti *v) { return v && v->linked; }
 
 int vti_is_dead(vti *v)
 {

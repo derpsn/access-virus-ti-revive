@@ -289,6 +289,7 @@ Re-attach via virsh detach/attach (no physical replug): host interfaces stayed u
 - **Pointer:** captures/p2-reattach.pcapng (addr 18); vm.sh ps Get-PnpDevice/pnputil
 - **Method:** usbdecode.py, PowerShell
 - **Confidence:** HIGH
+- **Status:** corrected by E524
 
 ### E031
 
@@ -4755,4 +4756,14 @@ The "Virus TI MIDI" filter (keyport.h vti_dinport_filter, 6d9fa12) fed with the 
 - **Pointer:** virus-ti-sim FINDINGS S137 (d991ca6), run keyed-f-dinmix, tools/dinport_feed.c, tools/dinport_check.py; src/broker/keyport.h
 - **Method:** model run, the broker's trace fed through our filter; firmware listing read by the sim
 - **Confidence:** HIGH (2) for our filter on the model's packing / MED (1), (3) model only / MED the F6 reading (static)
+- **Hardware:** no
+
+### E524
+
+What the original does with the link global 0x52 and with a live note's stamp (REA/Ghidra 12.1.4, agent run 2026-11-14 for the user's "it it's like the original, yes"; Mac MIDI driver MidiDriver_x64 52a173fd, vtimidi.sys 18a95971, VirusUSB.sys ea5426ac, Virus Control.dll 5.1.7 x64 a622f9a2; byte scan of 790 of the 815 pcapng captures in work/). (1) The original un-links, in the MIDI driver, with the raw handshake form: Mac, Initialize 0x5ea0 starts the hidden port's 8 reads and sends the raw word `4E 73 52 01` ("sent Open Msg", ev_19f7154b); the device destructor 0x4f80 sends `4E 73 52 00` ("sent Close Msg", then the pipes go, ev_832cf38a); the only three hits of `4E 73 52` in the binary (ev_62803173). Windows: vtimidi.sys, not VirusUSB.sys (no such constant there; corrects E030's attribution), fills EP 0x05 from a small control queue before MIDI data (0x13634): entry 1 = `4E 73 52 01`, entry 2 = `4E 73 52 00`; enqueued by 0x13518, from the stream opens 0x13f50/0x141a4 when the first stream opens and from the stream closes 0x14068/0x142dc when the last one closes (ev_59cb29fe, ev_9811595, ev_e2cb413b). (2) The plug-in never sends 0x52 = 0; at start it sends the SysEx `F0 00 20 33 01 10 73 00 52 01 F7` on EP 0x06 cable 2 (orig-startup-lcd at 12.99 s and 177.7 s; from GlobalInit: inferred). (3) Captures: SysEx `73 00 52 00` in none; raw `4E 73 52 00` 16 times in 14 captures of the original on the Windows VM (orig-patchchange-3, orig-rom-a-fetch-20261101b, orig-switch-display2-20261023, orig-libdrag-1/-2, orig-load-origin-1951, ref-libdrag-3, ref-library-1, ref-browser-1, ref-download-2, remote-page, p2-preset-2, p2-trace, p7-bs-interpose), about 0.3 s after the plug-in's close sequence (ref-browser-1: 7A = 0 at 855.58 and 855.96, `4E 73 52 00` at 856.23), once 24 s later (orig-switch-display2, the DAW closing its ports, inferred); the next session starts with SET_CONFIGURATION and `4E 73 52 01` twice; in no capture of TI Revive. So TI Revive leaves the link on where the original takes it off: the cause of E520 (3), and E520 (6)'s fix is the original's behaviour, though the sim sent the SysEx form, not the raw one. (4) Live stamp, 0x1800a8420 (ev_d1764bb6): 0x18002ffa0 gives a kIsLive event the offset -1; the stamp is the device position read at that moment minus the anchor plus (int)(offset x ratio), the -0x400 branch: our live_stamp(). The original drops the note's place in the block, ours (live_stamp_tl, E512) keeps it, so our stamp is the same or later by up to one block, never earlier; whether its "position" equals our newest frame is open (vtable +0x60 not read). So the original has E519's edge too, or a tighter one (inferred). (5) MED (ev_4815fbb9, ev_28019c73): 0x1800a86b0 sends a note-on with an offset below 1 the normal lead way while B+0xa50 is set and B+0xa54 is below the lead B+0xa6c (fields of the marker search, probably only just after a sync); what sets B+0xa50: open. Position read synchronously in process() on the device thread (D+0x7c), from other threads later via a ring (HIGH). LOW: 0x18002ffa0 treats every note as live when the calling thread equals the one at +0x10c (thread not identified).
+
+- **Date:** 2026-11-14
+- **Pointer:** REA evidence ids above (agent session, not exported); capture scan script and output in the session scratchpad (scan/scan52.py, out.txt, not in git); src/broker/vticore.c:36, native/src/device/stamprule.h
+- **Method:** static analysis (REA/Ghidra) of the user's Access files; byte scan of the captures
+- **Confidence:** HIGH (1), (3), (4) the rule / MED (2) the source of the SysEx, (5) / open: whether the Mac destructor runs in ordinary use; the firmware's handling of the raw form against the SysEx form
 - **Hardware:** no

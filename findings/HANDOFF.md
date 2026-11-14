@@ -93,9 +93,9 @@ message, only in a joint check with the user (by the dates above: #28 from 2026-
 
 - Sim runs: only B144 was killed (2026-11-10, memory guard); plan A and B1-B143 complete and read (S122, S123);
   the extra plan B (s094c) never started, needs the user's OK for the real TI2 (purpose: tighter +64 rate).
-- E520 (6)/(7): send 73 00 52 00 at close so a keyed unit plays stand-alone again? A global: own Virus first (rule 2);
-  check what the original's driver does at release first (REA). Pause the bank sync while keys come in?
-- E519: aim live stamps 64-128 frames later (1.3-2.7 ms) so the Virus always meets them?
+- Pause the bank sync while keys come in (E520 (7))? Not decided.
+- E519 + E524 (4): the original's live stamp has the same edge and drops the note's place in the block; ours is the
+  same or up to a block later. User 11-14: an option is fine if the default stays like the original.
 
 ## To do before the final 0.8.41
 
@@ -113,6 +113,10 @@ message, only in a joint check with the user (by the dates above: #28 from 2026-
       vticore.c (async transfers, event thread, rxqueue.h + 7 tests; reader keeps the E503 rules). Builds clean on
       Linux; NOT run on hardware yet: sim re-run of S135/S136/S134 asked, then hil.sh on the TI2 (Virus to Linux).
 - User 11-14: a message lost to an OUT stall stays lost (no resend), fine.
+- [ ] Unlink like the original (E524; user 11-14 "if it's like the original, yes"): linkrule.h + 3 tests; both
+      brokers send raw 4E 73 52 00 when the last non-observer client leaves and at vti_close, and 4E 73 52 01 again
+      before the next client write. Linux + mingw build clean; NOT run on hardware: on the TI2 check the link-off
+      line in the broker log and that the next session works (hil.sh); a keyed unit plays stand-alone after (sim).
 - [ ] Library scan skips patches as "damaged or unknown format" (#36 log: BC2001 36, Incubation V3 97): check the
       format.
 

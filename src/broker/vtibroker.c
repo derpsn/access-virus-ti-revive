@@ -22,6 +22,7 @@
 #include "vtiaudioshm.h"
 #include "vtiusbaudio.h"
 #include "ratesw.h"
+#include "linkrule.h"
 #include <windows.h>
 #include <stdarg.h>
 #include <stdio.h>
@@ -719,6 +720,8 @@ static DWORD WINAPI client_thread(LPVOID arg)
                 if (buf[0] == VTI_EP_MI04_OUT && !c->notes && vti_has_note_on(buf + 1, h.len - 1))
                     c->notes = 1;
                 EnterCriticalSection(&g_cs_dev);
+                if (g_dev && vti_link_on_now(vti_linked(g_dev))) // the last user had unlinked it (E524)
+                    vti_link(g_dev, 1);
                 int r = g_dev ? vti_write(g_dev, buf[0], buf + 1, h.len - 1) : -1;
                 LeaveCriticalSection(&g_cs_dev);
                 if (g_verbose || r)
@@ -794,6 +797,9 @@ static DWORD WINAPI client_thread(LPVOID arg)
     for (int i = 0; i < MAX_CLIENTS; i++)
         if (g_clients[i] == c)
             g_clients[i] = NULL;
+    int users = 0; // plug-ins and the Control Center: when the last one is gone, unlink like the original (E524)
+    for (int i = 0; i < MAX_CLIENTS; i++)
+        users += g_clients[i] && !g_clients[i]->observer;
     if (g_plugin_owner == c) { // hand the Virus to the next waiting plug-in (another program)
         g_plugin_owner = NULL;
         for (int i = 0; i < MAX_CLIENTS && !g_plugin_owner; i++)
@@ -801,6 +807,12 @@ static DWORD WINAPI client_thread(LPVOID arg)
                 g_plugin_owner = next = g_clients[i];
     }
     LeaveCriticalSection(&g_cs_clients);
+    if (!c->observer) {
+        EnterCriticalSection(&g_cs_dev);
+        if (g_dev && vti_link_off_now(vti_linked(g_dev), users))
+            vti_link(g_dev, 0);
+        LeaveCriticalSection(&g_cs_dev);
+    }
     if (next) {
         blog("the next program's plug-in owns the Virus now");
         send_state(next);
