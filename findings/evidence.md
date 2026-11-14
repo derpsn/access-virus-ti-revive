@@ -4746,3 +4746,13 @@ E503's stall handling run against a simulated Virus (simulator S135, virus-ti-si
 - **Method:** model run with injected stalls, the broker's and the stand-in's logs
 - **Confidence:** HIGH (1)-(5), (7) for our code's logic, model only / the real kernel path open
 - **Hardware:** no
+
+### E523
+
+The "Virus TI MIDI" filter (keyport.h vti_dinport_filter, 6d9fa12) fed with the unit's own MIDI In packing (simulator S137, virus-ti-sim d991ca6, model only: the virtual TI1 Keyboard with the plug-in link up; one of each message a keyboard sends played into MIDI In; the sim's tools/dinport_feed.c ran our filter over EP 0x85 transfers from the broker's trace; run once, isolation clean). (1) The unit packs MIDI In on cable 0 as whole channel events (running status made whole, e.g. 09 90 3e 64), real-time bytes as CIN F (0f f8 00 00, FE too), F2 as CIN 3, F1 and F3 as CIN 2, SysEx as CIN 4, 4, 4, 6 about 4-6 ms apart. (2) Our filter passed 18 of 19 played messages whole and in order, and nothing that was not played; the 19th, F6 (tune request), never left the unit: in the firmware's packer (0x23b9) F1, F3 and F6 share one branch (0x2466) that waits for a data byte, so F6 is dropped when the next status comes (static, the sim's reading); the note after it came through. (3) A SysEx reaches our callback in its USB pieces (f0 41 10 / 42 12 40 / 00 7f 00 / 41 f7), each handed to CoreMIDI as its own packet; active sensing (FE) from a keyboard passes, about every 300 ms. Not tried: real-time bytes inside another message or a SysEx; how CoreMIDI and DAWs take a SysEx spread over several packets (macOS only, not run).
+
+- **Date:** 2026-11-14
+- **Pointer:** virus-ti-sim FINDINGS S137 (d991ca6), run keyed-f-dinmix, tools/dinport_feed.c, tools/dinport_check.py; src/broker/keyport.h
+- **Method:** model run, the broker's trace fed through our filter; firmware listing read by the sim
+- **Confidence:** HIGH (2) for our filter on the model's packing / MED (1), (3) model only / MED the F6 reading (static)
+- **Hardware:** no
