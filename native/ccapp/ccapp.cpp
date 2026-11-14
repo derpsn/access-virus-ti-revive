@@ -300,7 +300,7 @@ private:
         if (p != kNerdPage && p != kOptionsPage)
             look_ = p;
         CPoint size = p == kNerdPage      ? CPoint(tirevive::kNerdWidth, tirevive::kNerdHeight)
-                      : p == kOptionsPage ? CPoint(tirevive::kOptionsWidth, tirevive::kOptionsHeight)
+                      : p == kOptionsPage ? CPoint(tirevive::kOptionsWidth, tirevive::options_page_height())
                       : p == kSkinPage    ? tirevive::skin_page_size(skin_)
                                        : CPoint(W, H);
         main_->setVisible(p == kPlainPage);

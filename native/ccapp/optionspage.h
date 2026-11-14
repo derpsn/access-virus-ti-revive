@@ -8,9 +8,12 @@
 
 namespace tirevive {
 
-constexpr VSTGUI::CCoord kOptionsWidth = 640, kOptionsHeight = 470;
+// The page's width, and the tallest it gets: more options than fit scroll (cc/optionslayout.h)
+constexpr VSTGUI::CCoord kOptionsWidth = 640, kOptionsMaxHeight = 640;
 
-// The page (kOptionsWidth x kOptionsHeight at 0,0), hidden. `back` is called by its "Back" button.
+// The page's height for the current options (as many rows as fit under kOptionsMaxHeight, then a scrollbar).
+VSTGUI::CCoord options_page_height();
+// The page (kOptionsWidth x options_page_height() at 0,0), hidden. `back` is called by its "Back" button.
 VSTGUI::CViewContainer *make_options_page(std::function<void()> back);
 // Shows / hides it; showing reads the options' current state again.
 void set_options_page_active(VSTGUI::CViewContainer *page, bool on);
