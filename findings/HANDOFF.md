@@ -5,146 +5,105 @@ NEXT. At most 150 lines; the Stop hook (`.claude/hooks/handoff-check.sh`) refuse
 how goes into the dated log [`log/2026-11.md`](log/2026-11.md) (newest first); older logs are in [`log/`](log/).
 Device/protocol knowledge goes into [`evidence.md`](evidence.md). Update this file in the same commit as the work._
 
-Last update: 2026-11-14 evening: 0.8.41 final test round; Linux + VM done, Mac in progress (pkg 7a631315).
+Last update: 2026-11-14 late evening: 0.8.41 Latest; #37 libusb audio works on Catalina, #30 closed; next round 0.8.42.
 
-## Round
+## Where things stand
 
-- **v0.8.41-rc8** pre-release 2026-11-14 (tag on 8bc8de7): rc7 crash fix without Access files + Live Mode hint
-  (E518). Release CI 43567076613 all green, 6 assets, Latest stays 0.8.40; main 5fc470c preview box. Open: #39
-  reply with the hint, together with the user.
-- **On the round since rc8 (not in a build yet; next rc or final):** "Virus TI MIDI" input on macOS (E521/E523),
-  libusb reader with 8 transfers pending + its fixes (E525-E527, last 2d69cc8), unlink like the original (E524,
-  E526), option live-later (E519). hil.sh ALL PASS on the TI2 with the round broker (E526); Linux re-link by
-  snd-usb-audio accepted and documented (E527).
-- **macOS without Apple's audio driver (option A, E511):** vtiaudioprobe on our Mac (macOS 27) WORKS as root: the
-  Virus taken from usbaudiod, 20.5 s streamed with the broker's Linux code, C4 on USB 1, slip share 0.01-0.03, given
-  back cleanly; as user LIBUSB_ERROR_ACCESS. Needs -usb (Global Mode 3 + Output Select 10, as the plug-in's start).
-  Open: Catalina (kernel AppleUSBAudio) via the #37 reporter (probe in the Catalina artifact, dev-mac 43495785623);
-  discussion with the three reporters in #40; decision after the #37 report (user). Design for 0.8.42+.
-- Round **0.8.41** on branch `round-0.8.41` (pushed); **final planned for 2026-11-14** (user): CI test build of the
-  round head, checklist, release; 0.8.40 Latest until then; earlier rcs in log/2026-11.md.
-- In 0.8.41: experimental lower latency (option `low-latency`, off by default, E496), Control Center Options page,
-  slip detector + automatic restart (`slip-restart`, on by default, E488), freeze alert page (E493), burst counter
-  (E490), Mac pkg refuses macOS < 14.4, plug-in log on by default (`diag.off` switches it off), Rise Message 4 per
-  fetched patch (E499/E502), LCD/sync page names each fetched patch, Windows broker error 433 = gone,
-  libusb reader stall handling (E503), Windows setup unplug step (E504), and since rc3 (not in a build yet):
-  E497 fix d7a0d1f (user 2026-11-12: "put E497 in 0.8.41") - a re-sync ping sent during a marker scan pass keeps
-  its 5 s (device/markerscan.h, test_markerscan.cpp; the two race tests failed on the old logic first); CI run
-  43369222561 (2026-11-13, all green) has it. Since then (user 2026-11-13: "Into 0.8.41 ... like the original"):
-  transport restarts like the original (E505, #30 count-in arp): F2 from ppq + 256, 73 00 23 vv on the next tick,
-  F8 grid rephased, FC at Stop, the original's jump limits (transport.h, test_transport.cpp, nativehost --count-in).
+- **0.8.41 is released and Latest** (2026-11-14, user "Ship it"): tag v0.8.41 on main 266cb46 = merge 6e4c632
+  (main 5fc470c + round e5f84e8) + one commit that drops main's rc8 preview block from the README (it survived the
+  merge without a conflict: check that at every round merge). Release CI 43625111066 green, 6 assets. Site rebuilt
+  by hand (site.yml 43625667337): Download 0.8.41, no preview box, 753 tests, coverage 96.4 %.
+- **Where the newest files are:** after the merge, `round-0.8.41` got HANDOFF/log commits only (74c8832 on); its tree
+  is main's plus those docs, but it lacks main's merge commit. Start round 0.8.42 as a branch from `origin/main`, then
+  `git merge origin/round-0.8.41` (docs only) so this HANDOFF comes along. Push the new branch with an explicit
+  refspec (`<b>:refs/heads/<b>`), check origin/main unchanged.
+- Test round of 0.8.41: checklist https://claude.ai/artifact/7j2tvTcAc19iNynNjfnSwM (spec
+  scripts/checklists/round-0.8.41.json). Linux L1-L4 + LC4 pass (hil.sh ALL PASS); Mac hil-mac ALL PASS, M1-M3,
+  MC4, MC5 pass; VM W2, W3 pass, WC4 skipped, W1 passed by the user as VM-related (E533). Found and fixed in the
+  round: the Control Center Options page cut off its 7th row (cc/optionslayout.h, b7b6779). M2 (E534): live-later
+  halves the played-note spread (<= 1.3 ms instead of 2.7 ms) but is not exact; texts made honest, code unchanged.
+- Contents of 0.8.41: build.yml "New in 0.8.41" (release page) and the What's New entry (native/src/editor/infopage.h).
 
 ## Machines and the Virus
 
-- Our TI2 Desktop: back on **Linux** (2026-11-14, after hil.sh and two level-2 slots with it unplugged; the user
-  switched it on again). User flashed ROM Z on it in early November (E500).
-- Linux: rc8 CI build installed (plug-in 7e3bdd83, broker 2e75801c = rc8's, restored after the round-broker run).
-- win11 VM: rc8 MSI installed (/quiet, exit 0, VST3 3d9f7dbf), shut down. win10 VM: snapshot `pre-i36` (0.8.36).
-- Branch `catalina-test` (../virus-ti-re-catalina): x86_64 / 10.15 build for #37, never in main.
-- Mac (macOS 27.2.1): rc7 installed; rc8 package + install command in ~/Downloads/TI-Revive-0.8.41-rc8 (user to
-  install). Live 12 Suite, keystamp in ~/tirevive-test/keystamp; klog.on, noteprobe.on set (harmless).
-- Branch `libusb-audio` (Mac libusb path, opt-in for old macOS): last merged round state before rc8; merge the
-  round again before its next build.
+- Our TI2 Desktop: on **Linux** USB (2026-11-14 evening). User flashed ROM Z on it in early November (E500).
+- Linux: 0.8.41 release installed (plug-in 184badb2, broker 728db830, Control Center 0.8.41).
+- win11 VM: 0.8.41 release installed (/quiet exit 0), shut down. TUNED 2026-11-14 (E533): vCPUs pinned to P-cores
+  4-7, emulator 2-3, topology 1/2/2, no emulated sound / SPICE USB redirect / balloon, evmcs+avic off, ISOs off;
+  guest High performance, USB selective suspend off (AC). Backup: work/vm/win11-before-tuning-20261114.xml.
+  Before VM timing tests: `sudo cpupower frequency-set -g performance` (user). hil-win on the tuned VM: not run.
+  win10 VM: snapshot `pre-i36` (0.8.36). No spare USB controller for VFIO (user: no extra hardware for now).
+- Mac (macOS 27.2.1): CI build 43620201798 installed (= 0.8.41 except texts). The RELEASE package is ready locally in
+  work/rel-0.8.41/mac-push/TI-Revive-0.8.41-release (pkg 643f73d4, INSTALL-COMMAND + "Install test build.command");
+  the Mac did not answer over SSH: push it to ~/Downloads when it is awake (scripts/mac.sh push), the user installs.
+  Option files there: live-later.on (left from M2), klog.on, noteprobe.on, live-notes.on, diag.on.
+- Branches: `libusb-audio` (Mac libusb path, merge main before its next build), `libusb-catalina` (worktree
+  ../virus-ti-re-catalina, the #37 test build, dev-mac 43512216308), `catalina-test` (old). Local scratch branch
+  `release-0.8.41` (merge worktree in this session's scratchpad) can be deleted.
 
-## Open issues (as of 2026-11-14 morning; check GitHub only together with the user)
+## Open issues (checked with the user 2026-11-14 evening; check GitHub only together with the user)
 
 | Issue | Topic | Waits on | Last from us |
 |---|---|---|---|
-| #26 | Snow, Linux REAPER timing / clicks | reporter (REAPER audio system, pw-jack test, rc3) | 2026-11-12 |
-| #28 | numbers 100-127 moved 5 px | reporter (confirm, close on yes) | 2026-11-09 |
-| #30 | Snow, Logic: rc4 "nailed it"; arp after 1-bar count-in confirmed (18:00, E505); only the plug-in window's meters (Logic's are fine) | reporter: rc5 posted 11-13 18:53 (meters on a real Snow?) | 2026-11-13 |
-| #31 | Win10 VirtualBox, Snow, setup with Access drivers | reporter (rc3 setup with the unplug step) | 2026-11-12 |
+| #26 | Snow, Linux REAPER timing | reporter: pw-jack test; 0.8.41 note | 2026-11-14 |
+| #28 | numbers 100-127 moved 5 px | reporter: confirm, close on yes | 2026-11-09 |
+| #31 | Win10 VirtualBox, Snow, setup with the Access driver | reporter: setup unplug step report; 0.8.41 note | 2026-11-14 |
 | #32 | (no change since 11-10) | reporter | before 11-10 |
-| #33 | Intel Mac, 0.8.39: Ableton fine, Logic distorted until a buffer change, back at the next start; log: no slip, rates match, no drops (E532) | reporter: Logic output device = Virus?, distortion on the unit's outputs too?, update to 0.8.41 (issuecomment-6881144202) | 2026-11-14 |
-| #34 | TI2/Keyboard macOS Ableton crackle, right channel at full scale | reporter (2 Outs, 44.1 kHz, no hub, record input 3/4) | 2026-11-12 |
-| #36 | Windows Cubase bank sync 0/128 | reporter (rc2: display, hub/cable, 3 checks; BC2001.syx asked 11-14) | 2026-11-14 |
-| #37 | Catalina: slips (E510) restarted by rc6 (2 in 3 h, then clean, Later), still a faint crackle not visible in the plug-in; probe run 2: C4s on the headphones but not on USB 1 (E511 Later) | reporter: libusb test in Logic (broker + plug-in, asked again 11-14, issuecomment-6876859556; 12:00 first try ran the old broker as root, pkg not installed (E511 Later), reinstall + strings check asked, issuecomment-6877363338), crackle on the headphones too?, Logic output device + buffer | 2026-11-14 |
-| #38 | macOS 27 Live: editor / AU crash | reporter (crash report, Access files) | 2026-11-10 |
-| #39 | TI1 Keyboard in Live: settled as the unit's pace (E515-E518); doubled notes = Local On + Monitor In, reproduced with TI Revive and the original on the sim (E530, E531). Reporter closed it 11-14 10:51 after our 'middle ground' comment; our follow-up with the result posted 11-14 (issuecomment-6876775320). | nobody (closed) | 2026-11-14 |
-| #40 | (ours) macOS: TI Revive takes the Virus' audio itself (libusb, E511) as an option? asks #30/#37/#39 reporters | #37 reporter answered 11-13 21:14: barely uses it as sound card, wants a unit/soundcard switch, admin rights ok, Logic on Catalina; #30/#39 reporters not yet | 2026-11-13 |
+| #33 | Intel Mac 0.8.39: Logic distorted until a buffer change; log clean on the way in, not a slip (E532) | reporter: Logic output device, distortion on the unit's outputs?, 0.8.41 log | 2026-11-14 |
+| #34 | TI2/Keyboard macOS crackle, bank sync failed 11.9 s (E529) | reporter: new log with 0.8.41 | 2026-11-14 |
+| #36 | Windows Cubase bank sync 0/128 | reporter: BC2001.syx, new log with 0.8.41 | 2026-11-14 |
+| #37 | Catalina: libusb test build WORKS (no crackle 64-1024, one slip at 512 healed by the stream restart); exit: give-back to Apple fails + libusb refcnt assertion | us: a test build that installs like the normal package (no Terminal) before 0.8.42; user promised official Catalina support in 0.8.42 | 2026-11-14 |
+| #38 | macOS 27 Live: AU/editor crash, not reproduced | reporter: crash report + log with 0.8.41 | 2026-11-14 |
+| #40 | (ours) macOS libusb audio as an option? | #39 reporter; #37 = first real data point (works) | 2026-11-13 |
 
-Every open issue waits on its reporter. Quiet-issue rule: 7 days after our last request, close with the AGENTS.md
-message, only in a joint check with the user (by the dates above: #28 from 2026-11-16, #38 from 2026-11-17, #33 from 2026-11-21, #36 from 2026-11-21; #32: look up its date first).
+#39 closed by the reporter (doubled notes = Local On + Monitor In, E530/E531). #30 closed by us 2026-11-14 with the
+user: all works, Snow meters visible in the plug-in (evidence entry still to write). Quiet-issue rule: 7 days after our
+last request, close with the AGENTS.md message, only in a joint check with the user: #28 from 2026-11-16, the
+others from 2026-11-21 (#40 is ours: no closing; #32: look up its date first).
 
-## Not verified on hardware yet (all: `evidence.py list --no-hardware`)
+## Not verified on hardware
 
-- E503 libusb reader stall handling (5660a93): sim level 1 DONE (E522, C1-C7 held on the model: our broker on its
-  virtual TI + stand-in libusb, STALL cases on 0x85/0x86/0x06); level 2 (usbip, real libusb)
-  needs sudo with the user.
-- Windows broker error 433 = device gone (5af74bd): mingw build + unit test only.
-- Windows setup unplug step (c6313b4, E504): the unplug path never exercised (no Virus on the Access driver).
-- E497 fix: DONE on the TI2 (E506): 0 of 239 re-syncs missed in 60 sessions (mixed build, both parts 0).
-- Transport restarts (E505): DONE on the TI2 for wire + note timing (count-in, between ticks, low-latency on,
-  FC; rc3 baseline sends F2 00 00). The arpeggiator itself not heard: sim model (asked) and Logic on the Mac.
+- libusb reader stall handling (E503) at kernel level with 8 transfers pending (level 2, needs sudo); sim held.
+- Windows broker error 433 = device gone: unit test only (WC4 skipped in the VM).
+- Windows setup unplug step (E504): never run with a Virus on the Access driver (win10 snapshot `pre-i36-access`
+  could do it).
+- Mac "Virus TI MIDI": the input shows up (M1); nothing played through it (no keyboard at the MIDI In here).
+- Unlink on a real Keyboard/Polar: sim only (E525); on Linux, Windows (W3) and our Desktop the link lines are fine.
+- Mac pkg refusing macOS < 14.4: no old Mac here.
+- Full list: `python3 -I scripts/evidence.py list --no-hardware`.
 
-## Open decisions for the user
+## Round 0.8.42 candidates (decided unless marked proposed)
 
-- None open. Decided 2026-11-14 (user): no pause of the bank sync for the unit's own keys (E520 (7)), like the
-  original - keys stay late during a sync, none lost; the DAW-notes pause (E153) stays as it is. The extra plan B
-  (s094c, tighter +64 rate) is not run: no longer round needed; the +64 re-sync stays a 0.8.42 candidate.
-- E519/E524 (4) decided (user 11-14 "sounds good"): option live-later (off by default, +128 frames for played notes,
-  stamprule.h LIVE_LATER_FRAMES, diag.cpp, 2 tests, README + site); not run on a Mac yet.
-
-## To do before the final 0.8.41
-
-- [x] README + site: round features added (lower latency, Options page, scrambled restart, freeze alert, count-in,
-      unlink), Preview block removed, TESTS 753, coverage 96.4 %, MIDI In seen on our Mac; Intel line unchanged.
-- [x] Site check (delta, 2026-11-14): live-later text honest (E534), the rest ok against E488-E534.
-- [x] Full test round: all pass (W1 by user decision, E533; WC4 skipped; M2 = E534: option halves the spread, not exact).
-- [x] Release text in build.yml: post-rc7 items added (live-later honest, MIDI In, unlink, 8 reads, logs); What's New too.
-- [x] #34 "bank sync failed in 11.9 s" looked into (E529): timing fits cut-short bank info replies (flaky USB), not
-      the note pause; memsync now logs wrong-size / missing replies (MemorySync::log).
-- [ ] MIDI In port "Virus TI MIDI" (user 11-14: "close the gap"): done on the round (keyport.h vti_dinport_filter
-      as the original's "MIDI" entity, E521 (4); vtikeyport_mac.c second source "VTI0"; 4 tests; README + site).
-      Mac build via dev-mac CI; not run yet (Mac check: the port shows up; no MIDI-In device here). Windows/Linux
-      still have no key port at all.
-- [ ] 8 reads pending per MIDI endpoint like the original (E521 (1); user 11-14: "yes and in this round"): done in
-      vticore.c (async transfers, event thread, rxqueue.h + 8 tests; reader keeps the E503 rules). Sim S138 (E525):
-      rules hold, keys a bit faster; faults fixed in ce60145 (S139 ok) and in the
-      close-drain commit cb73ca7; S140 on cb73ca7: all clean on the model (E525). hil.sh ALL PASS on the TI2 (E526); the kernel's halt with 8 pending = level 2 (sim's M12, needs sudo).
-- [ ] Unlink like the original (E524; user 11-14 "if it's like the original, yes"): linkrule.h + 3 tests; both
-      brokers send raw 4E 73 52 00 when the last non-observer client leaves and at vti_close, and 4E 73 52 01 again
-      before the next client write. Linux + mingw build clean; sim S138: keyed unit plays stand-alone after the
-      close, next session fine, CC keeps the link (E525). TI2: link off/on lines, sessions after fine (E526).
-- [x] Library skips (#36, E529): same counts as ours except BC2001/HS Extras = the reporter's .syx files (asked for
-      BC2001.syx 11-14, issuecomment-6875745545); the log line names the reasons (skip_summary), vtimodel libs fixed.
-
-## Round 0.8.42 candidates (decided or proposed)
-
-- Mac audio (user 2026-11-14): Core Audio stays the main path; libusb as root (branch libusb-audio) only as an
-  opt-in workaround for old unmaintained macOS, users accept sudo; no DriverKit for now (E528, log 2026-11-14).
-  The libusb path (#37 Catalina test) is finished in 0.8.42, not in 0.8.41 (user 2026-11-14).
-- Decided (user 2026-11-14): MIDI ports on Linux (ALSA sequencer virtual ports from the broker, keyport.h filter;
-  first) and Windows (Windows MIDI Services virtual devices on Win11 25H2+, design-midi-ports.md option A; option
-  C, a forwarding VST3, as the fallback for Windows 10).
-
-- Decided: opt-in update check in the Control Center; "Prepare bug report" button (no telemetry).
-- Decided (user 2026-11-14, #39): option 3, report the short latency while played notes come in (Live re-syncs).
-- Decided (user 2026-11-13, #30): the plug-in's level meters in Logic (details asked on #30). The count-in arp
-  moved into 0.8.41 (E505).
+- live-later at 160 frames (half a 64-frame step; E534 reading: the stamp sits on the Virus' 64-frame grid edge),
+  then the same keystamp test on the Mac (armed track, Monitor In, keystamp 500 ms, klog K and onset steps).
+- MIDI ports: Linux first (ALSA sequencer virtual ports from the broker, keyport.h filter), then Windows (Windows
+  MIDI Services virtual devices on Win11 25H2+, design-midi-ports.md option A; option C, a forwarding VST3, for
+  Windows 10).
+- FIRST: macOS libusb audio path as an opt-in for old macOS, official Catalina package (x86_64, 10.15) without the
+  Terminal steps; test build to #37 before the release. Fix the exit give-back (attach fails, then libusb
+  refcnt assertion; vticore.c vti_close), the cosmetic `usb block late` after a reconnect, and make
+  mac-libusb-test.command refuse a non-test broker. Evidence entry for #37's run (log 2026-11-14 late evening).
+- Opt-in update check in the Control Center; "Prepare bug report" button (no telemetry).
+- #39: report the short latency while played notes come in (Live re-syncs).
+- Windows VM: hil-win on the tuned VM; if fresh-broker sessions still miss the probe, A/B against 0.8.40 (E533).
 - Proposed (sim list): freeze guard (73 00 10 vv vs stream rate), single re-sync after a detected +64 (E492/E498),
-  burst guard, fewer broker resets (E495), lower safety-net floor (option B).
+  burst guard, fewer broker resets (E495), lower safety-net floor.
 
 ## Standing notes
 
-- Coverage: `scripts/coverage.py` (recipe and threshold in `findings/testing.md`). Mutation: `risk.py` names the
-  changed C/C++ files to run `scripts/mutation.py` on.
+- Weekly releases: one round per week, one test run (risk.py, hil.sh, checklist artifact via scripts/checklist.py).
+- Coverage: `scripts/coverage.py` (recipe in `findings/testing.md`). Mutation: `risk.py` names the files for
+  `scripts/mutation.py`.
 - Never `nativehost --stress*` on the real Virus at small blocks (E438). Never `virsh screenshot` with a Virus in a VM.
-- One VM at a time (30 GB host).
-- Stop hook (handoff-check.sh + handoff-turn.py, 2026-11-14): a turn that edits the repo, commits, pushes, posts on
-  GitHub or starts CI without touching this file is stopped once to update it.
+- One VM at a time (30 GB host). The tirevive-hil task in win11 runs hil-win in the console session; Live or the
+  Control Center open in the VM make it stop ("close first").
+- Xvfb grabs of the Control Center stay black (GTK, no WM): check its look on the user's desktop.
+- Stop hook (handoff-check.sh + handoff-turn.py): a turn that edits the repo, commits, pushes, posts on GitHub or
+  starts CI without touching this file is stopped once to update it.
 
 ## NEXT
 
-00. Waiting on reporters: #37 (libusb test in Logic, 0.8.42 work), #30 (Snow meters), #40, #36 (BC2001.syx).
-    Check issues only together with the user.
-0. 0.8.41 FINAL TODAY (user): CI test build 43617677008 (8df3a01) green; Linux installed (plug-in 64ba56a8, broker
-   728db830), hil.sh ALL PASS = L1 (work/hil/0.8.41-final); win11 installed (/quiet exit 0, VST3 52A4CA3F, no Virus
-   yet); Mac pkg b24b3a77 in ~/Downloads/TI-Revive-0.8.41-mac (user installs; hil-mac in hil-mac/hil/);
-   Linux L1-L4 + LC4 PASS (user 17:08). Options page fix (user screenshot: 7th row cut off, status line on it,
-   no scrollbar): cc/optionslayout.h + scroll view, 4 tests; CI 43620201798 = the build to ship (b7b6779).
-   VM: W2, W3 pass, WC4 skipped, W1 passed by the user (hil-win silent first sessions = VM, E533); VM tuned
-   (pinning etc., E533), hil-win on the tuned VM open. Mac: pkg 7a631315 in ~/Downloads, user testing now; user tests by the checklist
-   https://claude.ai/artifact/7j2tvTcAc19iNynNjfnSwM (spec scripts/checklists/round-0.8.41.json; M2 = the
-   live-later keystamp check, M1 = "Virus TI MIDI" listed). Meanwhile: README/site, build.yml "New in 0.8.41",
-   site check. Then merge -F, verify, tag, release CI, site rebuild.
+1. Mac awake: push the 0.8.41 release package (see Machines), the user installs it.
+2. Start round 0.8.42 from `origin/main` + merge `origin/round-0.8.41` (see "Where things stand"), pick the first items with the user
+   (first: the libusb path + Catalina package for #37, then live-later 160 + its Mac test, Linux MIDI ports).
+3. Waiting on reporters (table above); check issues only together with the user.
