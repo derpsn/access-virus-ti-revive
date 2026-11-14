@@ -76,8 +76,6 @@ message, only in a joint check with the user (by the dates above: #28 from 2026-
 - E497 fix: DONE on the TI2 (E506): 0 of 239 re-syncs missed in 60 sessions (mixed build, both parts 0).
 - Transport restarts (E505): DONE on the TI2 for wire + note timing (count-in, between ticks, low-latency on,
   FC; rc3 baseline sends F2 00 00). The arpeggiator itself not heard: sim model (asked) and Logic on the Mac.
-- Rule 2 incident (sim session, 2026-11-13 07:11:20): a sim nativehost run reached the real broker for 1.4 s and
-  sent the default state + close sequence (no store); no overlap with our runs; sim now uses m4/run.py only.
 - `python3 -I scripts/evidence.py list --no-hardware` lists the evidence entries marked this way.
 
 ## Open decisions for the user
