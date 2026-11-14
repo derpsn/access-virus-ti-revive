@@ -109,8 +109,10 @@ message, only in a joint check with the user (by the dates above: #28 from 2026-
       as the original's "MIDI" entity, E521 (4); vtikeyport_mac.c second source "VTI0"; 4 tests; README + site).
       Mac build via dev-mac CI; not run yet (Mac check: the port shows up; no MIDI-In device here). Windows/Linux
       still have no key port at all.
-- [ ] E521 (2): our libusb reader keeps one read on EP 0x85 and its callback blocks on client sockets; the original
-      Mac driver keeps 8 pending. Candidate: async transfers / non-blocking fan-out (0.8.42?), user's call.
+- [ ] 8 reads pending per MIDI endpoint like the original (E521 (1); user 11-14: "yes and in this round"): done in
+      vticore.c (async transfers, event thread, rxqueue.h + 7 tests; reader keeps the E503 rules). Builds clean on
+      Linux; NOT run on hardware yet: sim re-run of S135/S136/S134 asked, then hil.sh on the TI2 (Virus to Linux).
+- User 11-14: a message lost to an OUT stall stays lost (no resend), fine.
 - [ ] Library scan skips patches as "damaged or unknown format" (#36 log: BC2001 36, Incubation V3 97): check the
       format.
 
