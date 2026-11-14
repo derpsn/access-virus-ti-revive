@@ -112,7 +112,7 @@ message, only in a joint check with the user (by the dates above: #28 from 2026-
 - [ ] 8 reads pending per MIDI endpoint like the original (E521 (1); user 11-14: "yes and in this round"): done in
       vticore.c (async transfers, event thread, rxqueue.h + 8 tests; reader keeps the E503 rules). Sim S138 (E525):
       rules hold, keys a bit faster; faults fixed in ce60145 (S139 ok) and in the
-      close-drain commit (cancel first, hand on until all back; S139's 8 lost packets), sim re-run asked. NOT run on hardware: hil.sh on the TI2 (Virus to Linux), the kernel's halt with 8 pending = level 2.
+      close-drain commit cb73ca7; S140 on cb73ca7: all clean on the model (E525). NOT run on hardware: hil.sh on the TI2 (Virus to Linux), the kernel's halt with 8 pending = level 2.
 - User 11-14: a message lost to an OUT stall stays lost (no resend), fine.
 - [ ] Unlink like the original (E524; user 11-14 "if it's like the original, yes"): linkrule.h + 3 tests; both
       brokers send raw 4E 73 52 00 when the last non-observer client leaves and at vti_close, and 4E 73 52 01 again
@@ -143,7 +143,7 @@ message, only in a joint check with the user (by the dates above: #28 from 2026-
 0a. User's call on E519/E524 (4): a) keep the default (same as the original or up to a block later) + Control
     Center option "played notes a little later" (+1.3 ms, off by default) - recommended; b) the original exactly
     (no in-block place: rc6's uneven Mac timing back).
-0b. Sim re-run of the close-drain commit; then the Virus to Linux: hil.sh on the round build
+0b. Sim side closed (S140). Next the Virus to Linux: hil.sh on the round build
     (async reader, unlink, MIDI port code) - asked the user. Mac: rc8 install by the user, check "Virus TI MIDI"
     shows up with the next round build (dev-mac 43571122595 green for 95772b6, ce60145 not built yet).
 0c. rc8 #39 hint reply: with the user.
