@@ -16,7 +16,7 @@ extern "C" {
 #ifdef _MSC_VER
 #include <intrin.h>
 #endif
-#ifdef __linux__
+#if defined(__linux__) || defined(__APPLE__) // the broker's ring (macOS: the libusb-audio test, E511)
 #include <fcntl.h>
 #include <sys/mman.h>
 #include <sys/stat.h>
@@ -280,7 +280,10 @@ bool AudioIn::open(const char *linux_name, int rate)
     (void)rate; // macOS only: Linux and Windows ask the broker (Broker::audio)
     rate_gen_seen_ = -1;
     (void)linux_name; // Linux only
-#ifdef __linux__
+#if defined(__linux__) || defined(__APPLE__)
+#ifdef __APPLE__
+    if (broker_ring_) { // the libusb-audio test (E511): the broker's ring, exactly as on Linux
+#endif
     char name[64];
     snprintf(name, sizeof name, VTI_AUDIO_SHM_LINUX, (unsigned)getuid());
     int fd = shm_open(linux_name ? linux_name : name, O_RDWR, 0);
@@ -304,7 +307,11 @@ bool AudioIn::open(const char *linux_name, int rate)
     }
     pos_ = -1;
     return true;
-#elif defined(_WIN32)
+#ifdef __APPLE__
+    }
+#endif
+#endif
+#if defined(_WIN32)
     HANDLE m = OpenFileMappingA(FILE_MAP_READ | FILE_MAP_WRITE, FALSE, VTI_AUDIO_SHM_NAME);
     if (!m)
         return false;
@@ -353,7 +360,7 @@ bool AudioIn::open(const char *linux_name, int rate)
     map_ = m->ring;
     pos_ = -1;
     return true;
-#else
+#elif !defined(__linux__)
     return false;
 #endif
 }
@@ -368,6 +375,8 @@ void AudioIn::close()
     if (map_)
         UnmapViewOfFile(map_);
 #elif defined(__APPLE__)
+    if (!mac_ && map_) // the broker's ring (use_broker_ring)
+        munmap(map_, sizeof(vti_audio_shm));
     if (auto *m = (MacAudio *)mac_) {
         AudioObjectRemovePropertyListener(m->dev, &kRateAddr, rate_listener, (void *)m->id);
         {

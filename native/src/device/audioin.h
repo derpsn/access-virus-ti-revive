@@ -15,6 +15,9 @@ public:
     // Windows: the broker's mapping; macOS: Core Audio input, the device set to `rate` (44100/48000) when it differs
     bool open(const char *linux_name = nullptr, int rate = 44100);
     void close();
+    // macOS (libusb-audio test, E511): read the broker's ring as on Linux instead of Core Audio; set before open()
+    void use_broker_ring(bool on) { broker_ring_ = on; }
+    bool broker_ring() const { return broker_ring_; }
     bool streaming() const;
     // n frames into usb1 (L, R) and usb2 (L, R); missing data -> silence. `latency` = target distance in frames.
     // usb3l/usb3r (optional): raw channels 0/1, the third USB output while the Virus' USB IO configuration has 3
@@ -57,6 +60,7 @@ public:
 private:
     void *map_ = nullptr; // vti_audio_shm (vtiaudioshm.h)
     void *mac_ = nullptr; // macOS: the Core Audio reader that fills map_
+    bool broker_ring_ = false; // macOS: map the broker's ring instead (use_broker_ring)
     int64_t pos_ = -1, drops_ = 0;
     int64_t rate_gen_seen_ = -1; // -1: not looked at since open
 };

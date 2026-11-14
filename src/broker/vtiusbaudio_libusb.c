@@ -53,6 +53,10 @@ static struct {
     uint64_t delivered_ms; // USB frames (ms) delivered so far (packets + filled gaps)
     uint64_t frames, errs, gaps, next_log;
     vti_pktstat ps; // packet sizes as sent, before the repair (E175)
+    // VTI_USBAUDIO_DIAG=1 (#37, E511: Catalina delivered in-range packets of zeros): per second, the raw IN packets
+    int diag;
+    uint64_t d_pk, d_ok, d_bad, d_bytes, d_nonzero, d_next;
+    uint8_t d_head[16];
     int16_t pcm[(NP + 5000) * 49 * IN_CH]; // one transfer, or a filled gap of up to 5 s
 } S;
 
@@ -156,6 +160,19 @@ static void in_cb(struct libusb_transfer *t)
     for (int k = 0; k < t->num_iso_packets; k++) {
         struct libusb_iso_packet_descriptor *p = &t->iso_packet_desc[k];
         uint32_t f = p->status == LIBUSB_TRANSFER_COMPLETED ? p->actual_length / (IN_CH * 2) : 0;
+        if (S.diag) { // the raw packet as libusb hands it over, before any repair
+            const uint8_t *b = libusb_get_iso_packet_buffer_simple(t, (unsigned)k);
+            S.d_pk++;
+            if (p->status == LIBUSB_TRANSFER_COMPLETED)
+                S.d_ok++;
+            else
+                S.d_bad++;
+            S.d_bytes += p->actual_length;
+            for (unsigned i = 0; i < p->actual_length; i++)
+                S.d_nonzero += b[i] != 0;
+            if (p->actual_length >= 16 && k == 0)
+                memcpy(S.d_head, b, 16);
+        }
         unsigned nominal = vti_pkt_nominal(S.rate, S.pattern++);
         int ev = vti_pktstat_add(&S.ps, f);
         if (ev > 0)
@@ -179,6 +196,16 @@ static void in_cb(struct libusb_transfer *t)
                 memcpy(S.pcm + frames * IN_CH, libusb_get_iso_packet_buffer_simple(t, (unsigned)k), f * IN_CH * 2);
         }
         frames += f;
+    }
+    if (S.diag && S.d_pk >= S.d_next) { // once a second (1 packet per ms)
+        const uint8_t *h = S.d_head;
+        vti_log("usbaudio diag: %llu packets (ok %llu, status != ok %llu), %llu bytes, %llu bytes != 0, last head %02x %02x "
+                "%02x %02x %02x %02x %02x %02x %02x %02x %02x %02x",
+                (unsigned long long)S.d_pk, (unsigned long long)S.d_ok, (unsigned long long)S.d_bad,
+                (unsigned long long)S.d_bytes, (unsigned long long)S.d_nonzero, h[0], h[1], h[2], h[3], h[4], h[5], h[6],
+                h[7], h[8], h[9], h[10], h[11]);
+        S.d_pk = S.d_ok = S.d_bad = S.d_bytes = S.d_nonzero = 0;
+        S.d_next = 1000;
     }
     send_out(out_counts, out_silent, t->num_iso_packets); // mirror the synth's packets towards it (E241)
     S.in(S.pcm, frames, S.user);
@@ -348,6 +375,8 @@ int vla_start(libusb_context *ctx, libusb_device_handle *h, uint32_t rate, vla_i
     S.ctx = ctx, S.h = h, S.in = in, S.out = out, S.user = user;
     S.rate = vti_rate_valid(rate);
     S.next_log = (uint64_t)S.rate * 60;
+    S.diag = getenv("VTI_USBAUDIO_DIAG") && atoi(getenv("VTI_USBAUDIO_DIAG")) == 1;
+    S.d_next = 1000;
     for (int i = 0; i <= 2; i++) { // the audio function: taken from snd-usb-audio (auto-detach is on)
         int r = libusb_claim_interface(h, i);
         if (r) {

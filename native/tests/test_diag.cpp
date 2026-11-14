@@ -86,6 +86,15 @@ TEST(diag_plugin_options)
     CHECK(std::string(opts[3].name) == "slip-restart" && std::string(opts[3].file) == "slip-restart.off");
     CHECK(opts[3].default_on);
     CHECK(plugin_option("slip-restart"));
+    // the macOS libusb audio (E511, #37) is no Options page switch: only the separate libusb package writes its file
+    for (auto &o : opts)
+        CHECK(std::string(o.name) != "mac-usb-audio");
+    CHECK(!plugin_option("mac-usb-audio"));
+    CHECK(!mac_usb_audio());
+    std::ofstream(h.dir / ".local/share/virus-ti-native/mac-usb-audio.on").put('\n');
+    CHECK(mac_usb_audio());
+    fs::remove(h.dir / ".local/share/virus-ti-native/mac-usb-audio.on");
+    CHECK(!mac_usb_audio());
     // since rc6 the plug-in restarts it on macOS too (#37: 9 of 22 starts slipped on a Catalina Mac), so no option text
     // may say it is Linux and Windows only or only logged on a Mac
     for (const char *t : {opts[3].label, opts[3].hint})
