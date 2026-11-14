@@ -588,7 +588,7 @@ Entries: 522. Marks after an entry: its lowest confidence level when below HIGH,
 - [E520](evidence.md#e520) A keyed unit with TI Revive on the model (simulator S134, virus-ti-sim 6aa0ea3; virtual TI1 Keyboard played ... (LOW; not on hardware)
 - [E525](evidence.md#e525) The async reader (955e2b8) and the unlink (95772b6) on the simulated Virus (simulator S138, virus-ti-sim ... (MED; not on hardware)
 
-## Timing, stamps, latency, host blocks (209)
+## Timing, stamps, latency, host blocks (210)
 
 - [E025](evidence.md#e025) Host periodic traffic on EP 0x06 while plugin open: c2 Active Sensing FE (`2F FE 00 00`, median 0.31 s, ... (MED)
 - [E067](evidence.md#e067) Real Win11 PC (user): v0.2.0 loads and is audible, but tempo-synced sound and audio timing drift ("slowdowns ...
@@ -799,6 +799,7 @@ Entries: 522. Marks after an entry: its lowest confidence level when below HIGH,
 - [E521](evidence.md#e521) The open static points of E517 (2)/(3) and the original Mac driver's cable mapping (REA/Ghidra 12.1.4, agent ... (MED; open; not on hardware)
 - [E522](evidence.md#e522) E503's stall handling run against a simulated Virus (simulator S135, virus-ti-sim bc7cfb4; user 2026-11-14 ... (open; not on hardware)
 - [E524](evidence.md#e524) What the original does with the link global 0x52 and with a live note's stamp (REA/Ghidra 12.1.4, agent run ... (MED; open; not on hardware)
+- [E525](evidence.md#e525) The async reader (955e2b8) and the unlink (95772b6) on the simulated Virus (simulator S138, virus-ti-sim ... (MED; not on hardware)
 
 ## Sound problems: crackle, silence, dropouts (162)
 
