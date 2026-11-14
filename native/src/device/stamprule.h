@@ -74,7 +74,10 @@ inline int64_t live_stamp(int64_t newest, int64_t marker, double ratio)
 // 10.5 / 13.2 / 15.9 / 18.5 ms late in turn. Equal to live_stamp() when the ring is where the timeline expects it.
 // E519: on our Mac the Virus met such a stamp one or two of its 64-frame steps late in 22 of 40 played notes, so the
 // played rhythm came out up to +-128 frames uneven. The Control Center option live-later moves played notes this much
-// later (about 2.7 ms at 48 kHz) so it always meets them. Off by default: then the stamp is the original's or up to
+// later (about 2.7 ms at 48 kHz). E534 (the same keystamp test with it on): 11 of 40 on the stamp, 29 one 64-frame
+// step late, none two - half the spread, not exact; which step follows the send phase, not the margin, so the stamp
+// sits on an edge of the Virus' 64-frame grid and 128 (a multiple of 64) cannot move it off (a 32-frame shift is
+// the next thing to try, 0.8.42). Off by default: then the stamp is the original's or up to
 // one block later (the original drops the note's place in the block, E524 (4)).
 constexpr int LIVE_LATER_FRAMES = 128;
 

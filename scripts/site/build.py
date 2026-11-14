@@ -631,8 +631,12 @@ def features_section():
         <li>Audio from your DAW through the filters and effects of the Virus (sidechain input), as in the original.</li>
         <li>The REMOTE page (since 0.8.22): the Virus' remote templates with their names, knob names and MIDI strings, the original's knob template list, template files to load and save, sent to the Virus like the original.</li>
         <li>The original's sync error message, shown when the Virus reports late notes while your DAW plays.</li>
+        <li>Scrambled audio restarts by itself (since 0.8.41): in about one start in 250 the Virus sends its audio scrambled for a whole session (crackle, notes off time); the plug-in notices it and restarts the Virus' audio once, on Linux, Windows and macOS. A switch on the Control Center's Options page.</li>
+        <li>When the Virus stops sending audio (since 0.8.41): the plug-in tells you to switch the Virus off and on; in our tests only that helped.</li>
+        <li>The arpeggiator follows a count-in (since 0.8.41, issue #30): like with the original, the Virus' arpeggiator and clock-synced LFOs run in time with the bar when your DAW counts in before recording.</li>
+        <li>A Keyboard or Polar plays its own keys again after the DAW closes (since 0.8.41): TI Revive lets the Virus go when the last plug-in or the Control Center closes, as the original's driver does, and links it again for the next one. Checked on a simulated Keyboard. On Linux the kernel's USB audio driver can link it again (see the limits).</li>
         <li>The keys of a Keyboard or Polar on macOS (since 0.8.38): TI Revive offers a MIDI input &ldquo;Virus TI Synth&rdquo; while the plug-in or the Control Center is open. Choose it as the MIDI input of the track and arm it. Not tested by us: our TI2 Desktop has no keys. By user reports: notes, pitch bend and mod wheel recorded on a TI1 Keyboard (Ableton Live 12.3.7) and a TI2 Polar.</li>
-        <li>The Virus&rsquo; MIDI In on macOS (since 0.8.41): a second MIDI input &ldquo;Virus TI MIDI&rdquo;, as the Access driver had. While the Virus works with a plug-in it sends what arrives at its MIDI In socket only to the computer, so a keyboard plugged in there reaches the DAW only through this input: choose it as the MIDI input of the track with the plug-in and arm it. Not tested on hardware yet.</li>
+        <li>The Virus&rsquo; MIDI In on macOS (since 0.8.41): a second MIDI input &ldquo;Virus TI MIDI&rdquo;, as the Access driver had. While the Virus works with a plug-in it sends what arrives at its MIDI In socket only to the computer, so a keyboard plugged in there reaches the DAW only through this input: choose it as the MIDI input of the track with the plug-in and arm it. It shows up on our Mac (0.8.41 test round); we had no keyboard at the Virus' MIDI In to play through it.</li>
         <li>Setup Tips for Your DAW in the ? menu (since 0.8.38): opens by itself the first time for a DAW and for a point not read before. Seen on Linux (REAPER), macOS (Ableton Live, Logic) and Windows 11 (Ableton Live).</li>
         <li>In Logic, Plug-in Latency Compensation must be on. With it off, TI Revive and a Logic instrument played about 100 ms apart; with it on they were in sync by ear, and an export measured at most 0.42 ms apart. Logic warns when you turn it off.</li>
         <li>The Virus leaves remote mode when the plug-in closes, as with the original (since 0.8.38). Tested on Linux with a TI2 Desktop; the effect on a Virus with keys is not tested.</li>
@@ -728,7 +732,7 @@ def features_section():
 
     <div class="feature">
       <div><h3>Timing</h3>
-      <p>The plug-in finds the clock of the Virus on USB, stamps every note against it and reports its latency, so the DAW lines recordings up with the grid. Since 0.8.39 that delay follows your buffer down to 32 samples, as the original's does (3584 samples plus the buffer: 76 ms at 64 samples and 48 kHz, before 82.7 ms), and notes you play live skip it in DAWs that mark them (Ableton Live), about 22 ms. If you record a part you play into Ableton Live, switch the plug-in's Live Mode on while you record: otherwise Live puts the take about 50 ms later than you heard it (measured on macOS with Live 12). Played notes can come 1 to 3 ms late now and then (the original stamps them the same way); "Even rhythm for played notes" on the Control Center's Options page (since 0.8.41) plays them about 3 ms later and exactly in your rhythm. The Virus follows the host at 44.1 or 48 kHz like with the original (since
+      <p>The plug-in finds the clock of the Virus on USB, stamps every note against it and reports its latency, so the DAW lines recordings up with the grid. Since 0.8.39 that delay follows your buffer down to 32 samples, as the original's does (3584 samples plus the buffer: 76 ms at 64 samples and 48 kHz, before 82.7 ms), and notes you play live skip it in DAWs that mark them (Ableton Live), about 22 ms. Since 0.8.41 "Lower latency (experimental)" on the Control Center's Options page shortens that delay to 36 to 48 ms at buffers up to 256 (55 to 59 ms at 512); it leaves your DAW only about 20 ms, so switch it off if notes come late. If you record a part you play into Ableton Live, switch the plug-in's Live Mode on while you record: otherwise Live puts the take about 50 ms later than you heard it (measured on macOS with Live 12). Played notes can come 1 to 3 ms late now and then (the original stamps them the same way); "Even rhythm for played notes" on the Control Center's Options page (since 0.8.41) plays them about 3 ms later, so they come at most about 1.3 ms late (measured on a Mac). The Virus follows the host at 44.1 or 48 kHz like with the original (since
       0.8.32); at other host rates a resampler converts with -90 dB error.</p></div>
       <div><table class="data">
         <thead><tr><th>16th notes at 120 BPM</th><th>On the grid</th><th>Jitter</th><th>Drift</th></tr></thead>
@@ -818,9 +822,7 @@ def features_section():
       <div><h3>Nerd mode</h3>
       <p>Shows live what goes between TI Revive and the Virus, decoded: notes, parameter changes by name, dumps, the
       bank sync. It lists which programs use the Virus, shows the plug-in's and the broker's logs, and saves them all
-      for a bug report in one file. It only watches; it never sends anything to the Virus. Its Options... menu
-      switches a few things for comparisons with the original: the output delays only on change instead of at every
-      Play/Stop, and the timing as before 0.8.35 (from the next start of the plug-in), and notes played live skipping the delay (on by default since 0.8.39).</p></div>
+      for a bug report in one file. It only watches; it never sends anything to the Virus. Its Options page (since 0.8.41; also View &gt; Options) switches the plug-in's options: lower latency (experimental), the restart of scrambled audio, notes played live skipping the delay (on by default since 0.8.39), even rhythm for played notes, the plug-in log (on by default since 0.8.41), and two switches for comparisons with the original (the output delays only on change instead of at every Play/Stop, the timing as before 0.8.35). A change applies from the next start of the plug-in.</p></div>
       <figure class="shot"><img loading="lazy" src="control-center-nerd-mode.png" width="860" height="620"
       alt="Nerd mode: the plug-in plays notes and checks its bank cache, decoded live">
       <figcaption>The plug-in plays notes and checks its bank cache, decoded live.</figcaption></figure>
@@ -872,7 +874,7 @@ def page_changelog_landing(releases):
 SHARED_IMAGES = ["control-center.png", "control-center-nerd-mode.png", "plugin-help-mode.png", "plugin-help-inactive.png",
                  "plugin-menus.png", "plugin-library-drop.png",
                  "plugin-section-lock.png", "plugin-edit-menu.png", "plugin-help-menu.png"]
-TESTS = 627 # unit tests in native/tests (vtitests), as of 2026-11-09 (0.8.40 hotfix)
+TESTS = 753 # unit tests in native/tests (vtitests), as of 2026-11-14 (0.8.41)
 
 # Important information shown at the top of the page, newest first (empty list = no box). The README starts with the
 # same text ("Important" block), keep both identical. Remove an entry when it no longer matters to users.
@@ -890,7 +892,7 @@ def notice_section():
   </div></div>
 </section>"""
 # line coverage of vticore, measured like CI (no Access files, empty home): gcov over the test run
-COVERAGE, COVERAGE_DATE = "94 %", "16 Oct 2026"
+COVERAGE, COVERAGE_DATE = "96.4 %", "12 Nov 2026"
 
 # the site: one page plus the changelog archive (file name, title and description for search results and link
 # previews, content)

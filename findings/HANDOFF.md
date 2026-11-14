@@ -88,10 +88,11 @@ message, only in a joint check with the user (by the dates above: #28 from 2026-
 
 ## To do before the final 0.8.41
 
-- [ ] README + site: new features, Intel Mac line only once #33 confirms Logic; remove the README "Preview" block.
-- [ ] `tirevive-site-check` over the whole round.
-- [ ] Full test round: checklist artifact published (core LC4/WC4/MC4/MC5 + L1-L4, W1-W2, M1-M3), runs pending.
-- [ ] Release text heredoc in `.github/workflows/build.yml` ("New in 0.8.41") checked before the tag.
+- [x] README + site: round features added (lower latency, Options page, scrambled restart, freeze alert, count-in,
+      unlink), Preview block removed, TESTS 753, coverage 96.4 %, MIDI In seen on our Mac; Intel line unchanged.
+- [x] Site check (delta, 2026-11-14): live-later text honest (E534), the rest ok against E488-E534.
+- [x] Full test round: all pass (W1 by user decision, E533; WC4 skipped; M2 = E534: option halves the spread, not exact).
+- [x] Release text in build.yml: post-rc7 items added (live-later honest, MIDI In, unlink, 8 reads, logs); What's New too.
 - [x] #34 "bank sync failed in 11.9 s" looked into (E529): timing fits cut-short bank info replies (flaky USB), not
       the note pause; memsync now logs wrong-size / missing replies (MemorySync::log).
 - [ ] MIDI In port "Virus TI MIDI" (user 11-14: "close the gap"): done on the round (keyport.h vti_dinport_filter

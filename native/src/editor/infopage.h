@@ -61,8 +61,16 @@ inline const std::vector<ChangeNote> &changelog()
           "of slack: if notes come late, switch it off.",
           "The Control Center has an Options page: the plug-in's options as switches, with a line on what each does.",
           "When the Virus' audio arrives scrambled (about one start in 250; notes then come early or late), the "
-          "plug-in restarts it once by itself. Linux and Windows; on a Mac it is only logged. Switch on the Options "
-          "page.",
+          "plug-in restarts it once by itself (Linux, Windows and macOS). Switch on the Options page.",
+          "The Virus' arpeggiator and clock-synced LFOs follow a DAW's count-in, as with the original (#30).",
+          "TI Snow: the plug-in's level meters show each part's activity (#30).",
+          "Fixed a rare case (about 1 in 40) where the plug-in missed the Virus' answer to a timing re-sync and notes "
+          "could come off time.",
+          "macOS: notes you play keep their rhythm in Live (#39). \"Even rhythm for played notes\" on the Options "
+          "page plays them about 3 ms later, so they come at most about 1.3 ms late (measured on a Mac).",
+          "macOS: a second MIDI input \"Virus TI MIDI\" for the Virus' MIDI In socket, as the Access driver had.",
+          "A Virus TI Keyboard or Polar plays its own keys again after the DAW closes: TI Revive lets the Virus go "
+          "like the original's driver (checked on a simulated Keyboard).",
           "When the Virus stops sending audio, the plug-in now tells you to switch the Virus off and on (in our tests "
           "only that helped; it happened once, after a change of the sample rate).",
           "The plug-in's log notes when your DAW asks for audio before the Virus has sent it, which makes notes late. "
@@ -78,7 +86,8 @@ inline const std::vector<ChangeNote> &changelog()
           "it arrives, and its time left counts only what is really missing.",
           "Windows: fixed a case where the TI Revive service could keep a connection to a Virus that had disappeared "
           "from Windows for a moment, instead of connecting again (#36).",
-          "The plug-in's log keeps its first lines on a fresh install.",
+          "The plug-in's log keeps its first lines on a fresh install, and says why a bank sync failed or a patch "
+          "library file was left out (#34, #36).",
           "Windows setup asks you to unplug a Virus that is still on the old Access driver before it removes that "
           "driver (#31). Afterwards switch the Virus off and on once.",
           "macOS and Linux: a stalled USB connection no longer fills the log; the TI Revive service resets it and "

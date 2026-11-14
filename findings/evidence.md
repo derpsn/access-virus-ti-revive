@@ -4859,3 +4859,13 @@ hil-win with the 0.8.41 final test builds on the win11 VM (2026-11-14 18:18-18:3
 - **Method:** scripts/hil-win.ps1 + hil_check.py, the broker and plug-in logs
 - **Confidence:** HIGH (the measurements and the signature) / LOW (VM as the cause: not A/B-tested)
 - **Hardware:** yes (TI2 Desktop through the win11 VM)
+
+### E534
+
+The option live-later (E519: played notes stamped 128 frames later) on our Mac, the E518 run A setup (2026-11-14 ~17:56 UTC, MacBook Air M3, macOS 27.2.1, Ableton Live 12, 48 kHz block 128, the 0.8.41 final test build CI 43620201798 installed and hash-checked against the package, TI2 Desktop; keystamp --interval-ms 500 --count 40 into the armed plug-in track with Monitor In, Live button off, no clip; plug-in log klog lines, the logged stamp includes the 128 frames). 40 notes: stamps exactly 24000 +-1 frames apart; K (onset in USB 1 minus stamp) 5437-5441 in 11 notes (on the stamp, as E519's met notes) and 5501-5505 in 29 notes (one 64-frame step late), none two steps late; onset steps 23936 / 24000 / 24064 frames. Option off in E519: 18 met, the rest one or two steps late (onset steps 23872-24128). So the option halves the spread of played notes (at most about 1.3 ms instead of 2.7 ms at 48 kHz) but does not make them exact; E519's reading that late notes arrive too late does not hold: with 128 frames more margin most notes still land one step late, and which step a note takes follows the phase of the send sawtooth (stamp + 4526..4977, 64-frame steps), not the margin. Reading (LOW): the stamp sits on an edge of the Virus' 64-frame play grid, and 128 is a multiple of 64; half a step (32 frames, LIVE_LATER_FRAMES 160) is the next thing to try (0.8.42). The option's texts (Control Center, README, site) now say "at most about 1.3 ms late (measured on a Mac)" instead of "exactly in your rhythm". A first attempt the same evening measured only the lead path (all K 8072: the notes were not flagged as played), so it says nothing about the option.
+
+- **Date:** 2026-11-14
+- **Pointer:** the Mac's ~/Library/Application Support/virus-ti-native/diag.log from 1794678996 (klog lines), checklist M2
+- **Method:** keystamp (native/tools/keystamp.c) + the plug-in's klog (virusplugin.cpp klog_check)
+- **Confidence:** HIGH (the counts, one run of 40) / LOW (the grid-edge reading)
+- **Hardware:** yes (TI2 Desktop, macOS)
