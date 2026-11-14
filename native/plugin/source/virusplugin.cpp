@@ -901,7 +901,8 @@ void DeviceOut::run()
                     // from the note's place on the smoothed timeline (E512, #39): the ring's newest frame jumps in
                     // Core Audio's bursts on macOS and made one played rhythm uneven; without a timeline place as before
                     const double r = live_ratio.load(std::memory_order_relaxed);
-                    st = from_process ? live_stamp_tl(st, live_s.load(std::memory_order_relaxed), mk, r)
+                    st = from_process ? live_stamp_tl(st, live_s.load(std::memory_order_relaxed), mk, r,
+                                                      live_later.load(std::memory_order_relaxed))
                                       : live_stamp(audio_.newest_frame(), mk, r);
                     live_stamped = true;
                 } else {
@@ -1118,6 +1119,7 @@ tresult PLUGIN_API VirusPlugin::initialize(FUnknown *context)
     out_->lead = lead();
     out_->stamp_floor = !timing_classic_;
     out_->live_notes = live_notes_;
+    out_->live_later = vti::cc::plugin_option("live-later") ? LIVE_LATER_FRAMES : 0; // E519
     if (diag_enabled()) {
         // the folder first: on a fresh install it came only with the bank cache, ~7 s in, and every line before
         // (library scan, ready probe, marker) was lost (win10 VM, rc1, 2026-11-11)
@@ -1127,7 +1129,8 @@ tresult PLUGIN_API VirusPlugin::initialize(FUnknown *context)
         out_->set_diag_path(own_cache_dir() + "/../diag.log");
     }
     if (live_notes_) // after set_diag_path, or the line never reaches diag.log
-        out_->log("Virus TI native: live notes on (default; live-notes.off switches it off): notes flagged as played go without the lead\n");
+        out_->log("Virus TI native: live notes on (default; live-notes.off switches it off): notes flagged as played go without the lead%s\n",
+                  out_->live_later.load() ? ", stamped 128 frames later (live-later.on)" : "");
     out_->log("Virus TI native: timing: lead %d frames, safety net %s%s\n", timing_a_, timing_classic_ ? "off" : "on",
               timing_classic_ ? " (timing-classic.on)" : "");
     if (od_changes_only_)

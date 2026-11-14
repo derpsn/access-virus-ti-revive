@@ -72,9 +72,15 @@ inline int64_t live_stamp(int64_t newest, int64_t marker, double ratio)
 // offset; the timeline follows newest - S) instead of the ring's newest frame at send time. On macOS Core Audio fills
 // the ring in bursts of several hundred frames, and the ring-based stamp passed them on: one played rhythm sounded
 // 10.5 / 13.2 / 15.9 / 18.5 ms late in turn. Equal to live_stamp() when the ring is where the timeline expects it.
-inline int64_t live_stamp_tl(int64_t tl_at, int s, int64_t marker, double ratio)
+// E519: on our Mac the Virus met such a stamp one or two of its 64-frame steps late in 22 of 40 played notes, so the
+// played rhythm came out up to +-128 frames uneven. The Control Center option live-later moves played notes this much
+// later (about 2.7 ms at 48 kHz) so it always meets them. Off by default: then the stamp is the original's or up to
+// one block later (the original drops the note's place in the block, E524 (4)).
+constexpr int LIVE_LATER_FRAMES = 128;
+
+inline int64_t live_stamp_tl(int64_t tl_at, int s, int64_t marker, double ratio, int later = 0)
 {
-    return live_stamp(tl_at + s, marker, ratio);
+    return live_stamp(tl_at + s, marker, ratio) + later;
 }
 
 // Our one difference from the original's live path, by the user's word 2026-11-07: a flagged note-off goes at once only

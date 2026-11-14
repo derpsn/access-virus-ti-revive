@@ -177,6 +177,7 @@ public:
     std::atomic<bool> no_stamps{false}; // Live Mode / Plugin Latency Minimal: no F5 at all (stamprule.h timing_mode)
     std::atomic<double> live_ratio{1.0}; // Virus frames per host frame, for a live stamp
     std::atomic<int> live_s{5000};       // the timeline's distance behind the newest frame (S), for a live stamp (E512)
+    std::atomic<int> live_later{0};      // Control Center option live-later: frames added to a live stamp (E519)
     static constexpr int64_t floor_min = 1024;
     // the newest ring frame that had sound on USB 1 / USB 2 (the ping waits for 1 s of silence, like the original)
     std::atomic<int64_t> last_sound{-1};

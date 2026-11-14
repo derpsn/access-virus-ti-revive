@@ -66,7 +66,11 @@ TEST(diag_plugin_options)
 {
     Home h("vtester");
     const auto &opts = plugin_options();
-    CHECK(opts.size() == 6);
+    CHECK(opts.size() == 7);
+    // live-later (E519, 0.8.41): played notes stamped a little later so the Virus always meets them, OFF by default
+    // (off = the timing as the original, E524 (4)); live-later.on switches it on
+    CHECK(std::string(opts[6].name) == "live-later" && std::string(opts[6].file) == "live-later.on");
+    CHECK(!opts[6].default_on && !plugin_option("live-later"));
     // plugin-log (0.8.41): the plug-in's log for bug reports, ON by default; diag.off switches it off, so the plug-in's
     // own Options page can do it (the user is told on What's New and the welcome page)
     CHECK(std::string(opts[5].name) == "plugin-log" && std::string(opts[5].file) == "diag.off");

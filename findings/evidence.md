@@ -4777,3 +4777,13 @@ The async reader (955e2b8) and the unlink (95772b6) on the simulated Virus (simu
 - **Method:** model runs of our broker source against the sim's stand-in libusb and virtual TI1 Keyboard
 - **Confidence:** MED (model only; the host controller's handling of a halt with 8 transfers pending is not known) / HIGH (3) the cause, from the code
 - **Hardware:** no
+
+### E526
+
+The round's async reader and unlink on our TI2 Desktop (Linux, 2026-11-14 09:23-09:40; broker built locally from 0619b7e (cb73ca7 + docs) against the system libusb, installed for the run in place of rc8's; plug-in from build-native; scripts/hil.sh). hil.sh ALL PASS: H1 cold start, H2-1/H2-2 reopen after the idle exit, H3 export, H6 broker killed while playing (timing jitter 0.25 ms, drift +32 ppm in H2-2). The broker log: 0 `vti: read ep` error lines, no `transfers still pending at close`; `vti: link off (4E 73 52 00) -> 0` each time the plug-in left (6 times), `vti: link on (4E 73 52 01) -> 0` before the first write of a session that came while the broker was still open (09:26:04), and the sessions after an unlink ran normally. The Virus has no keys, so the stand-alone sound after the unlink (E525 (4)) is not checked here. During H3 the plug-in in build-native was rebuilt once (the live-later option, off by default), so the later stages loaded that build. Not covered: a stall or an error on the real kernel (no halt happened), the E517 (5) read-gap benefit.
+
+- **Date:** 2026-11-14
+- **Pointer:** work/hil/round-0.8.41-async-0923 (git-ignored); journalctl --user -u tirevive-broker 09:20-09:40
+- **Method:** scripts/hil.sh on the real TI2, the broker's journal
+- **Confidence:** HIGH (one run)
+- **Hardware:** yes (TI2 Desktop, Linux)

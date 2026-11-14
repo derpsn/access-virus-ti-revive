@@ -91,6 +91,11 @@ const std::vector<PluginOption> &plugin_options()
         // on by default since 0.8.41 (user 2026-11-10): the plug-in's log for bug reports; diag.off switches it off
         {"plugin-log", "diag.off", "Plug-in log for bug reports (stays on this computer)", true, "Plug-in log",
          "Writes what the plug-in does to diag.log on this computer, for bug reports. Nothing is sent anywhere."},
+        // off by default (0.8.41, E519): played notes a little later, so the Virus always meets their stamp
+        {"live-later", "live-later.on", "Played notes a little later, for an even rhythm (E519)", false,
+         "Even rhythm for played notes",
+         "Notes you play live go about 3 ms later, so the Virus plays them exactly in your rhythm. Off: they are "
+         "stamped like the original's, and one can come 1-3 ms late now and then."},
     };
     return opts;
 }
