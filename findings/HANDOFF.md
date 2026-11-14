@@ -141,4 +141,4 @@ message, only in a joint check with the user (by the dates above: #28 from 2026-
    green, 6 assets; site rebuilt (site.yml 43625667337, live: Download 0.8.41, no preview box). Installed: Linux
    (plug-in 184badb2, broker 728db830), win11 (/quiet exit 0, 0.8.41). Mac: unreachable over SSH at 19:3x; the
    package is ready in work/rel-0.8.41/mac-push/TI-Revive-0.8.41-release (pkg 643f73d4): push when it is awake.
-   'Out now' posts on issues only with the user. Then round 0.8.42 from main (new branch, explicit refspec).
+   'Out now' posted 2026-11-14 on #26 #30 #31 #33 #34 #36 #38 (not #37: the pkg refuses Catalina). Then round 0.8.42 from main (new branch, explicit refspec).
