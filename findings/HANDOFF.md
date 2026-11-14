@@ -5,7 +5,7 @@ NEXT. At most 150 lines; the Stop hook (`.claude/hooks/handoff-check.sh`) refuse
 how goes into the dated log [`log/2026-11.md`](log/2026-11.md) (newest first); older logs are in [`log/`](log/).
 Device/protocol knowledge goes into [`evidence.md`](evidence.md). Update this file in the same commit as the work._
 
-Last update: 2026-11-14 evening: #34/#36 looked into (E529, reply-size and skip-reason logging on the round).
+Last update: 2026-11-14 evening: decisions E520 (7) (no key pause, like the original) and plan B (not run) taken.
 
 ## Round
 
@@ -85,9 +85,9 @@ message, only in a joint check with the user (by the dates above: #28 from 2026-
 
 ## Open decisions for the user
 
-- Sim runs: only B144 was killed (2026-11-10, memory guard); plan A and B1-B143 complete and read (S122, S123);
-  the extra plan B (s094c) never started, needs the user's OK for the real TI2 (purpose: tighter +64 rate).
-- Pause the bank sync while keys come in (E520 (7))? Not decided.
+- None open. Decided 2026-11-14 (user): no pause of the bank sync for the unit's own keys (E520 (7)), like the
+  original - keys stay late during a sync, none lost; the DAW-notes pause (E153) stays as it is. The extra plan B
+  (s094c, tighter +64 rate) is not run: no longer round needed; the +64 re-sync stays a 0.8.42 candidate.
 - E519/E524 (4) decided (user 11-14 "sounds good"): option live-later (off by default, +128 frames for played notes,
   stamprule.h LIVE_LATER_FRAMES, diag.cpp, 2 tests, README + site); not run on a Mac yet.
 
