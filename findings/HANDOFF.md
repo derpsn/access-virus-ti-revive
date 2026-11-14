@@ -5,7 +5,7 @@ NEXT. At most 150 lines; the Stop hook (`.claude/hooks/handoff-check.sh`) refuse
 how goes into the dated log [`log/2026-11.md`](log/2026-11.md) (newest first); older logs are in [`log/`](log/).
 Device/protocol knowledge goes into [`evidence.md`](evidence.md). Update this file in the same commit as the work._
 
-Last update: 2026-11-14: #39 doubled-note test on the sim set up (nativehost --midi-in); help hint waits on it.
+Last update: 2026-11-14: #39 doubling with the original reproduced on the sim in win10ref (E531).
 
 ## Round
 
@@ -139,10 +139,8 @@ message, only in a joint check with the user (by the dates above: #28 from 2026-
 00. Our turn on #39 (reply 11-14: Live button a bit better, "doubling notes" when recording). Waiting on reporters: #37 (libusb test in Logic), #30 (Snow meters, rc5), #40 (#30/#39 views),
     #36 (BC2001.syx, asked 11-14).
     Check issues only together with the user.
-0. #39 doubled notes on the sim (user 11-14: press the keys in the sim panel and hear it): sim (virus-ti-sim-35)
-   writes key tap + keyed_live.sh + double_check.py, a keyplay run (4 cases), then the user's GUI session.
-   Plan B done (E530: 2/1/1/0 voices, doubling = Local On + echo); help hint committed. Next: the original in
-   win10ref over USB/IP (sim builds its session pieces), then post the #39 reply.
+0. #39 reply: post the draft (session 11-14) updated with E530/E531: the original doubles the same way (sim, win10ref,
+   Local On + Monitor In = 2 voices ~14.5 ms apart; Monitor Off or Local Off = 1). Together with the user.
 0a. live-later on the Mac: switch it on in the CC, keystamp run like E518 A, spacing should be 24000 +-1 (E519).
 0b. Level 2 done twice (E527). Linux re-link accepted, in README + site. One-probe fix 2d69cc8: sim stand-in OK
     (S144, at most 1 pending during a stall; kernel run not done, optional). Then the Mac: rc8 + "Virus TI MIDI" + live-later check with a round build
