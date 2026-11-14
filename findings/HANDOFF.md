@@ -140,6 +140,8 @@ message, only in a joint check with the user (by the dates above: #28 from 2026-
     Compare how the original's driver and our broker keep reads pending on EP 0x85 (sim: a 20 ms read gap delays keys
     to 30 ms). (3) Compare the key globals each plug-in sends (0x3B, 0x40, 0x41, 0x46, 0x3E, 0x42-0x45). (4) TI2 run
     with a USB-MIDI interface on MIDI In (sim's plan in S133): asked the user 11-14 whether one is here, no answer yet.
+    Sim S134 running (virtual TI1 Keyboard + our broker/plug-in, model only): first result, during the start-up bank
+    sync with an empty cache all keys came out but 34-984 ms late, 9-14 ms afterwards. Not in evidence yet: wait for S134.
 0d. rc8: the rc7 crash fix without Access files (dbf8bed) is only on the round; user's call when to build it.
     Sim repo history (raw firmware bytes in an old commit of the private repo): user's call on a force push.
 1. rc4 posted on #30 (issuecomment-6848455763). The reporter answered 11-13 15:46: latency solved, meters open.
