@@ -73,6 +73,13 @@ target_compile_definitions(TIReviveControlCenter PRIVATE TIREVIVE_VERSION="${PRO
 set_target_properties(TIReviveControlCenter PROPERTIES RUNTIME_OUTPUT_DIRECTORY "${CMAKE_BINARY_DIR}/ccapp/$<0:>")
 if(APPLE)
     set(TIREVIVE_APP_VERSION ${PROJECT_VERSION})
+    # the app's minimum macOS follows the build target: 11.0 for the release, 10.15 for the Catalina build (#37: a
+    # fixed 11.0 made Catalina refuse an app whose binary was built for 10.15)
+    if(CMAKE_OSX_DEPLOYMENT_TARGET)
+        set(TIREVIVE_APP_MIN_MACOS ${CMAKE_OSX_DEPLOYMENT_TARGET})
+    else()
+        set(TIREVIVE_APP_MIN_MACOS 11.0)
+    endif()
     configure_file(ccapp/Info.plist ${CMAKE_CURRENT_BINARY_DIR}/ccapp-Info.plist @ONLY)
     set_target_properties(TIReviveControlCenter PROPERTIES OUTPUT_NAME "TI Revive Control Center"
         MACOSX_BUNDLE_INFO_PLIST ${CMAKE_CURRENT_BINARY_DIR}/ccapp-Info.plist)
