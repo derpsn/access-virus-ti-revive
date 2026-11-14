@@ -5,7 +5,7 @@ NEXT. At most 150 lines; the Stop hook (`.claude/hooks/handoff-check.sh`) refuse
 how goes into the dated log [`log/2026-11.md`](log/2026-11.md) (newest first); older logs are in [`log/`](log/).
 Device/protocol knowledge goes into [`evidence.md`](evidence.md). Update this file in the same commit as the work._
 
-Last update: 2026-11-14: #39 doubling with the original reproduced on the sim in win10ref (E531).
+Last update: 2026-11-14: #39 follow-up posted (E530/E531), issue closed by the reporter.
 
 ## Round
 
@@ -61,7 +61,7 @@ Last update: 2026-11-14: #39 doubling with the original reproduced on the sim in
 | #36 | Windows Cubase bank sync 0/128 | reporter (rc2: display, hub/cable, 3 checks; BC2001.syx asked 11-14) | 2026-11-14 |
 | #37 | Catalina: crackle = byte-slipped audio (E510); libusb probe run 2 (E511 Later): 1000/1000 iso packets ok and real data, but only an idle floor on USB 1, no C4; AppleUSBAudio stays attached next to libusb; interface 1 without driver afterwards | reporter: heard the C4s on the Virus' outputs? Virus ok in Logic since? then the libusb test in Logic from his download (asked 11-14, issuecomment-6872527194): broker log + plug-in log | 2026-11-14 |
 | #38 | macOS 27 Live: editor / AU crash | reporter (crash report, Access files) | 2026-11-10 |
-| #39 | TI1 Keyboard in Ableton Live. Settled: the unit's pace and shares (E515, E516 6), the original on Win 10 in Live 10 as VST2 showed almost the same although it makes both 'AbLi' calls (E516 7, 8), so his symptom is the unit, not us. Measured on our Mac (E518): with monitor In a played take comes back 54.6 ms late by default, 0 with Live Mode on. His three logs: Live Mode off throughout. Posted 11-14 (issuecomment-6872942887): the measurement, did he ever try the Live button, his view on 3 remedies (hint only / played notes take the lead while recording / report the short latency while playing). Reply 11-14 10:32 (issuecomment-6875956857): Live button 'a little better' when recording; plays all parts live, timing is everything; hears 'doubling notes' when recording through TI Revive (cause not looked into; Local/monitor?); no remedy picked; happy with editing + browsing. | us: answer (doubling, remedy) | 2026-11-14 |
+| #39 | TI1 Keyboard in Live: settled as the unit's pace (E515-E518); doubled notes = Local On + Monitor In, reproduced with TI Revive and the original on the sim (E530, E531). Reporter closed it 11-14 10:51 after our 'middle ground' comment; our follow-up with the result posted 11-14 (issuecomment-6876775320). | nobody (closed) | 2026-11-14 |
 | #40 | (ours) macOS: TI Revive takes the Virus' audio itself (libusb, E511) as an option? asks #30/#37/#39 reporters | #37 reporter answered 11-13 21:14: barely uses it as sound card, wants a unit/soundcard switch, admin rights ok, Logic on Catalina; #30/#39 reporters not yet | 2026-11-13 |
 
 Every open issue waits on its reporter. Quiet-issue rule: 7 days after our last request, close with the AGENTS.md
@@ -136,11 +136,9 @@ message, only in a joint check with the user (by the dates above: #28 from 2026-
 
 ## NEXT
 
-00. Our turn on #39 (reply 11-14: Live button a bit better, "doubling notes" when recording). Waiting on reporters: #37 (libusb test in Logic), #30 (Snow meters, rc5), #40 (#30/#39 views),
+00. Waiting on reporters: #37 (libusb test in Logic), #30 (Snow meters, rc5), #40 (#30/#39 views),
     #36 (BC2001.syx, asked 11-14).
     Check issues only together with the user.
-0. #39 reply: post the draft (session 11-14) updated with E530/E531: the original doubles the same way (sim, win10ref,
-   Local On + Monitor In = 2 voices ~14.5 ms apart; Monitor Off or Local Off = 1). Together with the user.
 0a. live-later on the Mac: switch it on in the CC, keystamp run like E518 A, spacing should be 24000 +-1 (E519).
 0b. Level 2 done twice (E527). Linux re-link accepted, in README + site. One-probe fix 2d69cc8: sim stand-in OK
     (S144, at most 1 pending during a stall; kernel run not done, optional). Then the Mac: rc8 + "Virus TI MIDI" + live-later check with a round build
