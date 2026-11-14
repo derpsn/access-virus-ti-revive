@@ -70,6 +70,7 @@ struct vti {
     volatile int ev_stop;
     int started;            // rx_start ran: rx_stop on close
     int linked;             // the last link message sent (E524)
+    int leak;               // transfers still out after the close: keep this struct (rx_stop)
     uint8_t bulk[16];       // by endpoint number: 1 = bulk (Virus TI Snow), 0 = interrupt (TI/TI2 Desktop, E021) - E387
     unsigned long idle;     // FF FE 00 00 packets dropped on a bulk EP 0x85 (E387)
 };
@@ -199,11 +200,14 @@ static void *reader(void *p)
     vti *v = e->v;
     const uint8_t ep = e->ep;
     int fails = 0, last = 0; // errors in a row and the last one (vtireaderr.h)
+    int gave_up = 0;
     vti_rx_rec rec;
     while (!v->stop) {
         if (rx_take(e, &rec))
             continue;
-        if (rec.err) {
+        if (gave_up && !vti_rx_hand_on_after_giveup(rec.err))
+            continue;
+        if (rec.err && !gave_up) {
             const int r = rec.err;
             fails++;
             last = r;
@@ -213,7 +217,8 @@ static void *reader(void *p)
                 vti_log("vti: read ep %02x: %d errors in a row (last %s), giving up on the device\n", ep, fails,
                         libusb_error_name(r));
                 v->dead = 1;
-                break;
+                gave_up = 1; // keep handing on what the other transfers bring until the close (S138)
+                continue;
             }
             if (vti_libusb_stalled(r)) // the standard CLEAR_FEATURE(ENDPOINT_HALT), as WinUsb_ResetPipe on Windows
                 libusb_clear_halt(v->h, ep);
@@ -278,12 +283,13 @@ static void rx_stop(vti *v)
         for (int s = 0; s < RX_PENDING; s++)
             if (e->busy[s])
                 libusb_cancel_transfer(e->t[s]);
-        for (int w = 0; e->inflight > 0 && w < 2; w++) { // the event thread runs their callbacks: 2 s at most
-            struct timeval now;
-            gettimeofday(&now, NULL);
-            struct timespec until = {now.tv_sec + 1, now.tv_usec * 1000L};
-            pthread_cond_timedwait(&e->cv, &e->mu, &until);
-        }
+        // the event thread runs their callbacks: wait for all of them, 2 s at most by the clock (every callback
+        // wakes this wait, so counting wake-ups ended it early, S138)
+        struct timeval now;
+        gettimeofday(&now, NULL);
+        const struct timespec until = {now.tv_sec + 2, now.tv_usec * 1000L};
+        while (e->inflight > 0 && pthread_cond_timedwait(&e->cv, &e->mu, &until) != ETIMEDOUT)
+            ;
         if (e->inflight > 0)
             vti_log("vti: read ep %02x: %d transfers still pending at close\n", e->ep, e->inflight);
         const int left = e->inflight;
@@ -291,14 +297,16 @@ static void rx_stop(vti *v)
         if (!left)
             for (int s = 0; s < RX_PENDING; s++)
                 libusb_free_transfer(e->t[s]); // NULL is fine
-        // with transfers left (never seen) they are leaked rather than freed under libusb
+        else
+            v->leak = 1; // a late callback may still use e: vti_close keeps v (never seen with the clock wait)
     }
     v->ev_stop = 1;
     pthread_join(v->ev, NULL);
-    for (int i = 0; i < 2; i++) {
-        pthread_mutex_destroy(&v->rx[i].mu);
-        pthread_cond_destroy(&v->rx[i].cv);
-    }
+    if (!v->leak)
+        for (int i = 0; i < 2; i++) {
+            pthread_mutex_destroy(&v->rx[i].mu);
+            pthread_cond_destroy(&v->rx[i].cv);
+        }
 }
 
 vti *vti_open(vti_rx_cb cb, void *user)
@@ -379,7 +387,8 @@ void vti_close(vti *v)
 #endif
     libusb_close(v->h);
     libusb_exit(v->ctx);
-    free(v);
+    if (!v->leak) // else a transfer's late callback could still reach its rxep (rx_stop)
+        free(v);
 }
 
 struct write_ctx {

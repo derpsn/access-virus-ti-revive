@@ -99,3 +99,12 @@ TEST(rxqueue_maps_transfer_status_to_libusb_errors)
     CHECK_EQ(vti_xfer_err(3), -1);  // CANCELLED outside a close: as an IO error
     CHECK_EQ(vti_xfer_err(99), -1);
 }
+
+TEST(rxqueue_after_a_give_up_data_still_goes_on_errors_do_not)
+{
+    // S138: a reader that gave up left its other transfers submitted until the close; a key that came in that window
+    // was lost. Data in the queue still reaches the clients; further errors are neither counted nor resubmitted.
+    CHECK(vti_rx_hand_on_after_giveup(0));
+    CHECK(!vti_rx_hand_on_after_giveup(-9));
+    CHECK(!vti_rx_hand_on_after_giveup(-4));
+}

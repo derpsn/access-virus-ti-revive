@@ -72,6 +72,10 @@ static inline int vti_unpark(unsigned *parked) // the lowest parked slot, or -1
     return -1;
 }
 
+// After the reader gave up on the device its other transfers stay submitted until the close (0.25-0.5 s): what they
+// bring still goes to the clients (S138: a key in that window was lost), further errors are neither counted nor resent.
+static inline int vti_rx_hand_on_after_giveup(int err) { return err == 0; }
+
 // libusb_transfer_status -> the libusb error code the reader's rules use (plain numbers, testable without libusb)
 static inline int vti_xfer_err(int status)
 {
