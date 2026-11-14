@@ -5,7 +5,7 @@ NEXT. At most 150 lines; the Stop hook (`.claude/hooks/handoff-check.sh`) refuse
 how goes into the dated log [`log/2026-11.md`](log/2026-11.md) (newest first); older logs are in [`log/`](log/).
 Device/protocol knowledge goes into [`evidence.md`](evidence.md). Update this file in the same commit as the work._
 
-Last update: 2026-11-14 ~19:15 UTC: 0.8.41 tagged and pushed (release CI running).
+Last update: 2026-11-14 evening: 0.8.41 released and Latest; Mac push of the release pending.
 
 ## Round
 
@@ -137,8 +137,8 @@ message, only in a joint check with the user (by the dates above: #28 from 2026-
 
 00. Waiting on reporters: #37 (libusb test in Logic, 0.8.42 work), #30 (Snow meters), #40, #36 (BC2001.syx).
     Check issues only together with the user.
-0. 0.8.41 RELEASED (user: "Ship it", 2026-11-14 ~19:15 UTC): main 266cb46 = merge 6e4c632 (5fc470c + e5f84e8) +
-   README fix (main's rc8 preview block survived the merge); tree = round e5f84e8. Tag v0.8.41 pushed, release CI
-   43625111066 running. NEXT: check release (6 assets, Latest), site rebuild (gh workflow run site.yml), install the
-   release on Linux + win11, Mac pkg + install command, post 'out now' only with the user; start round 0.8.42
-   from main (candidates in "Round 0.8.42"; first: live-later 160 frames E534, MIDI ports Linux/Windows, libusb #37).
+0. 0.8.41 RELEASED and LATEST (2026-11-14): main 266cb46 (merge 6e4c632 + README fix), release CI 43625111066
+   green, 6 assets; site rebuilt (site.yml 43625667337, live: Download 0.8.41, no preview box). Installed: Linux
+   (plug-in 184badb2, broker 728db830), win11 (/quiet exit 0, 0.8.41). Mac: unreachable over SSH at 19:3x; the
+   package is ready in work/rel-0.8.41/mac-push/TI-Revive-0.8.41-release (pkg 643f73d4): push when it is awake.
+   'Out now' posts on issues only with the user. Then round 0.8.42 from main (new branch, explicit refspec).
