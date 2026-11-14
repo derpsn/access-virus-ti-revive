@@ -112,7 +112,8 @@ others from 2026-11-21 (#40 is ours: no closing; #32: look up its date first).
 
 ## NEXT
 
-1. rc1 pre-release (v0.8.42-rc1, user's go) with the libusb zip, then the #37 note (with the user).
+1. v0.8.42-rc1 tagged on round-0.8.42 (user 2026-11-14: "tag it and post to the user"); #37 note: draft shown to
+   the user first, then posted. build.yml "New in 0.8.42" written for rc1 (libusb package); rewrite before the final.
 2. Mac awake: push the 0.8.41 release package or the round's normal package (see Machines), the user installs it.
 3. Then live-later 160 + its Mac test, Linux MIDI ports.
 3. Waiting on reporters (table above); check issues only together with the user.
