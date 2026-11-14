@@ -940,7 +940,7 @@ Entries: 513. Marks after an entry: its lowest confidence level when below HIGH,
 - [E513](evidence.md#e513) The broker's own audio on macOS works in a DAW (libusb-audio branch, E511): our Mac (macOS 27.2.1, Apple ... (open)
 - [E515](evidence.md#e515) #39 joint deep look, the unit's side (user 2026-11-13: "find any clues ... in the firmware if there is ... (MED; not on hardware)
 
-## Access software (Virus Control, Control Center, installer) (208)
+## Access software (Virus Control, Control Center, installer) (209)
 
 - [E001](evidence.md#e001) MSI baseline SHA256 = f9a6f5c929ec894f872052082be9b4abec07e627499549d21c1f362a55e0a466 (47,767,552 B)
 - [E003](evidence.md#e003) MSI custom action `UpdateFirmware` (CAInstallerHelperDeferred!UpdateTIOS) runs at InstallExecuteSequence 6598 ...
@@ -1150,6 +1150,7 @@ Entries: 513. Marks after an entry: its lowest confidence level when below HIGH,
 - [E509](evidence.md#e509) #30 (Snow, "the level meters in the plug-in don't show", Logic's own meters fine): the Snow skin's part meter ... (MED; open; not on hardware)
 - [E510](evidence.md#e510) #37 follow-up (2026-11-13 18:56 UTC, Catalina, TI Desktop): the reporter's answers: "2 Outs / No Input" does ... (LOW; open)
 - [E511](evidence.md#e511) macOS without Apple's USB audio driver, feasibility (user 2026-11-13: "prepare the feasibility test", after ... (open)
+- [E516](evidence.md#e516) The original tells Ableton Live two latencies; TI Revive can tell a host only one (#39, user 2026-11-13: ... (MED; open)
 
 ## Windows (171)
 
