@@ -5,14 +5,14 @@ NEXT. At most 150 lines; the Stop hook (`.claude/hooks/handoff-check.sh`) refuse
 how goes into the dated log [`log/2026-11.md`](log/2026-11.md) (newest first); older logs are in [`log/`](log/).
 Device/protocol knowledge goes into [`evidence.md`](evidence.md). Update this file in the same commit as the work._
 
-Last update: 2026-11-14 (#39: E516 the original's two latencies for Ableton Live + sim S132 final; rc7 crash fix on the round; rc7 out).
+Last update: 2026-11-14 morning (#39: Live placement measured E518, reply with 3 options posted; #37 libusb test in Logic asked; E517 MIDI In; fresh context from here).
 
 ## Round
 
 - **v0.8.41-rc7** pre-release 2026-11-13 20:45 UTC (tag on 2e0fed9: live-note stamps from the timeline, E512),
   release CI 43503582943 all 8 jobs green, 6 assets, Latest stays 0.8.40; main 6cf8493 preview box; Linux rc7
-  installed. #39 asked to test rc7 (issuecomment-6864528067). Mac: rc6 installed, rc7 pushed 11-14 to
-  ~/Downloads/TI-Revive-0.8.41-rc7 (user installs; then the Live placement test, NEXT 00, also checks E512).
+  installed. #39 asked to test rc7 (issuecomment-6864528067). Mac: rc7 installed 11-14, Live
+  placement test done there (E518).
 - **rc7 bug, fixed on the round (2026-11-13 late):** without the user's Access files rc7 crashes the DAW in process()
   (the E512 change put `out_->live_s.store` under an `if` without braces; out_ is null there). Test-first: ctest
   no_access_files (nativehost, empty HOME) segfaulted, passes with the braces. Why unnoticed: plug-in sources got no
@@ -49,14 +49,14 @@ Last update: 2026-11-14 (#39: E516 the original's two latencies for Ableton Live
 
 ## Machines and the Virus
 
-- Our TI2 Desktop: on the **Mac** USB bus since 2026-11-13 ~18:20 (#39 run1/run2); back to Linux for hil.sh. User flashed ROM Z on it in early November (E500).
+- Our TI2 Desktop: on the **Mac** USB bus (2026-11-14, Live placement test); back to Linux for hil.sh. User flashed ROM Z on it in early November (E500).
 - Linux: rc4 CI build (run 43377561345) installed (plug-in b18c102b, broker 2e75801c), `hil.sh` ALL PASS.
 - win11 VM: rc4 CI MSI installed (/quiet, exit 0, DisplayVersion 0.8.41, no Virus attached), shut down.
 - win10 VM: reverted to snapshot `pre-i36` (0.8.36); snapshots `pre-i36`, `pre-i36-access` kept.
-- Mac (macOS 27.2.1): rc6 package INSTALLED 2026-11-13 21:00 (VST3 22e2d9fc, broker 4558a47e = payload); before: rc4 CI package (2026-11-13 09:42 CET; VST3 b9674444, AU 04b9bae3, broker 4558a47e
-  = the package payload). The count-in arp test is left to the #30 reporter (user 2026-11-13).
+- Mac (macOS 27.2.1): **rc7** package installed 2026-11-14 06:46 (by the user; ~/Downloads/TI-Revive-0.8.41-rc7). Live 12 Suite there; keystamp in
+  ~/tirevive-test/keystamp, starter ~/Downloads/'Live placement test.command'; sets ~/Desktop/placement-A/B/C. live-notes option back on; klog.on, noteprobe.on still set (harmless).
 
-## Open issues (as of 2026-11-12 late; check GitHub only together with the user)
+## Open issues (as of 2026-11-14 morning; check GitHub only together with the user)
 
 | Issue | Topic | Waits on | Last from us |
 |---|---|---|---|
@@ -70,7 +70,7 @@ Last update: 2026-11-14 (#39: E516 the original's two latencies for Ableton Live
 | #36 | Windows Cubase bank sync 0/128 | reporter (rc2: display, hub/cable, 3 checks) | 2026-11-11 |
 | #37 | Catalina: crackle = byte-slipped audio (E510); libusb probe run 2 (E511 Later): 1000/1000 iso packets ok and real data, but only an idle floor on USB 1, no C4; AppleUSBAudio stays attached next to libusb; interface 1 without driver afterwards | reporter: heard the C4s on the Virus' outputs? Virus ok in Logic since? then the libusb test in Logic from his download (asked 11-14, issuecomment-6872527194): broker log + plug-in log | 2026-11-14 |
 | #38 | macOS 27 Live: editor / AU crash | reporter (crash report, Access files) | 2026-11-10 |
-| #39 | TI1 Keyboard in Ableton Live. Our summary posted (issuecomment-6867329556). Reporter 11-13 23:22: his Win 10 test of the ORIGINAL was in Live 10 with the VST (not VST3), and it showed almost the same (E516 7, 8: the Windows core makes both 'AbLi' calls for any host named Live, read 11-14, so the two-latency call is not what he feels; the unit's pace E515 and the monitor Off placement remain). E517 (sim S133): MIDI In is no second keybed with the link up (cable 0, same queue, not played directly); TI Revive's port passes only cable 1 (gap). | us: closing answer with the user (Mac test done, E518: +54.6 ms on playback by default, 0 in Live Mode); open from E517: TI2 run with a USB-MIDI interface on MIDI In (ask user for one), compare EP 0x85 polling and the key globals original vs ours, cable 0 port | 2026-11-14 |
+| #39 | TI1 Keyboard in Ableton Live. Settled: the unit's pace and shares (E515, E516 6), the original on Win 10 in Live 10 as VST2 showed almost the same although it makes both 'AbLi' calls (E516 7, 8), so his symptom is the unit, not us. Measured on our Mac (E518): with monitor In a played take comes back 54.6 ms late by default, 0 with Live Mode on. His three logs: Live Mode off throughout. Posted 11-14 (issuecomment-6872942887): the measurement, did he ever try the Live button, his view on 3 remedies (hint only / played notes take the lead while recording / report the short latency while playing). | reporter: Live button tried? which remedy | 2026-11-14 |
 | #40 | (ours) macOS: TI Revive takes the Virus' audio itself (libusb, E511) as an option? asks #30/#37/#39 reporters | reporters (audio interface use, admin rights, macOS/DAW) | 2026-11-13 |
 
 Every open issue waits on its reporter. Quiet-issue rule: 7 days after our last request, close with the AGENTS.md
@@ -124,20 +124,19 @@ message, only in a joint check with the user (by the dates above: #28 from 2026-
 
 ## NEXT
 
-00. #39 / E518 MEASURED on the Mac 11-14 (Live 12, rc7 VST3, monitor In): a played take comes back 54.6 ms later than
-    it sounded (default, live notes on); 0.0 ms with Live Mode on, 0.0 ms with live notes off. DECIDE with the user: a
-    remedy (hint 'record with Live Mode on' in help/README, or played notes take the lead while the host records, or
-    report the short latency while a track is monitored). Open: +-128 frame spacing of played notes in rc7 (E518 4).
-0a. Live-stamp fix (E512): in rc7 (user: "make a new RC and let him test", #39 has the setup); also verify on our Mac
-   (keystamp + klog: onsets 24000 frames apart). libusb-audio branch paused (plug-in side committed 300cdd4).
-0. #39 (user 2026-11-13: investigate before replying to #39 and #30): E507 = their log (no unit requests while
-   playing), sim S127/S128 (unit holds keys only behind a dump reply), Mac run1 (Live on built-in output, two clocks)
-   and run2 (Virus as Live's device) with native/tools/keystamp.c + scripts/als_notes.py: 120/120 notes within
-   0.29 ms each, no drift/step/2-bar effect. Live audio-device switches reproduce the reporter's three session-1
-   moments (1+23..25 safety-net moves). Reply posted on #39 (issuecomment-6860658701, with keystamp build line
-   pinned to 9e2632f, SDK fallback tested on our Mac); analyse their zip with als_notes.py when it comes.
-   #30 reply posted (issuecomment-6860709832: meters + screenshot, arp after count-in). Data: work/latency/i39-keystamp.
-   TI2 is on the Mac USB now, not Linux. klog is still switched on on the Mac (harmless, diagnostic).
+00. START HERE (fresh context 2026-11-14). Waiting on reporters: #39 (Live button? remedy 1/2/3), #37 (libusb test in
+    Logic, two questions), #30 (Snow meters in rc5), #40 views. Check issues only together with the user.
+0a. E518 remedy, after #39's view and the user's call. My recommendation: hint now (helptext.cpp Live Mode text +
+    README), the 'short latency while playing' variant as a feature later (untested: hosts re-sync on a latency change).
+0b. Open from E518 (4): played notes in rc7 are spaced up to +-128 frames in Live on the Mac (E512 aimed lower, E513
+    saw +-64 on the libusb path). Look at live_stamp_tl with the Mac's diag.log/klog of 11-14 06:54-07:06.
+0c. Open from E517 (sim S133): (1) TI Revive's MIDI port passes only cable 1; a keyboard on the Virus' MIDI In (cable
+    0) reaches no DAW while the plug-in is connected: gap vs the original's second port, decide with the user. (2)
+    Compare how the original's driver and our broker keep reads pending on EP 0x85 (sim: a 20 ms read gap delays keys
+    to 30 ms). (3) Compare the key globals each plug-in sends (0x3B, 0x40, 0x41, 0x46, 0x3E, 0x42-0x45). (4) TI2 run
+    with a USB-MIDI interface on MIDI In (sim's plan in S133): asked the user 11-14 whether one is here, no answer yet.
+0d. rc8: the rc7 crash fix without Access files (dbf8bed) is only on the round; user's call when to build it.
+    Sim repo history (raw firmware bytes in an old commit of the private repo): user's call on a force push.
 1. rc4 posted on #30 (issuecomment-6848455763). The reporter answered 11-13 15:46: latency solved, meters open.
 2. User on bare-metal Windows testing rc4; afterwards read their plug-in log, and their call on the S126 fix.
 3. Wait for the reporters; next joint issue check with the user.
