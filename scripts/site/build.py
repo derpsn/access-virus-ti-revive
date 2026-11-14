@@ -726,7 +726,7 @@ def features_section():
 
     <div class="feature">
       <div><h3>Timing</h3>
-      <p>The plug-in finds the clock of the Virus on USB, stamps every note against it and reports its latency, so the DAW lines recordings up with the grid. Since 0.8.39 that delay follows your buffer down to 32 samples, as the original's does (3584 samples plus the buffer: 76 ms at 64 samples and 48 kHz, before 82.7 ms), and notes you play live skip it in DAWs that mark them (Ableton Live), about 22 ms. The Virus follows the host at 44.1 or 48 kHz like with the original (since
+      <p>The plug-in finds the clock of the Virus on USB, stamps every note against it and reports its latency, so the DAW lines recordings up with the grid. Since 0.8.39 that delay follows your buffer down to 32 samples, as the original's does (3584 samples plus the buffer: 76 ms at 64 samples and 48 kHz, before 82.7 ms), and notes you play live skip it in DAWs that mark them (Ableton Live), about 22 ms. If you record a part you play into Ableton Live, switch the plug-in's Live Mode on while you record: otherwise Live puts the take about 50 ms later than you heard it (measured on macOS with Live 12). The Virus follows the host at 44.1 or 48 kHz like with the original (since
       0.8.32); at other host rates a resampler converts with -90 dB error.</p></div>
       <div><table class="data">
         <thead><tr><th>16th notes at 120 BPM</th><th>On the grid</th><th>Jitter</th><th>Drift</th></tr></thead>
