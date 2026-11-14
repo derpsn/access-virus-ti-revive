@@ -5,7 +5,7 @@ NEXT. At most 150 lines; the Stop hook (`.claude/hooks/handoff-check.sh`) refuse
 how goes into the dated log [`log/2026-11.md`](log/2026-11.md) (newest first); older logs are in [`log/`](log/).
 Device/protocol knowledge goes into [`evidence.md`](evidence.md). Update this file in the same commit as the work._
 
-Last update: 2026-11-14 afternoon (rc8 out; MIDI In port, async reader, unlink like the original on the round, sim-checked E522-E525; no hardware run yet).
+Last update: 2026-11-14 late afternoon (sim side of the async reader + unlink closed, S140; dev-mac 43573023265 green for cb73ca7; waits: user on the live-stamp option and the Virus to Linux).
 
 ## Round
 
