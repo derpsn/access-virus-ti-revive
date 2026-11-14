@@ -5,7 +5,7 @@ NEXT. At most 150 lines; the Stop hook (`.claude/hooks/handoff-check.sh`) refuse
 how goes into the dated log [`log/2026-11.md`](log/2026-11.md) (newest first); older logs are in [`log/`](log/).
 Device/protocol knowledge goes into [`evidence.md`](evidence.md). Update this file in the same commit as the work._
 
-Last update: 2026-11-14: #39 follow-up posted (E530/E531), issue closed by the reporter.
+Last update: 2026-11-14: #37 reply (rc6 log, libusb Logic test asked again, E510/E511 Later).
 
 ## Round
 
@@ -59,7 +59,7 @@ Last update: 2026-11-14: #39 follow-up posted (E530/E531), issue closed by the r
 | #33 | Intel Mac: Ableton fine, Logic distorted | reporter (rc1: Logic log, rate, buffer) | 2026-11-10 |
 | #34 | TI2/Keyboard macOS Ableton crackle, right channel at full scale | reporter (2 Outs, 44.1 kHz, no hub, record input 3/4) | 2026-11-12 |
 | #36 | Windows Cubase bank sync 0/128 | reporter (rc2: display, hub/cable, 3 checks; BC2001.syx asked 11-14) | 2026-11-14 |
-| #37 | Catalina: crackle = byte-slipped audio (E510); libusb probe run 2 (E511 Later): 1000/1000 iso packets ok and real data, but only an idle floor on USB 1, no C4; AppleUSBAudio stays attached next to libusb; interface 1 without driver afterwards | reporter: heard the C4s on the Virus' outputs? Virus ok in Logic since? then the libusb test in Logic from his download (asked 11-14, issuecomment-6872527194): broker log + plug-in log | 2026-11-14 |
+| #37 | Catalina: slips (E510) restarted by rc6 (2 in 3 h, then clean, Later), still a faint crackle not visible in the plug-in; probe run 2: C4s on the headphones but not on USB 1 (E511 Later) | reporter: libusb test in Logic (broker + plug-in, asked again 11-14, issuecomment-6876859556), crackle on the headphones too?, Logic output device + buffer | 2026-11-14 |
 | #38 | macOS 27 Live: editor / AU crash | reporter (crash report, Access files) | 2026-11-10 |
 | #39 | TI1 Keyboard in Live: settled as the unit's pace (E515-E518); doubled notes = Local On + Monitor In, reproduced with TI Revive and the original on the sim (E530, E531). Reporter closed it 11-14 10:51 after our 'middle ground' comment; our follow-up with the result posted 11-14 (issuecomment-6876775320). | nobody (closed) | 2026-11-14 |
 | #40 | (ours) macOS: TI Revive takes the Virus' audio itself (libusb, E511) as an option? asks #30/#37/#39 reporters | #37 reporter answered 11-13 21:14: barely uses it as sound card, wants a unit/soundcard switch, admin rights ok, Logic on Catalina; #30/#39 reporters not yet | 2026-11-13 |
