@@ -5,7 +5,7 @@ NEXT. At most 150 lines; the Stop hook (`.claude/hooks/handoff-check.sh`) refuse
 how goes into the dated log [`log/2026-11.md`](log/2026-11.md) (newest first); older logs are in [`log/`](log/).
 Device/protocol knowledge goes into [`evidence.md`](evidence.md). Update this file in the same commit as the work._
 
-Last update: 2026-11-14 midday (rc8 tagged; Live Mode hint; E519 live-stamp edge, E520 sim S134; MIDI In port next).
+Last update: 2026-11-14 afternoon (rc8 out; MIDI In port, async reader, unlink like the original on the round, sim-checked E522-E525; no hardware run yet).
 
 ## Round
 
@@ -110,13 +110,14 @@ message, only in a joint check with the user (by the dates above: #28 from 2026-
       Mac build via dev-mac CI; not run yet (Mac check: the port shows up; no MIDI-In device here). Windows/Linux
       still have no key port at all.
 - [ ] 8 reads pending per MIDI endpoint like the original (E521 (1); user 11-14: "yes and in this round"): done in
-      vticore.c (async transfers, event thread, rxqueue.h + 7 tests; reader keeps the E503 rules). Builds clean on
-      Linux; NOT run on hardware yet: sim re-run of S135/S136/S134 asked, then hil.sh on the TI2 (Virus to Linux).
+      vticore.c (async transfers, event thread, rxqueue.h + 8 tests; reader keeps the E503 rules). Sim S138 (E525):
+      rules hold, keys a bit faster; two faults fixed in ce60145 (data after a give-up, rx_stop wait), sim re-run
+      asked. NOT run on hardware: hil.sh on the TI2 (Virus to Linux), the kernel's halt with 8 pending = level 2.
 - User 11-14: a message lost to an OUT stall stays lost (no resend), fine.
 - [ ] Unlink like the original (E524; user 11-14 "if it's like the original, yes"): linkrule.h + 3 tests; both
       brokers send raw 4E 73 52 00 when the last non-observer client leaves and at vti_close, and 4E 73 52 01 again
-      before the next client write. Linux + mingw build clean; NOT run on hardware: on the TI2 check the link-off
-      line in the broker log and that the next session works (hil.sh); a keyed unit plays stand-alone after (sim).
+      before the next client write. Linux + mingw build clean; sim S138: keyed unit plays stand-alone after the
+      close, next session fine, CC keeps the link (E525). NOT run on hardware: link-off line + next session (hil.sh).
 - [ ] Library scan skips patches as "damaged or unknown format" (#36 log: BC2001 36, Incubation V3 97): check the
       format.
 
@@ -138,9 +139,12 @@ message, only in a joint check with the user (by the dates above: #28 from 2026-
 ## NEXT
 
 00. Waiting on reporters: #39 (Live button? remedy), #37 (libusb test in Logic), #30 (Snow meters, rc5), #40 views.
-    Check issues only together with the user. #30's own case (count-in) is fixed and confirmed; the sim's
-    note-at-Play case matches the original (S126 + REA) and stays as it is (dropped from the to-do 11-14).
-0a. rc8: CI result, main preview box, installs (Linux, win11 silent, Mac command), then the #39 hint reply with the user.
-0b. MIDI In port: dev-mac 43568159285 green; on the Mac: does "Virus TI MIDI" show up (with the next Mac install). Sim fed its MIDI In packing through the filter: 18/18 passed whole (E523; the unit itself drops F6).
-0c. E517 (2)/(3) answered (E521). E503 level 1 done (E522); level 2 with the user. No USB-MIDI interface here (user).
+    Check issues only together with the user.
+0a. User's call on E519/E524 (4): a) keep the default (same as the original or up to a block later) + Control
+    Center option "played notes a little later" (+1.3 ms, off by default) - recommended; b) the original exactly
+    (no in-block place: rc6's uneven Mac timing back).
+0b. Sim re-run of ce60145 (give-up drain, rx_stop clock wait); then the Virus to Linux: hil.sh on the round build
+    (async reader, unlink, MIDI port code) - asked the user. Mac: rc8 install by the user, check "Virus TI MIDI"
+    shows up with the next round build (dev-mac 43571122595 green for 95772b6, ce60145 not built yet).
+0c. rc8 #39 hint reply: with the user.
 1. Then the "To do before the final 0.8.41" list.
