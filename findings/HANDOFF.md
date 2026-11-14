@@ -123,6 +123,9 @@ message, only in a joint check with the user (by the dates above: #28 from 2026-
 
 ## Round 0.8.42 candidates (decided or proposed)
 
+- Mac audio without Apple's driver: libusb as root (branch libusb-audio) or a DriverKit dext (E528: the original
+  used its own kext; DriverKit needs Apple's entitlement per VID/PID, prototype first; log 2026-11-14). Not decided.
+
 - Decided: opt-in update check in the Control Center; "Prepare bug report" button (no telemetry).
 - Decided (user 2026-11-13, #30): the plug-in's level meters in Logic (details asked on #30). The count-in arp
   moved into 0.8.41 (E505).
