@@ -43,8 +43,7 @@ Last update: 2026-11-14 afternoon (level 2 with the sim done, E527: rules hold o
   43369222561 (2026-11-13, all green) has it. Since then (user 2026-11-13: "Into 0.8.41 ... like the original"):
   transport restarts like the original (E505, #30 count-in arp): F2 from ppq + 256, 73 00 23 vv on the next tick,
   F8 grid rephased, FC at Stop, the original's jump limits (transport.h, test_transport.cpp, nativehost --count-in).
-- Branch `catalina-test` (worktree `../virus-ti-re-catalina`, e91ef17): untested x86_64 / macOS 10.15 build for
-  #37 only; dev-mac run 43278510379 green, link posted on #37. Never merged into main.
+- Branch `catalina-test` (worktree `../virus-ti-re-catalina`): x86_64 / macOS 10.15 build for #37, never in main.
 
 ## Machines and the Virus
 
