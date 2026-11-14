@@ -429,6 +429,13 @@ fail:
     return NULL;
 }
 
+#ifdef __APPLE__
+#include "macgiveback.h"
+static int mg_attach(void *p) { return libusb_attach_kernel_driver(((vti *)p)->h, 0); }
+static void mg_close(void *p) { libusb_close(((vti *)p)->h); }
+static void mg_exit(void *p) { libusb_exit(((vti *)p)->ctx); }
+#endif
+
 void vti_close(vti *v)
 {
     if (!v)
@@ -453,12 +460,21 @@ void vti_close(vti *v)
         libusb_release_interface(v->h, i);
 #endif
 #ifdef __APPLE__
-    if (v->captured) // back to Apple's audio driver: the Virus is a Core Audio device again
+    // back to Apple's audio driver (the Virus is a Core Audio device again); after a failed attach libusb_close and
+    // libusb_exit abort, so they are skipped then (macgiveback.h, #37)
+    const vti_macgiveback_ops ops = {mg_attach, mg_close, mg_exit};
+    const int g = vti_macgiveback(&ops, v, v->captured);
+    if (v->captured)
         vti_log("vti: Virus given back to Apple's audio driver: %s\n",
-                libusb_attach_kernel_driver(v->h, 0) ? "failed (replug it)" : "ok");
-#endif
+                g ? libusb_error_name(g) : "ok");
+    if (g) {
+        vti_log("vti: unplug the Virus' USB cable and plug it in again to give it to Apple's driver\n");
+        return; // v and the libusb context are left to the ending process (closing them aborts, see above)
+    }
+#else
     libusb_close(v->h);
     libusb_exit(v->ctx);
+#endif
     if (!v->leak) // else a transfer's late callback could still reach its rxep (rx_stop)
         free(v);
 }

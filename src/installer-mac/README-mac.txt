@@ -38,7 +38,7 @@ Uninstall
 Double-click "Uninstall TI Revive.command" (also in /Library/Application Support/TI Revive). The Virus TI files and
 your patch libraries stay.
 
-Logs (for bug reports): create an empty file "diag.on" in ~/Library/Application Support/virus-ti-native, reproduce
-the problem and attach diag.log from there, and /tmp/tirevive-vtibroker.log.
+Logs (for bug reports): the Control Center's Nerd mode > "Save logs...", or diag.log in ~/Library/Application
+Support/virus-ti-native (on by default since 0.8.41) and /tmp/tirevive-vtibroker.log.
 
 Not affiliated with Access Music or Kemper. https://github.com/derpsn/access-virus-ti-revive

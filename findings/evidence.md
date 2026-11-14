@@ -4869,3 +4869,23 @@ The option live-later (E519: played notes stamped 128 frames later) on our Mac, 
 - **Method:** keystamp (native/tools/keystamp.c) + the plug-in's klog (virusplugin.cpp klog_check)
 - **Confidence:** HIGH (the counts, one run of 40) / LOW (the grid-edge reading)
 - **Hardware:** yes (TI2 Desktop, macOS)
+
+### E535
+
+#37's libusb audio run on Catalina (reporter, 2026-11-14 ~19:57-20:06 UTC; Intel MacBook, macOS 10.15.7, TI Revive dev-mac-catalina build with the 0.8.41 package, the broker started by mac-libusb-test.command through sudo with VTI_LIBUSB_AUDIO=1, Logic on the Mac's built-in output, buffers 64-1024 in the Small and Large ranges). (1) Reporter: no crackle at any buffer, latency better than with the Access software, one glitch at 512 (Large) that was gone after a few seconds. (2) Broker log (tirevive-libusb-broker.log, reporter's local clock = UTC+3:30): `Virus taken from Apple's audio driver (capture): ok`, `usbaudio: streaming 44.1 kHz on libusb (IN EP 0x82 6 ch, OUT EP 0x01 2 ch, frame pattern mirrored)`; 7 client sessions over ~9 min, every summary `errors 0, stalled 0 ms` and no packets out of range (43/44/45-byte frames only). (3) The glitch = 20:04:32 UTC in the plug-in log: `the Virus' audio arrives scrambled (byte slip, E488, ratio 0.991) - restarting the stream (1)`, `audio stream restarted -> 1`; the broker logs `audio off` / `audio on` at the same second. So the byte slip of E488/E510 still happens on this path (once in 7 starts here), but the restart works, which Apple's driver path cannot do (`not restarted on macOS` in the same log's Core Audio sessions, 18:28 UTC). (4) 1-3 sync reports from the Virus per session start, as in the same log's Core Audio sessions: nothing specific to this path. (5) After each reconnect `usb block late: ~3840 ms` = the pause since the previous session counted by the -v gap diagnostics, no real delay (gap timers now reset at audio stop, 0.8.42). (6) At the exit (Ctrl-C, 23:36:41 local) `Virus given back to Apple's audio driver: failed (replug it)` 10.15 s later, then `Assertion failed: (refcnt >= 0), function libusb_unref_device, file core.c, line 1352.` Reading of libusb 1.0.30 darwin_usb.c (not run): libusb_attach_kernel_driver re-enumerates without capture and waits up to DARWIN_REENUMERATE_TIMEOUT_US (10 s) for the device to come back; 10.15 s fits a timeout, after which the device counts no longer match and libusb_close / libusb_exit abort. On our macOS 27 Mac the same give-back worked (E513). Fix in 0.8.42: macgiveback.h skips close and exit after a failed attach and asks for a replug.
+
+- **Date:** 2026-11-14
+- **Pointer:** issue #37 (issuecomment from packman83 2026-11-14 20:16 UTC: tirevive-libusb-broker.log, TI-Revive-logs-2026-11-14-2338.txt); log 2026-11-14 late evening
+- **Method:** reporter's test + log reading; libusb 1.0.30 source reading for (6)
+- **Confidence:** HIGH (1)-(5), as logged / LOW (6) the cause (source reading only, no libusb debug log)
+- **Hardware:** yes (reporter's TI on an Intel Mac, macOS 10.15.7); not on our hardware
+
+### E536
+
+The plug-in's level meters work on a real Virus TI Snow, and #30's latency problem is solved with 0.8.41 (reporter, issue #30, 2026-11-14 20:44 UTC, Snow, Logic on macOS): "I can play and record in an endless loop with punch in and out totally on the grid and without any noticeable latency. The level meters in the snow plug in are visible". The meters for the Snow came in 0.8.41-rc5 and had been checked only on our TI2 Desktop and the simulator before. Issue closed as solved with the user the same evening.
+
+- **Date:** 2026-11-14
+- **Pointer:** issue #30 (comment 2026-11-14 20:44 UTC; closing reply issuecomment-6884273030)
+- **Method:** user report
+- **Confidence:** MED (a user's report, no log with it)
+- **Hardware:** yes (reporter's Virus TI Snow, macOS, Logic); not on our hardware

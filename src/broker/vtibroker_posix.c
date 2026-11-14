@@ -860,6 +860,9 @@ static void audio_stop(void) // g_cs_dev held
     vla_stop();
     g_shm->streaming = 0;
     g_audio_on = 0;
+    // the gap diagnostics start again with the next stream: else its first block counted the pause since this one
+    // ("usb block late: 3843 ms" after every DAW restart in #37's log, no real delay)
+    g_in_last = g_tick_last = 0;
     if (g_out_frames)
         blog("audio out: %llu frames played, %llu underruns, %llu frames dropped", (unsigned long long)g_out_frames,
              (unsigned long long)g_out_underruns, (unsigned long long)g_out_dropped);
@@ -1272,6 +1275,28 @@ static void *client_thread(void *arg)
     return NULL;
 }
 
+// who is on the other end of a Unix socket client: only the user this broker serves and root (owneruid.h). The
+// normal broker's socket is 0600 already; the libusb package's root service gets the same rule in the broker itself.
+static int peer_allowed(int fd)
+{
+#ifdef __APPLE__
+    unsigned peer = (unsigned)-1;
+    uid_t u;
+    gid_t g;
+    if (getpeereid(fd, &u, &g) == 0)
+        peer = (unsigned)u;
+#else
+    (void)fd; // Linux: the broker is the user's own systemd service, never root; its socket unit is the guard
+    return 1;
+#endif
+#ifdef __APPLE__
+    if (vti_client_allowed(peer, g_owner_uid))
+        return 1;
+    blog("client of user %d refused (this broker serves user %u)", (int)peer, g_owner_uid);
+    return 0;
+#endif
+}
+
 int main(int argc, char **argv)
 {
     for (int i = 1; i < argc; i++) {
@@ -1295,7 +1320,7 @@ int main(int argc, char **argv)
         blog("tracing to %s", tp);
     }
     struct sockaddr_un sa = {.sun_family = AF_UNIX};
-    g_owner_uid = vti_owner_uid((unsigned)geteuid(), (unsigned)getuid(), getenv("SUDO_UID"));
+    g_owner_uid = vti_owner_uid((unsigned)geteuid(), (unsigned)getuid(), vti_owner_env(getenv("VTI_OWNER_UID"), getenv("SUDO_UID")));
 #ifdef __APPLE__
     // the macOS test of the broker's own audio (E511): root (Apple's driver lets only root take the Virus) and asked for
     g_usb_audio = geteuid() == 0 && getenv("VTI_LIBUSB_AUDIO") && atoi(getenv("VTI_LIBUSB_AUDIO")) == 1;
@@ -1404,6 +1429,10 @@ int main(int argc, char **argv)
             if (fd < 0) {
                 if (errno != EINTR)
                     blog("accept: %s", strerror(errno));
+                continue;
+            }
+            if (k == 0 && !peer_allowed(fd)) { // a root broker (the libusb package, #37) serves its user only
+                close(fd);
                 continue;
             }
             client *c = calloc(1, sizeof *c);

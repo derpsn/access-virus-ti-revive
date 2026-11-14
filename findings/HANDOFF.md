@@ -5,7 +5,7 @@ NEXT. At most 150 lines; the Stop hook (`.claude/hooks/handoff-check.sh`) refuse
 how goes into the dated log [`log/2026-11.md`](log/2026-11.md) (newest first); older logs are in [`log/`](log/).
 Device/protocol knowledge goes into [`evidence.md`](evidence.md). Update this file in the same commit as the work._
 
-Last update: 2026-11-14 late evening: 0.8.41 Latest; #37 libusb audio works on Catalina, #30 closed; next round 0.8.42.
+Last update: 2026-11-14 night: round 0.8.42 started (libusb package for #37 written, not built on a Mac yet).
 
 ## Where things stand
 
@@ -13,10 +13,18 @@ Last update: 2026-11-14 late evening: 0.8.41 Latest; #37 libusb audio works on C
   (main 5fc470c + round e5f84e8) + one commit that drops main's rc8 preview block from the README (it survived the
   merge without a conflict: check that at every round merge). Release CI 43625111066 green, 6 assets. Site rebuilt
   by hand (site.yml 43625667337): Download 0.8.41, no preview box, 753 tests, coverage 96.4 %.
-- **Where the newest files are:** after the merge, `round-0.8.41` got HANDOFF/log commits only (74c8832 on); its tree
-  is main's plus those docs, but it lacks main's merge commit. Start round 0.8.42 as a branch from `origin/main`, then
-  `git merge origin/round-0.8.41` (docs only) so this HANDOFF comes along. Push the new branch with an explicit
-  refspec (`<b>:refs/heads/<b>`), check origin/main unchanged.
+- **Round 0.8.42** (branch `round-0.8.42` from origin/main 266cb46 + round-0.8.41 docs + `libusb-audio` +
+  `libusb-catalina`; the newest files are here). First item done in code: the **libusb package** (user 2026-11-14:
+  normal Mac package stays as it is; a separate package for Macs where Apple's driver crackles; "we dont test the
+  catalina build. This needs to be done from the user that had the issue" = #37 tests, we do not):
+  `LIBUSB_AUDIO=1 MAC_MIN=10.15 MAC_ARCHS=x86_64 PLUGIN_MIN=10.15 scripts/mac-build-release.sh` ->
+  TI-Revive-<v>-mac-libusb.zip (plain component pkg, README-mac-libusb.txt); its postinstall (marker `libusb-audio`
+  in the pkg scripts) installs the LaunchDaemon io.github.derpsn.tirevive.usbaudio (root, launchd socket
+  /tmp/vtibroker-<uid>.sock 0666, VTI_OWNER_UID, -stay) and mac-usb-audio.on; the normal pkg removes a leftover
+  service; the uninstaller too. Broker: VTI_OWNER_UID (owneruid.h vti_owner_env), clients other than the owner/root
+  refused on macOS (vti_client_allowed), give-back without the abort (macgiveback.h, E535 (6)), gap timers reset at
+  audio stop. Plug-in: mac-usb-audio is no Options switch any more (cc::mac_usb_audio()). CI: build.yml job
+  `mac-libusb` (macos-15-intel) + release asset. Built: Linux broker, plug-in, 760 tests; NOT built on a Mac yet.
 - Test round of 0.8.41: checklist https://claude.ai/artifact/7j2tvTcAc19iNynNjfnSwM (spec
   scripts/checklists/round-0.8.41.json). Linux L1-L4 + LC4 pass (hil.sh ALL PASS); Mac hil-mac ALL PASS, M1-M3,
   MC4, MC5 pass; VM W2, W3 pass, WC4 skipped, W1 passed by the user as VM-related (E533). Found and fixed in the
@@ -37,8 +45,8 @@ Last update: 2026-11-14 late evening: 0.8.41 Latest; #37 libusb audio works on C
   work/rel-0.8.41/mac-push/TI-Revive-0.8.41-release (pkg 643f73d4, INSTALL-COMMAND + "Install test build.command");
   the Mac did not answer over SSH: push it to ~/Downloads when it is awake (scripts/mac.sh push), the user installs.
   Option files there: live-later.on (left from M2), klog.on, noteprobe.on, live-notes.on, diag.on.
-- Branches: `libusb-audio` (Mac libusb path, merge main before its next build), `libusb-catalina` (worktree
-  ../virus-ti-re-catalina, the #37 test build, dev-mac 43512216308), `catalina-test` (old). Local scratch branch
+- Branches: `libusb-audio` and `libusb-catalina` (worktree ../virus-ti-re-catalina) are merged into round-0.8.42 and
+  done (dev-mac there = the Catalina build; on the round dev-mac stays the normal build), `catalina-test` (old). Local scratch branch
   `release-0.8.41` (merge worktree in this session's scratchpad) can be deleted.
 
 ## Open issues (checked with the user 2026-11-14 evening; check GitHub only together with the user)
@@ -79,10 +87,10 @@ others from 2026-11-21 (#40 is ours: no closing; #32: look up its date first).
 - MIDI ports: Linux first (ALSA sequencer virtual ports from the broker, keyport.h filter), then Windows (Windows
   MIDI Services virtual devices on Win11 25H2+, design-midi-ports.md option A; option C, a forwarding VST3, for
   Windows 10).
-- FIRST: macOS libusb audio path as an opt-in for old macOS, official Catalina package (x86_64, 10.15) without the
-  Terminal steps; test build to #37 before the release. Fix the exit give-back (attach fails, then libusb
-  refcnt assertion; vticore.c vti_close), the cosmetic `usb block late` after a reconnect, and make
-  mac-libusb-test.command refuse a non-test broker. Evidence entry for #37's run (log 2026-11-14 late evening).
+- FIRST (code written, see Where things stand): the libusb package; open: CI build of both Mac jobs, our Mac
+  keeps the NORMAL package (install it there, check it is unchanged), then an rc1 pre-release with the libusb zip
+  for #37 (promised there). Unverified: launchd socket activation as root on 10.15, SockPathMode 438, the
+  postinstall's pkill of a running user broker. mac-libusb-test.command stays a dev tool (not in any package).
 - Opt-in update check in the Control Center; "Prepare bug report" button (no telemetry).
 - #39: report the short latency while played notes come in (Live re-syncs).
 - Windows VM: hil-win on the tuned VM; if fresh-broker sessions still miss the probe, A/B against 0.8.40 (E533).
@@ -103,7 +111,7 @@ others from 2026-11-21 (#40 is ours: no closing; #32: look up its date first).
 
 ## NEXT
 
-1. Mac awake: push the 0.8.41 release package (see Machines), the user installs it.
-2. Start round 0.8.42 from `origin/main` + merge `origin/round-0.8.41` (see "Where things stand"), pick the first items with the user
-   (first: the libusb path + Catalina package for #37, then live-later 160 + its Mac test, Linux MIDI ports).
+1. CI build.yml on round-0.8.42 (both Mac jobs compile the macOS-only code for the first time); fix what breaks.
+2. Mac awake: push the 0.8.41 release package or the round's normal package (see Machines), the user installs it.
+3. rc1 pre-release with the libusb zip, reply on #37; then live-later 160 + its Mac test, Linux MIDI ports.
 3. Waiting on reporters (table above); check issues only together with the user.

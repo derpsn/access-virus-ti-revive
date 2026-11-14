@@ -11,6 +11,10 @@ VERSION="${2:?version}"
 OUT="$(mkdir -p "${3:-$REPO/../release}" && cd "${3:-$REPO/../release}" && pwd)"
 # the defaults are the release; a Catalina test build (#37) sets MAC_MIN=10.15 MAC_ARCHS=x86_64 PLUGIN_MIN=10.15
 MAC_MIN="${MAC_MIN:-14.4}"; MAC_ARCHS="${MAC_ARCHS:-arm64 x86_64}"; PLUGIN_MIN="${PLUGIN_MIN:-11.0}"
+# LIBUSB_AUDIO=1: the libusb package (#37, E511) - TI Revive's root service takes the Virus' audio instead of Apple's
+# driver (postinstall installs it when the package carries a "libusb-audio" file); its own zip name and README
+LIBUSB_AUDIO="${LIBUSB_AUDIO:-0}"
+PKG_SUFFIX=$([ "$LIBUSB_AUDIO" = 1 ] && echo mac-libusb || echo mac)
 export VERSION MACOSX_DEPLOYMENT_TARGET="$MAC_MIN"
 # a stale MacOSX27.0.sdk in some Command Line Tools installs breaks ld (E098): use a working SDK
 if [ -z "${SDKROOT:-}" ]; then
@@ -98,8 +102,11 @@ for ((i = 0; i < n; i++)); do
 done
 STAGE="$BUILD/TI-Revive-$VERSION-mac"
 mkdir -p "$STAGE"
+SCRIPTS="$BUILD/scripts" # the package's scripts; the libusb package also carries the marker its postinstall reads
+rm -rf "$SCRIPTS" && cp -R "$REPO/src/installer-mac/scripts" "$SCRIPTS"
+[ "$LIBUSB_AUDIO" != 1 ] || touch "$SCRIPTS/libusb-audio"
 pkgbuild --root "$ROOT" --component-plist "$BUILD/components.plist" --identifier io.github.derpsn.tirevive \
-    --version "$VERSION" --scripts "$REPO/src/installer-mac/scripts" --install-location / "$BUILD/tirevive-component.pkg"
+    --version "$VERSION" --scripts "$SCRIPTS" --install-location / "$BUILD/tirevive-component.pkg"
 # a build for an older macOS (Catalina test build, #37) ships the plain component package: Catalina's Installer cannot
 # open the product archive below ("can't instantiate package", pagecontroller error -1, #37 log 2026-11-10), while the
 # plain package of 0.8.40 installed there
@@ -122,8 +129,11 @@ PYEOF
 grep -q "os-version min=\"$MAC_MIN\"" "$BUILD/distribution.xml" || { echo "distribution.xml without the OS minimum" >&2; exit 1; }
 productbuild --distribution "$BUILD/distribution.xml" --package-path "$BUILD" "$STAGE/TI Revive.pkg"
 fi
+README="$REPO/src/installer-mac/README-mac.txt"
+[ "$LIBUSB_AUDIO" != 1 ] || README="$REPO/src/installer-mac/README-mac-libusb.txt"
 cp "$REPO/src/installer-mac/Set up Access Virus TI files.command" "$REPO/src/installer-mac/Uninstall TI Revive.command" \
-    "$REPO/src/installer-mac/README-mac.txt" "$REPO/LICENSE" "$REPO/THIRD-PARTY-NOTICES.txt" "$STAGE/"
+    "$README" "$REPO/LICENSE" "$REPO/THIRD-PARTY-NOTICES.txt" "$STAGE/"
 chmod +x "$STAGE"/*.command
-(cd "$BUILD" && ditto -c -k --keepParent "TI-Revive-$VERSION-mac" "$OUT/TI-Revive-$VERSION-mac.zip")
-echo "built $OUT/TI-Revive-$VERSION-mac.zip"
+if [ "$PKG_SUFFIX" != mac ]; then rm -rf "$BUILD/TI-Revive-$VERSION-$PKG_SUFFIX"; mv "$STAGE" "$BUILD/TI-Revive-$VERSION-$PKG_SUFFIX"; fi
+(cd "$BUILD" && ditto -c -k --keepParent "TI-Revive-$VERSION-$PKG_SUFFIX" "$OUT/TI-Revive-$VERSION-$PKG_SUFFIX.zip")
+echo "built $OUT/TI-Revive-$VERSION-$PKG_SUFFIX.zip"

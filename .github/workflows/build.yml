@@ -174,6 +174,51 @@ jobs:
           path: TI-Revive-hil-mac.zip
           if-no-files-found: warn
 
+  # the libusb package (#37, E511): TI Revive's root service takes the Virus' audio instead of Apple's driver, for Macs
+  # where that driver crackles (Catalina). Intel, macOS 10.15. Not tested by us (no Catalina Mac): its reporter tests.
+  mac-libusb:
+    runs-on: macos-15-intel # x86_64 build; Catalina runs on Intel Macs only
+    timeout-minutes: 25
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          path: repo
+          submodules: recursive # native/external/vst3sdk
+      - name: Build
+        env:
+          MAC_MIN: "10.15"
+          MAC_ARCHS: x86_64
+          PLUGIN_MIN: "10.15"
+          LIBUSB_AUDIO: "1"
+        run: |
+          v="${VERSION:-${GITHUB_REF_NAME#v}}"
+          bash repo/scripts/mac-build-release.sh repo "${v%%-rc*}" "$PWD/out"
+      - name: Check the targets and the package
+        run: |
+          set -x
+          B=out/build
+          lipo -info "$B/mac/vtibroker"
+          P="$B/native/VST3/Release/TI Revive Virus Control.vst3/Contents/MacOS/TI Revive Virus Control"
+          otool -l "$P" | grep -A4 -E "LC_BUILD_VERSION|LC_VERSION_MIN_MACOSX" | head -12
+          # Catalina has no UniformTypeIdentifiers (#37): it must not be linked
+          if otool -L "$P" | grep -q UniformTypeIdentifiers; then echo "still links UniformTypeIdentifiers"; exit 1; fi
+          A=$(find "$B/native" -path "*TI Revive Control Center.app/Contents/Info.plist" | head -1)
+          test -n "$A" && test "$(/usr/libexec/PlistBuddy -c 'Print :LSMinimumSystemVersion' "$A")" = "10.15"
+          K=$(mktemp -d) && ditto -x -k out/TI-Revive-*-mac-libusb.zip "$K"
+          PKG=$(ls "$K"/*/"TI Revive.pkg")
+          # a plain component package: Catalina's Installer cannot open the product archive (#37)
+          xar -tf "$PKG" | grep -qx PackageInfo
+          if xar -tf "$PKG" | grep -qx Distribution; then echo "product archive, not a component package"; exit 1; fi
+          # the marker that makes postinstall install the root service, and its README
+          X=$(mktemp -d) && (cd "$X" && xar -xf "$PKG" Scripts && gzip -dc Scripts | cpio -i --quiet)
+          test -f "$X/libusb-audio" && grep -q tirevive.usbaudio "$X/postinstall"
+          test -f "$K"/*/README-mac-libusb.txt
+      - uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
+        with:
+          name: TI-Revive-mac-libusb
+          path: out/TI-Revive-*-mac-libusb.zip
+          if-no-files-found: error
+
   native-linux: # the native plug-in for Linux, on Ubuntu 22.04 (glibc 2.35: runs on Ubuntu 22.04 / Debian 12 and newer)
     runs-on: ubuntu-22.04
     timeout-minutes: 25 # a hanging step (e.g. a stuck package mirror) fails fast instead of blocking
@@ -265,7 +310,7 @@ jobs:
 
   release:
     if: startsWith(github.ref, 'refs/tags/v')
-    needs: [msi, mac, linux]
+    needs: [msi, mac, mac-libusb, linux]
     runs-on: ubuntu-24.04
     timeout-minutes: 10 # a hanging step (e.g. a stuck package mirror) fails fast instead of blocking
     permissions:
@@ -278,6 +323,10 @@ jobs:
       - uses: actions/download-artifact@9000827ccba6bdab643e8b6fd33ac0654aef8333 # v8.0.2
         with:
           name: TI-Revive-mac
+          path: out
+      - uses: actions/download-artifact@9000827ccba6bdab643e8b6fd33ac0654aef8333 # v8.0.2
+        with:
+          name: TI-Revive-mac-libusb
           path: out
       - uses: actions/download-artifact@9000827ccba6bdab643e8b6fd33ac0654aef8333 # v8.0.2
         with:
@@ -340,5 +389,5 @@ jobs:
           curl -fsSL https://github.com/libusb/libusb/releases/download/v1.0.30/libusb-1.0.30.tar.bz2 -o out/libusb-1.0.30.tar.bz2
           echo "fea36f34f9156400209595e300840767ab1a385ede1dc7ee893015aea9c6dbaf  out/libusb-1.0.30.tar.bz2" | sha256sum -c -
           gh release create "$GITHUB_REF_NAME" out/TI-Revive-*-setup.exe out/TI-Revive-*.msi out/TI-Revive-*-mac.zip \
-            out/TI-Revive-*-linux.tar.gz repo/scripts/tirevive-usbinfo.ps1 out/libusb-1.0.30.tar.bz2 \
+            out/TI-Revive-*-mac-libusb.zip out/TI-Revive-*-linux.tar.gz repo/scripts/tirevive-usbinfo.ps1 out/libusb-1.0.30.tar.bz2 \
             --repo "$GITHUB_REPOSITORY" --title "TI Revive $v" --notes-file notes.md $pre
