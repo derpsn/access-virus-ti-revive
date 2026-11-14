@@ -9,6 +9,7 @@
 #include "access/accessfiles.h"
 #include "access/firmware.h"
 #include "access/library.h"
+#include "cc/controlcenter.h"
 #include "cc/diag.h"
 #include "base/source/fstreamer.h"
 #include "device/closeseq.h"
@@ -92,6 +93,12 @@ static bool env_stats()
 {
     static const bool on = getenv("VTI_NATIVE_STATS") != nullptr; // read once (called on hot paths)
     return on;
+}
+
+static double env_resync_s() // S094 test: a new sync every N s of quiet (resync.h); 0 = off
+{
+    static const double s = getenv("VTI_NATIVE_RESYNC") ? atof(getenv("VTI_NATIVE_RESYNC")) : 0.0;
+    return s > 0 ? s : 0.0;
 }
 
 static const uint8_t EP_PLUGIN_OUT = 0x06, CABLE_PLUGIN = 2, CABLE_TIME = 5;
@@ -266,6 +273,10 @@ bool DeviceOut::send_rt(const uint8_t *msg, size_t n, int64_t stamp, bool live)
         blocked_.fetch_add(1, std::memory_order_relaxed);
         return true;
     }
+    if (n >= 3 && (msg[0] & 0xF0) == 0x90 && msg[2] != 0) // a note is due soon: FreezeWatch's "nothing came" (E493)
+        last_note_ms.store(std::chrono::duration_cast<std::chrono::milliseconds>(
+                               std::chrono::steady_clock::now().time_since_epoch()).count(),
+                           std::memory_order_relaxed);
     size_t w = rt_w_.load(std::memory_order_relaxed);
     if (n > sizeof rt_[0].data || w - rt_r_.load(std::memory_order_acquire) >= RT_SLOTS) {
         // full (a runaway host while the budget holds the flood back): counted, and a lost note-off is answered with
@@ -347,8 +358,11 @@ void DeviceOut::scan_audio()
     if (newest < 0)
         return;
     if (scanned_ < 0 || newest - scanned_ > 16384 - 2048)
+    {
         scanned_ = std::max<int64_t>(0, newest - 4096); // first call / fell behind: the ring holds 16384 frames
-    int64_t from = marker_from_.load();
+        slip_.reset();                                   // a new stream (or a gap): its windows start afresh
+        freeze_.reset();
+    }
     // a frame is judged once the 66 after it are there: the marker check below reads frames f+2..f+65, which past
     // the newest frame are not written yet (review 2026-10-19: a marker could be judged on them)
     const int64_t until = newest - 66;
@@ -359,7 +373,7 @@ void DeviceOut::scan_audio()
         for (int i = 0; i < n; i++) {
             int64_t f = scanned_ + i;
             bool usb1 = l1[i] != 0 || r1[i] != 0, usb2 = l2[i] != 0 || r2[i] != 0;
-            if (pings_out_.load() > 0 && from >= 0 && f >= from && f > marker_skip_ && usb2 && !usb1) {
+            if (markers_.candidate(f, usb1, usb2)) {
                 // the marker: one sample per channel, the rest of USB 2 silent around it
                 float ll[64], rr[64], a2[64], b2[64];
                 audio_.read_at(ll, rr, a2, b2, 64, f + 2);
@@ -367,25 +381,45 @@ void DeviceOut::scan_audio()
                 for (int k = 0; k < 64; k++)
                     isolated &= a2[k] == 0 && b2[k] == 0;
                 if (isolated) {
-                    marker = f; // the newest marker: the Virus reset its stamp clock here
-                    pings_out_.fetch_sub(1);
+                    const int64_t from = markers_.ping_frame();
+                    markers_.take(f); // the newest marker: the Virus reset its stamp clock here
                     log("Virus TI native: sync marker at frame %lld (ping at %lld, %lld frames later)\n", (long long)f,
                         (long long)from, (long long)(f - from));
-                    marker_skip_ = f + 1; // its second channel follows one frame later
                 }
             }
             if (usb1 || usb2)
                 last_sound = f;
         }
+        // the byte layout of the same frames as the device delivered them (E488): a slipped stream finds no marker
+        if (const int r = (int)rate.load(); r != slip_rate_) {
+            slip_rate_ = r;
+            slip_.set_rate(r);
+        }
+        int16_t raw[1024 * 6];
+        audio_.read_raw_at(raw, n, scanned_);
+        // VTI_NATIVE_FAKE_SLIP (test only): the detector sees the first stream slipped (byte 2k = high byte of word k,
+        // 2k+1 = low byte of word k+2, E488) so the restart path runs on a real Virus; the audio itself is untouched
+        static const bool fake = getenv("VTI_NATIVE_FAKE_SLIP") != nullptr;
+        for (int i = 0; i < n; i++) {
+            int16_t *fr = raw + i * 6, s[6];
+            // VTI_NATIVE_FAKE_FREEZE (test only): from 8 s into the stream the detector sees the frozen frame E493 saw,
+            // so the alert page can be checked on a live Virus; the audio itself is untouched
+            static const bool fake_freeze = getenv("VTI_NATIVE_FAKE_FREEZE") != nullptr;
+            static const int16_t kFrozen[6] = {-4672, -4672, 0, 0, 0, 0};
+            freeze_.feed(fake_freeze && scanned_ + i > 8 * (int64_t)rate.load() ? kFrozen : fr); // the device's frames
+            if (fake && slip_gate_.count() == 0) {
+                for (int k = 0; k < 6; k++)
+                    s[k] = (int16_t)(uint16_t)((((uint16_t)fr[k] >> 8) & 0xFF) | (((uint16_t)fr[(k + 2) % 6] & 0xFF) << 8));
+                fr = s;
+            }
+            if (slip_.feed(fr))
+                slip_fired_ = true;
+        }
         scanned_ += n;
     }
-    if (pings_out_.load() > 0 && from >= 0 && newest > from + 5 * (int64_t)rate.load()) { // 5 s without a marker
-        pings_out_ = 0;
-        if (marker.load() < 0) {
-            marker = -2;
-            log("Virus TI native: no sync marker - time stamps relative to the ring\n");
-        }
-    }
+    // 5 s without a marker for the newest ping (E497: judged now, not by the ping this pass started with)
+    if (markers_.end(newest, (int)rate.load()))
+        log("Virus TI native: no sync marker - time stamps relative to the ring\n");
 }
 
 // the Virus unplugged / switched off and back while the broker connection stays (user test): stop the audio, and on
@@ -411,9 +445,8 @@ void DeviceOut::check_presence()
         // a new audio stream counts its frames from 0 again: the scan positions of the old one would keep
         // scan_audio idle (and the sync marker unfound) until the new stream passed them - ~19 s (user test)
         scanned_ = -1;
-        marker_skip_ = -1;
+        markers_.reset_stream(); // a ping of the old stream gets no marker in the new one (its timeout fired too early)
         last_sound = -1;
-        pings_out_ = 0; // a ping of the old stream gets no marker in the new one (its 5 s timeout fired too early)
         generation++;
         // the Virus' OS version for PATCH UTILITY > INFO, read like the original at plug-in start, before the
         // memory sync: the broker's fixed read-only flash sequence (flashinfo.h, E026/E040), ~2 s once per open
@@ -655,6 +688,49 @@ void DeviceOut::run()
         if (idle_)
             idle_();
         scan_audio();
+        if (slip_fired_) { // E488: the Virus delivers this stream byte-slipped - no marker, notes off time, until it restarts
+            slip_fired_ = false;
+            const int64_t now = std::chrono::duration_cast<std::chrono::milliseconds>(
+                                    std::chrono::steady_clock::now().time_since_epoch()).count();
+            if (!vti::cc::plugin_option("slip-restart"))
+                log("Virus TI native: the Virus' audio arrives scrambled (byte slip, E488, ratio %.3f) - slip-restart is "
+                    "off, not restarted\n", slip_.last_ratio());
+            else if (!slip_gate_.allow(now))
+                log("Virus TI native: the Virus' audio arrives scrambled (byte slip, E488, ratio %.3f) - %s\n",
+                    slip_.last_ratio(), slip_gate_.count() >= 5 ? "restarted 5 times already, giving up"
+                                                                 : "restarted less than 10 s ago, waiting");
+            else {
+                // the broker's normal stop and start (alt 0/1 + SET_CUR, as at every session start), then a new
+                // timeline and sync ping on the new stream, as after a rate change
+                log("Virus TI native: the Virus' audio arrives scrambled (byte slip, E488, ratio %.3f) - restarting "
+                    "the stream (%d)\n", slip_.last_ratio(), slip_gate_.count());
+                close_audio();
+#ifdef __APPLE__
+                // macOS (#37, E510): Apple's driver owns the Virus' audio; stopping our Core Audio input lets the HAL
+                // stop the Virus' USB stream when no other program reads it, and starting it again starts a new
+                // stream, as alt 0/1 does on Linux. If the DAW uses the Virus as its own device the stream runs on:
+                // the detector fires again and the gate gives up after 5 tries.
+                std::this_thread::sleep_for(std::chrono::milliseconds(300));
+#else
+                broker_.audio(false);
+#endif
+                const int r = start_audio();
+                scanned_ = -1;
+                markers_.reset_stream();
+                last_sound = -1;
+                generation++;
+                log("Virus TI native: audio stream restarted -> %d\n", r);
+            }
+        }
+        // E493: the Virus' audio froze (the same frame for a second while a note was due); only a power cycle of the
+        // Virus helped, so the editor tells the user (its alert page) - nothing is sent to the Virus
+        if (audio_ok() && freeze_.check(std::chrono::duration_cast<std::chrono::milliseconds>(
+                                            std::chrono::steady_clock::now().time_since_epoch()).count(),
+                                        last_note_ms.load(std::memory_order_relaxed), (int)rate.load())) {
+            freezes.fetch_add(1, std::memory_order_relaxed);
+            log("Virus TI native: the Virus stopped sending audio (the same frame for %.1f s while notes were due, "
+                "E493) - switch the Virus off and on again\n", (double)freeze_.run_frames() / std::max(1, (int)rate.load()));
+        }
         // the stream stood still while time went on and runs on (macOS sleep pauses Core Audio, E207): the Virus'
         // stamp clock did not stop, so the anchor is off by the pause - a new timeline and sync ping, as after a
         // reconnect (process() re-anchors on the generation change)
@@ -712,9 +788,8 @@ void DeviceOut::run()
             log("Virus TI native: the Virus' audio now runs at %d Hz - a new timeline\n", r);
             rate = r;
             scanned_ = -1;
-            marker_skip_ = -1;
+            markers_.reset_stream();
             last_sound = -1;
-            pings_out_ = 0;
             generation++;
         }
         if (req_handled)
@@ -734,6 +809,10 @@ void DeviceOut::run()
                 (long long)(stats_newest_ >= 0 ? newest - stats_newest_ : -1), (long long)anchors.exchange(0),
                 (long long)err_min.exchange(INT64_MAX), (long long)err_max.exchange(INT64_MIN));
             stats_newest_ = newest;
+            int64_t pull_blocks = 0, pull_max = 0;
+            pulls.take(pull_blocks, pull_max);
+            if (pull_blocks > 0) // E490: the host ran ahead of the Virus' audio (bursts): those blocks put out older audio
+                log("stats: pulled back %lld blocks, largest %lld frames\n", (long long)pull_blocks, (long long)pull_max);
             if (int n = clamp_reanchors.exchange(0)) // E472: reads pulled back for a second, a new timeline
                 log("Virus TI native: reads ran ahead of the Virus' audio for a second - a new timeline (%d)\n", n);
             int pk[6];
@@ -819,7 +898,12 @@ void DeviceOut::run()
             bool live_stamped = false; // a real live stamp, not "no stamp yet"
             if (int64_t mk = marker.load(); st >= 0 && mk >= 0 && !ping && !inherits && plan.net) {
                 if (is_live && audio_ok()) { // no lead, no safety net (stamprule.h)
-                    st = live_stamp(audio_.newest_frame(), mk, live_ratio.load(std::memory_order_relaxed));
+                    // from the note's place on the smoothed timeline (E512, #39): the ring's newest frame jumps in
+                    // Core Audio's bursts on macOS and made one played rhythm uneven; without a timeline place as before
+                    const double r = live_ratio.load(std::memory_order_relaxed);
+                    st = from_process ? live_stamp_tl(st, live_s.load(std::memory_order_relaxed), mk, r,
+                                                      live_later.load(std::memory_order_relaxed))
+                                      : live_stamp(audio_.newest_frame(), mk, r);
                     live_stamped = true;
                 } else {
                     int64_t due = st + lead.load(); // the ring frame it sounds at
@@ -1021,6 +1105,7 @@ tresult PLUGIN_API VirusPlugin::initialize(FUnknown *context)
         // the output delays only on change, not at every Play/Stop (Control Center option, outputdelay.h resend_all)
         od_changes_only_ = std::filesystem::exists(vti::u8path(own_cache_dir() + "/../outdelay-changes.on"), tec);
         live_notes_ = vti::cc::plugin_option("live-notes"); // the plug-in folder itself: no cache folder needed (S065 C9)
+        low_latency_ = vti::cc::plugin_option("low-latency") && !getenv("VTI_NATIVE_A"); // a measurement's A wins
 #ifdef _WIN32
         timing_a_ = timing_lead(timing_classic_, true);
 #else
@@ -1034,10 +1119,18 @@ tresult PLUGIN_API VirusPlugin::initialize(FUnknown *context)
     out_->lead = lead();
     out_->stamp_floor = !timing_classic_;
     out_->live_notes = live_notes_;
-    if (diag_enabled())
+    out_->live_later = vti::cc::plugin_option("live-later") ? LIVE_LATER_FRAMES : 0; // E519
+    if (diag_enabled()) {
+        // the folder first: on a fresh install it came only with the bank cache, ~7 s in, and every line before
+        // (library scan, ready probe, marker) was lost (win10 VM, rc1, 2026-11-11)
+        std::error_code ec;
+        std::filesystem::create_directories(vti::u8path(own_cache_dir()), ec);
+        vti::cc::rotate_log(own_cache_dir() + "/../diag.log", vti::cc::kPluginLogLimit); // on for everyone: kept small
         out_->set_diag_path(own_cache_dir() + "/../diag.log");
+    }
     if (live_notes_) // after set_diag_path, or the line never reaches diag.log
-        out_->log("Virus TI native: live notes on (default; live-notes.off switches it off): notes flagged as played go without the lead\n");
+        out_->log("Virus TI native: live notes on (default; live-notes.off switches it off): notes flagged as played go without the lead%s\n",
+                  out_->live_later.load() ? ", stamped 128 frames later (live-later.on)" : "");
     out_->log("Virus TI native: timing: lead %d frames, safety net %s%s\n", timing_a_, timing_classic_ ? "off" : "on",
               timing_classic_ ? " (timing-classic.on)" : "");
     if (od_changes_only_)
@@ -1070,6 +1163,7 @@ tresult PLUGIN_API VirusPlugin::initialize(FUnknown *context)
         out_->send(m);
         return true;
     });
+    sync_->log = [this](const std::string &line) { out_->log("Virus TI native: %s\n", line.c_str()); }; // #34
     out_->on_reply([this](const std::vector<uint8_t> &m) { sync_->feed(m); });
     out_->on_waiting([this](bool waiting) { // worker thread
         // the original's page for a Virus that another program holds (SystemStatus/Error 2 = "VDM not Master":
@@ -1321,7 +1415,9 @@ void VirusPlugin::apply_timing_mode(bool notify)
     int n = ui_value(PLUGIN_LATENCY_PATH, -1);
     if (n < 0 || n > 3)
         n = 3;
-    const TimingMode m = timing_mode(live, n, timing_a_, block_); // Plugin Latency 1/2: 3 blocks at least (E477)
+    // the base lead: the original's 3072, or with the low-latency option the lead measured for this block (E496)
+    const int base = low_latency_ ? experimental_lead(block_, virus_rate_for(rate_)) : timing_a_;
+    const TimingMode m = timing_mode(live, n, base, block_); // Plugin Latency 1/2: 3 blocks at least (E477)
     if (m.a == a_now_.load() && m.stamps == stamps_now_)
         return;
     a_now_ = m.a;
@@ -1330,8 +1426,9 @@ void VirusPlugin::apply_timing_mode(bool notify)
         out_->lead = lead();
         out_->no_stamps = !m.stamps;
         out_->send({0xB0, 0x78, 0x00});
-        out_->log("Virus TI native: timing: lead %d frames, %s (Live Mode %s, Plugin Latency %d)\n", m.a,
-                  m.stamps ? "time stamps" : "no time stamps", live ? "on" : "off", n);
+        out_->log("Virus TI native: timing: lead %d frames, %s (Live Mode %s, Plugin Latency %d%s)\n", m.a,
+                  m.stamps ? "time stamps" : "no time stamps", live ? "on" : "off", n,
+                  low_latency_ ? ", low-latency option" : "");
     }
     if (notify && componentHandler) // from setupProcessing the host asks for the latency afterwards anyway
         componentHandler->restartComponent(kLatencyChanged);
@@ -1519,10 +1616,8 @@ bool VirusPlugin::has_history() const
 bool VirusPlugin::diag_enabled()
 {
     static int on = -1;
-    if (on < 0) {
-        std::error_code ec;
-        on = std::filesystem::exists(vti::u8path(own_cache_dir() + "/../diag.on"), ec) ? 1 : 0;
-    }
+    if (on < 0)
+        on = vti::cc::plugin_log_enabled() ? 1 : 0; // on unless diag.off (since 0.8.41, the Options page switch)
     return on == 1;
 }
 
@@ -1548,6 +1643,9 @@ void VirusPlugin::diag_report()
     int64_t due = diag_next_ms_.load();
     if (!diag_enabled() || now < due || !diag_next_ms_.compare_exchange_strong(due, now + 10000))
         return;
+    // a long session (the DAW open for days) must not grow the log without end either; another instance may rotate
+    // the same file meanwhile, then at most a few lines go to the old file
+    vti::cc::rotate_log(own_cache_dir() + "/../diag.log", vti::cc::kPluginLogLimit);
     note_probe_flush();
     long long drops = -1; // the editor's timer or the worker: read under the audio gate (audiogate.h)
     if (out_)
@@ -1640,12 +1738,21 @@ tresult PLUGIN_API VirusPlugin::process(ProcessData &data)
             marker_retries_++;
             anchor_now = true;
         }
+        // S094 test switch: a new sync every N s, after a second of quiet like the original's pings (E491)
+        resync_.period = (int64_t)(env_resync_s() * vrate);
+        bool resync = tl_valid_ && !anchor_now && !out_->calibrating() && !env_no_ping() && resync_.due(newest, quiet);
+        if (resync)
+            anchor_now = true;
         if (anchor_now) {
-            if (env_stats())
-                fprintf(stderr, "timeline %s: err %lld newest %lld block %d\n", tl_valid_ ? "re-anchor" : "anchor",
-                        (long long)err, (long long)newest, data.numSamples);
+            if (env_stats() || resync)
+                fprintf(stderr, "timeline %s: err %lld newest %lld block %d\n",
+                        resync ? "resync" : tl_valid_ ? "re-anchor" : "anchor", (long long)err, (long long)newest,
+                        data.numSamples);
+            resync_.start(newest);
             tl_ = target;
             next_tick_ = (double)tl_;
+            transport_.reset(); // the new F8 grid is off the beat: the next playing block restarts on a tick (E505)
+            restart_.clear();
             tl_follow_.reset();
             bool new_stream = !tl_valid_;
             if (new_stream)
@@ -1664,6 +1771,7 @@ tresult PLUGIN_API VirusPlugin::process(ProcessData &data)
             const TimelineFollow::Move mv = tl_follow_.update(err, whole, out_->marker.load() >= 0);
             tl_ += mv.delta;
             next_tick_ += (double)mv.delta;
+            restart_.shift(mv.delta);
             if (mv.jump) {
                 out_->anchors.fetch_add(1, std::memory_order_relaxed);
                 // the resampled output (host rate != 44.1 kHz) jumps too: steering at 0.2 % took >10 s for the
@@ -1690,9 +1798,9 @@ tresult PLUGIN_API VirusPlugin::process(ProcessData &data)
         add(tl_ - M, &fe, 1);
         // and then every 300 ms (ActiveSensing): the DSP releases every voice ~1 s after the last FE it saw (E237)
         fe_.reset(tl_ - M + fe_.period);
-        int spp = 0; // song position (sixteenths) from the host, else 0
+        int spp = 0; // song position (sixteenths) from the host + 256 quarters like a restart (E505), else 0
         if (data.processContext && (data.processContext->state & ProcessContext::kProjectTimeMusicValid))
-            spp = (int)std::max(0.0, data.processContext->projectTimeMusic * 4.0);
+            spp = transport_start(data.processContext->projectTimeMusic, 1.0).spp;
         uint8_t f2[3] = {0xF2, (uint8_t)(spp & 0x7F), (uint8_t)((spp >> 7) & 0x7F)};
         add(tl_ - M, f2, 3);
         if (!env_no_ping()) { // the original's sync ping (73 00 22 00), stamped 3072 like the original: the Virus
@@ -1701,27 +1809,36 @@ tresult PLUGIN_API VirusPlugin::process(ProcessData &data)
             add(3072, ping, 11);
         }
     }
-    // Play and loop restarts (transport.h): like the original, the song position, the +1 clock tick and the per-part
-    // reset at the block's time, so the arpeggiator and clock-synced LFOs restart with the bar
-    bool restart = false;
-    uint8_t restart_f2[3] = {};
+    // MIDI clock at the host tempo (120 BPM without a process context), 24 ticks per quarter
+    const double tempo = clock_tempo(data.processContext && (data.processContext->state & ProcessContext::kTempoValid)
+                                         ? data.processContext->tempo
+                                         : 120.0); // 0 or negative made the tick loop endless (hostmidi.h)
+    const double per_tick = vrate * 60.0 / (tempo * 24.0); // 919 frames per tick at 44.1 kHz, 1000 at 48 (E323)
+    // Play, loop restarts, jumps and Stop (transport.h, E505): like the original, F2 and 73 00 23 vv from the host
+    // position + 256 quarters on the next clock tick, where the F8 grid restarts too, so the arpeggiator and
+    // clock-synced LFOs follow the bar (a count-in included); FC at Stop. The original's 16 part messages
+    // (6F <part> 7F 00) go out from the worker (send_output_delays, E344)
     if (tl_valid_ && data.processContext && (data.processContext->state & ProcessContext::kProjectTimeMusicValid)) {
         const bool playing = (data.processContext->state & ProcessContext::kPlaying) != 0;
-        const double tempo_qn = (data.processContext->state & ProcessContext::kTempoValid) ? data.processContext->tempo
-                                                                                          : 120.0;
         const double ppq = data.processContext->projectTimeMusic;
-        if (transport_.update(playing, ppq, (double)block_frames / vrate * tempo_qn / 60.0)) {
-            // F2 and the +1 tick, added after the block's events below; the original's 16 part messages
-            // (6F <part> 7F 00) go out from the worker (send_output_delays, E344)
-            transport_f2((int)std::max(0.0, std::floor(ppq * 4.0 + 1e-6)), restart_f2);
-            restart = true;
+        const auto ev = transport_.update(playing, ppq, (double)block_frames / vrate * tempo / 60.0,
+                                          (int64_t)data.processContext->projectTimeSamples, data.numSamples);
+        if (ev == TransportWatch::Start) {
+            const TransportStart st = transport_start(ppq, per_tick);
+            const int64_t at_tick = tl_ + (int64_t)std::lround(st.offset);
+            restart_.arm(st, at_tick); // goes out with the block that holds its tick (PendingRestart)
+            next_tick_ = (double)at_tick;
+        } else if (ev == TransportWatch::Stop) {
+            restart_.clear();
+            add(tl_, &TRANSPORT_STOP, 1);
         }
     }
-    if (tl_valid_) { // MIDI clock at the host tempo (120 BPM without a process context), 24 ticks per quarter
-        double tempo = clock_tempo(data.processContext && (data.processContext->state & ProcessContext::kTempoValid)
-                                       ? data.processContext->tempo
-                                       : 120.0); // 0 or negative made this loop endless (hostmidi.h)
-        double per_tick = vrate * 60.0 / (tempo * 24.0); // 919 frames per tick at 44.1 kHz, 1000 at 48 (E323)
+    if (tl_valid_) {
+        // the restart before the F8 at its stamp (stable sort), as the original: F2, 73 00 23 vv, then F8 (E505)
+        if (restart_.due(tl_ + block_frames)) {
+            add(restart_.stamp(), restart_.f2(), 3);
+            add(restart_.stamp(), restart_.tick(), 11);
+        }
         static const uint8_t f8 = 0xF8;
         while (next_tick_ < (double)(tl_ + block_frames)) {
             add((int64_t)std::lround(next_tick_), &f8, 1);
@@ -1731,8 +1848,10 @@ tresult PLUGIN_API VirusPlugin::process(ProcessData &data)
         fe_.run(tl_ + block_frames, [&](int64_t t) { add(t, &fe, 1); });
     }
     auto at = [&](int32 offset) { return tl_valid_ ? tl_ + (int64_t)std::lround(offset * ratio) : -1; };
-    if (live_notes_ && out_)
+    if (live_notes_ && out_) { // both under the test: without the Access files out_ is null (no_access_files)
         out_->live_ratio.store(ratio, std::memory_order_relaxed);
+        out_->live_s.store(S, std::memory_order_relaxed);
+    }
     if (data.inputParameterChanges && out_) {
         for (int32 i = 0; i < data.inputParameterChanges->getParameterCount(); i++) {
             IParamValueQueue *q = data.inputParameterChanges->getParameterData(i);
@@ -1827,12 +1946,6 @@ tresult PLUGIN_API VirusPlugin::process(ProcessData &data)
             }
         }
     }
-    // the restart set after the block's controllers and notes at the same stamp, like the original (E280; the order
-    // made no difference to the sync reports at REAPER's Play, E373)
-    if (restart) {
-        add(tl_, restart_f2, 3);
-        add(tl_, TRANSPORT_TICK, 11);
-    }
     // to the Virus in time order (clock ticks and events share the timeline); stable: at the same stamp automation
     // stays before the notes, so a note starts with the new values (insertion sort: stable, no allocation on the
     // audio thread, and the events come nearly in order)
@@ -1888,9 +2001,11 @@ tresult PLUGIN_API VirusPlugin::process(ProcessData &data)
         {
             if (tl_valid_ && out_->marker.load() >= 0) { // stamp-aligned: an event of this block sounds latency() later
                 int64_t pos = block_start + lead() - latency_frames();
-                const bool pulled_back = pos + data.numSamples > avail;
+                const int64_t shortfall = read_shortfall(pos, data.numSamples, avail);
+                const bool pulled_back = shortfall > 0;
                 if (pulled_back) // never read frames that are not there yet (silence, clicks)
                     pos = avail - data.numSamples;
+                out_->pulls.add(shortfall); // the block puts out older audio: notes in it sound late (E490)
                 // pulled back in every block for a second: the timeline sits ahead of the audio, start a new one (E472)
                 if (clamp_watch_.update(pulled_back, data.numSamples, virus_rate())) {
                     out_->clamp_reanchors.fetch_add(1, std::memory_order_relaxed);
@@ -2975,12 +3090,14 @@ void VirusPlugin::load_banks()
     for (auto &root : library_roots())
         for (auto &lib : load_libraries(root.dir, files_ ? files_->default_page_b() : std::vector<uint8_t>())) {
             if (lib.skipped > 0) { // the original skips them silently (E356); the name only, no path (rule 5)
-                fprintf(stderr, "Virus TI native: library %s/%s: %d patch(es) skipped (damaged or unknown format)\n",
-                        root.menu.c_str(), lib.name.c_str(), lib.skipped);
+                const std::string why = skip_summary(lib); // sizes / versions (#36)
+                fprintf(stderr, "Virus TI native: library %s/%s: %d patch(es) skipped (damaged or unknown format: %s)\n",
+                        root.menu.c_str(), lib.name.c_str(), lib.skipped, why.c_str());
                 if (diag_enabled())
                     if (FILE *f = vti::u8fopen(own_cache_dir() + "/../diag.log", "a")) {
-                        fprintf(f, "%ld Virus TI native: library %s/%s: %d patch(es) skipped (damaged or unknown format)\n",
-                                (long)std::time(nullptr), root.menu.c_str(), lib.name.c_str(), lib.skipped);
+                        fprintf(f, "%ld Virus TI native: library %s/%s: %d patch(es) skipped (damaged or unknown format: %s)\n",
+                                (long)std::time(nullptr), root.menu.c_str(), lib.name.c_str(), lib.skipped,
+                                why.c_str());
                         fclose(f);
                     }
             }
@@ -3268,22 +3385,26 @@ void VirusPlugin::sync_banks()
     const int64_t sync_t0 = now_ms();
     // like the original: its page "Syncing memory with Virus" (VirusControl/InitialSyncProgress 0..126) covers the
     // editor while banks are fetched; notes still play. Only when a patch is really fetched (startprogress.h): the
-    // check of a current cache shows nothing. The original keeps "synchronising" on the Virus display while it
-    // syncs (74 01 7E 07 about once a second) - also only then
+    // check of a current cache shows nothing. The Virus display: MemorySync sends Rise Message 7 ("Configuring")
+    // before each bank info and Rise Message 4 (syncing) before each fetched patch, as the original's capture shows;
+    // nothing in between (a once-a-second 7E 07 kept "Configuring" up during the whole sync)
     SyncPage page;
     int result = 0; // the last bank's sync_bank result: < 0 = the sync stopped there
     page.total = 512 + rom_missing; // user ROM banks are read after RAM D (the page shows once their reading starts)
     if (sync_page_at_start(sync_expected, rom_missing)) // a read is certain: the page follows "Starting up" directly
         page.expect();
-    std::atomic<bool> rise{true}, fetching{page.shown()};
-    std::thread riser([this, &rise, &fetching] {
-        while (rise) {
-            if (fetching)
-                out_->send({0xF0, 0x00, 0x20, 0x33, 0x01, 0x10, 0x74, 0x01, 0x7E, 0x07, 0xF7});
-            for (int i = 0; i < 10 && rise; i++)
-                std::this_thread::sleep_for(std::chrono::milliseconds(100));
+    std::array<std::vector<bool>, 4> empty; // slots sure to be fetched, for the time left on the sync page
+    {
+        std::lock_guard<std::mutex> lk(banks_mu_);
+        for (int b = 0; b < 4; b++) {
+            empty[b].assign(128, true);
+            if (auto it = banks_.find(b); it != banks_.end())
+                for (size_t p = 0; p < 128 && p < it->second.size(); p++)
+                    empty[b][p] = it->second[p].empty();
         }
-    });
+    }
+    int fetched_total = 0;
+    sync_eta_s_ = sync_eta_s(sync_remaining(empty, 0, -1, rom_missing), 0, 0);
     for (int b = 0; b < 4; b++) {
         Bank bank;
         {
@@ -3293,19 +3414,22 @@ void VirusPlugin::sync_banks()
                 for (size_t p = 0; p < 128 && p < it->second.size(); p++)
                     bank[p] = it->second[p];
         }
-        int n = sync_->sync_bank(b + 1, bank, [this, b, &bank, sync_t0, &page, &fetching, rom_missing](int p, bool fetched) {
+        int n = sync_->sync_bank(b + 1, bank, [this, b, &bank, sync_t0, &page, rom_missing, &empty, &fetched_total](
+                                                  int p, bool fetched) {
             set_sync_progress(page.progress(b * 128 + p + 1, fetched));
-            fetching = page.shown();
             // remaining time at the pace so far (pauses for notes not counted): the original's start page promises
-            // "a couple of seconds", but a first sync takes 8-9 minutes (issue #5)
-            int done = b * 128 + p + 1;
-            int64_t worked = now_ms() - sync_t0 - sync_paused_ms_;
-            if (done >= 8 && worked > 0)
-                sync_eta_s_ = (int)((512 - done) * worked / done / 1000) + rom_missing; // ROM: one a second
+            // "a couple of seconds", but a first sync takes 8-9 minutes (issue #5); only what is sure to be fetched
+            // counts, not all 512 (one missing bank said "about 9 min" for 2, 2026-11-11)
+            fetched_total += fetched;
+            sync_eta_s_ = sync_eta_s(sync_remaining(empty, b, p, rom_missing), now_ms() - sync_t0 - sync_paused_ms_,
+                                     fetched_total);
 
             if (page.shown()) {
                 std::lock_guard<std::mutex> lk(values_mu_); // progress on the LCD
-                lcd_param_ = "Synchronizing " + bank_name(b);
+                // the patch just fetched, as the Virus display shows its entry (Rise Message 4)
+                lcd_param_ = sync_lcd_title("Synchronizing " + bank_name(b), fetched ? cc::patch_name(bank[p]) : "");
+                if (fetched)
+                    sync_item_ = sync_page_item(bank_name(b), p + 1, cc::patch_name(bank[p]));
                 lcd_value_ = std::to_string(p + 1) + " / 128";
                 lcd_part_.clear();
                 lcd_orig_.clear();
@@ -3336,10 +3460,7 @@ void VirusPlugin::sync_banks()
         ui_dirty_ = true;
     }
     // user ROM banks (E381/E382): their programs not cached yet, read like the original - no bank info, each request
-    // after its own display message 74 01 7E 04 (read_missing); the riser's 7E 07 ends first, so none comes between a
-    // 7E 04 and its request (the capture has only 7E 04 while ROM A is read)
-    rise = false;
-    riser.join();
+    // after its own display message 74 01 7E 04 (read_missing; the capture has only 7E 04 while ROM A is read)
     int rom_done = 0;
     if (result >= 0 && rom_missing > 0 && !user_rom_dir_.empty()) {
         std::error_code ec;
@@ -3362,7 +3483,8 @@ void VirusPlugin::sync_banks()
             sync_eta_s_ = rom_missing - rom_done; // one program a second (E382)
             {
                 std::lock_guard<std::mutex> lk(values_mu_);
-                lcd_param_ = "Synchronizing " + name;
+                lcd_param_ = sync_lcd_title("Synchronizing " + name, cc::patch_name(bank[p]));
+                sync_item_ = sync_page_item(name, p + 1, cc::patch_name(bank[p]));
                 lcd_value_ = std::to_string(p + 1) + " / 128";
                 lcd_part_.clear();
                 lcd_orig_.clear();
@@ -3383,6 +3505,10 @@ void VirusPlugin::sync_banks()
     out_->send({0xF0, 0x00, 0x20, 0x33, 0x01, 0x10, 0x74, 0x00, 0x29, 0x01, 0xF7});
     syncing_ = false;
     sync_eta_s_ = -1;
+    {
+        std::lock_guard<std::mutex> lk(values_mu_);
+        sync_item_.clear();
+    }
     set_sync_progress(127);
     out_->log("Virus TI native: bank sync %s in %.1f s\n", sync_end(result), (now_ms() - sync_t0) / 1000.0);
     if (page.shown()) {
@@ -3906,7 +4032,7 @@ bool VirusPlugin::download_bank(int bank)
                 std::lock_guard<std::mutex> lk(banks_mu_);
                 banks_[bank][p] = cache[p];
             }
-            lcd(what, download_progress(p + 1, now_ms() - t0));
+            lcd(sync_lcd_title(what, cc::patch_name(cache[p])), download_progress(p + 1, now_ms() - t0));
             ui_dirty_ = true;
         }, &stop_warm_);
         lcd(n == 128 ? "Download done" : "Download stopped", "");

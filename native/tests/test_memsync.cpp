@@ -8,6 +8,10 @@
 #include <cstdio>
 #include <filesystem>
 #include <thread>
+#ifndef _WIN32
+#include <csignal>
+#include <sys/resource.h>
+#endif
 
 using namespace vti;
 using Bytes = std::vector<uint8_t>;
@@ -160,7 +164,7 @@ TEST(memsync_sync_bank_fetches_only_stale)
     CHECK_EQ(progress_calls, 128);
     CHECK_EQ(stale_calls, 2);
     CHECK(cache[3] == v.ram[1][3] && cache[100] == v.ram[1][100]);
-    CHECK_EQ(v.requests.size(), 4u); // display message (E321) + bank info + 2 single dumps
+    CHECK_EQ(v.requests.size(), 6u); // display message (E321) + bank info + 2 x (syncing message + single dump)
     // up to date now: only the display message and the bank info
     v.requests.clear();
     CHECK_EQ(sync.sync_bank(1, cache), 0);
@@ -211,6 +215,41 @@ TEST(memsync_bank_info_gives_up_on_wrong_sizes)
     CHECK_EQ(v.requests.size(), 3u); // bounded, like single()
 }
 
+// #34: a "bank sync failed" log could not tell cut-short replies (lost packets) from no reply at all (2026-11-14)
+TEST(memsync_logs_wrong_size_replies)
+{
+    FakeVirus v;
+    MemorySync sync(v.send());
+    v.sync = &sync;
+    std::vector<std::string> lines;
+    sync.log = [&](const std::string &s) { lines.push_back(s); };
+    v.short_info = 1;
+    CHECK_EQ(sync.bank_info(2).size(), 128u);
+    CHECK_EQ(lines.size(), 1u);
+    if (!lines.empty())
+        CHECK(lines[0] == std::string("bank info RAM B: reply 11 bytes, expected 267 (try 1 of 3)"));
+
+    lines.clear();
+    v.ram[2][5] = fake_single(2, 5, 5);
+    CHECK_EQ(sync.single(2, 5).size(), 524u);
+    CHECK(lines.empty()); // a good reply logs nothing
+}
+
+TEST(memsync_logs_no_reply_but_not_a_cancel)
+{
+    std::vector<std::string> lines;
+    MemorySync sync([](const Bytes &) { return false; }); // empty at once, like a reply that never comes
+    sync.log = [&](const std::string &s) { lines.push_back(s); };
+    CHECK(sync.single(3, 7).empty());
+    CHECK_EQ(lines.size(), 1u);
+    if (!lines.empty())
+        CHECK(lines[0] == std::string("single RAM C 7: no reply"));
+    lines.clear();
+    sync.cancel();
+    CHECK(sync.bank_info(1).empty());
+    CHECK(lines.empty()); // the plug-in closing is not a Virus that did not answer
+}
+
 TEST(memsync_sync_bank_survives_one_wrong_size_bank_info)
 {
     FakeVirus v;
@@ -238,7 +277,7 @@ TEST(memsync_sync_bank_retries_a_wrong_fingerprint)
     v.corrupt_times = 1;
     CHECK_EQ(sync.sync_bank(1, cache), 1);
     CHECK(cache[2] == v.ram[1][2]);
-    CHECK_EQ(v.requests.size(), 4u); // display message + bank info + the dump twice
+    CHECK_EQ(v.requests.size(), 6u); // display message + bank info + the dump twice, each after its syncing message
 }
 
 TEST(memsync_sync_bank_gives_up_on_a_wrong_fingerprint)
@@ -256,7 +295,7 @@ TEST(memsync_sync_bank_gives_up_on_a_wrong_fingerprint)
     v.corrupt = 2; // always: never cached
     CHECK_EQ(sync.sync_bank(1, cache), -1);
     CHECK(cache[2] == old);
-    CHECK_EQ(v.requests.size(), 5u); // display message + bank info + 3 tries, bounded
+    CHECK_EQ(v.requests.size(), 8u); // display message + bank info + 3 tries (each with its syncing message), bounded
 }
 
 TEST(memsync_bank_file_round_trip)
@@ -370,6 +409,33 @@ TEST(memsync_sync_bank_keeps_the_configuring_message_up)
     CHECK_EQ(v.requests.size(), 2u);
     CHECK(v.requests[0] == rise);
     CHECK(v.requests.size() > 1 && v.requests[1][6] == 0x39);
+}
+
+// the original's start-up sync on the wire (captures/orig-rom-a-fetch-20261101b): 74 01 7E 07 only right before the
+// bank info; every program it fetches gets 74 01 7E 04 (the Virus shows its syncing message) right before its
+// 30 bank program, also each retry. Nothing else in between: no repeated "Configuring" while patches come in.
+TEST(memsync_sync_bank_shows_syncing_for_each_fetch)
+{
+    FakeVirus v;
+    MemorySync sync(v.send());
+    v.sync = &sync;
+    Bank cache;
+    for (int p = 0; p < 128; p++)
+        cache[p] = v.ram[1][p] = fake_single(1, p, p);
+    cache[3] = fake_single(1, 3, 500);
+    cache[100].clear();
+    v.corrupt = 100; // one wrong dump first: asked again
+    v.corrupt_times = 1;
+    CHECK_EQ(sync.sync_bank(1, cache), 2);
+    const Bytes configuring = {0xF0, 0x00, 0x20, 0x33, 0x01, 0x10, 0x74, 0x01, 0x7E, 0x07, 0xF7};
+    const Bytes syncing = {0xF0, 0x00, 0x20, 0x33, 0x01, 0x10, 0x74, 0x01, 0x7E, 0x04, 0xF7};
+    CHECK_EQ(v.requests.size(), 8u); // 7E 07, bank info, 7E 04 + #3, 7E 04 + #100, 7E 04 + #100 again
+    CHECK(v.requests.size() == 8 && v.requests[0] == configuring && v.requests[1][6] == 0x39);
+    for (size_t i = 2; i + 1 < v.requests.size(); i += 2) {
+        CHECK(v.requests[i] == syncing);
+        CHECK(v.requests[i + 1][6] == 0x30);
+    }
+    CHECK(v.requests.size() == 8 && v.requests[3][8] == 3 && v.requests[5][8] == 100 && v.requests[7][8] == 100);
 }
 
 TEST(memsync_read_bank_reads_all)
@@ -495,4 +561,162 @@ TEST(memsync_read_missing_stops)
     sync.before_request = nullptr;
     std::atomic<bool> stop{true};
     CHECK_EQ(sync.read_missing(5, cache, nullptr, &stop), -2);
+}
+
+// Only an Access SysEx (F0 00 20 33) longer than 8 bytes is a reply: other manufacturers' SysEx and cut-short Access
+// messages whose bytes 6.. happen to look like the reply must not be taken for it (the plug-in feeds every SysEx from
+// the Virus in, also MIDI-port traffic)
+TEST(memsync_transact_skips_lookalike_messages)
+{
+    MemorySync *ms = nullptr;
+    const Bytes good = {0xF0, 0x00, 0x20, 0x33, 0x01, 0x10, 0x14, 0x01, 0x00, 0x55, 0xF7};
+    MemorySync sync([&](const Bytes &) {
+        ms->feed({0xF1, 0x00, 0x20, 0x33, 0x01, 0x10, 0x14, 0x01, 0x00, 0xF7}); // not a SysEx start
+        ms->feed({0xF0, 0x01, 0x20, 0x33, 0x01, 0x10, 0x14, 0x01, 0x00, 0xF7}); // another manufacturer (each byte)
+        ms->feed({0xF0, 0x00, 0x21, 0x33, 0x01, 0x10, 0x14, 0x01, 0x00, 0xF7});
+        ms->feed({0xF0, 0x00, 0x20, 0x34, 0x01, 0x10, 0x14, 0x01, 0x00, 0xF7});
+        ms->feed({0xF0, 0x00, 0x20, 0x33, 0x01, 0x10, 0x14, 0x01}); // 8 bytes: cut short
+        ms->feed(good);
+        return true;
+    });
+    ms = &sync;
+    Dump r = sync.transact({0xF0, 0x00, 0x20, 0x33, 0x01, 0x10, 0x39, 0x01, 0xF7}, {0x14, 0x01}, 500, 1);
+    CHECK(r == good);
+}
+
+// the match is a prefix of bytes 6..: a reply that ends right after the matched bytes still counts
+TEST(memsync_transact_reply_just_long_enough)
+{
+    MemorySync *ms = nullptr;
+    const Bytes nine = {0xF0, 0x00, 0x20, 0x33, 0x01, 0x10, 0x10, 0x00, 0x05};
+    MemorySync sync([&](const Bytes &) {
+        ms->feed(nine);
+        return true;
+    });
+    ms = &sync;
+    CHECK(sync.transact({0xF0, 0x00, 0x20, 0x33, 0x01, 0x10, 0x30, 0x00, 0x05, 0xF7}, {0x10, 0x00, 0x05}, 300, 1) ==
+          nine);
+}
+
+// a single dump of the wrong size is asked for again, but bounded: 3 requests, then single() gives up (each extra
+// request costs ~1 s on the Virus and delays its notes)
+TEST(memsync_single_gives_up_after_three_wrong_sizes)
+{
+    MemorySync *ms = nullptr;
+    int requests = 0;
+    MemorySync sync([&](const Bytes &m) {
+        requests++;
+        ms->feed({0xF0, 0x00, 0x20, 0x33, 0x01, 0x10, 0x10, m[7], m[8], 0x00, 0xF7}); // cut short
+        return true;
+    });
+    ms = &sync;
+    CHECK(sync.single(1, 7).empty());
+    CHECK_EQ(requests, 3);
+}
+
+// a ROM bank has 128 programs (0..127): read_missing must never ask for a program number 128 (0x80 is not even a
+// valid data byte in a SysEx). The bank sits in front of an empty dump so that a read one past its end would find an
+// empty slot and ask for it.
+TEST(memsync_read_missing_never_asks_past_program_127)
+{
+    struct {
+        Bank bank;
+        Dump after;
+    } cache;
+    MemorySync *ms = nullptr;
+    int singles = 0, bad = 0;
+    MemorySync sync([&](const Bytes &m) {
+        if (m.size() >= 9 && m[6] == 0x30) {
+            singles++;
+            bad += m[8] > 0x7F;
+            ms->feed(fake_single(m[7], m[8], 1));
+        }
+        return true;
+    });
+    ms = &sync;
+    CHECK_EQ(sync.read_missing(5, cache.bank), 128);
+    CHECK_EQ(singles, 128);
+    CHECK_EQ(bad, 0);
+}
+
+namespace {
+struct TempDir {
+    std::filesystem::path dir;
+    explicit TempDir(const char *name) : dir(std::filesystem::temp_directory_path() / name)
+    {
+        std::filesystem::remove_all(dir);
+        std::filesystem::create_directories(dir);
+    }
+    ~TempDir()
+    {
+        std::error_code ec;
+        std::filesystem::remove_all(dir, ec);
+    }
+    std::string write(const std::string &name, const Bytes &b) const
+    {
+        FILE *f = fopen((dir / name).string().c_str(), "wb");
+        fwrite(b.data(), 1, b.size(), f);
+        fclose(f);
+        return (dir / name).string();
+    }
+};
+} // namespace
+
+// a cache file holds exactly 128 programs: whatever follows them is not read (and cannot make the load fail), and a
+// dump of up to 4096 bytes is accepted (only longer ones are taken as a broken file)
+TEST(memsync_bank_file_limits)
+{
+    TempDir t("vtitests-memsync-limits");
+    Bytes full = {'M', 'I', 'D', 'I', 0, 1, 8, 0};
+    for (int p = 0; p < 128; p++) {
+        Dump d = fake_single(1, p, p);
+        full.insert(full.end(), {0x00, 0x00, 0x02, 0x0C});
+        full.insert(full.end(), d.begin(), d.end());
+    }
+    full.insert(full.end(), {0xFF, 0xFF, 0xFF, 0xFF, 0x01, 0x02}); // trailing bytes after program 128
+    Bank in;
+    CHECK(load_bank_file(t.write("trailing.bin", full), in));
+    CHECK(in[127] == fake_single(1, 127, 127));
+
+    Bytes big(12 + 4096, 0x11);
+    const uint8_t head[12] = {'M', 'I', 'D', 'I', 0, 1, 8, 0, 0x00, 0x00, 0x10, 0x00}; // one dump of 4096 bytes
+    std::copy(head, head + 12, big.begin());
+    Bank b;
+    CHECK(load_bank_file(t.write("4096.bin", big), b));
+    CHECK_EQ(b[0].size(), 4096u);
+}
+
+// a save that cannot be done reports it, and an existing cache file at the path is never left half-written
+TEST(memsync_bank_file_save_errors)
+{
+    TempDir t("vtitests-memsync-save");
+    Bank bank;
+    bank[0] = fake_single(1, 0, 0);
+    CHECK(!save_bank_file((t.dir / "no-such-folder" / "bank.bin").string(), bank)); // the temp file cannot be made
+    // the rename at the end fails (a non-empty folder is in the way): the folder stays as it was
+    const std::filesystem::path in_way = t.dir / "bank.bin";
+    std::filesystem::create_directories(in_way);
+    t.write("bank.bin/keep", {1});
+    CHECK(!save_bank_file(in_way.string(), bank));
+    CHECK(std::filesystem::is_directory(in_way) && std::filesystem::exists(in_way / "keep"));
+#ifndef _WIN32
+    // the disk is full when the buffered data is written at fclose (the writes before it all succeed): simulated
+    // with a file size limit of 100 bytes (SIGXFSZ ignored, so the write fails with EFBIG instead)
+    {
+        Bank empty; // 8 + 128 x 4 = 520 bytes: all in stdio's buffer until fclose
+        const std::string path = (t.dir / "full.bin").string();
+        const std::string old = t.write("full.bin", {'o', 'l', 'd'});
+        struct rlimit was;
+        getrlimit(RLIMIT_FSIZE, &was);
+        void (*was_sig)(int) = signal(SIGXFSZ, SIG_IGN);
+        struct rlimit small = was;
+        small.rlim_cur = 100;
+        setrlimit(RLIMIT_FSIZE, &small);
+        const bool ok = save_bank_file(path, empty);
+        setrlimit(RLIMIT_FSIZE, &was);
+        signal(SIGXFSZ, was_sig);
+        CHECK(!ok);
+        CHECK_EQ(std::filesystem::file_size(old), 3u); // the old file is kept
+    }
+#endif
 }

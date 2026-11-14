@@ -25,6 +25,20 @@ function Trust-Store([string]$name, $cert, [switch]$Remove) {
 }
 
 if ($Action -eq 'install') {
+    . (Join-Path $here 'tirevive-virusstate.ps1')
+    # a Virus connected on Access' drivers: ask to unplug it before those drivers are removed. Unloading them with the
+    # Virus present crashed Windows (0xCE in vtimidi.sys) in issue #31 (VirtualBox; real PCs not known). If it stays
+    # connected (nobody logged in, silent install, no reaction in 2 minutes), carry on as before.
+    $wasBound = @(Get-AccessBoundVirus (Get-VirusDevices)).Count -gt 0 # @(): one item has no .Count in PowerShell 5.1
+    if ($wasBound) {
+        "a Virus is connected on the Access driver: asking to unplug it (issue #31)"
+        $shown = Show-UserMessage 'TI Revive setup' ("Please unplug the Virus TI's USB cable now.`n`n" +
+            "Setup removes the old Access drivers and continues by itself once the Virus is unplugged. " +
+            "Afterwards plug it back in, and switch the Virus off and on before you use it with TI Revive.") 120
+        "message shown: $shown"
+        if (Wait-Until { @(Get-AccessBoundVirus (Get-VirusDevices)).Count -eq 0 } 120 1) { "Virus unplugged" }
+        else { "WARNING: the Virus is still connected on the Access driver; removing the Access packages anyway" }
+    }
     # Access driver packages would be preferred for the device and are blocked by Code Integrity on Win11.
     $blocks = (pnputil /enum-drivers | Out-String) -split "(\r?\n){2,}"
     foreach ($b in $blocks) {
@@ -58,6 +72,7 @@ if ($Action -eq 'install') {
     # a Virus still running on the Access USB driver (service VIRUSUSB, e.g. Access software installed or repaired
     # after TI Revive) keeps it until the device is re-detected: remove those device nodes, the rescan below brings
     # the Virus back on the generic composite driver with our WinUSB interfaces (issue #3, Snow)
+    $connected = @(Get-VirusDevices | Where-Object Present).Count -gt 0 # before the nodes vanish for the re-detection
     Get-PnpDevice -ErrorAction SilentlyContinue | Where-Object InstanceId -match 'VID_133E' | ForEach-Object {
         $svc = (Get-PnpDeviceProperty -InstanceId $_.InstanceId -KeyName 'DEVPKEY_Device_Service' -ErrorAction SilentlyContinue).Data
         if ($svc -eq 'VIRUSUSB') {
@@ -66,12 +81,18 @@ if ($Action -eq 'install') {
         }
     }
     pnputil /scan-devices | Out-Null
-    Start-Sleep -Seconds 3
-    # what the Virus ended up on, so that driver.log shows whether the switch worked
-    Get-PnpDevice -ErrorAction SilentlyContinue | Where-Object { $_.InstanceId -match 'VID_133E' -and $_.Present } | ForEach-Object {
-        $svc = (Get-PnpDeviceProperty -InstanceId $_.InstanceId -KeyName 'DEVPKEY_Device_Service' -ErrorAction SilentlyContinue).Data
-        "now: $($_.InstanceId) -> $svc"
-        if ($svc -eq 'VIRUSUSB') { "WARNING: the Virus is still on the Access USB driver" }
+    # what the Virus ended up on, so that driver.log shows whether the switch worked. A connected Virus can take more
+    # than 3 s to come back after the re-detection (#31 run 2: no "now:" line although it was on VIRUSUSB again), so
+    # wait for it, up to 15 s; an unplugged one is not waited for.
+    if ($connected -and -not (Wait-Until { Test-VirusDetected (Get-VirusDevices) } 15 1)) {
+        "WARNING: the Virus was not detected again within 15 s"
+    }
+    Start-Sleep -Seconds 1 # its interfaces follow the device node
+    $now = @(Get-VirusDevices | Where-Object Present)
+    if (-not $now) { "now: no Virus connected (plug it in after setup)" }
+    foreach ($d in $now) {
+        "now: $($d.InstanceId) -> $($d.Service)"
+        if ($d.Service -eq 'VIRUSUSB') { "WARNING: the Virus is still on the Access USB driver" }
     }
     Remove-Item $stage -Recurse -Force
     & (Join-Path $here 'tirevive-shortcuts.ps1') uninstall # 0.8.0: no Control Center launcher - shortcuts of 0.7.x back to Access'

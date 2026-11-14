@@ -720,6 +720,8 @@ void EditorRenderer::draw(Canvas &c, const Element &e, int ox, int oy, int inher
     int lo = p ? p->min : 0, hi = p ? p->max : 127;
     if (p)
         v = shown_value(vparam, v);
+    if (is_midi_indicator(param)) // the Snow skin's part meter (E509): the part's MIDI activity, 0..127 like the VUSlider
+        v = meter ? meter(pt) : 0;
 
     if (e.type == "PatchBrowser")
         browser_numbers(c, e, x, y);
@@ -843,7 +845,9 @@ bool EditorRenderer::hit(const Element &e, int ox, int oy, int inherited, int px
         inside = (e.type == "IncButton" || e.type == "DecButton") && e.h < 12 && px >= x && px < x + e.w &&
                  py >= y - slack && py < y + e.h + slack;
     bool disabled = e.get("Enabled") == "false";
-    if (inside && !e.get("Parameter").empty() && (!disabled || include_disabled) && (!menus_only || is_menu(e))) {
+    // the Snow's MIDI Indicator is a display (E509), not a control: no drag, no hit
+    if (inside && !e.get("Parameter").empty() && !is_midi_indicator(e.get("Parameter")) &&
+        (!disabled || include_disabled) && (!menus_only || is_menu(e))) {
         out.element = &e; // later (= drawn on top) elements override
         out.x = x, out.y = y, out.part = pt;
         out.disabled = disabled;
@@ -889,6 +893,23 @@ std::vector<std::array<int, 4>> EditorRenderer::param_rects(const std::string &p
     };
     for (auto &e : layout_.elements)
         walk(e, 0, 0);
+    return out;
+}
+
+std::vector<std::array<int, 5>> EditorRenderer::meter_rects() const
+{
+    std::vector<std::array<int, 5>> out;
+    std::function<void(const Element &, int, int, int)> walk = [&](const Element &e, int ox, int oy, int inherited) {
+        int pt = own_part(e) >= 0 ? own_part(e) : inherited >= 0 ? inherited : part;
+        int x = ox + e.x, y = oy + e.y;
+        // a VUSlider without a parameter is a skin's component palette entry, not a part strip
+        if ((e.type == "VUSlider" && !e.get("Parameter").empty()) || is_midi_indicator(e.get("Parameter")))
+            out.push_back({pt, x, y, e.w, e.h});
+        for (auto &c : e.children)
+            walk(c, x, y, own_part(e) >= 0 ? own_part(e) : inherited);
+    };
+    for (auto &e : layout_.elements)
+        walk(e, 0, 0, -1);
     return out;
 }
 

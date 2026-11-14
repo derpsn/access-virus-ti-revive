@@ -1,6 +1,6 @@
 # virus-ti-native - native rewrite of the Access Virus TI plug-in (docs/plan.md)
 cmake_minimum_required(VERSION 3.25)
-project(virus-ti-native VERSION 0.8.40 LANGUAGES C CXX) # = the TI Revive release it ships with
+project(virus-ti-native VERSION 0.8.41 LANGUAGES C CXX) # = the TI Revive release it ships with
 set(CMAKE_CXX_STANDARD 17)
 set(CMAKE_CXX_STANDARD_REQUIRED ON)
 # Windows: static C/C++ runtime, so the plug-in and the ASIO driver run without the VC++ redistributable
@@ -64,7 +64,7 @@ add_executable(tirevive-cc tools/tirevive-cc.cpp)
 target_link_libraries(tirevive-cc PRIVATE vticore $<$<PLATFORM_ID:Windows>:shell32>)
 target_compile_definitions(tirevive-cc PRIVATE TIREVIVE_VERSION="${PROJECT_VERSION}")
 # Control Center app (ccapp/, docs/controlcenter.md): a window around src/cc, VSTGUI's standalone library
-vstgui_add_executable(TIReviveControlCenter "ccapp/ccapp.cpp;ccapp/nerdmode.cpp;ccapp/skinpage.cpp;ccapp/skinview.cpp")
+vstgui_add_executable(TIReviveControlCenter "ccapp/ccapp.cpp;ccapp/nerdmode.cpp;ccapp/optionspage.cpp;ccapp/skinpage.cpp;ccapp/skinview.cpp")
 target_link_libraries(TIReviveControlCenter PRIVATE vticore)
 target_include_directories(TIReviveControlCenter SYSTEM PRIVATE external/vst3sdk/vstgui4)
 target_compile_definitions(TIReviveControlCenter PRIVATE TIREVIVE_VERSION="${PROJECT_VERSION}")
@@ -163,13 +163,13 @@ add_executable(vtitests tests/main.cpp tests/test_usbmidi.cpp tests/test_state.c
                tests/test_protocol.cpp tests/test_upscale.cpp tests/test_ctrlguard.cpp tests/test_pktstat.cpp tests/test_owner.cpp tests/test_sysinfo.cpp tests/test_flashinfo.cpp tests/test_remotetemplates.cpp tests/test_popupmenu.cpp tests/test_workarea.cpp
                tests/test_offlinepace.cpp tests/test_syncalert.cpp tests/test_patchhistory.cpp tests/test_stallwatch.cpp tests/test_noteprobe.cpp tests/test_liverule.cpp tests/test_directmon.cpp tests/test_setuptips.cpp
                tests/test_presencewatch.cpp tests/test_keepalive.cpp tests/test_sendbudget.cpp tests/test_writeretry.cpp
-               tests/test_stamprule.cpp tests/test_hostclock.cpp tests/test_sendguard.cpp tests/test_cablerule.cpp tests/test_dumppacer.cpp tests/test_startprogress.cpp tests/test_userrom.cpp tests/test_transport.cpp
+               tests/test_stamprule.cpp tests/test_hostclock.cpp tests/test_midiin.cpp tests/test_sendguard.cpp tests/test_cablerule.cpp tests/test_dumppacer.cpp tests/test_startprogress.cpp tests/test_userrom.cpp tests/test_transport.cpp
                tests/test_gapfill.cpp tests/test_audiogate.cpp tests/test_dragsend.cpp tests/test_hostmidi.cpp tests/test_textfield.cpp
                tests/test_bankdrop.cpp tests/test_hostgestures.cpp tests/test_ratesw.cpp tests/test_timelinefollow.cpp
                tests/test_blockevents.cpp tests/test_outputdelay.cpp tests/test_lcdhover.cpp
-               tests/test_heldnotes.cpp tests/test_factoryorder.cpp tests/test_ratemeter.cpp tests/test_sectionlock.cpp
+               tests/test_heldnotes.cpp tests/test_factoryorder.cpp tests/test_ratemeter.cpp tests/test_sectionlock.cpp tests/test_resync.cpp tests/test_slipwatch.cpp tests/test_freezewatch.cpp
                tests/test_editormenus.cpp tests/test_infopage.cpp tests/test_rambackup.cpp tests/test_undohistory.cpp
-               tests/test_comparestate.cpp tests/test_randomizer.cpp tests/test_trafficring.cpp tests/test_capture.cpp tests/test_keyport.cpp tests/test_closeseq.cpp tests/test_utf8.cpp)
+               tests/test_comparestate.cpp tests/test_randomizer.cpp tests/test_trafficring.cpp tests/test_capture.cpp tests/test_keyport.cpp tests/test_closeseq.cpp tests/test_utf8.cpp tests/test_winusb_errors.cpp tests/test_markerscan.cpp tests/test_rxqueue.cpp tests/test_linkrule.cpp tests/test_optionslayout.cpp)
 target_link_libraries(vtitests PRIVATE vticore)
 add_test(NAME vtitests COMMAND vtitests)
 
@@ -221,6 +221,11 @@ if(CMAKE_SYSTEM_NAME STREQUAL "Linux")
     add_test(NAME gui_controlcenter_close
              COMMAND sh ${CMAKE_CURRENT_SOURCE_DIR}/tests/gui_test.sh ccclose $<TARGET_FILE:TIReviveControlCenter>
                      $<TARGET_FILE:xclose>)
+    # the plug-in without the user's Access files: an empty instance, the host keeps running (rc7 crashed it)
+    add_test(NAME no_access_files
+             COMMAND ${CMAKE_COMMAND} -DHOST=$<TARGET_FILE:nativehost> -DBUNDLE=$<TARGET_FILE_DIR:VirusTINative>/../..
+                     -DDIR=${CMAKE_CURRENT_BINARY_DIR}/no_access_home -P ${CMAKE_CURRENT_SOURCE_DIR}/tests/no_access_files.cmake)
+    set_tests_properties(no_access_files PROPERTIES TIMEOUT 60)
     set_tests_properties(gui_duplicate_editors gui_controlcenter_close PROPERTIES SKIP_RETURN_CODE 77 TIMEOUT 120)
 endif()
 
@@ -269,7 +274,10 @@ if(NOT MSVC)
         foreach(_s ${_srcs})
             cmake_path(ABSOLUTE_PATH _s BASE_DIRECTORY ${_dir} OUTPUT_VARIABLE _abs)
             if(NOT _abs MATCHES "/external/" AND _abs MATCHES "\\.(c|cpp|mm)$")
-                set_property(SOURCE ${_s} DIRECTORY ${_dir} APPEND PROPERTY COMPILE_OPTIONS ${_vti_warn})
+                # the absolute path: a relative one is read against this folder, so the plug-in's own sources
+                # (plugin/source/*.cpp, listed relative to plugin/) got no warnings and a misleading `if` without
+                # braces in process() went unnoticed into rc7 (no_access_files)
+                set_property(SOURCE ${_abs} DIRECTORY ${_dir} APPEND PROPERTY COMPILE_OPTIONS ${_vti_warn})
             endif()
         endforeach()
     endforeach()

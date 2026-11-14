@@ -46,17 +46,57 @@ static bool set_flag(const char *file, bool on, std::string &error)
     return true;
 }
 
-bool plugin_log_enabled() { return flag("diag.on"); }
+bool plugin_log_enabled() { return !flag("diag.off"); }
 
-bool set_plugin_log(bool on, std::string &error) { return set_flag("diag.on", on, error); }
+bool set_plugin_log(bool on, std::string &error)
+{
+    // the switch of 0.8.40 and older goes when the log is switched off, so no file suggests it is still on
+    return set_flag("diag.off", !on, error) && (on || set_flag("diag.on", false, error));
+}
+
+bool rotate_log(const std::string &path, unsigned long long limit)
+{
+    std::error_code ec;
+    const fs::path f = u8path(path);
+    const auto size = fs::file_size(f, ec);
+    if (ec || size <= limit)
+        return false;
+    fs::path old = f;
+    old += ".1";
+    fs::rename(f, old, ec); // replaces an older .1 (POSIX and Windows' MoveFileEx semantics in std::filesystem)
+    return !ec;
+}
 
 const std::vector<PluginOption> &plugin_options()
 {
     static const std::vector<PluginOption> opts = {
-        {"outdelay-changes", "outdelay-changes.on", "Output delays only on change (not at every Play/Stop)"},
-        {"timing-classic", "timing-classic.on", "Timing as before 0.8.35 (lead 1024, no safety net)"},
+        {"outdelay-changes", "outdelay-changes.on", "Output delays only on change (not at every Play/Stop)", false,
+         "Output delays only on change",
+         "Sends the parts' output delays only when they change, not at every Play and Stop (a test against the original)."},
+        {"timing-classic", "timing-classic.on", "Timing as before 0.8.35 (lead 1024, no safety net)", false,
+         "Timing as before 0.8.35", "Lead 1024 and no safety net, as before 0.8.35 (a test; notes can come late)."},
         // on by default since 0.8.39, as the original's VST3 always does it (E400, E402); the file switches it off
-        {"live-notes", "live-notes.off", "Notes played live skip the lead, like the original (#30)", true},
+        {"live-notes", "live-notes.off", "Notes played live skip the lead, like the original (#30)", true, "Live notes",
+         "Notes you play live skip the lead, like the original: about 22 ms instead of 76 ms at 48 kHz (#30)."},
+        // on by default since 0.8.41: restart the Virus' audio once when it arrives byte-slipped (slipwatch.h, E488)
+        // macOS too since 0.8.41-rc6 (#37: 9 of 22 starts slipped on a Catalina Mac, E510)
+        {"slip-restart", "slip-restart.off", "Restart the Virus' audio when it arrives scrambled", true,
+         "Restart scrambled audio",
+         "When the Virus' audio arrives scrambled (crackle, notes off time), restart it. On a Mac this helps when the "
+         "DAW does not use the Virus as its own audio device."},
+        // off by default (0.8.41, #30): the lead per host block measured exact on the TI2 (stamprule.h, E496)
+        {"low-latency", "low-latency.on", "Lower latency, experimental (#30)", false, "Lower latency (experimental)",
+         "About 36-48 ms instead of 76-87 ms at buffers up to 256 (55-59 ms at 512, unchanged above). It leaves "
+         "the DAW only about 20 ms: if notes come late, switch it off."},
+        // on by default since 0.8.41 (user 2026-11-10): the plug-in's log for bug reports; diag.off switches it off
+        {"plugin-log", "diag.off", "Plug-in log for bug reports (stays on this computer)", true, "Plug-in log",
+         "Writes what the plug-in does to diag.log on this computer, for bug reports. Nothing is sent anywhere."},
+        // off by default (0.8.41, E519): played notes a little later; on our Mac at most one 64-frame step late
+        // instead of two (E534), not exact
+        {"live-later", "live-later.on", "Played notes a little later, for an evener rhythm (E519, E534)", false,
+         "Even rhythm for played notes",
+         "Notes you play live go about 3 ms later, so they come at most about 1.3 ms late (measured on a Mac). Off: "
+         "they are stamped like the original's, and one can come 1-3 ms late now and then."},
     };
     return opts;
 }
@@ -199,9 +239,15 @@ bool collect_logs(const std::string &out_path, const std::string &version, std::
     const char *os = "Linux";
 #endif
     t += std::string("Collected ") + stamp + " by TI Revive Control Center " + version + " on " + os + "\n";
-    t += std::string("Plug-in log ") + (plugin_log_enabled() ? "ON" : "OFF (create diag.on, then reproduce)") + "\n\n";
+    t += std::string("Plug-in log ") +
+         (plugin_log_enabled() ? "ON" : "OFF (switch it on on the Options page, then reproduce)") + "\n\n";
     t += "--- plug-in diag.log (last 2000 lines) ---\n";
-    for (auto &l : tail_file(plugin_log_path(), 2000))
+    std::vector<std::string> lines = tail_file(plugin_log_path(), 2000);
+    if (lines.size() < 2000) { // just rotated: the end of the older file first
+        std::vector<std::string> older = tail_file(plugin_log_path() + ".1", 2000 - lines.size());
+        lines.insert(lines.begin(), older.begin(), older.end());
+    }
+    for (auto &l : lines)
         t += l + "\n";
     t += "\n--- broker log (" + broker_log_location() + ", last 1000 lines) ---\n";
     for (auto &l : broker_log_tail(1000))

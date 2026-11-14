@@ -1,5 +1,5 @@
 // noteprobe.h - what a host really sends for a note (#30, E403): flags, offset, block and transport per note, in
-// diag.log when noteprobe.on lies next to diag.on. A field diagnostic, off by default. process() pushes without locks and
+// diag.log when noteprobe.on lies in the plug-in folder (and the log is on). A field diagnostic, off by default. process() pushes without locks and
 // never waits; when the ring is full the record is dropped and counted. One thread pushes, one drains (serialise drains
 // from outside). Header only: the plug-in and the tests use it.
 #pragma once

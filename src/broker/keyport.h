@@ -26,3 +26,27 @@ static inline void vti_keyport_filter(uint8_t ep, const uint8_t *packets, int le
         cb(user, p + 1, n);
     }
 }
+
+// The Virus' DIN MIDI In, "Virus TI MIDI" (E517, #39): with the plug-in link up the Virus sends what arrives there only
+// to USB, EP 0x85 cable 0, and plays none of it itself. The original's Mac driver gave cable 0 its own source and
+// passed every code index but 0 and 1 (E521 (4)): SysEx in its pieces and single bytes too, as they come from a
+// keyboard or another device. `cb` gets the packet's MIDI bytes; a SysEx piece is not a whole message.
+static inline void vti_dinport_filter(uint8_t ep, const uint8_t *packets, int len, vti_keyport_cb cb, void *user)
+{
+    // bytes per code index (USB-MIDI 1.0 table 4-1): 2/3 system common, 4 SysEx on, 5-7 SysEx ends, 8-E channel, F one byte
+    static const uint8_t bytes[16] = {0, 0, 2, 3, 3, 1, 2, 3, 3, 3, 3, 3, 2, 2, 3, 1};
+    if (ep != 0x85)
+        return;
+    for (int i = 0; i + 4 <= len; i += 4) {
+        const uint8_t *p = packets + i;
+        const int cin = p[0] & 0x0F;
+        if (p[0] >> 4 != 0 || !bytes[cin]) // cable 0 only; code index 0/1 are reserved (and padding)
+            continue;
+        const int n = bytes[cin];
+        if (cin >= 0x8 && cin <= 0xE) { // a channel message must fit its code index, as on the key port
+            if ((p[1] & 0xF0) >> 4 != cin || p[2] & 0x80 || (n == 3 && p[3] & 0x80))
+                continue;
+        }
+        cb(user, p + 1, n);
+    }
+}

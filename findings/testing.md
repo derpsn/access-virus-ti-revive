@@ -141,12 +141,26 @@ for class B), and the round's own items stay targeted at the changed feature.
 Recount after every few rounds: add the round's FAILs to this table and move items in or out of the rotation in
 `risk.json`.
 
+## Line coverage (`scripts/coverage.py`)
+
+`python3 -I scripts/coverage.py --min 95` makes a separate coverage build (`build-cov/`, Debug, `--coverage -O0`),
+runs vtitests with an empty HOME (no Access files, no user state, `XDG_CONFIG_HOME`/`WINEPREFIX`/`VTI_ACCESS_DIR`
+unset) and merges gcov's line hits of vticore and vtitests per source line of `native/src` (header-only code runs
+from the test objects). It prints the total and the weakest files and exits 1 below the threshold. The CI job
+`coverage` in build.yml runs it on every CI build; it is not in the release's `needs` (a red job shows, it does not
+hold back a hotfix by itself). Never use build-native for it (the flags would stick in that build's cache).
+
+Measured 2026-11-12 on round-0.8.41 (4f72e64 + docs): **96.4 %** (6206 of 6435 lines, 87 files, 653 vtitests);
+weakest editor/manuals.h 88.4 %, device/outputdelay.h 90.0 %. Threshold 95 %. The website's "94 %" is the older
+vticore-only method of 2026-10-16, a different measure (site check decides whether to switch it).
+
 ## Mutation score (`scripts/mutation.py`)
 
-Line coverage (vticore 94 %) only says that code ran during the tests, not that a test would notice a wrong
+Line coverage only says that code ran during the tests, not that a test would notice a wrong
 result. `mutation.py` changes one operator at a time (`<` to `<=`, `&&` to `||`, `true` to `false`, `+ 1` to `- 1`)
 in a copy of the tree, rebuilds vtitests and runs it: a mutant the tests still pass is behaviour no test pins
-down. Run it now and then on the class B/C logic, not in CI (each mutant is a rebuild).
+down. Not in CI (each mutant is a rebuild): `scripts/risk.py` prints the command for the round's changed files in
+`native/src` and the broker headers; run it once per round on those, and now and then on the class B/C logic.
 
 ```
 git worktree add ../tirevive-mut HEAD          # a copy: an interrupted run must not leave a mutant behind
@@ -206,3 +220,28 @@ resetguard.h:19 (`fd > 0`: fd 0 only with stdin closed), resampler.h:32 (the Kai
 
 Note: several survivors were reads past a message's end (usbmidi_pack); a plain unit test sees them only when the
 bytes past the end are known, so the test leaves a marker in the vector's spare capacity.
+
+**2026-11-13, round 0.8.41** (copy of 19df199, the 15 files `risk.py` names for the round; 461 mutants, log
+`work/mutation-0.8.41.log`): **342 of 461 killed (74 %)**. The two files new since rc3 first: transport.h (transport
+restarts like the original, E505) 20 of 29, markerscan.h (E497 fix) 19 of 22. Their 12 survivors checked in the
+code: 8 were missing tests, now added and each killed when applied by hand in the copy - the jump limits at exactly
+0.05 quarter, exactly -128 samples and exactly one tick (transport.h:36), the 1e6 guard (:67), a restart that fires
+only once (:124); a marker at ring frame 0 that a re-sync ping and a timeout must keep (markerscan.h:23, :63), and a
+timeout with no ping out after a stream reset (:61, `out > 0`). 4 are equivalent: transport.h:71 and :74 (`< 0` vs
+`<= 0` clamps 0 to 0), :77 (`offset >= 0` vs `> 0` sets 0 to 0) and :79 (`>` vs `>=` sets frames_per_tick to itself).
+**transport.h and markerscan.h: every behaviour-changing mutant killed.** The 107 survivors in the 10 files from rc1-rc3 were then checked
+by four agents in parallel worktrees (each claimed kill applied by hand), and the tool itself confirmed the result
+on copies with all new tests (`work/mutation-0.8.41-rerun1.log`, `-rerun2.log`; 38 new tests, 720 in all). 88 more
+are killed now: infopage.h 72 of 76, editormenus.h 22 of 22, memsync.cpp 59 of 60, diag.cpp 34 of 35, stamprule.h
+83 of 87, stallwatch.h 26 of 29, startprogress.h 20 of 23, freezewatch.h 19 of 23, slipwatch.h 25 of 27. The 21 that
+survive (with transport.h's 4, 27 of 461) change no behaviour: same value at the boundary (infopage.h:41, :206;
+stamprule.h:85, :171, :172, :216 `due < last`; stallwatch.h:79, :91; startprogress.h:24, :26, :44, the earlier run's
+:19/:21/:38; diag.cpp:239, a tail of 0 lines reads nothing; slipwatch.h:56, a changed frame always adds to the sum),
+initial values the first call overwrites (stallwatch.h:45; freezewatch.h:20, :25, :58, :59; diag.h:30, every option
+sets `default_on`), a loop guard that cannot be reached (infopage.h:257 `last > 0`) or a pop the later resize does
+anyway (:261); 2 write one element past an array into padding or spare heap bytes (memsync.cpp:147 `bank_info`,
+slipwatch.h:49 `prev_`): only a sanitizer build sees them (not run). **Result: 434 of 461 killed (94 %), every
+surviving mutant equivalent or sanitizer-only.** No survivor was a bug. Notes: memsync's
+`read_missing_never_asks_past_program_127` kills its mutant through the memory layout (an empty dump placed after
+the bank), the past-the-end reads in infopage/editormenus through a marker in the vectors' spare capacity; a build
+without a build type has libstdc++ bounds assertions on (GCC 15), so run the tool on a Release build as before.

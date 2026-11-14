@@ -68,6 +68,24 @@ inline int64_t live_stamp(int64_t newest, int64_t marker, double ratio)
     return newest - marker + (int64_t)(-1.0 * ratio) - 0x400;
 }
 
+// #39, E512: the same live stamp, but from the note's place on the plug-in's smoothed timeline (`tl_at` = tl_ +
+// offset; the timeline follows newest - S) instead of the ring's newest frame at send time. On macOS Core Audio fills
+// the ring in bursts of several hundred frames, and the ring-based stamp passed them on: one played rhythm sounded
+// 10.5 / 13.2 / 15.9 / 18.5 ms late in turn. Equal to live_stamp() when the ring is where the timeline expects it.
+// E519: on our Mac the Virus met such a stamp one or two of its 64-frame steps late in 22 of 40 played notes, so the
+// played rhythm came out up to +-128 frames uneven. The Control Center option live-later moves played notes this much
+// later (about 2.7 ms at 48 kHz). E534 (the same keystamp test with it on): 11 of 40 on the stamp, 29 one 64-frame
+// step late, none two - half the spread, not exact; which step follows the send phase, not the margin, so the stamp
+// sits on an edge of the Virus' 64-frame grid and 128 (a multiple of 64) cannot move it off (a 32-frame shift is
+// the next thing to try, 0.8.42). Off by default: then the stamp is the original's or up to
+// one block later (the original drops the note's place in the block, E524 (4)).
+constexpr int LIVE_LATER_FRAMES = 128;
+
+inline int64_t live_stamp_tl(int64_t tl_at, int s, int64_t marker, double ratio, int later = 0)
+{
+    return live_stamp(tl_at + s, marker, ratio) + later;
+}
+
 // Our one difference from the original's live path, by the user's word 2026-11-07: a flagged note-off goes at once only
 // when the last note-on of that key went at once. The original goes by the flag alone, so a flagged note-off of a clip
 // note still waiting on its lead lands first and the note hangs (simulator S065 C4, from about 35 ms before its due;
@@ -180,6 +198,24 @@ inline TimingMode timing_mode(bool live_mode, int plugin_latency, int base_a, in
 inline int timing_lead(bool classic, bool windows)
 {
     return classic && !windows ? 1024 : 3072;
+}
+
+// The experimental lower lead (Control Center option low-latency, 0.8.41, #30): per host block and Virus rate the
+// values measured exact on the real TI2 (E496, 10-20 sessions each, every note on its stamp on the wire). The safety
+// net floors a note when the timeline's error exceeds A - 1024, and that error grows with the block (48 kHz b512: up
+// to 671), so the lead grows with it. It leaves the host about 20-25 ms: a longer stall makes a note late where 3072
+// absorbs it. Above block 512 nothing was measured: the default lead stays.
+inline int experimental_lead(int block, int virus_rate)
+{
+    if (block <= 0 || block > 512)
+        return 3072;
+    if (block <= 64)
+        return 1152;
+    if (block <= 128)
+        return 1280;
+    if (block <= 256)
+        return 1344;
+    return virus_rate == 48000 ? 1792 : 1408;
 }
 
 // The safety net (0.8.35): a stamp from the timeline can lie in the past when the host hands over a block late. The

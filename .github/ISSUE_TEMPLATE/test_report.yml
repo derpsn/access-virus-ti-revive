@@ -42,7 +42,7 @@ body:
     attributes:
       label: Logs
       description: |
-        Plug-in: diag.log (create diag.on in the plug-in folder first, see CONTRIBUTING.md). Broker: Windows %TEMP%\vtibroker.log,
+        Plug-in: diag.log (on by default since 0.8.41; with older versions create diag.on in the plug-in folder first, see CONTRIBUTING.md). Broker: Windows %TEMP%\vtibroker.log,
         macOS /tmp/tirevive-vtibroker.log, Linux journalctl --user -u tirevive-broker -b. Snow / detection problems: the usbinfo output.
         Remove anything private first.
   - type: checkboxes

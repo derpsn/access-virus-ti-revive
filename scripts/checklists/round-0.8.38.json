@@ -113,7 +113,7 @@
      "id": "L5",
      "title": "Sleep, automated (only you can run this one)",
      "steps": [
-      "No DAW open. In a terminal: <code>/home/datoml/virus-ti-re/scripts/hil.sh --sleep</code>. It asks for your password once (rtcwake) and suspends this PC for 45 s."
+      "No DAW open. In a terminal: <code>~/virus-ti-re/scripts/hil.sh --sleep</code>. It asks for your password once (rtcwake) and suspends this PC for 45 s."
      ],
      "expect": "The summary says ALL PASS, including H5."
     }

@@ -45,7 +45,7 @@
      "title": "Install from the Access .msi (issue #15)",
      "steps": [
       "Move the Access files away: <code>mv ~/.local/share/tirevive/access ~/.local/share/tirevive/access.bak-0.8.32</code>",
-      "Run <code>~/Downloads/TI-Revive-0.8.32-test/TI-Revive-0.8.32-linux/install.sh \"/home/datoml/virus-ti-re/originals/Virus TI Software Suite 5.1.7.00 64-bit.msi\"</code>",
+      "Run <code>~/Downloads/TI-Revive-0.8.32-test/TI-Revive-0.8.32-linux/install.sh \"~/virus-ti-re/originals/Virus TI Software Suite 5.1.7.00 64-bit.msi\"</code>",
       "Start the TI Revive Control Center from the app menu."
      ],
      "expect": "install.sh unpacks the Access files without an error; the Control Center opens in the Access look. (Afterwards the backup folder can be deleted, or moved back if something failed.)"

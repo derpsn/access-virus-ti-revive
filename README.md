@@ -67,7 +67,7 @@ contains no Access material. No kernel code of its own is installed.
 | **Tested with** | Ableton Live 11 (Windows 11 PC and VM) | Ableton Live 12 on a MacBook Air M3 (VST3), GarageBand and Logic Pro (AU) | REAPER 7.83 on Ubuntu 26.04 |
 
 - **Timing:** notes land sample-accurately on the grid (measured jitter 0.01 to 0.33 ms, std. dev.); the plug-in
-  reports its latency so the DAW compensates it. Since 0.8.39 that delay follows your buffer down to 32 samples, as the original's does (3584 samples plus the buffer: 76 ms at 64 samples and 48 kHz, before 82.7 ms), and notes you play live skip it in DAWs that mark them (Ableton Live), about 22 ms. The Virus follows the project's sample rate like with the
+  reports its latency so the DAW compensates it. Since 0.8.39 that delay follows your buffer down to 32 samples, as the original's does (3584 samples plus the buffer: 76 ms at 64 samples and 48 kHz, before 82.7 ms), and notes you play live skip it in DAWs that mark them (Ableton Live), about 22 ms. Since 0.8.41 "Lower latency (experimental)" on the Control Center's Options page shortens that delay to 36 to 48 ms at buffers up to 256 (55 to 59 ms at 512); it leaves your DAW only about 20 ms, so switch it off if notes come late. If you record a part you play into Ableton Live, switch the plug-in's Live Mode on while you record: otherwise Live puts the take about 50 ms later than you heard it (measured on macOS with Live 12). Played notes can come 1 to 3 ms late now and then (the original stamps them the same way); "Even rhythm for played notes" on the Control Center's Options page (since 0.8.41) plays them about 3 ms later, so they come at most about 1.3 ms late (measured on a Mac). The Virus follows the project's sample rate like with the
   original: it runs at 44.1 or 48 kHz, at other rates (88.2, 96 kHz, ...) the plug-in converts (since 0.8.32).
 - **First start:** the plug-in reads RAM A-D from the Virus (a few minutes without a cache); you can play meanwhile -
   the sync pauses while notes arrive.
@@ -347,6 +347,10 @@ same with Access' own driver.
 - **REMOTE page** (since 0.8.22): the Virus' remote templates with their names, knob names and MIDI strings, the
   original's knob template list, template files to load and save, sent to the Virus like the original.
 - **The original's sync error message**, shown when the Virus reports late notes while your DAW plays.
+- **Scrambled audio restarts by itself (since 0.8.41):** in about one start in 250 the Virus sends its audio scrambled for a whole session (crackle, notes off time); the plug-in notices it and restarts the Virus' audio once, on Linux, Windows and macOS. A switch on the Control Center's Options page.
+- **When the Virus stops sending audio (since 0.8.41):** the plug-in tells you to switch the Virus off and on; in our tests only that helped.
+- **The arpeggiator follows a count-in (since 0.8.41, issue #30):** like with the original, the Virus' arpeggiator and clock-synced LFOs run in time with the bar when your DAW counts in before recording.
+- **A Keyboard or Polar plays its own keys again after the DAW closes (since 0.8.41):** TI Revive lets the Virus go when the last plug-in or the Control Center closes, as the original's driver does, and links it again for the next one. Checked on a simulated Keyboard. On Linux the kernel's USB audio driver can link it again (see the limits).
 - Setup Tips for Your DAW in the ? menu (since 0.8.38): opens by itself the first time for a DAW and for a point not read before. Seen on Linux (REAPER), macOS (Ableton Live, Logic) and Windows 11 (Ableton Live).
 - In Logic, Plug-in Latency Compensation must be on. With it off, TI Revive and a Logic instrument played about 100 ms apart; with it on they were in sync by ear, and an export measured at most 0.42 ms apart. Logic warns when you turn it off.
 - The Virus leaves remote mode when the plug-in closes, as with the original (since 0.8.38). Tested on Linux with a TI2 Desktop; the effect on a Virus with keys is not tested.
@@ -388,9 +392,12 @@ same with Access' own driver.
 
 #### Logs and firmware
 
-- **Logs for bug reports:** create an empty file `diag.on` in the plug-in's folder (Windows
-  `%LOCALAPPDATA%\virus-ti-native`, macOS `~/Library/Application Support/virus-ti-native`, Linux
-  `~/.local/share/virus-ti-native`), reproduce the problem and attach `diag.log` from there (see CONTRIBUTING.md).
+- **Logs for bug reports:** since 0.8.41 the plug-in log is on by default. It stays on your computer (nothing is
+  sent anywhere) and is kept small (about 8 MB at most). Reproduce the problem, then *Save logs...* in the Control
+  Center's Nerd mode, or attach `diag.log` from the plug-in's folder (Windows `%LOCALAPPDATA%\virus-ti-native`, macOS
+  `~/Library/Application Support/virus-ti-native`, Linux `~/.local/share/virus-ti-native`; see CONTRIBUTING.md). To
+  switch it off: *? > Detailed Log* in the plug-in, or the Control Center's Options page. With 0.8.40 or older, create
+  an empty file `diag.on` in that folder first.
 - Do not run firmware/OS updates of the Virus through TI Revive; that path is not verified.
 
 **Backups: TI Revive Control Center**
@@ -403,8 +410,7 @@ plug-in and the Control Center share the Virus (only plug-ins of two programs do
 such a backup and converts libraries between `.mid` and `.syx`. **Nerd mode** (button or *View > Nerd mode*) shows live what goes between
 TI Revive and the Virus (decoded: notes, parameter changes by name, dumps, bank sync), which programs use the Virus,
 the plug-in's and the broker's logs; it switches the plug-in log on and off and saves all logs for a bug report in
-one file. **Record...** writes all traffic to and from the Virus to a file (raw and decoded, with endpoint and cable, from the Virus' first reply on), for bug reports; the audio stream is not in it. It only watches: it never sends anything to the Virus. Its *Options...* menu switches a few things for
-comparisons with the original: the output delays only on change instead of at every Play/Stop, and the timing as before 0.8.35 (from the next start of the plug-in), and notes played live skipping the delay (on by default since 0.8.39).
+one file. **Record...** writes all traffic to and from the Virus to a file (raw and decoded, with endpoint and cable, from the Virus' first reply on), for bug reports; the audio stream is not in it. It only watches: it never sends anything to the Virus. Its *Options* page (since 0.8.41; also *View > Options*) switches the plug-in's options: lower latency (experimental), the restart of scrambled audio, notes played live skipping the delay (on by default since 0.8.39), even rhythm for played notes, the plug-in log (on by default since 0.8.41), and two switches for comparisons with the original (the output delays only on change instead of at every Play/Stop, the timing as before 0.8.35). A change applies from the next start of the plug-in.
 
 **Restore** (since 0.8.30): *Restore...* (in the Access look: RESTORE) asks for a backup's `RAM B.mid` (or any library), then for the RAM bank to overwrite. Only the programs that differ are written, into the Virus' RAM, the way the plug-in's browser writes them, and each one is read back. Unlike Access' Control Center it never writes the Virus' flash. The same from a terminal: `tirevive-cc restore B "RAM B.mid"`.
 
@@ -442,9 +448,11 @@ the Virus' flash and can brick it. Details: [native/docs/controlcenter.md](nativ
   use the ASIO device in your DAW. When you update from TI Revive 0.2.x, the audio part of the Virus switches to
   WinUSB automatically; if the Virus audio does not work afterwards, unplug and replug the Virus once.
 - **Windows MIDI ports** ("Virus TI MIDI"/"Virus TI Synth") of the old driver are not provided, so on Windows the keys of a Keyboard or Polar cannot be recorded in a DAW yet.
+- **Keyed Virus on Linux after the DAW closes:** On Linux a Keyboard or Polar can stay silent on its own keys after the DAW closes: the Linux kernel's USB audio driver links the Virus to the computer each time it takes the device (when it is plugged in, after a reset, and when TI Revive gives it back), so the keys keep going to USB. TI Revive unlinks it at the close like the original driver; the kernel links it again. Unplugging the USB cable brings the keys back. Seen with a simulated Virus through the real Linux kernel (E527); not checked on a real Keyboard.
 
 **macOS**
 - **The keys of a Keyboard or Polar** (since 0.8.38): TI Revive offers a MIDI input "Virus TI Synth", as the Access driver did. Choose it as the MIDI input of the track with the plug-in and arm it: the keys, wheels and pedals reach the DAW, and you can record them. The Virus plays them through the track, because Local is off while it works with a plug-in, as with the original. The port exists while the plug-in or the Control Center is open. Virus to DAW only: no other program can send to the Virus this way. Not tested by us: our TI2 Desktop has no keys. By user reports: notes, pitch bend and mod wheel recorded on a TI1 Keyboard (Ableton Live 12.3.7) and a TI2 Polar.
+- **The Virus' MIDI In** (since 0.8.41): a second MIDI input "Virus TI MIDI", as the Access driver had. While the Virus works with a plug-in it sends what arrives at its MIDI In socket only to the computer and does not play it itself, so a keyboard plugged in there reaches the DAW only through this input: choose it as the MIDI input of the track with the plug-in and arm it. SysEx and clock from that socket pass too. Virus to DAW only. It shows up on our Mac (0.8.41 test round); we had no keyboard at the Virus' MIDI In to play through it. Built from the original driver's behaviour (E521).
 
 - **Microphone permission** for your DAW is required (see above); without it the plug-in stays silent.
 - **One DAW at a time** uses the Virus (as with the Access driver): the plug-in in a second DAW or GarageBand next
@@ -782,7 +790,7 @@ Branch pushes and pull requests do not build.
 | Path | Content |
 |---|---|
 | `native/` | the native plug-in "TI Revive Virus Control" (VST3, all platforms) and the ASIO driver "TI Revive Virus Audio": `native/README.md`, `native/docs/architecture.md` |
-| `findings/` | the research: `spec.md` (protocol), `evidence.md` (every observation with its source), `claims.md` (community claims checked), `design*.md`, `HANDOFF.md` (working log) |
+| `findings/` | the research: `spec.md` (protocol), `evidence.md` (every observation with its source), `claims.md` (community claims checked), `design*.md`, `HANDOFF.md` (current state), `log/` (working log) |
 | `src/broker/` | device access (WinUSB / libusb / named-pipe backends), broker (Windows and macOS; the macOS MIDI driver stand-in for the classic plug-in is opt-in), hardware test tools |
 | `src/wrapper/` | the classic Windows plug-in of 0.7.x (driver-interface emulation, VST3 wrapper, ASIO wrapper, Control Center launcher); not shipped since 0.8.0 |
 | `src/inf/` | Windows: the WinUSB driver package |

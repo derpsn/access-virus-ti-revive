@@ -27,7 +27,8 @@ CPU table, sidechain, limits, roadmap/status table). List every claim that could
 For each claim search, newest first:
 
 1. `findings/evidence.md` (search by number, model, OS, "bare metal", "real PC", "VM")
-2. `findings/HANDOFF.md` (top = current state, test round results, open items)
+2. `findings/HANDOFF.md` (current state, open items, what is not verified on hardware) and the newest log in
+   `findings/log/` (test round results)
 3. `native/docs/status.md`, `native/docs/architecture.md`
 4. `scripts/checklists/`: `core.json` (the core items every round runs, merged into each round by
    `scripts/checklist.py`), `round-*.json` (the round's own items: e.g. B1 = sidechain on bare metal) and

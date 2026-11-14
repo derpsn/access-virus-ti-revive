@@ -4,7 +4,7 @@
 # Prerequisites (pool "default"): Windows_10.iso (de-DE), win10ref-unattend.iso (make-unattend-iso.sh, uploaded with
 # virsh vol-upload). The disk win10ref.qcow2 (80G) is created here. Legacy BIOS without Secure Boot/TPM, like the old
 # win10 VM the 2014 Access driver ran on. SATA disk + e1000e: no extra drivers needed.
-# Rules (HANDOFF): attach the Virus once after boot, never power-cycle or replug it while attached (bug checks
+# Rules (findings/log/): attach the Virus once after boot, never power-cycle or replug it while attached (bug checks
 # 0xCE / 0x139), close the DAW before a detach; snapshot ref-clean before the first attach.
 set -euo pipefail
 export LIBVIRT_DEFAULT_URI=qemu:///system

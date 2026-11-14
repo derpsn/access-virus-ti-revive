@@ -119,6 +119,10 @@ public:
     bool param_active(const std::string &param, int part) const;
     // absolute rectangles (x, y, w, h) of all elements bound to `param` (for partial repaints)
     std::vector<std::array<int, 4>> param_rects(const std::string &param) const;
+    // the part strips' MIDI activity meters, {part, x, y, w, h} in layout order: the TI skin's VUSliders and the
+    // Snow skin's "VirusControl/MIDI Indicator" sliders (E509); the editor repaints these when a meter changes
+    std::vector<std::array<int, 5>> meter_rects() const;
+    static bool is_midi_indicator(const std::string &param) { return param == "VirusControl/MIDI Indicator"; }
     // the browser entry (program 0..127) under a point inside a PatchBrowser hit, or -1
     static int browser_entry(const Hit &h, int x, int y);
     // The draggable handles of a filter response or ADSTR envelope display (E371): position (editor coordinates, the

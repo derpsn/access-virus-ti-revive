@@ -12,7 +12,11 @@
 #include "device/automation.h"
 #include "device/broker.h"
 #include "device/keepalive.h"
+#include "device/markerscan.h"
 #include "device/memsync.h"
+#include "device/resync.h"
+#include "device/slipwatch.h"
+#include "device/freezewatch.h"
 #include "device/noteprobe.h"
 #include "device/sendbudget.h"
 #include "device/cablerule.h"
@@ -132,8 +136,15 @@ public:
     bool waiting() const { return wait_reported_.load() || broker_.in_use_elsewhere(); }
     std::atomic<int> generation{0}; // +1 on every return of the Virus (process() re-anchors its timeline)
     std::atomic<int> clamp_reanchors{0}; // new timelines because every read was pulled back for a second (E472)
+    std::atomic<int64_t> last_note_ms{0}; // steady clock of the last note-on sent (FreezeWatch: was a note due?)
+    std::atomic<int> freezes{0};          // frozen streams seen (E493); the editor opens its page on a new one
     StallWatch stall_;              // worker: the stream stood still and runs on (sleep) -> generation + 1
     ReplugGate replug_gate_;        // worker, macOS: at most one software replug a minute (E472)
+    SlipWatch slip_;                // worker (scan_audio): the stream arrives byte-slipped (E488)
+    SlipRestartGate slip_gate_;     // worker: restarts after a slip, 10 s apart, at most 5 a session
+    bool slip_fired_ = false;       // worker: scan_audio saw a slip, the loop acts on it
+    FreezeWatch freeze_;            // worker (scan_audio): the stream froze (E493), only a power cycle helped
+    int slip_rate_ = 0;             // worker: the rate slip_ was set for
     bool connected() const { return broker_.device_present(); }
     void stop_worker(); // the worker and the broker's reader have ended when it returns; the destructor does it too
     void leave_virus(); // what the Virus is left with when the plug-in closes (closeseq.h); blocks 350 ms, up to ~1.5 s
@@ -147,15 +158,11 @@ public:
     // unknown, -2 = not found: stamps stay relative to the ring like before)
     // Every ping RESETS that clock, and the Virus can answer seconds late (Windows: start-up dumps still being
     // digested), so a ping waits up to 5 s for its marker and the newest marker always wins
-    void calibrate(int64_t from, bool new_stream)
-    {
-        marker_from_ = from;
-        pings_out_.fetch_add(1);
-        if (new_stream || marker.load() < 0) // a new audio stream (start, the Virus came back): the old one is void
-            marker = -1;
-    }
-    bool calibrating() const { return pings_out_.load() > 0; }
-    std::atomic<int64_t> marker{-2};
+    // (the bookkeeping is MarkerScan, markerscan.h; a new audio stream voids the old marker)
+    void calibrate(int64_t from, bool new_stream) { markers_.calibrate(from, new_stream); }
+    bool calibrating() const { return markers_.calibrating(); }
+    MarkerScan markers_;
+    std::atomic<int64_t> &marker = markers_.marker;
     std::atomic<int> rate{44100}; // the Virus' sample rate (44100; 48000 when it follows the host, E323)
     // rate following (design-rate.md step 5): the Virus rate this instance wants (the host rate mapped like the
     // original, virusrate.h) - the audio start asks for it; request_rate() asks now and waits until the worker did
@@ -169,12 +176,15 @@ public:
     std::atomic<bool> live_notes{false};
     std::atomic<bool> no_stamps{false}; // Live Mode / Plugin Latency Minimal: no F5 at all (stamprule.h timing_mode)
     std::atomic<double> live_ratio{1.0}; // Virus frames per host frame, for a live stamp
+    std::atomic<int> live_s{5000};       // the timeline's distance behind the newest frame (S), for a live stamp (E512)
+    std::atomic<int> live_later{0};      // Control Center option live-later: frames added to a live stamp (E519)
     static constexpr int64_t floor_min = 1024;
     // the newest ring frame that had sound on USB 1 / USB 2 (the ping waits for 1 s of silence, like the original)
     std::atomic<int64_t> last_sound{-1};
     // R5 diagnostics (VTI_NATIVE_STATS, every 10 s): stamp-aligned reads, their smallest distance to the newest frame,
     // timeline drift steps
     std::atomic<int64_t> aligned_blocks{0}, read_margin_min{INT64_MAX}, tl_steps{0};
+    PullStats pulls; // reads pulled back because the host ran ahead of the Virus' audio (E490), per stats window
     // process() calls/samples and timeline events (anticipative hosts call in bursts ahead of real time)
     std::atomic<int64_t> host_frames{0}, anchors{0}, err_min{INT64_MAX}, err_max{INT64_MIN};
     // the Sidechain bus towards the Virus' USB input ("3 Outs / 1 Input", E167): frames sent, refills (start, the
@@ -183,7 +193,7 @@ public:
     std::atomic<int64_t> sc_frames{0}, sc_refills{0}, sc_yields{0}, sc_corr_ppm{0}, sc_queued_min{INT64_MAX},
         sc_queued_max{INT64_MIN};
     std::atomic<int> sc_in_peak{0}; // the highest sidechain input sample (x 32767) since the last stats line
-    // R5 lines also go to this file (diag.on, field tests); set once after construction, read by the worker
+    // R5 lines also go to this file (the plug-in log, on unless diag.off); set once after construction, read by the worker
     void set_diag_path(const std::string &p)
     {
         snprintf(diag_path_, sizeof diag_path_, "%s", p.c_str());
@@ -252,9 +262,6 @@ private:
     char diag_path_[1024] = {};
     std::atomic<bool> diag_on_{false};
     void scan_audio(); // worker: silence tracking + marker search
-    std::atomic<int64_t> marker_from_{-1};
-    std::atomic<int> pings_out_{0}; // pings sent whose marker has not been seen yet
-    int64_t marker_skip_ = -1;      // worker: frames up to here belong to the last marker
     int64_t scanned_ = -1; // ring frames up to here were looked at
     bool elsewhere_seen_ = false; // worker: broker state 2 seen (another program's plug-in has the Virus)
     struct Queued {
@@ -377,6 +384,7 @@ public:
     bool part_locked(int part);  // any section of the part (the part strip's indicator)
     // the setup page (setuptips.h): this DAW and this setup; which points were read, in setup-tips.seen
     vti::TipsFacts tips_facts() const;
+    int audio_freezes() const { return out_ ? out_->freezes.load(std::memory_order_relaxed) : 0; } // E493, editor
     std::vector<std::string> tips_seen() const;
     void tips_save_seen(const std::vector<std::string> &seen) const;
     // the welcome / What's New pages (infopage.h): what the user chose, in info-page.state; has_history = TI Revive
@@ -463,6 +471,7 @@ public:
     std::atomic<bool> sync_paused_{false}; // the bank sync waits for a gap between notes
     std::atomic<int> sync_eta_s_{-1};       // see sync_eta()
     int marker_retries_ = 0; // process(): sync pings sent again after "no marker"
+    ResyncTimer resync_;     // process(): VTI_NATIVE_RESYNC test switch (S094, E491), off by default
     static int64_t now_ms()
     {
         return std::chrono::duration_cast<std::chrono::milliseconds>(std::chrono::steady_clock::now().time_since_epoch()).count();
@@ -530,8 +539,14 @@ public:
     bool sync_paused() const { return syncing_.load() && sync_paused_.load(); } // the sync page's note
     // estimated seconds the bank sync still needs (-1: unknown or done); a first sync reads 512 programs at ~1 s each
     int sync_eta() const { return syncing_.load() ? sync_eta_s_.load() : -1; }
+    // the sync page's line with the patch just fetched ("RAM A 85 / 128: NAME"); empty: nothing fetched yet or done
+    std::string sync_item()
+    {
+        std::lock_guard<std::mutex> lk(values_mu_);
+        return syncing_.load() ? sync_item_ : std::string();
+    }
     bool lcd_changed() { return lcd_dirty_.exchange(false); } // only the LCD texts changed
-    // field diagnostics (file ~/.local/share/virus-ti-native/diag.on enables a log every 10 s in diag.log)
+    // field diagnostics (a log line every 10 s in diag.log; on unless diag.off, since 0.8.41)
     struct Diag {
         std::atomic<long> full_draws{0}, part_draws{0}, draw_us{0}, dirty_ticks{0}, process_calls{0};
         std::atomic<long> process_max_us{0}, process_over{0}; // over = longer than the block's real time
@@ -540,7 +555,7 @@ public:
     std::atomic<int64_t> diag_next_ms_{0}; // diag_report: when the next line is due
     bool diag_enabled();
     void diag_report(); // editor timer and device worker
-    // what the host really sends for a note (noteprobe.on next to diag.on, off by default, #30)
+    // what the host really sends for a note (noteprobe.on in the plug-in folder, with the log on, off by default, #30)
     NoteProbe note_probe_;
     bool note_probe_on_ = false;
     std::mutex note_probe_mu_; // diag_report and terminate may both drain
@@ -656,6 +671,7 @@ private:
     std::vector<std::string> lock_sections_; // editordevice.xml's sections (initialize)
     std::vector<std::string> locked_children(int part); // the parameters part's locked sections keep
     std::string lcd_param_, lcd_value_, lcd_part_, lcd_orig_; // the last edited parameter for the LCD
+    std::string sync_item_; // see sync_item(), under values_mu_
     LcdHover lcd_hover_; // values_mu_
     bool lcd_hint_on_ = false; // values_mu_: lcd_hint's text is shown, lcd_saved_ holds what it covered
     LcdFields lcd_saved_;
@@ -740,9 +756,10 @@ private:
     // host gets it exactly latency_frames() late in every session (reported as the plug-in latency)
     // A: time for a stamped event to reach the Virus. Since 0.8.35 3072 everywhere, like the original (E364); before,
     // Linux/macOS used 1024 (exact down to 768 in REAPER/Ableton), which Logic's uneven blocks overran (E363).
-    // timing-classic.on next to diag.on gives the old A and no safety net, to compare; VTI_NATIVE_A overrides
+    // timing-classic.on in the plug-in folder gives the old A and no safety net, to compare; VTI_NATIVE_A overrides
     int timing_a_ = 3072; // set in initialize()
     bool timing_classic_ = false;
+    bool low_latency_ = false; // Control Center option low-latency: the experimental lead per block (E496)
     // the lead in force: timing_a_, or what Live Mode / Plugin Latency make of it (stamprule.h timing_mode)
     std::atomic<int> a_now_{3072};
     bool stamps_now_ = true;
@@ -779,7 +796,8 @@ private:
     double next_tick_ = 0;
     ActiveSensing fe_;  // FE every 300 ms on the timeline (the DSP's watchdog, E237)
     double tl_acc_ = 0; // fractional Virus frames of the timeline (host rate != the Virus' rate)
-    TransportWatch transport_; // Play and loop restarts: the original's F2 + 73 00 23 01 + 6F <part> 7F 00 (E275)
+    TransportWatch transport_; // Play, restarts, jumps, Stop: F2 + 73 00 23 vv on the next tick, FC (E275, E505)
+    PendingRestart restart_;   // a restart waits for the block that holds its tick (transport.h)
     double stat_acc_ = 0; // the same for the host-frames statistic
     int64_t stream_start_ = -1;
     TimelineFollow tl_follow_; // after the anchor: jumps and drift steps from the error over time, not per block (E337)

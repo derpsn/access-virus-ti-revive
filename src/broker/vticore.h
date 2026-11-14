@@ -26,6 +26,9 @@ void vti_close(vti *v);
 
 // 1 once a reader hit a fatal error (device removed, handle invalid): close and reopen.
 int vti_is_dead(vti *v);
+// the link global 0x52 by the raw handshake (linkrule.h, E524): 0 or the write's error; vti_linked = last state sent
+int vti_link(vti *v, int on);
+int vti_linked(vti *v);
 // macOS: let the system re-enumerate the Virus (a software replug after a sleep, E472); at most once a minute;
 // 0 = done, -2 = skipped by the gap, other < 0 = libusb error or not supported (Linux, Windows)
 int vti_reenumerate(vti *v);

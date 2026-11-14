@@ -3,6 +3,7 @@
 // Music/Virus TI/Patches") and the same folder below the user's and the shared application data (E307).
 #pragma once
 #include <cstdint>
+#include <map>
 #include <string>
 #include <vector>
 
@@ -12,7 +13,11 @@ struct PatchLibrary {
     std::string name, path;                   // file name without ".mid"
     std::vector<std::vector<uint8_t>> dumps; // 524-byte single dumps (TI format) by position; empty = a gap
     int skipped = 0; // single dumps left out: not 267/524 bytes (damaged), Virus C without page B, not convertible
+    std::map<std::string, int> skip_why; // the same, by reason ("200 bytes", "version 127", "Virus C without page B")
 };
+
+// "2 x 200 bytes, 1 x version 127": what the log line names after the skipped count (#36); empty without skips
+std::string skip_summary(const PatchLibrary &lib);
 
 // one .mid or .syx file (`lib.name` is left to the caller); false if it cannot be read. Each patch at its program
 // byte like the original (E298), gaps empty; the file order when program bytes repeat

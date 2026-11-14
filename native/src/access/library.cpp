@@ -24,6 +24,14 @@ std::string lower_ext(const fs::path &p)
 }
 } // namespace
 
+std::string skip_summary(const PatchLibrary &lib)
+{
+    std::string s;
+    for (auto &[why, n] : lib.skip_why)
+        s += (s.empty() ? "" : ", ") + std::to_string(n) + " x " + why;
+    return s;
+}
+
 bool load_library_file(const std::string &path, PatchLibrary &lib, const std::vector<uint8_t> &page_b)
 {
     std::ifstream f(u8path(path), std::ios::binary);
@@ -33,6 +41,11 @@ bool load_library_file(const std::string &path, PatchLibrary &lib, const std::ve
     lib.path = path;
     lib.dumps.clear();
     lib.skipped = 0;
+    lib.skip_why.clear();
+    auto skip = [&](const std::string &why) { // the reason goes into the log line (#36: a .syx we did not have)
+        lib.skipped++;
+        lib.skip_why[why]++;
+    };
     std::vector<std::vector<uint8_t>> found; // in file order
     // SysEx single dumps anywhere in the file (SMF sysex events or raw .syx): 00 20 33 01 <dev> 10 ... F7
     for (size_t i = 0; i + 8 < d.size(); i++) {
@@ -48,14 +61,17 @@ bool load_library_file(const std::string &path, PatchLibrary &lib, const std::ve
         if (m.size() == 524) {
             found.push_back(m);
         } else if (m.size() == 267 && page_b.size() == 256) { // Virus C: page A only -> upgrade like the original
+            const int version = m[9];
             m.resize(524, 0);
             m[523] = 0xF7;
             if (RemoteDevice::upgrade_single(m, page_b))
                 found.push_back(m);
             else
-                lib.skipped++;
+                skip("version " + std::to_string(version));
+        } else if (m.size() == 267) {
+            skip("Virus C without page B");
         } else {
-            lib.skipped++;
+            skip(std::to_string(m.size()) + " bytes");
         }
         i = end - d.begin();
     }

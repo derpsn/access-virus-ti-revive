@@ -125,6 +125,23 @@ class Spec(unittest.TestCase):
         self.assertEqual(spec["core_items"], [])
 
 
+class Mutation(unittest.TestCase):
+    def test_targets_are_changed_code_vtitests_builds(self):
+        files = ["native/src/device/sendguard.h", "native/src/model/state.cpp", "src/broker/vtireaderr.h",
+                 "src/broker/vticore.c", "native/tests/test_state.cpp", "README.md", "native/plugin/source/x.cpp"]
+        self.assertEqual(risk.mutation_targets(files),
+                         ["native/src/device/sendguard.h", "native/src/model/state.cpp", "src/broker/vtireaderr.h"])
+
+    def test_report_names_the_mutation_command(self):
+        files = ["native/src/device/sendguard.h"]
+        out = risk.report(risk.select(files, MAP), files, MAP)
+        self.assertIn("scripts/mutation.py --tree COPY --build COPY/build native/src/device/sendguard.h", out)
+
+    def test_docs_only_report_has_no_mutation_line(self):
+        out = risk.report(risk.select(["README.md"], MAP), ["README.md"], MAP)
+        self.assertNotIn("mutation.py", out)
+
+
 class CoreFilter(unittest.TestCase):
     def test_core_items_filter_keeps_only_listed_ids(self):
         spec = {"round": "t", "core": "core.json", "core_items": ["LC1", "LC3"],

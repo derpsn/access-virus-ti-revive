@@ -99,6 +99,21 @@ def changed(base):
     return [f for f in (out + new).splitlines() if f]
 
 
+MUTATION_EXT = (".h", ".hpp", ".c", ".cpp")
+
+
+def mutation_targets(files):
+    """changed code that vtitests builds (native/src, the broker headers it includes): what mutation.py should change
+    this round, so a surviving mutant shows code the round's tests do not pin down (findings/testing.md)"""
+    out = []
+    for f in sorted(set(files)):
+        if not f.endswith(MUTATION_EXT):
+            continue
+        if f.startswith("native/src/") or (f.startswith("src/broker/") and f.endswith(".h")):
+            out.append(f)
+    return out
+
+
 def report(sel, files, rmap):
     lines = ["%d changed files, highest class %s" % (len(set(files)), sel["class"])]
     for f in sorted(set(files)):
@@ -110,6 +125,10 @@ def report(sel, files, rmap):
         lines.append("%s: class %s; by hand: %s; automated (hil.sh): %s%s" % (
             p, e["class"], ", ".join(e["manual"]) or "-", ", ".join(e["automated"]) or "-",
             "; rotated out this round: " + ", ".join(e["rotated"]) if e["rotated"] else ""))
+    mut = mutation_targets(files)
+    if mut:
+        lines.append("Mutation run for the changed code (on a copy of the tree, see findings/testing.md):")
+        lines.append("  python3 -I scripts/mutation.py --tree COPY --build COPY/build " + " ".join(mut))
     return "\n".join(lines)
 
 

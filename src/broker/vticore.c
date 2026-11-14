@@ -6,6 +6,12 @@
 #include <stdlib.h>
 #include <string.h>
 #include "writeretry.h" // all platforms: vti_write (Linux and macOS)
+#include "vtireaderr.h" // when a reader clears a stall, waits, or gives up (#37)
+#include "linkrule.h"   // link at open, unlink at close like the original driver (E524)
+#include "rxqueue.h"   // 8 reads pending per MIDI endpoint, the callback only queues (E521)
+#include <errno.h>
+#include <sys/time.h>
+#include <unistd.h>     // usleep
 
 #ifdef __linux__
 #include "resetguard.h"
@@ -33,6 +39,25 @@ static int reset_allowed(void)
 
 static const uint8_t HANDSHAKE[4] = {0x4e, 0x73, 0x52, 0x01}; // spec §3, sent raw on EP 0x05
 
+// One MIDI IN endpoint: RX_PENDING transfers always submitted, like the original's Mac driver (E521 (1)), and a queue
+// to the reader thread (rxqueue.h). Invariant under mu: queued + inflight <= RX_QCAP, so a completion always fits.
+#define RX_PENDING 8
+#define RX_QCAP 512
+typedef struct rxep {
+    struct vti *v;
+    uint8_t ep;
+    struct libusb_transfer *t[RX_PENDING];
+    uint8_t buf[RX_PENDING][VTI_RX_MAX];
+    uint8_t busy[RX_PENDING]; // submitted, its callback not run yet
+    int inflight;
+    unsigned parked;          // not resubmitted for lack of room: the reader resubmits them
+    int quiet;                // the reader clears a halt: transfers cancelled, parked until the clear (S142)
+    vti_rx_rec recs[RX_QCAP];
+    vti_rxq q;
+    pthread_mutex_t mu;
+    pthread_cond_t cv;
+} rxep;
+
 struct vti {
     libusb_context *ctx;
     libusb_device_handle *h;
@@ -41,6 +66,13 @@ struct vti {
     volatile int stop, dead;
     pthread_t rd[2];
     uint8_t rd_ep[2];
+    rxep rx[2];
+    pthread_t ev;           // handles libusb events for the transfers (sync calls elsewhere handle them too)
+    volatile int ev_stop;
+    int started;            // rx_start ran: rx_stop on close
+    int linked;             // the last link message sent (E524)
+    int leak;               // transfers still out after the close: keep this struct (rx_stop)
+    volatile int closing;   // rx_stop runs: transfers cancelled, nothing resubmitted, readers still draining
     uint8_t bulk[16];       // by endpoint number: 1 = bulk (Virus TI Snow), 0 = interrupt (TI/TI2 Desktop, E021) - E387
     unsigned long idle;     // FF FE 00 00 packets dropped on a bulk EP 0x85 (E387)
 };
@@ -93,32 +125,239 @@ static int drop_idle(vti *v, uint8_t *b, int n)
     return w;
 }
 
-typedef struct {
-    vti *v;
-    int i;
-} rd_arg;
+// under e->mu
+static int rx_submit(rxep *e, int slot)
+{
+    int r = libusb_submit_transfer(e->t[slot]);
+    if (r == 0) {
+        e->busy[slot] = 1;
+        e->inflight++;
+    }
+    return r;
+}
+
+// Any thread that handles libusb events runs this (the event thread, a sync write, the Linux audio thread): queue and
+// resubmit only, never block. An error goes to the reader as a record and its transfer waits for the reader.
+static void LIBUSB_CALL rx_done(struct libusb_transfer *t)
+{
+    rxep *e = t->user_data;
+    const int slot = (int)((t->buffer - e->buf[0]) / VTI_RX_MAX);
+    pthread_mutex_lock(&e->mu);
+    e->busy[slot] = 0;
+    e->inflight--;
+    const int err = vti_xfer_err(t->status);
+    switch (vti_rx_done_action(e->v->closing, e->quiet, err)) {
+    case VTI_RX_ERROR:
+        vti_rxq_push(&e->q, slot, err, NULL, 0); // fits: queued + inflight <= RX_QCAP
+        break;
+    case VTI_RX_QUEUE: // the close: hand it on, read no more
+        if (t->actual_length > 0)
+            vti_rxq_push(&e->q, slot, 0, t->buffer, t->actual_length);
+        break;
+    case VTI_RX_QUEUE_RESUBMIT:
+        if (t->actual_length > 0)
+            vti_rxq_push(&e->q, slot, 0, t->buffer, t->actual_length);
+        if (!vti_rxq_may_resubmit(&e->q, (unsigned)e->inflight + 1))
+            vti_park(&e->parked, slot);
+        else if (rx_submit(e, slot))
+            vti_rxq_push(&e->q, slot, -4, NULL, 0); // a failed resubmit: the device is going, the reader decides
+        break;
+    case VTI_RX_QUEUE_PARK:
+        if (t->actual_length > 0)
+            vti_rxq_push(&e->q, slot, 0, t->buffer, t->actual_length);
+        vti_park(&e->parked, slot);
+        break;
+    case VTI_RX_PARK:
+        vti_park(&e->parked, slot);
+        break;
+    default:
+        break;
+    }
+    pthread_cond_broadcast(&e->cv);
+    pthread_mutex_unlock(&e->mu);
+}
+
+static void *events(void *p)
+{
+    vti *v = p;
+    while (!v->ev_stop) {
+        struct timeval tv = {0, 100000};
+        libusb_handle_events_timeout_completed(v->ctx, &tv, NULL);
+    }
+    return NULL;
+}
+
+// 0, or -1 when the queue stayed empty for 200 ms (the reader then checks stop)
+static int rx_take(rxep *e, vti_rx_rec *rec)
+{
+    pthread_mutex_lock(&e->mu);
+    if (!e->q.count && !e->v->stop) {
+        struct timeval now;
+        gettimeofday(&now, NULL);
+        struct timespec until = {now.tv_sec, (now.tv_usec + 200000) * 1000L};
+        if (until.tv_nsec >= 1000000000L) {
+            until.tv_sec++;
+            until.tv_nsec -= 1000000000L;
+        }
+        pthread_cond_timedwait(&e->cv, &e->mu, &until);
+    }
+    int r = vti_rxq_pop(&e->q, rec);
+    int slot; // data again (room, or the endpoint works after a stall): the parked transfers go out
+    while (r == 0 && vti_rx_unpark_after(rec->err) && !e->v->closing && e->parked && vti_rxq_may_resubmit(&e->q, (unsigned)e->inflight + 1) &&
+           (slot = vti_unpark(&e->parked)) >= 0)
+        if (rx_submit(e, slot))
+            vti_rxq_push(&e->q, slot, -4, NULL, 0);
+    pthread_mutex_unlock(&e->mu);
+    return r;
+}
+
+// a halt is cleared on a quiet endpoint: the kernel warns about CLEAR_HALT with transfers queued (S142, 125 lines).
+// Cancel the endpoint's transfers, wait for them (data still handed on), clear, then the reader resubmits them.
+// Real TI2 firmware refuses the clear anyway (sim S141); the reset at the give-up ends a halt.
+static void rx_clear_halt(rxep *e)
+{
+    pthread_mutex_lock(&e->mu);
+    e->quiet = 1;
+    for (int s = 0; s < RX_PENDING; s++)
+        if (e->busy[s])
+            libusb_cancel_transfer(e->t[s]);
+    struct timeval now;
+    gettimeofday(&now, NULL);
+    long ns = (now.tv_usec + 500000) * 1000L; // 0.5 s at most
+    const struct timespec until = {now.tv_sec + ns / 1000000000L, ns % 1000000000L};
+    while (e->inflight > 0 && pthread_cond_timedwait(&e->cv, &e->mu, &until) != ETIMEDOUT)
+        ;
+    pthread_mutex_unlock(&e->mu);
+    libusb_clear_halt(e->v->h, e->ep);
+    pthread_mutex_lock(&e->mu);
+    e->quiet = 0;
+    pthread_mutex_unlock(&e->mu);
+}
 
 static void *reader(void *p)
 {
-    rd_arg a = *(rd_arg *)p;
-    free(p);
-    vti *v = a.v;
-    uint8_t ep = v->rd_ep[a.i], buf[64];
-    while (!v->stop) {
-        int got = 0, r = xfer(v, ep, buf, sizeof buf, &got, 200);
-        if (r == 0 && got > 0 && ep == VTI_EP_MI03_IN && v->bulk[ep & 15] && !(got = drop_idle(v, buf, got)))
-            continue;
-        if (r == 0 && got > 0)
-            v->cb(v->user, ep, buf, got);
-        else if (r != LIBUSB_ERROR_TIMEOUT && r != 0) {
-            vti_log("vti: read ep %02x: %s\n", ep, libusb_error_name(r));
-            if (r == LIBUSB_ERROR_NO_DEVICE) {
-                v->dead = 1;
+    rxep *e = p;
+    vti *v = e->v;
+    const uint8_t ep = e->ep;
+    int fails = 0, last = 0; // errors in a row and the last one (vtireaderr.h)
+    int gave_up = 0;
+    vti_rx_rec rec;
+    for (;;) { // after stop, until the queue is empty: the close hands on what still came (S139)
+        if (rx_take(e, &rec)) {
+            if (v->stop)
                 break;
-            }
+            continue;
         }
+        if (gave_up && !vti_rx_hand_on_after_giveup(rec.err))
+            continue;
+        if (rec.err && !gave_up) {
+            const int r = rec.err;
+            fails++;
+            last = r;
+            if (vti_read_error_logged(fails))
+                vti_log("vti: read ep %02x: %s\n", ep, libusb_error_name(r));
+            if (vti_libusb_read_dead(r, fails)) { // gone or broken: the broker closes it and opens the Virus again
+                vti_log("vti: read ep %02x: %d errors in a row (last %s), giving up on the device\n", ep, fails,
+                        libusb_error_name(r));
+                v->dead = 1;
+                gave_up = 1; // keep handing on what the other transfers bring until the close (S138)
+                fails = 0;   // so the next data record writes no "then read again" line (S139)
+                continue;
+            }
+            if (vti_libusb_stalled(r)) // the standard CLEAR_FEATURE(ENDPOINT_HALT), as WinUsb_ResetPipe on Windows
+                rx_clear_halt(e);
+            usleep(10000); // never a tight loop on errors (#37: ~25000 a second, 300 MB of log)
+            pthread_mutex_lock(&e->mu); // one probe: the failed transfer goes out again only when none is out (S143)
+            if (!v->closing) {
+                if (!vti_rx_probe_now(e->inflight))
+                    vti_park(&e->parked, rec.slot);
+                else if (rx_submit(e, rec.slot))
+                    vti_rxq_push(&e->q, rec.slot, -4, NULL, 0);
+            }
+            pthread_mutex_unlock(&e->mu);
+            continue;
+        }
+        if (fails > 3)
+            vti_log("vti: read ep %02x: %d errors in a row (last %s), then read again\n", ep, fails,
+                    libusb_error_name(last));
+        fails = 0;
+        int got = rec.len;
+        if (ep == VTI_EP_MI03_IN && v->bulk[ep & 15] && !(got = drop_idle(v, rec.data, got)))
+            continue;
+        v->cb(v->user, ep, rec.data, got);
     }
     return NULL;
+}
+
+// RX_PENDING transfers on each MIDI IN endpoint and their reader; 0 or a libusb error
+static int rx_start(vti *v)
+{
+    if (pthread_create(&v->ev, NULL, events, v))
+        return LIBUSB_ERROR_OTHER;
+    for (int i = 0; i < 2; i++) {
+        rxep *e = &v->rx[i];
+        e->v = v;
+        e->ep = v->rd_ep[i];
+        pthread_mutex_init(&e->mu, NULL);
+        pthread_cond_init(&e->cv, NULL);
+        vti_rxq_init(&e->q, e->recs, RX_QCAP);
+        pthread_mutex_lock(&e->mu);
+        for (int s = 0; s < RX_PENDING; s++) {
+            e->t[s] = libusb_alloc_transfer(0);
+            if (!e->t[s])
+                continue;
+            if (v->bulk[e->ep & 15])
+                libusb_fill_bulk_transfer(e->t[s], v->h, e->ep, e->buf[s], VTI_RX_MAX, rx_done, e, 0);
+            else
+                libusb_fill_interrupt_transfer(e->t[s], v->h, e->ep, e->buf[s], VTI_RX_MAX, rx_done, e, 0);
+            int r = rx_submit(e, s);
+            if (r)
+                vti_log("vti: read ep %02x: transfer %d not submitted (%s)\n", e->ep, s, libusb_error_name(r));
+        }
+        pthread_mutex_unlock(&e->mu);
+        pthread_create(&v->rd[i], NULL, reader, e);
+    }
+    return 0;
+}
+
+// the close: cancel every transfer while the readers still hand on what completes, wait for all of them, then stop
+// the readers (they empty their queue first) and the event thread (S139)
+static void rx_stop(vti *v)
+{
+    v->closing = 1;
+    for (int i = 0; i < 2; i++) {
+        rxep *e = &v->rx[i];
+        pthread_mutex_lock(&e->mu);
+        for (int s = 0; s < RX_PENDING; s++)
+            if (e->busy[s])
+                libusb_cancel_transfer(e->t[s]);
+        // the event thread runs their callbacks: wait for all of them, 2 s at most by the clock (every callback
+        // wakes this wait, so counting wake-ups ended it early, S138)
+        struct timeval now;
+        gettimeofday(&now, NULL);
+        const struct timespec until = {now.tv_sec + 2, now.tv_usec * 1000L};
+        while (e->inflight > 0 && pthread_cond_timedwait(&e->cv, &e->mu, &until) != ETIMEDOUT)
+            ;
+        if (e->inflight > 0)
+            vti_log("vti: read ep %02x: %d transfers still pending at close\n", e->ep, e->inflight);
+        const int left = e->inflight;
+        pthread_mutex_unlock(&e->mu);
+        if (!left)
+            for (int s = 0; s < RX_PENDING; s++)
+                libusb_free_transfer(e->t[s]); // NULL is fine
+        else
+            v->leak = 1; // a late callback may still use e: vti_close keeps v (never seen with the clock wait)
+    }
+    v->stop = 1;
+    for (int i = 0; i < 2; i++)
+        pthread_join(v->rd[i], NULL);
+    v->ev_stop = 1;
+    pthread_join(v->ev, NULL);
+    if (!v->leak)
+        for (int i = 0; i < 2; i++) {
+            pthread_mutex_destroy(&v->rx[i].mu);
+            pthread_cond_destroy(&v->rx[i].cv);
+        }
 }
 
 vti *vti_open(vti_rx_cb cb, void *user)
@@ -155,16 +394,16 @@ vti *vti_open(vti_rx_cb cb, void *user)
     // Readers first: if nobody drains EP 0x85/0x86, the device stops accepting OUT data (E042).
     v->rd_ep[0] = VTI_EP_MI03_IN;
     v->rd_ep[1] = VTI_EP_MI04_IN;
-    for (int i = 0; i < 2; i++) {
-        rd_arg *a = malloc(sizeof *a);
-        a->v = v;
-        a->i = i;
-        pthread_create(&v->rd[i], NULL, reader, a);
+    if ((r = rx_start(v))) {
+        vti_log("vti: event thread not started (%s)\n", libusb_error_name(r));
+        goto fail;
     }
+    v->started = 1;
     if (vti_write(v, VTI_EP_MI03_OUT, HANDSHAKE, sizeof HANDSHAKE)) {
         vti_close(v);
         return NULL;
     }
+    v->linked = 1;
     return v;
 fail:
     if (v->h)
@@ -178,9 +417,11 @@ void vti_close(vti *v)
 {
     if (!v)
         return;
+    if (v->linked && !v->dead) // the original's driver unlinks when it lets the Virus go (E524); readers still drain
+        vti_link(v, 0);
+    if (v->started)
+        rx_stop(v); // sets stop after the transfers are back
     v->stop = 1;
-    for (int i = 0; i < 2; i++)
-        pthread_join(v->rd[i], NULL);
     if (v->idle)
         vti_log("vti: %lu idle packets (FF FE 00 00) dropped on bulk EP 0x85\n", v->idle);
 #ifdef __linux__
@@ -197,7 +438,8 @@ void vti_close(vti *v)
 #endif
     libusb_close(v->h);
     libusb_exit(v->ctx);
-    free(v);
+    if (!v->leak) // else a transfer's late callback could still reach its rxep (rx_stop)
+        free(v);
 }
 
 struct write_ctx {
@@ -242,6 +484,8 @@ int vti_write(vti *v, uint8_t ep, const uint8_t *data, int len)
         vti_log("vti: write ep %02x: %d timeout(s), %s\n", ep, timeouts, r ? "gave up" : "then accepted");
     if (r && c.err)
         vti_log("vti: write ep %02x: %s\n", ep, libusb_error_name(c.err));
+    if (r && vti_libusb_stalled(c.err)) // a stalled OUT endpoint refuses every later write until its halt is cleared
+        libusb_clear_halt(v->h, ep);
     return r;
 }
 
@@ -263,6 +507,21 @@ int vti_audio(vti *v, int on, const char *event_name) // broker audio exists onl
     (void)event_name;
     return -1;
 }
+
+int vti_link(vti *v, int on)
+{
+    if (!v || v->dead)
+        return -1;
+    uint8_t m[4];
+    vti_link_msg(m, on);
+    int r = vti_write(v, VTI_EP_MI03_OUT, m, sizeof m);
+    if (!r)
+        v->linked = on;
+    vti_log("vti: link %s (4E 73 52 %02X) -> %d\n", on ? "on" : "off", m[3], r);
+    return r;
+}
+
+int vti_linked(vti *v) { return v && v->linked; }
 
 int vti_is_dead(vti *v)
 {

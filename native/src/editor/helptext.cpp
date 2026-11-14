@@ -42,7 +42,8 @@ const Entry ENTRIES[] = {
     {"Multi Part Bits/Part Enable", "Part on/off",
      "Switches this part on or off. A part that is off does not play, even if notes arrive on its channel."},
     {"Internal MIDI Standard Parameters/Volume", "Part volume and activity",
-     "The part's channel volume (MIDI CC 7). The bar behind the handle lights up while the part receives notes."},
+     "The part's channel volume (MIDI CC 7). The part's activity bar lights up while the part receives notes: "
+     "behind the handle on the TI, as its own thin bar in the part strip on the Snow."},
     {"Single Patch Name/Name", "Patch name",
      "The name of the part's current patch. Double-click to rename it; drag it onto another part strip to copy "
      "the whole patch there."},
@@ -79,7 +80,7 @@ const Entry ENTRIES[] = {
      "settings when you load another patch, in the browser or on the Virus. Right-click for more: all sections, all "
      "parts and presets per page. Locks are not saved with the project, like in the original."},
     {"LockView/Part Lock Indicator", "Lock indicator", "This part has locked sections."},
-    {"VirusControl/Live Mode", "Live mode", "For playing live: every note goes to the Virus at once, without the plug-in's lead, sequenced notes too, so they are no longer exact to the sample. The plug-in reports the smaller latency to your DAW. Only while the transport is stopped."},
+    {"VirusControl/Live Mode", "Live mode", "For playing live: every note goes to the Virus at once, without the plug-in's lead, sequenced notes too, so they are no longer exact to the sample. The plug-in reports the smaller latency to your DAW. Only while the transport is stopped. Switch it on when you record a part you play into Ableton Live: with live mode off, Live puts the take about 50 ms later than you heard it. Playing a Keyboard or Polar from its own keys feels tightest with Local On on the Virus and the track's monitor off in the DAW: the keys play the sound directly, and the DAW still records them. With Local On and the monitor on you hear every note twice."},
     {"VirusControl/Plugin Latency", "Latency", "How far ahead the plug-in sends notes to the Virus: the default is the safest. Smaller values lower the latency for everything, Minimal works like live mode. Takes effect with live mode off."},
     {"VirusControl/Direct Monitoring", "Direct monitoring", "Puts this part on the Virus' analog output Out1 L+R, so you hear it there; off gives the part its outputs back. One part at a time. Choosing another output for the part ends it. Not saved with the project, like in the original."},
     {"VirusControl/Access Website", nullptr, "A link to the manufacturer's website (not used by TI Revive)."},

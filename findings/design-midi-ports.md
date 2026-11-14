@@ -1,6 +1,6 @@
 # Design proposal: Windows MIDI ports for the Virus TI
 
-Status: proposal (2026-10-11), not implemented. Plan item 3 in `HANDOFF.md`.
+Status: proposal (2026-10-11), not implemented. Plan item 3 in the old HANDOFF (now `log/until-2026-10-12.md`).
 
 ## Goal
 

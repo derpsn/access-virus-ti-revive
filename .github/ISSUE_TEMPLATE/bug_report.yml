@@ -35,8 +35,8 @@ body:
     attributes:
       label: Logs
       description: |
-        Plug-in (all systems): create an empty file diag.on in the plug-in's folder (Windows %LOCALAPPDATA%\virus-ti-native,
-        macOS ~/Library/Application Support/virus-ti-native, Linux ~/.local/share/virus-ti-native), reproduce, attach diag.log from there.
+        Plug-in (all systems): Control Center > Nerd mode > Save logs..., or diag.log from the plug-in's folder (Windows %LOCALAPPDATA%\virus-ti-native,
+        macOS ~/Library/Application Support/virus-ti-native, Linux ~/.local/share/virus-ti-native). The log is on by default since 0.8.41; with 0.8.40 or older create an empty file diag.on there first, then reproduce.
         Windows: also TI-Revive-usbinfo.txt from scripts/tirevive-usbinfo.ps1 (Virus connected) and %TEMP%\vtibroker.log
         macOS: also /tmp/tirevive-vtibroker.log
         Linux: also journalctl --user -u tirevive-broker -b

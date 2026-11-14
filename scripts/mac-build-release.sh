@@ -93,7 +93,22 @@ done
 STAGE="$BUILD/TI-Revive-$VERSION-mac"
 mkdir -p "$STAGE"
 pkgbuild --root "$ROOT" --component-plist "$BUILD/components.plist" --identifier io.github.derpsn.tirevive \
-    --version "$VERSION" --scripts "$REPO/src/installer-mac/scripts" --install-location / "$STAGE/TI Revive.pkg"
+    --version "$VERSION" --scripts "$REPO/src/installer-mac/scripts" --install-location / "$BUILD/tirevive-component.pkg"
+# a product archive around it that refuses macOS older than 14.4 with Installer's own message: on Catalina the old
+# package installed and the plug-in then failed to load (#37: UniformTypeIdentifiers missing); the broker and libusb
+# are built for 14.4 (MACOSX_DEPLOYMENT_TARGET above). TI Revive is for systems where the original no longer runs.
+productbuild --synthesize --package "$BUILD/tirevive-component.pkg" "$BUILD/distribution.xml"
+python3 - "$BUILD/distribution.xml" <<'PYEOF'
+import sys
+p = sys.argv[1]
+lines = open(p).read().split('\n')
+i = next(k for k, l in enumerate(lines) if '<installer-gui-script' in l)
+lines[i + 1:i + 1] = ['    <title>TI Revive</title>',
+                      '    <allowed-os-versions><os-version min="14.4"/></allowed-os-versions>']
+open(p, 'w').write('\n'.join(lines))
+PYEOF
+grep -q 'os-version min="14.4"' "$BUILD/distribution.xml" || { echo "distribution.xml without the OS minimum" >&2; exit 1; }
+productbuild --distribution "$BUILD/distribution.xml" --package-path "$BUILD" "$STAGE/TI Revive.pkg"
 cp "$REPO/src/installer-mac/Set up Access Virus TI files.command" "$REPO/src/installer-mac/Uninstall TI Revive.command" \
     "$REPO/src/installer-mac/README-mac.txt" "$REPO/LICENSE" "$REPO/THIRD-PARTY-NOTICES.txt" "$STAGE/"
 chmod +x "$STAGE"/*.command

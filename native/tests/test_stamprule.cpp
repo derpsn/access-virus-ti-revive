@@ -134,3 +134,92 @@ TEST(stamp_plan_queued_messages_own_stamp_no_net)
     p = stamp_plan(note, 3, true, false, true);
     CHECK(p.inherits && !p.stamp && !p.net);
 }
+
+// The experimental lower lead (Control Center option low-latency, 0.8.41, E496): per host block and Virus rate, the
+// values measured exact in 10 or more sessions each on the real TI2; above block 512 nothing was measured, so the
+// default lead stays there
+TEST(stamprule_experimental_lead_per_block_and_rate)
+{
+    CHECK_EQ(experimental_lead(32, 44100), 1152);
+    CHECK_EQ(experimental_lead(64, 44100), 1152);
+    CHECK_EQ(experimental_lead(100, 44100), 1280);
+    CHECK_EQ(experimental_lead(128, 44100), 1280);
+    CHECK_EQ(experimental_lead(256, 44100), 1344);
+    CHECK_EQ(experimental_lead(512, 44100), 1408);
+    CHECK_EQ(experimental_lead(512, 48000), 1792); // 48 kHz b512: the net fires up to ~1700 (err max 671)
+    CHECK_EQ(experimental_lead(64, 48000), 1152);
+    CHECK_EQ(experimental_lead(1024, 44100), 3072); // not measured: the default
+    CHECK_EQ(experimental_lead(0, 44100), 3072);    // block unknown yet: the default
+}
+
+TEST(stamprule_timing_mode_takes_the_experimental_lead_as_its_base)
+{
+    // the option only changes the base: Live Mode and Plugin Latency 1/2 still decide over it
+    CHECK_EQ(timing_mode(false, 3, experimental_lead(128, 44100), 128).a, 1280);
+    CHECK(timing_mode(true, 3, experimental_lead(128, 44100), 128).a == LIVE_A);
+}
+
+// The safety net's edges. Ring frame 0 is a real newest frame (the first one of a stream), so a stamp behind it gets
+// the reserve too; a stamp exactly at the reserve is not "moved" (the count goes to diag.log and would report moves
+// that did not happen); and a jump of exactly one second back (48000 frames) is a new timeline, accepted as it is,
+// while one frame less is still held in order (a stamp behind the DSP's newest one can raise a Sync Information
+// Event, E251)
+TEST(stamp_floor_edges)
+{
+    StampFloor f;
+    CHECK(f.apply(10, 0, 1024) == 1024 && f.moved == 1); // newest frame 0: the reserve still counts
+    StampFloor g;
+    CHECK(g.apply(9024, 8000, 1024) == 9024 && g.moved == 0); // exactly at the reserve: not moved
+    StampFloor h;
+    CHECK(h.apply(100000, -1, 1024) == 100000);
+    CHECK(h.apply(100000 - 47999, -1, 1024) == 100000);         // just under a second behind: in order
+    CHECK(h.apply(100000 - 48000, -1, 1024) == 100000 - 48000); // a full second behind: a new timeline
+}
+
+// An empty message from process() has no status byte: the plan must not read one (a stale byte in the buffer would
+// make it inherit the last F5), it gets neither its own stamp nor the inherited one
+TEST(stamp_plan_empty_message_reads_nothing)
+{
+    const uint8_t stale[3] = {0xB0, 0x7B, 0x00};
+    StampPlan p = stamp_plan(stale, 0, true, true, false);
+    CHECK(!p.inherits && !p.stamp && !p.net);
+}
+
+// #39 (E512): a live note was stamped from the ring's newest frame at send time. On macOS Core Audio fills the ring in
+// bursts of several hundred frames, so the same played rhythm sounded 10.5 / 13.2 / 15.9 / 18.5 ms late in turn (klog,
+// our Mac, 2026-11-13). Stamped from the note's place on the smoothed timeline (st + S stands for the newest frame the
+// timeline follows), the spacing stays the spacing the player played.
+TEST(stamprule_live_stamp_from_the_timeline_is_steady)
+{
+    const int S = 5000;
+    const int64_t mk = 1000;
+    const double ratio = 1.0;
+    // the same frame as the ring-based stamp when the ring is exactly where the timeline expects it
+    CHECK(live_stamp_tl(100000, S, mk, ratio) == live_stamp(100000 + S, mk, ratio));
+    // notes every 24000 frames on the timeline; the ring's newest frame lags by 0..384 frames in turn (bursts)
+    const int64_t lag[4] = {0, 128, 256, 384};
+    int64_t prev_tl = -1, prev_ring = -1;
+    bool ring_uneven = false;
+    for (int i = 0; i < 8; i++) {
+        const int64_t tl = 200000 + 24000 * i;
+        const int64_t a = live_stamp_tl(tl, S, mk, ratio), b = live_stamp(tl + S - lag[i % 4], mk, ratio);
+        if (prev_tl >= 0) {
+            CHECK(a - prev_tl == 24000);       // the played spacing, exactly
+            ring_uneven |= b - prev_ring != 24000; // the old rule passed the bursts on
+        }
+        prev_tl = a, prev_ring = b;
+    }
+    CHECK(ring_uneven);
+}
+
+// E519: the Virus met a live stamp late by one or two of its 64-frame steps in 22 of 40 played notes on our Mac.
+// The Control Center option live-later moves played notes LIVE_LATER_FRAMES later so it always meets them; off, the
+// stamp stays where the original puts it or up to one block later (E524 (4)).
+TEST(stamprule_live_later_moves_a_played_note_by_two_virus_steps)
+{
+    const int S = 5000;
+    const int64_t mk = 1000;
+    CHECK_EQ(LIVE_LATER_FRAMES, 128); // the largest lateness seen (E519 (1): K 5438 .. 5566)
+    CHECK(live_stamp_tl(100000, S, mk, 1.0, LIVE_LATER_FRAMES) == live_stamp_tl(100000, S, mk, 1.0) + 128);
+    CHECK(live_stamp_tl(100000, S, mk, 1.0, 0) == live_stamp_tl(100000, S, mk, 1.0));
+}

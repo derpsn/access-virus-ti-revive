@@ -54,6 +54,25 @@ class HandoffHook(unittest.TestCase):
         self.assertIn("1 commit", out["reason"])
         self.assertIn("fix the thing", out["reason"])
 
+    def test_block_reason_asks_for_the_same_commit(self):
+        self.commit("code.c", "fix")
+        self.assertIn("into the work commit itself", self.run_hook()["reason"])
+
+    def test_long_handoff_blocks(self):
+        with open(os.path.join(self.repo, "findings", "HANDOFF.md"), "w") as f:
+            f.write("line\n" * 151)
+        self.git("commit", "-q", "-am", "HANDOFF: long")
+        out = self.run_hook()
+        self.assertEqual(out["decision"], "block")
+        self.assertIn("151 lines (limit 150)", out["reason"])
+        self.assertNotIn("since the last HANDOFF update", out["reason"])
+
+    def test_handoff_at_the_limit_allows(self):
+        with open(os.path.join(self.repo, "findings", "HANDOFF.md"), "w") as f:
+            f.write("line\n" * 150)
+        self.git("commit", "-q", "-am", "HANDOFF: full")
+        self.assertIsNone(self.run_hook())
+
     def test_uncommitted_changes_allow(self):
         with open(os.path.join(self.repo, "code.c"), "w") as f:
             f.write("wip\n")

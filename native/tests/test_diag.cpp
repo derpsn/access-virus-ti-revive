@@ -42,12 +42,21 @@ TEST(diag_switch_and_paths)
     Home h("vtester");
     CHECK(plugin_dir() == (h.dir / ".local/share/virus-ti-native").string());
     CHECK(plugin_log_path() == (h.dir / ".local/share/virus-ti-native/diag.log").string());
-    CHECK(!plugin_log_enabled());
+    // on by default since 0.8.41 (user 2026-11-10: reports without the log kept coming); diag.off switches it off
+    CHECK(plugin_log_enabled());
     std::string err;
-    CHECK(set_plugin_log(true, err) && plugin_log_enabled()); // creates the folder too
-    CHECK(set_plugin_log(true, err));                         // again: harmless
+    CHECK(set_plugin_log(false, err) && !plugin_log_enabled()); // creates the folder too
+    CHECK(fs::exists(h.dir / ".local/share/virus-ti-native/diag.off"));
+    CHECK(set_plugin_log(false, err)); // again: harmless
+    CHECK(set_plugin_log(true, err) && plugin_log_enabled());
+    CHECK(!fs::exists(h.dir / ".local/share/virus-ti-native/diag.off"));
+    CHECK(set_plugin_log(true, err)); // already on
+    // an old diag.on (the switch before 0.8.41) changes nothing, and switching off removes it
+    std::ofstream(h.dir / ".local/share/virus-ti-native/diag.on").put('\n');
+    CHECK(plugin_log_enabled());
     CHECK(set_plugin_log(false, err) && !plugin_log_enabled());
-    CHECK(set_plugin_log(false, err)); // already off
+    CHECK(!fs::exists(h.dir / ".local/share/virus-ti-native/diag.on"));
+    CHECK(set_plugin_log(true, err));
     CHECK(broker_log_location().find("journalctl") != std::string::npos);
     (void)broker_log_tail(5); // the user journal: read-only, may be empty (CI)
 }
@@ -57,7 +66,30 @@ TEST(diag_plugin_options)
 {
     Home h("vtester");
     const auto &opts = plugin_options();
-    CHECK(opts.size() == 3);
+    CHECK(opts.size() == 7);
+    // live-later (E519, 0.8.41): played notes stamped a little later so the Virus always meets them, OFF by default
+    // (off = the timing as the original, E524 (4)); live-later.on switches it on
+    CHECK(std::string(opts[6].name) == "live-later" && std::string(opts[6].file) == "live-later.on");
+    CHECK(!opts[6].default_on && !plugin_option("live-later"));
+    // plugin-log (0.8.41): the plug-in's log for bug reports, ON by default; diag.off switches it off, so the plug-in's
+    // own Options page can do it (the user is told on What's New and the welcome page)
+    CHECK(std::string(opts[5].name) == "plugin-log" && std::string(opts[5].file) == "diag.off");
+    CHECK(opts[5].default_on && plugin_option("plugin-log") == plugin_log_enabled());
+    // low-latency (E496, 0.8.41): the experimental lower lead, OFF by default; low-latency.on switches it on
+    CHECK(std::string(opts[4].name) == "low-latency" && std::string(opts[4].file) == "low-latency.on");
+    CHECK(!opts[4].default_on);
+    CHECK(!plugin_option("low-latency"));
+    // the Control Center's Options page (0.8.41) shows a title and a one-line explanation per option
+    for (auto &o : opts)
+        CHECK(o.title && *o.title && o.hint && *o.hint);
+    // slip-restart (E488, 0.8.41): on by default, the Control Center switch writes slip-restart.off
+    CHECK(std::string(opts[3].name) == "slip-restart" && std::string(opts[3].file) == "slip-restart.off");
+    CHECK(opts[3].default_on);
+    CHECK(plugin_option("slip-restart"));
+    // since rc6 the plug-in restarts it on macOS too (#37: 9 of 22 starts slipped on a Catalina Mac), so no option text
+    // may say it is Linux and Windows only or only logged on a Mac
+    for (const char *t : {opts[3].label, opts[3].hint})
+        CHECK(std::string(t).find("Linux") == std::string::npos && std::string(t).find("only logged") == std::string::npos);
     CHECK(std::string(opts[0].name) == "outdelay-changes" && std::string(opts[0].file) == "outdelay-changes.on");
     CHECK(std::string(opts[1].name) == "timing-classic" && std::string(opts[1].file) == "timing-classic.on");
     // live-notes is on by default since 0.8.39 (the original's VST3 does it always, E400/E402; user 2026-11-08): its
@@ -118,11 +150,28 @@ TEST(diag_anonymize)
     }
 }
 
+// the log is on for everyone since 0.8.41, so it must not grow without end: over the limit diag.log becomes diag.log.1
+// (an older .1 is replaced), at most about two limits on disk
+TEST(diag_rotate_log)
+{
+    Home h("vtester");
+    fs::path log = h.dir / "diag.log", old = h.dir / "diag.log.1";
+    CHECK(!rotate_log(log.string(), 100)); // missing: nothing to do
+    std::ofstream(log) << std::string(100, 'a');
+    CHECK(!rotate_log(log.string(), 100) && fs::exists(log)); // at the limit: kept
+    std::ofstream(log, std::ios::app) << "b";
+    CHECK(rotate_log(log.string(), 100) && !fs::exists(log) && fs::file_size(old) == 101);
+    std::ofstream(log) << std::string(150, 'c');
+    CHECK(rotate_log(log.string(), 100) && fs::file_size(old) == 150); // the older .1 is replaced
+    CHECK(kPluginLogLimit >= 1000000 && kPluginLogLimit <= 8000000);
+}
+
 TEST(diag_collect_logs)
 {
     Home h("vtester");
     std::string err;
     CHECK(set_plugin_log(true, err));
+    fs::create_directories(plugin_dir()); // "on" writes no file since 0.8.41; the plug-in makes its folder itself
     {
         std::ofstream o(plugin_log_path());
         o << "Virus TI native: cache " << h.dir.string() << "/x\n" << "Virus ready after 3.8 s\n";
@@ -135,8 +184,73 @@ TEST(diag_collect_logs)
     CHECK(all.find("Plug-in log ON") != std::string::npos && all.find("Virus ready after 3.8 s") != std::string::npos);
     CHECK(all.find(h.dir.string()) == std::string::npos && all.find("cache ~/x") != std::string::npos);
     CHECK(all.find("--- broker log") != std::string::npos);
+    // right after a rotation diag.log is short: the end of diag.log.1 comes first, so the report keeps its context
+    {
+        std::ofstream(plugin_log_path() + ".1") << "older line\n";
+        std::ofstream(plugin_log_path()) << "newer line\n";
+        CHECK(collect_logs(out.string(), "0.0.1", err));
+        std::ifstream g(out);
+        std::string r((std::istreambuf_iterator<char>(g)), std::istreambuf_iterator<char>());
+        const size_t a = r.find("older line"), b = r.find("newer line");
+        CHECK(a != std::string::npos && b != std::string::npos && a < b);
+    }
+    // switched off: the header says how to switch it on again
+    CHECK(set_plugin_log(false, err) && collect_logs(out.string(), "0.0.1", err));
+    {
+        std::ifstream g(out);
+        std::string r((std::istreambuf_iterator<char>(g)), std::istreambuf_iterator<char>());
+        CHECK(r.find("Plug-in log OFF (switch it on on the Options page") != std::string::npos);
+    }
     // a folder as the target: cannot be written
     err.clear();
     CHECK(!collect_logs(h.dir.string(), "0.0.1", err) && !err.empty());
 }
+
+// a flag file that cannot be written or removed (here: a folder with something in it sits at its name) is reported,
+// so the Control Center does not show a switch as changed when it is not
+TEST(diag_flag_file_errors)
+{
+    Home h("vtester");
+    const fs::path f = fs::path(plugin_dir()) / "outdelay-changes.on";
+    fs::create_directories(f);
+    std::ofstream(f / "inside").put('\n');
+    std::string err;
+    CHECK(!set_plugin_option("outdelay-changes", true, err) && !err.empty());
+    err.clear();
+    CHECK(!set_plugin_option("outdelay-changes", false, err) && !err.empty());
+    CHECK(fs::exists(f / "inside"));
+}
+
+// the boundaries of anonymize(): a home folder of "/" (e.g. a service account) is not replaced, or every slash in the
+// report would become "~"; a user name of 3 characters is replaced (only 1-2 are too short)
+TEST(diag_anonymize_boundaries)
+{
+    Home h("bob");
+    CHECK(anonymize("owner bob") == "owner <user>");
+    setenv("HOME", "/", 1);
+    CHECK(anonymize("/usr/lib/x") == "/usr/lib/x");
+    setenv("HOME", h.dir.string().c_str(), 1);
+}
+
+#ifndef __APPLE__
+// Linux reads the broker's log from the user journal: each line arrives with its line end (LF, or CR LF), which goes,
+// and nothing else of the line; the last line may come without one. A stand-in journalctl in PATH prints known lines.
+TEST(diag_broker_log_tail_line_ends)
+{
+    Home h("vtester");
+    const fs::path bin = h.dir / "bin";
+    fs::create_directories(bin);
+    {
+        std::ofstream o(bin / "journalctl");
+        o << "#!/bin/sh\nprintf 'one\\r\\ntwo\\n\\nlast'\n";
+    }
+    fs::permissions(bin / "journalctl", fs::perms::owner_all);
+    const char *p = getenv("PATH");
+    const std::string old_path = p ? p : "";
+    setenv("PATH", bin.string().c_str(), 1);
+    const std::vector<std::string> lines = broker_log_tail(10);
+    p ? setenv("PATH", old_path.c_str(), 1) : unsetenv("PATH");
+    CHECK((lines == std::vector<std::string>{"one", "two", "", "last"}));
+}
+#endif
 #endif

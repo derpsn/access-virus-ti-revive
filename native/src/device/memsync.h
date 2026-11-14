@@ -64,8 +64,12 @@ public:
     // called before every request: may block (e.g. while the host plays - the Virus delays notes while it answers
     // dump requests); returning false cancels like `stop`
     std::function<bool()> before_request;
+    // optional: one line per bank info / single dump reply of the wrong size or no reply (not after cancel()), so a
+    // "bank sync failed" log tells lost packets from a Virus that does not answer (#34)
+    std::function<void(const std::string &)> log;
 
 private:
+    void note_reply(const char *what, int bank, int program, size_t got, size_t want, int t);
     bool was_cancelled();
     Broker *broker_ = nullptr;
     std::function<bool(const std::vector<uint8_t> &)> send_;

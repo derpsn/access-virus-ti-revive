@@ -29,7 +29,7 @@ xcb_screen_t *screen_of(xcb_connection_t *c)
 xcb_atom_t atom(xcb_connection_t *c, const char *name)
 {
     auto *r = xcb_intern_atom_reply(c, xcb_intern_atom(c, 0, (uint16_t)strlen(name), name), nullptr);
-    xcb_atom_t a = r ? r->atom : XCB_ATOM_NONE;
+    xcb_atom_t a = r ? r->atom : (xcb_atom_t)XCB_ATOM_NONE;
     free(r);
     return a;
 }

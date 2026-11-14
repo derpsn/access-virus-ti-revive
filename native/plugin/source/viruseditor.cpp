@@ -1081,6 +1081,7 @@ public:
             plugin_->diag_report();
             tick_info();
             tick_tips();
+            tick_alert();
             plugin_->tick_gestures(); // knob moves on the Virus -> host edits (E304)
             if (int kb, kp; key_load_.due(now_ms(), kb, kp)) // Up/Down in the browser stopped
                 plugin_->load_patch_remembered(kb, kp, plugin_->ui_value(plugin_->layout().frame_parameter, -1));
@@ -1120,19 +1121,16 @@ public:
             // last branch above and froze while a host automated a parameter - user, W block)
             if (int changed = plugin_->tick_meters(2)) { // the original: -1 per ~25 ms idle tick; 2 per 50 ms
                 // repaint only the changed meters, merged into one area (a repaint per meter made hosts sluggish)
-                if (meter_rects_.empty()) { // the VU sliders (one per part), top to bottom = part 1..16
-                    for (auto &rc : renderer_.param_rects("Internal MIDI Standard Parameters/07 Volume"))
-                        meter_rects_.push_back(CRect(rc[0], rc[1], rc[0] + rc[2], rc[1] + rc[3]));
-                    std::sort(meter_rects_.begin(), meter_rects_.end(),
-                              [](const CRect &a, const CRect &b) { return a.top < b.top; });
-                }
-                CRect area;
-                for (int ch = 0; ch < 16 && ch < (int)meter_rects_.size(); ch++)
-                    if (changed & (1 << ch)) {
+                if (meter_rects_.empty()) // the part meters: TI VU sliders or the Snow's MIDI Indicators (E509)
+                    meter_rects_ = renderer_.meter_rects();
+                CRect area; // part n listens on channel n (the plug-in's fixed multi)
+                for (auto &m : meter_rects_)
+                    if (m[0] >= 0 && m[0] < 16 && (changed & (1 << m[0]))) {
+                        const CRect rc(m[1], m[2], m[1] + m[3], m[2] + m[4]);
                         if (area.isEmpty())
-                            area = meter_rects_[ch];
+                            area = rc;
                         else
-                            area.unite(meter_rects_[ch]);
+                            area.unite(rc);
                     }
                 if (!area.isEmpty())
                     invalidRect(area);
@@ -1223,6 +1221,11 @@ public:
     {
         if (info_ != vti::InfoStart::None && event.type == EventType::KeyDown && event.virt == VirtualKey::Escape) {
             close_info(false); // as OK
+            event.consumed = true;
+            return;
+        }
+        if (alert_ && event.type == EventType::KeyDown && event.virt == VirtualKey::Escape) {
+            close_alert();
             event.consumed = true;
             return;
         }
@@ -1388,6 +1391,10 @@ public:
             snprintf(t, sizeof t, "READING THE VIRUS' BANKS: ABOUT %d MIN LEFT", (eta + 59) / 60);
             renderer_.status_text(canvas_, "FNT_LCD_5x7_Rot.png", t, 480, 290, 381, 12);
         }
+        // the patch just fetched, as the Virus display shows its entry (user 2026-11-11); the LCD is hidden here
+        if (sync_page && !plugin_->sync_paused())
+            if (const std::string item = plugin_->sync_item(); !item.empty())
+                renderer_.status_text(canvas_, "FNT_LCD_5x7_Rot.png", item, 480, 304, 381, 12);
         // "No Virus TI can be found": name another installed Virus driver under the page's text (our own, E366)
         if (plugin_->ui_value("SystemStatus/Error", -1) == 3) {
             const auto &lines = plugin_->other_driver_lines();
@@ -1398,8 +1405,10 @@ public:
             draw_help(ctx);
         if (tips_)
             draw_tips(ctx);
-        if (info_ != vti::InfoStart::None)
-            draw_info(info_page_, true);
+        if (info_ != vti::InfoStart::None) // the log notice is shown once: no "Don't show again"
+            draw_info(info_page_, info_ != vti::InfoStart::LogNotice);
+        if (alert_) // over everything: the Virus' audio froze (E493)
+            draw_info(alert_page_, false);
         {
             long us = (long)std::chrono::duration_cast<std::chrono::microseconds>(std::chrono::steady_clock::now() - t0).count();
             plugin_->diag.draw_us += us;
@@ -1423,8 +1432,13 @@ public:
             const int mx = (int)event.mousePosition.x, my = (int)event.mousePosition.y;
             if (vti::kInfoOk.contains(mx, my))
                 close_info(false);
-            else if (vti::kInfoDontShow.contains(mx, my))
+            else if (info_ != vti::InfoStart::LogNotice && vti::kInfoDontShow.contains(mx, my))
                 close_info(true);
+            event.consumed = true;
+            return;
+        }
+        if (alert_) { // any click closes the alert page and does nothing else
+            close_alert();
             event.consumed = true;
             return;
         }
@@ -1965,6 +1979,35 @@ private:
         help_hit_ = help_pin_ = {};
         invalid();
     }
+    // E493: the Virus' audio froze (FreezeWatch in the plug-in) - a page in the welcome page's look that says what to do;
+    // it opens for each new freeze the plug-in reports, any click or Esc closes it
+    bool alert_ = false;
+    int freeze_seen_ = 0;
+    vti::InfoPage alert_page_;
+    void tick_alert()
+    {
+        const int n = plugin_->audio_freezes();
+        if (n <= freeze_seen_)
+            return;
+        freeze_seen_ = n;
+        alert_page_ = {};
+        alert_page_.title = "The Virus stopped sending audio";
+        alert_page_.paras = {
+            {"TI Revive receives only one constant value from the Virus, and notes no longer come back. MIDI and USB "
+             "still work.", false, true},
+            {"Switch the Virus off, wait a few seconds and switch it on again. Restarting the DAW or the plug-in does "
+             "not help: in our tests only switching the Virus off and on cleared it."},
+            {"If this happens more than once, please open an issue on GitHub with the plug-in's log (Control Center, "
+             "Nerd mode, Save logs)."},
+            {"Click anywhere or press Esc to close."}};
+        alert_ = true;
+        invalid();
+    }
+    void close_alert()
+    {
+        alert_ = false;
+        invalid();
+    }
     // the setup page (setuptips.h): over the editor, any click or Esc closes it, and what it showed counts as read
     bool tips_ = false;
     vti::TipsPage tips_page_;
@@ -2032,7 +2075,8 @@ private:
     void open_info(vti::InfoStart which, bool from_menu)
     {
         const vti::InfoState st = plugin_->info_state();
-        info_page_ = which == vti::InfoStart::Welcome ? vti::welcome_page(tirevive_version())
+        info_page_ = which == vti::InfoStart::Welcome     ? vti::welcome_page(tirevive_version())
+                     : which == vti::InfoStart::LogNotice ? vti::log_notice_page()
                      : from_menu ? vti::whats_new_page("", tirevive_version()) // the menu: all notes up to this one
                                  : vti::whats_new_page(st.last_version, tirevive_version());
         if (which == vti::InfoStart::WhatsNew && info_page_.paras.empty())
@@ -2054,12 +2098,7 @@ private:
     }
     void close_info(bool dont_show_again)
     {
-        vti::InfoState st = plugin_->info_state();
-        if (vti::version_cmp(tirevive_version(), st.last_version) > 0)
-            st.last_version = tirevive_version();
-        if (dont_show_again)
-            (info_ == vti::InfoStart::Welcome ? st.welcome_off : st.news_off) = true;
-        plugin_->info_save_state(st);
+        plugin_->info_save_state(vti::info_closed(plugin_->info_state(), info_, tirevive_version(), dont_show_again));
         info_ = vti::InfoStart::None;
         invalid();
     }
@@ -2087,21 +2126,24 @@ private:
         title->setStyle(kBoldFace);
         bold->setStyle(kBoldFace);
         title->setSize(18);
-        // the largest body size whose text fits above the buttons
-        std::vector<std::vector<std::string>> lines;
-        double size = 13, lh = 0, gap = 0;
-        for (; size >= 9; size -= 1) {
-            body->setSize(size), bold->setSize(size);
-            lh = size + 4, gap = size * 0.6;
-            lines.clear();
-            double h = 18 + 4 + gap * 2;
-            for (const vti::InfoPara &p : page.paras) {
+        // the largest body size whose text fits above the buttons; with several versions on What's New the older ones
+        // go first (fit_info_page: they overflowed the page into the footer, 2026-11-10)
+        auto measure = [&](const std::vector<vti::InfoPara> &paras, double sz) {
+            body->setSize(sz), bold->setSize(sz);
+            double h = 18 + 4 + sz * 0.6 * 2;
+            for (const vti::InfoPara &p : paras) {
                 ctx->setFont(p.bold || p.warn ? bold : body);
-                lines.push_back(wrap(ctx, p.text, a.w));
-                h += lines.back().size() * lh + gap;
+                h += wrap(ctx, p.text, a.w).size() * (sz + 4) + sz * 0.6;
             }
-            if (h <= vti::kInfoOk.y - 8 - a.y)
-                break;
+            return h;
+        };
+        const vti::InfoFit fit = vti::fit_info_page(page, vti::kInfoOk.y - 8 - a.y, measure);
+        const double size = fit.size, lh = size + 4, gap = size * 0.6;
+        body->setSize(size), bold->setSize(size);
+        std::vector<std::vector<std::string>> lines;
+        for (const vti::InfoPara &p : fit.page.paras) {
+            ctx->setFont(p.bold || p.warn ? bold : body);
+            lines.push_back(wrap(ctx, p.text, a.w));
         }
         ctx->setDrawMode(kAntiAliasing);
         double y = a.y;
@@ -2109,8 +2151,8 @@ private:
         ctx->setFontColor(CColor(20, 20, 20, 255));
         ctx->drawString(page.title.c_str(), CRect(a.x, y, a.x + a.w, y + 22), kLeftText);
         y += 22 + gap * 2;
-        for (size_t i = 0; i < page.paras.size(); i++) {
-            const vti::InfoPara &p = page.paras[i];
+        for (size_t i = 0; i < fit.page.paras.size(); i++) {
+            const vti::InfoPara &p = fit.page.paras[i];
             ctx->setFont(p.bold || p.warn ? bold : body);
             ctx->setFontColor(p.warn ? CColor(150, 25, 15, 255) : CColor(25, 25, 25, 255));
             for (const std::string &l : lines[i]) {
@@ -2291,7 +2333,7 @@ private:
     int edit_part_ = 0;
     std::string edit_param_; // edit_name: the REMOTE page field being edited, empty for a patch name
     int edit_bank_ = -1, edit_prog_ = -1; // edit_browser_name: the RAM slot being renamed (-1: none)
-    std::vector<CRect> meter_rects_; // the part strips' meters
+    std::vector<std::array<int, 5>> meter_rects_; // the part strips' meters, {part, x, y, w, h}
     EditorRenderer::Deps deps_;      // what the controls read (filled by full repaints)
     struct StaticLayer {
         std::vector<const Element *> key; // the visible conditional static elements (page, modes, ...)

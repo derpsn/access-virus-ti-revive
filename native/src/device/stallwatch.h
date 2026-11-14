@@ -4,6 +4,7 @@
 // was stamped ~19 s wrong and nothing sounded. update() reports the resume once; the plug-in then starts a new
 // timeline (re-anchor, sync ping), as after a reconnect. Header only: the plug-in and the tests use it.
 #pragma once
+#include <atomic>
 #include <cstdint>
 
 namespace vti {
@@ -67,6 +68,37 @@ public:
 
 private:
     int64_t frames_ = 0;
+};
+
+// Frames a read of n at pos lacks: what the host asks for beyond the newest frame that has arrived (avail). The
+// plug-in then reads n frames ending at avail instead, so the block puts out older audio and a note in it sounds late
+// by about this much (E490: hosts that hand over blocks in bursts).
+inline int64_t read_shortfall(int64_t pos, int n, int64_t avail)
+{
+    const int64_t s = pos + n - avail;
+    return s > 0 ? s : 0;
+}
+
+// Pulled-back reads per stats window (the audio thread adds, the worker takes every 10 s): how many blocks and the
+// largest shortfall. Short clamps do not reach ClampWatch's second, so this is what shows them in diag.log.
+struct PullStats {
+    void add(int64_t shortfall)
+    {
+        if (shortfall <= 0)
+            return;
+        blocks_.fetch_add(1, std::memory_order_relaxed);
+        int64_t m = max_.load(std::memory_order_relaxed);
+        while (shortfall > m && !max_.compare_exchange_weak(m, shortfall, std::memory_order_relaxed)) {
+        }
+    }
+    void take(int64_t &blocks, int64_t &max)
+    {
+        blocks = blocks_.exchange(0, std::memory_order_relaxed);
+        max = max_.exchange(0, std::memory_order_relaxed);
+    }
+
+private:
+    std::atomic<int64_t> blocks_{0}, max_{0};
 };
 
 // After a detected sleep on the Mac the plug-in asks the broker to make macOS re-enumerate the Virus (a software

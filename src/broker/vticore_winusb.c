@@ -6,6 +6,8 @@
 #include <setupapi.h>
 #include <winusb.h>
 #include "writeretry.h"
+#include "vtireaderr.h"
+#include "linkrule.h" // link at open, unlink at close like the original driver (E524)
 #include <stdio.h>
 #include <stdlib.h>
 
@@ -24,6 +26,7 @@ struct vti {
     void *user;
     volatile LONG stop, dead;
     HANDLE rd[2];
+    int linked; // the last link message sent (E524)
 };
 
 static int open_iface(const GUID *g, iface *out)
@@ -90,8 +93,9 @@ static DWORD WINAPI reader(LPVOID p)
             DWORD e = GetLastError();
             if (e != ERROR_SEM_TIMEOUT && e != 0) {
                 vti_log("vti: read ep %02x: error %lu\n", a.ep, e);
-                if (e == ERROR_BAD_COMMAND || e == ERROR_DEVICE_NOT_CONNECTED || e == ERROR_INVALID_HANDLE ||
-                    (e == ERROR_GEN_FAILURE && ++fails > 50)) { // removed, or stalled beyond recovery
+                if (e == ERROR_GEN_FAILURE)
+                    fails++;
+                if (vti_read_error_dead(e, fails)) { // removed (also 433, vtireaderr.h), or stalled beyond recovery
                     a.v->dead = 1;
                     break;
                 }
@@ -127,6 +131,7 @@ vti *vti_open(vti_rx_cb cb, void *user)
         vti_close(v);
         return NULL;
     }
+    v->linked = 1;
     return v;
 }
 
@@ -134,6 +139,8 @@ void vti_close(vti *v)
 {
     if (!v)
         return;
+    if (v->linked && !v->dead) // the original's vtimidi.sys unlinks when its last stream closes (E524)
+        vti_link(v, 0);
     v->stop = 1;
     for (int i = 0; i < 2; i++)
         if (v->rd[i]) {
@@ -228,3 +235,18 @@ int vti_is_dead(vti *v)
 {
     return v->dead != 0;
 }
+
+int vti_link(vti *v, int on)
+{
+    if (!v || v->dead)
+        return -1;
+    uint8_t m[4];
+    vti_link_msg(m, on);
+    int r = vti_write(v, VTI_EP_MI03_OUT, m, sizeof m);
+    if (!r)
+        v->linked = on;
+    vti_log("vti: link %s (4E 73 52 %02X) -> %d\n", on ? "on" : "off", m[3], r);
+    return r;
+}
+
+int vti_linked(vti *v) { return v && v->linked; }

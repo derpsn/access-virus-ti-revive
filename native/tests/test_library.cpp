@@ -65,6 +65,38 @@ TEST(library_round_trip)
     fs::remove_all(dir);
 }
 
+// #36: "36 patch(es) skipped" in a .syx we do not have; the log line now says why (2026-11-14)
+TEST(library_skip_summary_names_the_reasons)
+{
+    fs::path dir = fs::temp_directory_path() / "vtitests-library-skips";
+    fs::remove_all(dir);
+    fs::create_directories(dir);
+    auto dump = [](size_t size, uint8_t version) {
+        Dump d(size, 0);
+        const uint8_t head[] = {0xF0, 0x00, 0x20, 0x33, 0x01, 0x10, 0x10, 0x01, 0x03, version};
+        memcpy(d.data(), head, sizeof head);
+        d.back() = 0xF7;
+        return d;
+    };
+    Dump file = single(1);
+    for (const Dump &d : {dump(200, 6), dump(200, 6), dump(267, 127), dump(267, 6)})
+        file.insert(file.end(), d.begin(), d.end());
+    {
+        std::ofstream o(dir / "Odd.syx", std::ios::binary);
+        o.write((const char *)file.data(), (std::streamsize)file.size());
+    }
+    PatchLibrary with_b, without_b;
+    CHECK(load_library_file((dir / "Odd.syx").string(), with_b, std::vector<uint8_t>(256, 0)));
+    CHECK_EQ(with_b.skipped, 3);
+    CHECK(skip_summary(with_b) == std::string("2 x 200 bytes, 1 x version 127"));
+    CHECK(load_library_file((dir / "Odd.syx").string(), without_b));
+    CHECK_EQ(without_b.skipped, 4);
+    CHECK(skip_summary(without_b) == std::string("2 x 200 bytes, 2 x Virus C without page B"));
+    PatchLibrary clean;
+    CHECK(skip_summary(clean) == std::string());
+    fs::remove_all(dir);
+}
+
 TEST(library_edge_cases)
 {
     fs::path dir = fs::temp_directory_path() / "vtitests-library-edge";

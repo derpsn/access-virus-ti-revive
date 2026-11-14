@@ -1,6 +1,6 @@
 # Design proposal: the Virus TI as a Windows sound device (virtual cable bridge)
 
-Status: proposal (2026-10-11), not implemented. Plan item 2 in `HANDOFF.md`.
+Status: proposal (2026-10-11), not implemented. Plan item 2 in the old HANDOFF (now `log/until-2026-10-12.md`).
 
 ## Goal
 

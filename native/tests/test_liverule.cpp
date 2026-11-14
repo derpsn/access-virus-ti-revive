@@ -190,3 +190,25 @@ TEST(timing_mode_out_of_range_is_the_default)
     CHECK_EQ(timing_mode(false, -1, 3072).a, 3072);
     CHECK_EQ(timing_mode(false, 7, 3072).a, 3072);
 }
+
+// A window of 0 turns the protection off (a lead too short to protect anything, live_guard_window): a played note then
+// goes at once, also when its position lies before the clip's note-off (the timeline jumped back, a loop)
+TEST(live_guard_no_window_no_wait)
+{
+    LiveNoteGuard g;
+    CHECK(!g.note_off(0, 60, false, 50000));
+    CHECK(g.note_on(0, 60, true, 1000, 0));
+}
+
+// The right to go at once belongs to one played note-on and is used up by its note-off: a further flagged note-off of
+// that key (here after the clip's own note-off) has no played note-on of its own and goes with the lead
+TEST(live_guard_note_off_uses_up_the_live_note_on)
+{
+    LiveNoteGuard g;
+    CHECK(g.note_on(0, 60, true));
+    CHECK(g.note_off(0, 60, true));
+    CHECK(!g.note_off(0, 60, true)); // a second flagged off: no played note-on left
+    CHECK(g.note_on(1, 61, true));
+    CHECK(!g.note_off(1, 61, false)); // the clip's note-off goes with the lead
+    CHECK(!g.note_off(1, 61, true));  // and uses the played note-on up too
+}

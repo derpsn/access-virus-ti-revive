@@ -28,8 +28,14 @@ class DriverScript(unittest.TestCase):
                 self.assertNotIn("$Matches", body, line)
 
     def test_the_log_says_what_the_virus_ended_up_on(self):
-        self.assertIn('"now: $($_.InstanceId) -> $svc"', self.text)
+        self.assertIn('"now: $($d.InstanceId) -> $($d.Service)"', self.text)
         self.assertIn("still on the Access USB driver", self.text)
+
+    def test_the_log_waits_for_the_re_detection_and_asks_to_unplug(self):
+        # #31: the Virus took longer than 3 s to come back, and unloading Access' driver with it connected crashed
+        self.assertIn("Wait-Until { Test-VirusDetected (Get-VirusDevices) } 15 1", self.text)
+        self.assertIn("Show-UserMessage", self.text)
+        self.assertLess(self.text.index("Get-AccessBoundVirus"), self.text.index("pnputil /delete-driver $pkg"))
 
 
 if __name__ == "__main__":

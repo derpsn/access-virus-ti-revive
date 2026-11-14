@@ -249,6 +249,7 @@ private:
                     page.children.push_back(t);
                 }
         footer_ = {{"TIRevive/Nerd", "NERD MODE", actions_.nerd_mode},
+                   {"TIRevive/Options", "OPTIONS", actions_.options},
                    {"TIRevive/Convert", "CONVERT LIBRARY", actions_.convert_library},
                    {"TIRevive/Plain", "PLAIN VIEW", actions_.plain_view}};
         for (auto &n : layout_.nodes) {

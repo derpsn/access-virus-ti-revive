@@ -19,6 +19,7 @@ struct SkinPageActions {
     std::function<void(VSTGUI::CPoint)> size_menu; // right-click where there is no control
     // RESTORE: the app's restore (file, then the bank menu); its status lines go to the given function too
     std::function<void(std::function<void(const std::string &)>)> restore;
+    std::function<void()> options; // OPTIONS: the Options page (0.8.41)
 };
 
 // nullptr if the user's installer has no Control Center (the app then shows its plain page); `error` says why

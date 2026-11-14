@@ -219,6 +219,26 @@ jobs:
           path: native-linux
           if-no-files-found: error
 
+  coverage: # line coverage of native/src by vtitests must stay at 95 % or more (scripts/coverage.py, findings/testing.md)
+    # not in the release's needs: a red coverage job shows in the run (the release routine wants every job green),
+    # but it cannot hold back a hotfix on its own
+    runs-on: ubuntu-22.04
+    timeout-minutes: 25
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          submodules: recursive # native/external/vst3sdk (the CMake project configures it)
+      - name: Build dependencies # same list as native-linux, cached
+        uses: ./.github/actions/apt-install
+        with:
+          list: native-linux
+      - name: CMake
+        run: |
+          pip3 install --user "cmake>=3.25" # Ubuntu 22.04 ships 3.22
+          echo "$HOME/.local/bin" >> "$GITHUB_PATH"
+      - name: Coverage
+        run: python3 -I scripts/coverage.py --build cov-build --min 95 --show 15
+
   linux:
     needs: native-linux
     runs-on: ubuntu-24.04
@@ -279,16 +299,30 @@ jobs:
           native plug-in **"TI Revive Virus Control"**: looks and works like the original Virus Control and runs
           natively on Windows, macOS (Apple Silicon and Intel) and Linux - no Rosetta, Wine or yabridge.
 
-          **New in 0.8.39: lower latency, the same as the original's; notes you play skip the delay, as in the original; the Access manuals in the ? menu; Welcome and What's New pages; macOS: the Virus reconnects by itself after the Mac wakes; macOS: the broker now runs on Intel Macs (#33).**
+          **New in 0.8.41: lower latency as an experimental option; an Options page in the Control Center; the plug-in restarts scrambled Virus audio by itself and tells you when the Virus stops sending audio; macOS: the installer refuses systems older than 14.4; the plug-in log is on by default for easier bug reports; the Virus display shows the sync like the original, and the plug-in names each patch as it syncs; the arpeggiator follows a count-in and the beat like with the original; on the TI Snow the plug-in's level meters work; scrambled Virus audio is restarted on macOS too; on a Mac, notes you play keep their rhythm; macOS: the Virus' MIDI In as a second MIDI input; a Virus Keyboard or Polar plays its own keys again after the DAW closes.**
 
-          - **Intel Macs, testers wanted (#33):** the broker (the background program that talks to the Virus) was built for Apple Silicon only, so on an Intel Mac the plug-in could not reach the Virus. It is now built for both. We have no Intel Mac: the package contains both parts (checked), but nobody has run it on an Intel Mac yet. Please tell us with the "Test report" issue template.
-          - **Lower latency:** the delay follows your audio buffer all the way down (before, never below 256 samples) and uses the original's safety margin. At 64 samples and 48 kHz a note takes 76 ms instead of 82.7 ms, the 3584 frames plus buffer the original reports. Measured on our TI2 Desktop on Linux; Ableton Live (64) and Logic (32) played cleanly on our Mac.
-          - **Played notes skip the delay (live-notes):** notes that the DAW marks as played, as Ableton Live does, sound after about 22 ms instead of 76 ms; clip notes keep their exact timing. On by default, as in the original; the switch is at the bottom left of the plug-in. Logic's Audio Unit marks no notes as played, so there all notes keep the delay. A played note that a clip note of the same key would cut now waits for it.
-          - **macOS after a sleep:** macOS sometimes leaves the Virus' audio with gaps after the Mac wakes, until the Virus is unplugged and plugged in again (a QuickTime recording had the gaps too, so they arise before TI Revive). When the plug-in sees the Virus' audio stand still after a wake, it now reconnects the Virus by itself, like a replug, at most once a minute. Tested after one sleep on our TI2 Desktop: back after 3 s and clean. If you still hear dropouts after waking, unplug and replug the Virus.
-          - **Panic** and the editor's own messages reach the Virus at once, also with played notes on (checked on our Mac).          - **The Access manuals** (Reference, Quickstart, Atomizer, tutorials) in the ? menu, opened from your own Access installation; the **Welcome and What's New pages** and the **start pages** work like the original's. Checked on Linux and macOS.
-          - **The D button** (direct monitoring) works: the part plays straight on Out 1.
-          - **macOS:** a saved project no longer switches the Virus' audio clock at start (the display showed "Audio clock changed" twice).
-          - The broker mutes the first audio packet of a new stream: our simulator predicted a click there. We never heard that click on our Virus, so this is a precaution.
+          - **Lower latency, experimental (#30):** a new option on the Control Center's Options page, off by default. At audio buffers up to 256 a note takes 36 to 48 ms instead of 76 to 87 ms (44.1 kHz: 39.2 / 43.5 / 47.9 ms at 64 / 128 / 256; 48 kHz: 36.0 / 40.0 / 44.0 ms), at 512 55 to 59 ms; above 512 nothing changes. Measured on our TI2 Desktop on Linux in 10 to 20 sessions per setting, every note on time. It leaves your DAW only about 20 ms of slack: if your computer or DAW stalls longer, a note comes late, where the default absorbs it. Not yet tested in a DAW, on Windows or on macOS.
+          - **Arpeggiator with a count-in (#30):** when your DAW counts in before recording, the Virus' arpeggiator and clock-synced LFOs now run in time with the bar, as with the original. Before, the plug-in told the Virus "bar 1" at the start of the count-in, so the arpeggiator ran a count-in ahead for the whole take. The plug-in now also sends its MIDI clock on the beat after every Play, and a Stop to the Virus when you stop. Checked on our TI2 Desktop on Linux (what the plug-in sends, and notes on time), and by a tester with a TI Snow in Logic: the arpeggiator starts in time after a one-bar count-in.
+          - **TI Snow: the level meters in the plug-in work (#30).** On the Snow they stayed empty: its window draws each part's meter as a thin bar of its own, which the plug-in never filled. Now it shows each part's note activity there, as on the TI. Checked on a simulated Snow (our simulator running the Virus' own software), with the original Snow plug-in for comparison; not yet on a real Snow.
+          - **Timing re-syncs:** fixed a rare case (about 1 in 40 in our tests) where the plug-in missed the Virus' answer to a timing re-sync, after which notes could come off time. 0 missed in 239 re-syncs on our TI2 with the fix.
+          - **Options page in the Control Center:** the plug-in's options (live notes, the new ones, the two test switches) as switches with a line on what each does. A change applies from the next start of the plug-in.
+          - **Scrambled audio restarts by itself:** in about one start in 250 the Virus sends its audio scrambled for the whole session (we found 4 such starts in about 940; the plug-in then finds no timing marker and notes come early or late). The plug-in now recognises it and restarts the audio, through the same steps as every start. Tested with a simulated scrambled stream on our TI2; a real one could not be caused on purpose. Switch on the Options page.
+          - **macOS: notes you play keep their rhythm (#39).** When you hear the Virus through the plug-in, TI Revive placed each played note relative to the Virus' audio as it arrives from macOS, which comes in chunks: an even rhythm came out 10 to 18 ms late in turn, a varying 8 ms that makes fast playing feel pushed. Each played note now keeps the spacing you played: on our Mac the stamps of a steady played rhythm are now exact to one sample, and the Virus plays them at most 1 to 3 ms off now and then, as with the original's stamps.
+          - **macOS: scrambled audio restarts too (#37).** On a Mac with macOS Catalina the Virus' audio arrived scrambled in 9 of 22 starts, which sounds like loud crackle. The plug-in now restarts it there as well, by stopping and starting its audio input. This helps when your DAW does not use the Virus as its own audio device; if it does, the Virus' audio keeps running and only switching the Virus off and on helps. Not yet tested on a Mac: a scrambled stream cannot be caused on purpose; we check the restart on our Mac with a simulated one.
+          - **macOS: "Even rhythm for played notes" (option, off by default).** Plays notes you play about 3 ms later, so they come at most about 1.3 ms late instead of up to 3 ms (measured on our Mac with Live 12). Not exact yet: we keep looking at it.
+          - **macOS: the Virus' MIDI In as a second MIDI input, "Virus TI MIDI",** as the Access driver had. While the Virus works with a plug-in it sends what arrives at its MIDI In socket only to the computer, so a keyboard plugged in there reaches the DAW only through this input. The input shows up on our Mac; we had no keyboard at the Virus' MIDI In to play through it.
+          - **A Virus TI Keyboard or Polar plays its own keys again after the DAW closes.** TI Revive kept the Virus linked to the computer after the last program closed, so the keys stayed silent on the Virus itself until it was switched off and on. It now lets the Virus go when the last plug-in or the Control Center closes, as the original's driver does, and links it again for the next one. Checked on a simulated Keyboard and on our TI Desktop (the messages and the sessions after them); not on a real Keyboard or Polar.
+          - **macOS and Linux: the Virus' keys and knobs reach the computer with less delay** when the computer is busy: the TI Revive service keeps eight reads waiting for the Virus' MIDI, as the original's Mac driver does, instead of one.
+          - **Better logs for bug reports:** the plug-in's log says why a bank sync failed (for example replies from the Virus that came back cut short, #34) and why patches in a library file were left out (#36).
+          - **When the Virus stops sending audio**, the plug-in tells you to switch the Virus off and on. It happened once in our tests, after a change of the sample rate; only switching the Virus off and on helped.
+          - **Late notes in the log:** the plug-in's log now notes when your DAW asks for audio before the Virus has sent it (DAWs that process in bursts), which makes notes late. It helps us with reports of late notes.
+          - **macOS:** the installer refuses macOS versions older than 14.4 instead of installing a plug-in that cannot start there (#37). On very old versions such as Catalina, Installer then only says it cannot open the package.
+          - **The plug-in log is on by default**, so a bug report has everything we need. It stays on your computer (nothing is sent anywhere) and is kept small (about 8 MB at most). To switch it off: *? > Detailed Log* in the plug-in, or the Control Center's Options page.
+          - **Bank sync on the Virus display:** while the banks sync, the Virus' own display shows its syncing message for each patch, as with the original software; it showed "Configuring Virus TI" the whole time. The plug-in's sync page now names each patch as it arrives ("RAM A 85 / 128: <name>", also for user ROM banks; the display at the bottom does it for "Download entire bank"), and its time left counts only what is really missing (it said "about 9 min" when one bank, 2 minutes, was missing).
+          - **Windows (#36):** fixed a case where the TI Revive service could keep talking to a Virus that had disappeared from Windows for a moment (error 433 in the log), instead of connecting again. Not tested on hardware: such a drop-off cannot be caused on purpose.
+          - **The plug-in log keeps its first lines on a fresh install** (they were lost until the bank cache folder existed).
+          - **Windows installer (#31): unplug the Virus before installing.** If a Virus is connected on the old Access driver, setup now asks you to unplug it before it removes that driver, and waits up to 2 minutes (in one report, removing the Access driver with the Virus connected crashed Windows; that was in a virtual machine). Plug it back in afterwards and switch the Virus off and on before the first use with TI Revive: after the Access driver it may not answer until then. driver.log now also waits until Windows has found the Virus again before it says which driver it is on. Not tested with a Virus connected yet.
+          - **macOS and Linux: a stalled USB connection no longer floods the log** (#37: 300 MB in 2 minutes). The TI Revive service now resets a stalled MIDI connection, pauses after errors, and connects to the Virus again if it stays broken, as it already did on Windows.
 
           Earlier versions: their own release pages, and every version's changes on one page in the
           [changelog](https://derpsn.github.io/access-virus-ti-revive/changelog.html).

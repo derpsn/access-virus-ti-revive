@@ -12,7 +12,7 @@
 //   tirevive-cc list FILE                     patch names in a library (.mid or .syx), no Virus needed
 //   tirevive-cc export FILE OUT.syx|OUT.mid   convert a library, no Virus needed
 //   tirevive-cc logs [--out FILE]             plug-in + broker logs in one file for a bug report (anonymized)
-//   tirevive-cc debug on|off                  the plug-in's log (diag.on; takes effect when the plug-in starts)
+//   tirevive-cc debug on|off                  the plug-in's log (on by default; off = diag.off; takes effect when the plug-in starts)
 //   tirevive-cc option [NAME on|off]          A/B options against the original (nerd mode's Options menu)
 //   tirevive-cc watch [--seconds N]           Nerd mode in the terminal: broker status, log and the traffic, decoded
 //                                             (a read-only observer: works while the plug-in uses the Virus)
