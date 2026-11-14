@@ -83,7 +83,18 @@
       "In the Control Center, Options: switch <b>lower latency</b> on, reload the plug-in, play again; then off."
      ],
      "expect": "Plays cleanly both times; with lower latency on, Live shows a smaller plug-in delay. VM USB timing is not exact, so crackle here proves little, missing notes do."
+    },
+    {
+     "id": "W3",
+     "title": "Close and reopen Live within 20 s (unlink, link again)",
+     "steps": [
+      "With the plug-in playing in Live, close Live, open it again with the same project within 20 s (the broker keeps running), play."
+     ],
+     "expect": "It plays as before; Claude finds <code>link off</code> at the close and <code>link on</code> before the new session in vtibroker.log (first run of the unlink on Windows)."
     }
+   ],
+   "notes": [
+    "WC4 (Virus off and on): Claude reads the broker log afterwards; the power-off should show as the device gone (error 433, so far only a unit test) and the Virus should come back by itself."
    ]
   },
   {
@@ -93,7 +104,7 @@
    "prep": [
     "Quit the DAW, then double-click <code>Install test build.command</code> in <code>~/Downloads/TI-Revive-0.8.41-mac</code>, or paste: <code>sudo installer -pkg \"$HOME/Downloads/TI-Revive-0.8.41-mac/TI Revive.pkg\" -target /</code>",
     "Move the Virus' USB cable to the Mac and switch it on if needed. Claude checks the installed version with pkgutil before trusting a result.",
-    "Run <code>hil-mac.command</code> from the package for the automated core items (cold start, reopen, export)."
+    "Run <code>~/Downloads/TI-Revive-0.8.41-mac/hil-mac/hil/hil-mac.command</code> for the automated core items (cold start, reopen, export). Not the older <code>hil</code> folder next to it (from 11-10)."
    ],
    "items": [
     {

@@ -55,7 +55,7 @@ Last update: 2026-11-14: #37 libusb Logic test: first try with the old broker, r
 | #30 | Snow, Logic: rc4 "nailed it"; arp after 1-bar count-in confirmed (18:00, E505); only the plug-in window's meters (Logic's are fine) | reporter: rc5 posted 11-13 18:53 (meters on a real Snow?) | 2026-11-13 |
 | #31 | Win10 VirtualBox, Snow, setup with Access drivers | reporter (rc3 setup with the unplug step) | 2026-11-12 |
 | #32 | (no change since 11-10) | reporter | before 11-10 |
-| #33 | Intel Mac: Ableton fine, Logic distorted | reporter (rc1: Logic log, rate, buffer) | 2026-11-10 |
+| #33 | Intel Mac, 0.8.39: Ableton fine, Logic distorted until a buffer change, back at the next start; log: no slip, rates match, no drops (E532) | reporter: Logic output device = Virus?, distortion on the unit's outputs too?, update to 0.8.41 (issuecomment-6881144202) | 2026-11-14 |
 | #34 | TI2/Keyboard macOS Ableton crackle, right channel at full scale | reporter (2 Outs, 44.1 kHz, no hub, record input 3/4) | 2026-11-12 |
 | #36 | Windows Cubase bank sync 0/128 | reporter (rc2: display, hub/cable, 3 checks; BC2001.syx asked 11-14) | 2026-11-14 |
 | #37 | Catalina: slips (E510) restarted by rc6 (2 in 3 h, then clean, Later), still a faint crackle not visible in the plug-in; probe run 2: C4s on the headphones but not on USB 1 (E511 Later) | reporter: libusb test in Logic (broker + plug-in, asked again 11-14, issuecomment-6876859556; 12:00 first try ran the old broker as root, pkg not installed (E511 Later), reinstall + strings check asked, issuecomment-6877363338), crackle on the headphones too?, Logic output device + buffer | 2026-11-14 |
@@ -64,7 +64,7 @@ Last update: 2026-11-14: #37 libusb Logic test: first try with the old broker, r
 | #40 | (ours) macOS: TI Revive takes the Virus' audio itself (libusb, E511) as an option? asks #30/#37/#39 reporters | #37 reporter answered 11-13 21:14: barely uses it as sound card, wants a unit/soundcard switch, admin rights ok, Logic on Catalina; #30/#39 reporters not yet | 2026-11-13 |
 
 Every open issue waits on its reporter. Quiet-issue rule: 7 days after our last request, close with the AGENTS.md
-message, only in a joint check with the user (by the dates above: #28 from 2026-11-16, #33 and #38 from 2026-11-17, #36 from 2026-11-21; #32: look up its date first).
+message, only in a joint check with the user (by the dates above: #28 from 2026-11-16, #38 from 2026-11-17, #33 from 2026-11-21, #36 from 2026-11-21; #32: look up its date first).
 
 ## Not verified on hardware yet
 
@@ -140,8 +140,9 @@ message, only in a joint check with the user (by the dates above: #28 from 2026-
 
 00. Waiting on reporters: #37 (libusb test in Logic, 0.8.42 work), #30 (Snow meters), #40, #36 (BC2001.syx).
     Check issues only together with the user.
-0. 0.8.41 FINAL TODAY (user): CI test build 43617677008 (8df3a01) running; then install on Linux + hil.sh (L1),
-   win11 /quiet, Mac pkg + install command; user tests by the checklist
+0. 0.8.41 FINAL TODAY (user): CI test build 43617677008 (8df3a01) green; Linux installed (plug-in 64ba56a8, broker
+   728db830), hil.sh ALL PASS = L1 (work/hil/0.8.41-final); win11 installed (/quiet exit 0, VST3 52A4CA3F, no Virus
+   yet); Mac pkg b24b3a77 in ~/Downloads/TI-Revive-0.8.41-mac (user installs; hil-mac in hil-mac/hil/); user tests by the checklist
    https://claude.ai/artifact/7j2tvTcAc19iNynNjfnSwM (spec scripts/checklists/round-0.8.41.json; M2 = the
    live-later keystamp check, M1 = "Virus TI MIDI" listed). Meanwhile: README/site, build.yml "New in 0.8.41",
    site check. Then merge -F, verify, tag, release CI, site rebuild.

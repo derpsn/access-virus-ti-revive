@@ -4839,3 +4839,13 @@ How the original Access software reached the Virus' USB audio on macOS (REA/Ghid
 - **Method:** the original Access software against the simulated unit over USB/IP in a VM, keys played by the user, counts from the model's packet and voice logs, user's ear
 - **Confidence:** HIGH for the model (counts with both controls, ear agrees) / open (real TI1 Keyboard, Mac)
 - **Hardware:** no
+
+### E532
+
+#33 Logic distortion on an Intel Mac is not E488's byte slip (2026-11-14, the reporter's Intel Mac mini 2018, macOS Sequoia, TI Revive 0.8.39, Logic Pro; Ableton 12 plays clean on the same Mac, E494). Reporter: at buffer 512 distorted, 1024 cleared it; after reopening Logic at 1024 distorted again, back to 512 cleared it. The plug-in log (28 sessions, 2026-11-11 and 2026-11-14 15:32-16:11 UTC, 44.1/48 kHz, blocks 128/512/1024/1920): every one of the 22 sessions with stats lines shows the normal raw-peak pattern (first pair 5-9 = noise floor, sound on USB 1, third pair 0) and none the slipped one of #37 / E488 (32767 32768 | 255 255 | 768 768); Virus frames against host frames per 10 s 0.996-1.006 in almost all windows (no rate mismatch); drops 0 (1 in two sessions), filled 0; sound peaks at most 11816 (no clipping); read margin sometimes 0 with err down to -678 (bursty host blocks, the E490 read clamp). So the Virus' audio reaches the plug-in clean in every session, and the distortion arises after the plug-in or on the output path (HIGH for the log reading, open for the cause). Not known: whether Logic's output device is the Virus TI (its playback stream then also goes through Apple's driver, as in #37's remaining crackle, E510 Later) and whether the unit's own outputs are distorted too; asked (issuecomment-6881144202), with 0.8.41 for the slip detector and more logging.
+
+- **Date:** 2026-11-14
+- **Pointer:** issue #33 comment 2026-11-14 16:40 UTC (TI-Revive-logs-2026-11-14-1612.txt, in the session scratchpad only)
+- **Method:** the plug-in log's stats lines (raw peaks, host/virus frames, drops, read margin) per session
+- **Confidence:** HIGH (no slip, no rate mismatch, no dropouts in the log) / open (the cause)
+- **Hardware:** no (the reporter's unit)
