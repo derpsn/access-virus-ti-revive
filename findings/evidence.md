@@ -4664,6 +4664,7 @@ How the original Access software brings a Virus Keyboard's keys to the host on m
 - **Method:** src/broker/vtikeyport_mac.c, src/broker/vticore.c (reader)
 - **Confidence:** HIGH (static, the Mac driver) / open (the Windows driver vtimidi.sys, not read)
 - **Hardware:** no
+- **Status:** corrected by E521
 
 ### E515
 
@@ -4724,4 +4725,14 @@ A keyed unit with TI Revive on the model (simulator S134, virus-ti-sim 6aa0ea3; 
 - **Pointer:** virus-ti-sim FINDINGS S134 (6aa0ea3), m4/keyed_e2e.sh runs keyed-a-localoff, keyed-b-sync, keyed-c-warm-localon, keyed-d-close52; tools/keyed_check.py
 - **Method:** model runs of the sim (8051 firmware + DSP model), our broker and plug-in code
 - **Confidence:** MED (1)-(4), (6) model only / LOW (5), (7)
+- **Hardware:** no
+
+### E521
+
+The open static points of E517 (2)/(3) and the original Mac driver's cable mapping (REA/Ghidra 12.1.4, agent run 2026-11-14 for the user's "E517 yes"; Mac MIDI driver MidiDriver_x64 52a173fd..., Windows vtimidi.sys 18a95971... from the user's installer, Virus Control.dll 5.1.7 x64 a622f9a2...). (1) Reads on EP 0x85, original Mac: the public port's start 0xbfc0 creates 8 read buffers and submits all 8 (ev_3a11abaa); the completion 0xd1e0 hands the data on (time stamp, E514) and then resubmits that buffer via 0xcfc0 (ev_da199f2c, ev_941f5e8e), so 7 reads stay queued and the endpoint is never without one; the hidden port does the same ("let the read buffers pend", 0x5ea0, ev_901018fb; teardown 0xc3b0 waits on 8 buffers). Corrects E514 (4) where it implied one read. Buffer size from device+0x4e, probably the max packet size (not traced). Original Windows: vtimidi.sys keeps 1 IRP/URB per IN pipe (0x19f70, 0x147cc), the completion 0x14754 -> 0x148bc passes the data on and resubmits at DPC level (0x14a9c); no resubmit after an error, the recovery path not read. (2) Ours: libusb (src/broker/vticore.c:111) one synchronous 64-byte read with a 200 ms timeout, and the client callback runs before the next read; on POSIX it does a blocking write to every client socket under a mutex (vtibroker_posix.c:526-530, send_msg 135-143), so a slow client leaves EP 0x85 unasked while it blocks (E517 (5): such a gap delays keys). A timed-out transfer that carried data is dropped (vticore.c:134 needs r == 0; LOW risk, not seen). Windows (vticore_winusb.c:80-88): one synchronous WinUsb_ReadPipe, the callback only queues. (3) Key globals: the original sends only what the description's GlobalInit holds (0x3B = 1, 0x40 = 0, 0x41 = 0 twice) at start and 3B = 1 at close (E391); a byte scan of 174 captures (69 of the original) shows only 3B/40/41 of 0x3B-0x46. TI Revive sends the same GlobalInit (native/src/model/remotedevice.cpp:143, virusplugin.cpp:1204-1236) and the same close set (closeseq.h:20); no difference found; the original's user-action path for these globals open. (4) Mac driver entities: CreateDevice 0x3b70 adds "MIDI" first (embedded flag 0) and "Synth" second (flag 1), each 1 source + 1 destination; 0x9630 builds the sources in that order; the input handler 0x109a0 takes the source from the packet's cable nibble: cable 0 -> "MIDI", cable 1 -> "Synth", higher cables clamped to the last. Only USB-MIDI code index 0 and 1 are dropped: channel messages, SysEx (CIN 4-7) and single bytes (CIN F) all pass (HIGH). Output: the packer 0x10eb0 writes cable = port number << 4, consistent with "MIDI" -> cable 0 and "Synth" -> cable 1 (MED, the Send step that fills it not traced).
+
+- **Date:** 2026-11-14
+- **Pointer:** REA evidence ids above (agent session, not exported); src/broker/vticore.c, vticore_winusb.c, vtibroker_posix.c; native/src/model/remotedevice.cpp, native/src/device/closeseq.h
+- **Method:** static analysis (REA/Ghidra) of the user's Access files; byte scan of the captures in work/; our source read
+- **Confidence:** HIGH (1) Mac, (2), (4) inputs / MED-HIGH (1) Windows / HIGH (3) start and close, open user action / MED (4) outputs
 - **Hardware:** no
