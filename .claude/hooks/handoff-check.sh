@@ -31,5 +31,12 @@ if [ "$lines" -gt "$MAX_LINES" ]; then
     reason="${reason:+$reason }findings/HANDOFF.md has $lines lines (limit $MAX_LINES): it holds the current state only. Move finished or historical items to the dated log in findings/log/ and keep HANDOFF short."
 fi
 
+# 3. this turn changed state (repo edits, commits, pushes, GitHub posts, CI runs) without touching HANDOFF.md:
+#    a /clear must find the current state there (user 2026-11-14). Checked from the transcript, see handoff-turn.py.
+if [ -z "$reason" ]; then
+    turn=$(printf '%s' "$event" | python3 -I "$(dirname "$0")/handoff-turn.py" 2>/dev/null) || turn=""
+    reason="$turn"
+fi
+
 [ -n "$reason" ] || exit 0
 python3 -I -c 'import json, sys; print(json.dumps({"decision": "block", "reason": sys.argv[1]}))' "$reason"

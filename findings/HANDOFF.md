@@ -133,6 +133,8 @@ message, only in a joint check with the user (by the dates above: #28 from 2026-
   changed C/C++ files to run `scripts/mutation.py` on.
 - Never `nativehost --stress*` on the real Virus at small blocks (E438). Never `virsh screenshot` with a Virus in a VM.
 - One VM at a time (30 GB host).
+- Stop hook (handoff-check.sh + handoff-turn.py, 2026-11-14): a turn that edits the repo, commits, pushes, posts on
+  GitHub or starts CI without touching this file is stopped once to update it.
 
 ## NEXT
 
