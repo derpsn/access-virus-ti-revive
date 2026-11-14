@@ -70,3 +70,14 @@ TEST(helptext_display_notes)
     CHECK(help_for("VirusControl/Filter Display", t) && t.title == "Filter display" && !t.text.empty());
     CHECK(help_for("VirusControl/Envelope Display", t) && t.title == "Envelope display" && !t.text.empty());
 }
+
+// #39, E530: playing a Keyboard or Polar from its own keys is tightest with Local On and the DAW's monitor off (the keys
+// sound directly, no USB round trip; with both on every note sounds twice); the Live button's note says so
+TEST(helptext_live_mode_own_keys)
+{
+    HelpText t;
+    CHECK(help_for("VirusControl/Live Mode", t));
+    CHECK(t.text.find("Local On") != std::string::npos);
+    CHECK(t.text.find("monitor") != std::string::npos);
+    CHECK(t.text.find("twice") != std::string::npos);
+}

@@ -141,8 +141,8 @@ message, only in a joint check with the user (by the dates above: #28 from 2026-
     Check issues only together with the user.
 0. #39 doubled notes on the sim (user 11-14: press the keys in the sim panel and hear it): sim (virus-ti-sim-35)
    writes key tap + keyed_live.sh + double_check.py, a keyplay run (4 cases), then the user's GUI session.
-   Ours: nativehost --midi-in (032837d). Help text for the Live button (Local On + monitor off; "twice") + test written, NOT committed until the sim
-   confirms. #39 reply drafted in the session (to post after the sim result).
+   Plan B done (E530: 2/1/1/0 voices, doubling = Local On + echo); help hint committed. Next: the original in
+   win10ref over USB/IP (sim builds its session pieces), then post the #39 reply.
 0a. live-later on the Mac: switch it on in the CC, keystamp run like E518 A, spacing should be 24000 +-1 (E519).
 0b. Level 2 done twice (E527). Linux re-link accepted, in README + site. One-probe fix 2d69cc8: sim stand-in OK
     (S144, at most 1 pending during a stall; kernel run not done, optional). Then the Mac: rc8 + "Virus TI MIDI" + live-later check with a round build

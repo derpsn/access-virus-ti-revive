@@ -4817,3 +4817,13 @@ How the original Access software reached the Virus' USB audio on macOS (REA/Ghid
 - **Method:** log reading against the code's timeouts; read-only SMF parse of our library files; unit tests; vtimodel libs on our libraries (Linux, dev build)
 - **Confidence:** MED (1) cut-short replies (timing inference, open until a log with the new lines) / HIGH (2), (3)
 - **Hardware:** no
+
+### E530
+
+#39 "doubling notes" (user 2026-11-14: "we should also hear the doubling note"): on the model a key played on a Keyboard sounds twice exactly when the Virus has Local On and the host passes the key back to the plug-in as a played note (Live's Monitor In). Simulator plan B (virus-ti-sim 160bd03, model only, run.py isolation): virtual TI1 Keyboard, warm cache, 10 keys 700 ms apart by keyplay, Local by injection (73 00 40 01 / 00); the echo = the stand-in libusb's key tap (every cable-1 note on EP 0x85 with its CLOCK_MONOTONIC time) into nativehost --midi-in (032837d, delay 0), which gives each to the plug-in as kIsLive; round-0.8.41 dev plug-in, live-notes on, live-later off, 44.1 kHz block 512; counted by the sim's double_check.py. (1) Every key reached the host's input once with the tap (10 note-ons, 10 note-offs per run), none without. (2) The plug-in sent each played key back on EP 0x06 at the same pitch, 10 of 10, 0.7-10.9 ms (median 5.6) after the key's USB arrival: only the wait for the next host block (11.6 ms at 512), no lead, as stamprule.h's live path says. (3) Voice starts per key on DSP A (voice log): Local On + echo 2 for 10 of 10 keys, the second 10.2-30.5 ms after the first (median 16.0), one at 100.1 ms; Local Off + echo 1 (10/10); Local On without echo 1 (10/10); Local Off without echo 0. The two controls show the voice log holds on the TI1 image too. So the doubling needs both, and either one alone gives one note; the first is the Virus' own voice, the second the round trip. Not shown: why one second voice came 100 ms late (its EP 0x06 write was on time; the way into the unit, maybe the link queue); spacing in Live with its own buffers (delay 0 here); the sound (panel.raw kept, onsets not counted); the original in the same loop (planned: win10ref over USB/IP).
+
+- **Date:** 2026-11-14
+- **Pointer:** virus-ti-sim 160bd03 (key tap, double_check.py), runs d-on-echo, d-off-echo2, d-on-noecho, d-off-noecho (voice.A, trace.bin, host.log); native/tools/midiin.h, nativehost --midi-in
+- **Method:** model runs of the sim (TI1 image, keybed scanner) with our broker against the stand-in libusb and our plug-in in nativehost
+- **Confidence:** MED (model only; the counts measured on the model, controls pass) / LOW (the 100 ms case)
+- **Hardware:** no
