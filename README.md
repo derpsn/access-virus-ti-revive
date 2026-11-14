@@ -448,6 +448,7 @@ the Virus' flash and can brick it. Details: [native/docs/controlcenter.md](nativ
 
 **macOS**
 - **The keys of a Keyboard or Polar** (since 0.8.38): TI Revive offers a MIDI input "Virus TI Synth", as the Access driver did. Choose it as the MIDI input of the track with the plug-in and arm it: the keys, wheels and pedals reach the DAW, and you can record them. The Virus plays them through the track, because Local is off while it works with a plug-in, as with the original. The port exists while the plug-in or the Control Center is open. Virus to DAW only: no other program can send to the Virus this way. Not tested by us: our TI2 Desktop has no keys. By user reports: notes, pitch bend and mod wheel recorded on a TI1 Keyboard (Ableton Live 12.3.7) and a TI2 Polar.
+- **The Virus' MIDI In** (since 0.8.41): a second MIDI input "Virus TI MIDI", as the Access driver had. While the Virus works with a plug-in it sends what arrives at its MIDI In socket only to the computer and does not play it itself, so a keyboard plugged in there reaches the DAW only through this input: choose it as the MIDI input of the track with the plug-in and arm it. SysEx and clock from that socket pass too. Virus to DAW only. Not tested on hardware yet: built from the original driver's behaviour (E521).
 
 - **Microphone permission** for your DAW is required (see above); without it the plug-in stays silent.
 - **One DAW at a time** uses the Virus (as with the Access driver): the plug-in in a second DAW or GarageBand next

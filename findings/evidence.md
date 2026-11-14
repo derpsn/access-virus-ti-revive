@@ -4736,3 +4736,13 @@ The open static points of E517 (2)/(3) and the original Mac driver's cable mappi
 - **Method:** static analysis (REA/Ghidra) of the user's Access files; byte scan of the captures in work/; our source read
 - **Confidence:** HIGH (1) Mac, (2), (4) inputs / MED-HIGH (1) Windows / HIGH (3) start and close, open user action / MED (4) outputs
 - **Hardware:** no
+
+### E522
+
+E503's stall handling run against a simulated Virus (simulator S135, virus-ti-sim bc7cfb4; user 2026-11-14 "E503 can we test it in the VM?"; level 1 = our broker source of 8bc8de7 built against the sim's stand-in libusb, the virtual TI1 Keyboard of S134 with a warm cache, only through m4/run.py, no real libusb or USB device, our broker inactive). The stand-in halts endpoints on cue (VTISIM_STALL=85:1@15,86:3@20,06:1@25,86:5@30,85:51@36): a halted endpoint answers LIBUSB_ERROR_PIPE until CLEAR_FEATURE(ENDPOINT_HALT). Our claims C1-C7 (sent to the sim from vticore.c reader()/vti_write()) all held: (1) runs of 1, 3, 5, 51 errors logged 1, 3, 3, 3 lines `vti: read ep XX: LIBUSB_ERROR_PIPE`; (2) one clear per PIPE error (none after the 51st), stalled reads at least 10 ms apart (504 ms over 50 gaps); (3) one `... 5 errors in a row (last LIBUSB_ERROR_PIPE), then read again` after the run of 5, none after 1 or 3; (4) the 51st error gave up (`giving up on the device`), 0.5 s later `device failed: closing`, libusb_reset_device, reopen, handshake, flash info read again; the plug-in logged disconnected, reconnected, Virus ready after 3.8 s; (5) keys on EP 0x85 cable 1 and pot CCs on EP 0x86 came through in every phase (single notes up to 821 ms late across the reopen); (6) per-thread counters (from the code; runs did not overlap); (7) a stalled OUT write on 0x06 logged once, cleared, and the stalled packet (a stamped F8) was lost, not resent. Not tried: non-PIPE errors, a vanished device (NO_DEVICE), write timeouts, real libusb and the kernel's clear (data toggle): level 2 over usbip needs sudo with the user.
+
+- **Date:** 2026-11-14
+- **Pointer:** virus-ti-sim FINDINGS S135 (bc7cfb4), run e503-l1-a, m4/e503_build.sh, m4/stall_rules.h, tools/e503_check.py; src/broker/vticore.c
+- **Method:** model run with injected stalls, the broker's and the stand-in's logs
+- **Confidence:** HIGH (1)-(5), (7) for our code's logic, model only / the real kernel path open
+- **Hardware:** no

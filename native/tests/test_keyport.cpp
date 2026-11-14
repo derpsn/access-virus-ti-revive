@@ -75,3 +75,55 @@ TEST(keyport_rejects_a_packet_whose_status_does_not_fit)
     auto o = run(0x85, {0x00, 0x00, 0x00, 0x00, 0x19, 0x90, 60, 100}); // padding before a real one
     CHECK(o.size() == 1);
 }
+
+// The Virus' DIN MIDI In: with the plug-in link up it goes only to USB, EP 0x85 cable 0 (E517). The original's Mac
+// driver gave cable 0 its own source "MIDI" and passed everything but code index 0 and 1, SysEx and single bytes too
+// (E521 (4)), so a keyboard or a sequencer on MIDI In reaches the DAW.
+namespace {
+std::vector<std::vector<uint8_t>> din(uint8_t ep, std::vector<uint8_t> packets)
+{
+    std::vector<std::vector<uint8_t>> out;
+    vti_dinport_filter(
+        ep, packets.data(), (int)packets.size(),
+        [](void *u, const uint8_t *m, int n) { ((std::vector<std::vector<uint8_t>> *)u)->push_back(std::vector<uint8_t>(m, m + n)); },
+        &out);
+    return out;
+}
+} // namespace
+
+TEST(dinport_passes_channel_messages_from_cable_0)
+{
+    auto o = din(0x85, {0x09, 0x92, 60, 100, 0x08, 0x82, 60, 0, 0x0C, 0xC0, 7, 0, 0x0E, 0xE0, 0, 64});
+    CHECK_EQ(o.size(), 4u);
+    CHECK(o.size() == 4 && o[0] == (std::vector<uint8_t>{0x92, 60, 100}) && o[1] == (std::vector<uint8_t>{0x82, 60, 0}));
+    CHECK(o.size() == 4 && o[2] == (std::vector<uint8_t>{0xC0, 7}) && o[3] == (std::vector<uint8_t>{0xE0, 0, 64}));
+}
+
+TEST(dinport_passes_sysex_in_its_pieces)
+{
+    // F0 43 10 4C 00 F7 from another device: CIN 4 (start/continue, 3 bytes), CIN 6 (ends with 2 bytes)
+    auto o = din(0x85, {0x04, 0xF0, 0x43, 0x10, 0x04, 0x4C, 0x00, 0x00, 0x06, 0x00, 0xF7, 0x00});
+    CHECK_EQ(o.size(), 3u);
+    CHECK(o.size() == 3 && o[0] == (std::vector<uint8_t>{0xF0, 0x43, 0x10}) && o[2] == (std::vector<uint8_t>{0x00, 0xF7}));
+    auto e5 = din(0x85, {0x05, 0xF7, 0, 0}); // ends with 1 byte
+    auto e7 = din(0x85, {0x07, 0x01, 0x02, 0xF7}); // ends with 3 bytes
+    CHECK(e5.size() == 1 && e5[0].size() == 1 && e7.size() == 1 && e7[0].size() == 3);
+}
+
+TEST(dinport_passes_system_and_single_bytes)
+{
+    auto o = din(0x85, {0x0F, 0xF8, 0, 0, 0x0F, 0xFA, 0, 0, 0x02, 0xF3, 1, 0, 0x03, 0xF2, 0x10, 0x02});
+    CHECK_EQ(o.size(), 4u);
+    CHECK(o.size() == 4 && o[0] == (std::vector<uint8_t>{0xF8}) && o[2] == (std::vector<uint8_t>{0xF3, 1}) &&
+          o[3] == (std::vector<uint8_t>{0xF2, 0x10, 0x02}));
+}
+
+TEST(dinport_only_cable_0_of_this_endpoint)
+{
+    CHECK(din(0x85, {0x19, 0x90, 60, 100}).empty()); // cable 1: the keys, "Virus TI Synth"
+    CHECK(din(0x86, {0x09, 0x90, 60, 100}).empty()); // the plug-in's interface
+    CHECK(din(0x85, {0x00, 0, 0, 0, 0x01, 0, 0, 0}).empty()); // code index 0 and 1: reserved, padding
+    CHECK(din(0x85, {0xFF, 0xFE, 0, 0}).empty());    // the Snow's idle packets (E387)
+    CHECK(din(0x85, {0x09, 0x40, 60, 100}).empty()); // a garbled channel message
+    CHECK(din(0x85, {0x09, 0x90, 60}).empty());      // a short tail
+}

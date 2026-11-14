@@ -507,6 +507,11 @@ static void keyport_out(void *user, const uint8_t *msg, int n)
     (void)user;
     vti_keyport_send(msg, n);
 }
+static void dinport_out(void *user, const uint8_t *msg, int n)
+{
+    (void)user;
+    vti_dinport_send(msg, n);
+}
 #endif
 
 static void on_rx(void *user, uint8_t ep, const uint8_t *data, int len)
@@ -522,6 +527,7 @@ static void on_rx(void *user, uint8_t ep, const uint8_t *data, int len)
     if (ep == VTI_EP_MI04_IN)
         vtimidi_rx(data, len);
     vti_keyport_filter(ep, data, (int)len, keyport_out, NULL); // the Virus keys to the DAW (#29)
+    vti_dinport_filter(ep, data, (int)len, dinport_out, NULL); // its DIN MIDI In to the DAW (E517)
 #endif
     pthread_mutex_lock(&g_cs_clients); // the owner and every sharing client
     for (int i = 0; i < MAX_CLIENTS; i++)

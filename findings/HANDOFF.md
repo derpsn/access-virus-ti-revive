@@ -77,8 +77,8 @@ message, only in a joint check with the user (by the dates above: #28 from 2026-
 
 ## Not verified on hardware yet
 
-- E503 libusb reader stall handling (5660a93): unit tests only. Sim level 1 run asked 11-14 (our broker on its
-  virtual TI + stand-in libusb, STALL cases on 0x85/0x86/0x06, our claims C1-C8 sent); level 2 (usbip, real libusb)
+- E503 libusb reader stall handling (5660a93): sim level 1 DONE (E522, C1-C7 held on the model: our broker on its
+  virtual TI + stand-in libusb, STALL cases on 0x85/0x86/0x06); level 2 (usbip, real libusb)
   needs sudo with the user.
 - Windows broker error 433 = device gone (5af74bd): mingw build + unit test only.
 - Windows setup unplug step (c6313b4, E504): the unplug path never exercised (no Virus on the Access driver).
@@ -105,9 +105,12 @@ message, only in a joint check with the user (by the dates above: #28 from 2026-
       hand: sleep), `scripts/hil.sh` on Linux, checklist artifact via `scripts/checklist.py`.
 - [ ] Release text heredoc in `.github/workflows/build.yml` ("New in 0.8.41") checked before the tag.
 - [ ] #34 second session "bank sync failed in 11.9 s" (RAM B -1) after "paused 2.6 s for notes": not looked into.
-- [ ] MIDI In port (user 11-14: "close the gap", E517 (6)): a second CoreMIDI source "Virus TI MIDI" for cable 0
-      next to "Virus TI Synth" (cable 1), as the original's Mac driver (E391 (4)); which cable feeds which entity
-      there: check by REA first. Windows/Linux have no key port at all (README "Windows MIDI ports").
+- [ ] MIDI In port "Virus TI MIDI" (user 11-14: "close the gap"): done on the round (keyport.h vti_dinport_filter
+      as the original's "MIDI" entity, E521 (4); vtikeyport_mac.c second source "VTI0"; 4 tests; README + site).
+      Mac build via dev-mac CI; not run yet (Mac check: the port shows up; no MIDI-In device here). Windows/Linux
+      still have no key port at all.
+- [ ] E521 (2): our libusb reader keeps one read on EP 0x85 and its callback blocks on client sockets; the original
+      Mac driver keeps 8 pending. Candidate: async transfers / non-blocking fan-out (0.8.42?), user's call.
 - [ ] Library scan skips patches as "damaged or unknown format" (#36 log: BC2001 36, Incubation V3 97): check the
       format.
 
@@ -132,7 +135,6 @@ message, only in a joint check with the user (by the dates above: #28 from 2026-
     Check issues only together with the user. #30's own case (count-in) is fixed and confirmed; the sim's
     note-at-Play case matches the original (S126 + REA) and stays as it is (dropped from the to-do 11-14).
 0a. rc8: CI result, main preview box, installs (Linux, win11 silent, Mac command), then the #39 hint reply with the user.
-0b. MIDI In port (to-do list above), after the REA check of the original's Mac driver entities.
-0c. E517 (2)/(3): agent running (reads on EP 0x85, key globals, original vs ours); result into evidence.
-0d. Sim: E503 level 1 run, results as claims. S134 done (E520). No USB-MIDI interface here (user): E517 (4) not possible.
+0b. MIDI In port: dev-mac CI, then see the port on the Mac (to-do list above).
+0c. E517 (2)/(3) answered (E521). E503 level 1 done (E522); level 2 with the user. No USB-MIDI interface here (user).
 1. Then the "To do before the final 0.8.41" list.
