@@ -136,9 +136,11 @@ message, only in a joint check with the user (by the dates above: #28 from 2026-
 
 ## NEXT
 
-00. Waiting on reporters: #39 (Live button? remedy), #37 (libusb test in Logic), #30 (Snow meters, rc5), #40 views.
+00. Waiting on reporters: #39 (Live button? remedy), #37 (libusb test in Logic), #30 (Snow meters, rc5), #40 views,
+    #36 (BC2001.syx, asked 11-14).
     Check issues only together with the user.
 0a. live-later on the Mac: switch it on in the CC, keystamp run like E518 A, spacing should be 24000 +-1 (E519).
 0b. Level 2 done twice (E527). Linux re-link accepted, in README + site. One-probe fix 2d69cc8: sim stand-in OK
-    (S144, at most 1 pending during a stall; kernel run not done, optional). Then the Mac: rc8 + "Virus TI MIDI" + live-later check with a round build.
+    (S144, at most 1 pending during a stall; kernel run not done, optional). Then the Mac: rc8 + "Virus TI MIDI" + live-later check with a round build
+    (rc9 = everything since rc8 incl. E529's new log lines).
 1. Then the "To do before the final 0.8.41" list.
