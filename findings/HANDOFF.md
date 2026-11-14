@@ -75,7 +75,7 @@ Last update: 2026-11-14 (#39: E516 the original's two latencies for Ableton Live
 | #36 | Windows Cubase bank sync 0/128 | reporter (rc2: display, hub/cable, 3 checks) | 2026-11-11 |
 | #37 | Catalina: crackle = byte-slipped audio (E510); libusb probe run 2 (E511 Later): 1000/1000 iso packets ok and real data, but only an idle floor on USB 1, no C4; AppleUSBAudio stays attached next to libusb; interface 1 without driver afterwards | reporter: heard the C4s on the Virus' outputs? Virus ok in Logic since? then the libusb test in Logic from his download (asked 11-14, issuecomment-6872527194): broker log + plug-in log | 2026-11-14 |
 | #38 | macOS 27 Live: editor / AU crash | reporter (crash report, Access files) | 2026-11-10 |
-| #39 | TI1 Keyboard in Ableton Live. Our summary posted (issuecomment-6867329556). Reporter 11-13 23:22: his Win 10 test of the ORIGINAL was in Live 10 with the VST (not VST3), and it showed almost the same (E516 7, 8: the Windows core makes both 'AbLi' calls for any host named Live, read 11-14, so the two-latency call is not what he feels; the unit's pace E515 and the monitor Off placement remain). E517 (sim S133): MIDI In is no second keybed with the link up (cable 0, same queue, not played directly); TI Revive's port passes only cable 1 (gap). | us: closing answer with the user after the Mac test in Live (E516 3; rc7 installed on the Mac 11-14, Virus not yet seen there); open from E517: TI2 run with a USB-MIDI interface on MIDI In (ask user for one), compare EP 0x85 polling and the key globals original vs ours, cable 0 port | 2026-11-14 |
+| #39 | TI1 Keyboard in Ableton Live. Our summary posted (issuecomment-6867329556). Reporter 11-13 23:22: his Win 10 test of the ORIGINAL was in Live 10 with the VST (not VST3), and it showed almost the same (E516 7, 8: the Windows core makes both 'AbLi' calls for any host named Live, read 11-14, so the two-latency call is not what he feels; the unit's pace E515 and the monitor Off placement remain). E517 (sim S133): MIDI In is no second keybed with the link up (cable 0, same queue, not played directly); TI Revive's port passes only cable 1 (gap). | us: closing answer with the user (Mac test done, E518: +54.6 ms on playback by default, 0 in Live Mode); open from E517: TI2 run with a USB-MIDI interface on MIDI In (ask user for one), compare EP 0x85 polling and the key globals original vs ours, cable 0 port | 2026-11-14 |
 | #40 | (ours) macOS: TI Revive takes the Virus' audio itself (libusb, E511) as an option? asks #30/#37/#39 reporters | reporters (audio interface use, admin rights, macOS/DAW) | 2026-11-13 |
 
 Every open issue waits on its reporter. Quiet-issue rule: 7 days after our last request, close with the AGENTS.md
@@ -129,11 +129,10 @@ message, only in a joint check with the user (by the dates above: #28 from 2026-
 
 ## NEXT
 
-00. #39 / E516: measure Live's recording placement on our Mac (TI2 to the Mac, Live 12, keystamp through the armed
-    plug-in track with monitor In; record MIDI + resample audio; play back, resample again; compare the two audio
-    clips): live notes on (expect ~53 ms late at 48 kHz), Live Mode on (expect ~0), live notes off (expect ~0).
-    Then decide: hint for Live users (Live Mode while recording), or played notes take the lead while the host records.
-    Original vs ours for a played note end to end: only on a real PC/Mac with the original (the VM captures cannot).
+00. #39 / E518 MEASURED on the Mac 11-14 (Live 12, rc7 VST3, monitor In): a played take comes back 54.6 ms later than
+    it sounded (default, live notes on); 0.0 ms with Live Mode on, 0.0 ms with live notes off. DECIDE with the user: a
+    remedy (hint 'record with Live Mode on' in help/README, or played notes take the lead while the host records, or
+    report the short latency while a track is monitored). Open: +-128 frame spacing of played notes in rc7 (E518 4).
 0a. Live-stamp fix (E512): in rc7 (user: "make a new RC and let him test", #39 has the setup); also verify on our Mac
    (keystamp + klog: onsets 24000 frames apart). libusb-audio branch paused (plug-in side committed 300cdd4).
 0. #39 (user 2026-11-13: investigate before replying to #39 and #30): E507 = their log (no unit requests while
