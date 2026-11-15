@@ -34,7 +34,11 @@ duplicate)
 ccclose)
     # the app crashed on closing (its timer outlived VSTGUI's platform layer), and its window kept the size it was
     # created with instead of the start page's
-    timeout 90 xvfb-run -a sh -c '
+    # its own session bus: GTK runs one instance per session, and a second start (the test while the user's Control
+    # Center is open) only hands over to that one and exits (2026-11-15)
+    bus=""
+    command -v dbus-run-session >/dev/null 2>&1 && bus="dbus-run-session --"
+    $bus timeout 90 xvfb-run -a sh -c '
         "$1" >"$3" 2>&1 &
         app=$!
         sleep 4
