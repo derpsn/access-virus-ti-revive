@@ -129,7 +129,7 @@ talk with the user (Linux may start); hil-win on the tuned VM: yes; update check
    helper by itself; real key/DIN traffic untested (no keyed Virus here).
 5. Open, low: stray single sample 2^-6 after record start in Logic (E541): not reproduced in nativehost (10/10 zero, both
    output-delay modes); next only if it shows again (Logic 48k series). Proposed sim items (discuss one at a time).
-5a. #37 fixes (E544) on round-0.8.42, CI dispatch only (no tag): libusb package MIDI ports (launchctl asuser helper,
+5a. #37 fixes (E544) on round-0.8.42, CI 43727531536 all green (no tag): libusb package MIDI ports (launchctl asuser helper,
    `vtibroker -midiports UID`) and the latency watch (UI timer, `the host reads latency` log line). Next: user back ->
    our Mac: normal package unchanged (ports, latency lines in Logic); libusb install on our Mac only with the user;
    then rc3 + #37 reply (draft in the session: ask how big the offset is, MIDI ports fixed in rc3).
