@@ -404,7 +404,8 @@ one file. Since 0.8.42 Nerd mode, the Options page and the RAM banks (on BACKUP 
 
 **Restore** (since 0.8.30): *Restore...* (in the Access look: RESTORE) asks for a backup's `RAM B.mid` (or any library), then for the RAM bank to overwrite. Only the programs that differ are written, into the Virus' RAM, the way the plug-in's browser writes them, and each one is read back. Unlike Access' Control Center it never writes the Virus' flash. The same from a terminal: `tirevive-cc restore B "RAM B.mid"`.
 
-![Nerd mode: the plug-in plays notes and checks its bank cache, decoded live](docs/images/control-center-nerd-mode.png)
+![Nerd mode in the Access look (0.8.42): the notes the plug-in sends to the Virus, decoded live](docs/images/control-center-nerd-mode.png)
+<sub>Nerd mode in the Access look, drawn from your own Access installer. TI Revive is not affiliated with Access Music or Kemper.</sub>
 
 The same from a terminal:
 
