@@ -4889,3 +4889,13 @@ The plug-in's level meters work on a real Virus TI Snow, and #30's latency probl
 - **Method:** user report
 - **Confidence:** MED (a user's report, no log with it)
 - **Hardware:** yes (reporter's Virus TI Snow, macOS, Logic); not on our hardware
+
+### E537
+
+hil-win on the TUNED win11 VM (E533's tuning; host governor performance; 2026-11-15 08:15 and 08:21 local; 0.8.41 release installed, the hil folder of the 0.8.41 final test build CI 43620201798, scheduled task in the console session; TI2 Desktop switched on and passed through by usb hostdev about two minutes before run 1). Run 1: H1 FAIL, H2-1, H2-2, H3 (45/45, export 1.00x), H6 pass; every note at most 0.60 ms off the grid, jitter 0.03-0.29 ms. Run 2 (5 min later, same attach): H1, H2-2, H3 (45/45, 1.00x), H6 pass, H2-1 failed only its drift check (+112 ppm against the 100 ppm limit; 12 notes, none lost, max 0.50 ms, jitter 0.27 ms: about 1.2 ms over its 11 s of notes). Every session answered the probe within 1.6-1.8 s, so E533's `no reply to the probe` did not come back. Run 1's H1 has its own signature: the Virus' audio never reached the plug-in (`virus frames 0`, drops 37 then 468), the bank-info replies (`6f 0n 7e`) arrived only as a burst after the close, and the broker's stop took 3 s with no `usbaudio: stopped (rc 0)` line (an isochronous IN read that hung; every other session logs that line at once, E533's silent H1 too). Reading (LOW): the first audio start after the Virus is powered on and attached to the VM; the same H1 passed 5 min later. Before the tuning (E533) two of five stages were silent per run; with it, none after the first session. VM drift readings: +0 to +64 ppm in the other stages.
+
+- **Date:** 2026-11-15
+- **Pointer:** work/hil/win11-20261115-081553, work/hil/win11-20261115-082126 (results, git-ignored); the VM's %TEMP%\vtibroker.log 08:15:56-08:27
+- **Method:** hil-win.ps1 + hil_check.py; broker log reading
+- **Confidence:** HIGH (the results as graded) / LOW (the cause of run 1's H1; one occurrence)
+- **Hardware:** yes (TI2 Desktop, Windows 11 VM build 26300 on the tuned host)

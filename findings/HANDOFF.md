@@ -37,10 +37,12 @@ Last update: 2026-11-15: task order agreed with the user (see Round 0.8.42 candi
 
 - Our TI2 Desktop: on **Linux** USB (2026-11-14 evening). User flashed ROM Z on it in early November (E500).
 - Linux: 0.8.41 release installed (plug-in 184badb2, broker 728db830, Control Center 0.8.41).
-- win11 VM: 0.8.41 release installed (/quiet exit 0), shut down. TUNED 2026-11-14 (E533): vCPUs pinned to P-cores
+- win11 VM: 0.8.41 release installed (/quiet exit 0), shut down. hil-win on the tuned VM 2026-11-15 (E537): run 1
+  4/5 (H1 silent, first session after Virus power-on + attach, audio read hung), run 2 4/5 (H2-1 drift +112 ppm
+  only); probe answered every time, notes <= 0.70 ms. TUNED 2026-11-14 (E533): vCPUs pinned to P-cores
   4-7, emulator 2-3, topology 1/2/2, no emulated sound / SPICE USB redirect / balloon, evmcs+avic off, ISOs off;
   guest High performance, USB selective suspend off (AC). Backup: work/vm/win11-before-tuning-20261114.xml.
-  Before VM timing tests: `sudo cpupower frequency-set -g performance` (user). hil-win on the tuned VM: not run.
+  Before VM timing tests: `sudo cpupower frequency-set -g performance` (user; on since 2026-11-15 08:10).
   win10 VM: snapshot `pre-i36` (0.8.36). No spare USB controller for VFIO (user: no extra hardware for now).
 - Mac (macOS 27.2.1): CI build 43620201798 installed (= 0.8.41 except texts). The RELEASE package is ready locally in
   work/rel-0.8.41/mac-push/TI-Revive-0.8.41-release (pkg 643f73d4, INSTALL-COMMAND + "Install test build.command");
@@ -104,7 +106,8 @@ talk with the user (Linux may start); hil-win on the tuned VM: yes; update check
   postinstall's pkill of a running user broker. mac-libusb-test.command stays a dev tool (not in any package).
 - Opt-in update check in the Control Center; "Prepare bug report" button (no telemetry).
 - #39: report the short latency while played notes come in (Live re-syncs).
-- Windows VM: hil-win on the tuned VM; if fresh-broker sessions still miss the probe, A/B against 0.8.40 (E533).
+- Windows VM: hil-win on the tuned VM DONE (E537): the probe miss is gone, no A/B needed. Open (LOW): H1's hung
+  first audio read after power-on + attach; watch for it in the next hil-win, and drift limit 100 ppm vs 11 s items.
 - Proposed (sim list): freeze guard (73 00 10 vv vs stream rate), single re-sync after a detected +64 (E492/E498),
   burst guard, fewer broker resets (E495), lower safety-net floor.
 
