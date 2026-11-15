@@ -130,10 +130,10 @@ talk with the user (Linux may start); hil-win on the tuned VM: yes; update check
 
 ## NEXT
 
-1. Linux has the DEV build installed (plug-in 08c1f920, broker 1f2fc540, CC + tirevive-cc from 1435b04; the
-   0.8.41 release backed up in ~/.vst3-backup/0.8.41-release). User smoke test asked: Options page 8th row "Check for
-   updates" (scrolls?), switching it on writes update.txt; plug-in ? menu "Prepare a Bug Report..." opens the form.
-   Optional: fake latest 0.8.99 in update.txt to see the note + Download entry (restore after).
+1. Linux has the DEV build installed (plug-in 7220de21 from a1153d9, broker 1f2fc540, CC + tirevive-cc from
+   1435b04; 0.8.41 release backed up in ~/.vst3-backup/0.8.41-release). User smoke test 2026-11-15 PASSED: Options
+   8th row visible (8 rows fit, no scroll: right), switching it on ran a real check (update.txt latest 0.8.41);
+   plug-in ? menu "Prepare a Bug Report..." saved the logs and opened the form; plug-in played, no crash.
 2. #39 decided (user 2026-11-15): NO automatic latency switch ("the original also had this issue and live mode is for
    that"); only the once-only LCD hint when recording played notes without Live Mode: CODE DONE (recordhint.h, test
    first; help text, README, site). Not seen in a DAW yet (needs Live: Mac). Any #39 text: show the user first.
