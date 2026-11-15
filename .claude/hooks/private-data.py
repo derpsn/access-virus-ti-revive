@@ -255,10 +255,13 @@ def claude_mode(personal):
     if not command or not re.search(r"(^|[\s;&|(])(gh|git)\s", command):
         return 0
     findings = []
+    stdin_body = False
     for seg in segments(command):
         for text in texts_to_check(seg):
             findings += scan_text(text, personal, " ".join(seg[:2]))
-    if "<<" in command and re.search(r"(^|[\s;&|(])gh\s", command):  # body from a heredoc
+        if seg[:1] == ["gh"] and any(a in BODY_FILE_FLAGS and b == "-" for a, b in zip(seg, seg[1:])):
+            stdin_body = True
+    if stdin_body and "<<" in command:  # gh reads its body from a heredoc
         findings += scan_text(command.split("<<", 1)[1].split("\n", 1)[-1], personal, "gh heredoc body")
     return report(findings, 2)
 

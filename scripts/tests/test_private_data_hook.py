@@ -225,6 +225,13 @@ class ClaudeHook(Base):
     def test_git_commit_inline_message_blocks(self):
         self.assertEqual(self.bash('git commit -m "fix from secretname"').returncode, 2)
 
+    def test_gh_body_from_heredoc_blocks(self):
+        self.assertEqual(self.bash("gh issue comment 41 --body-file - <<'EOF'\nfrom secretname\nEOF").returncode, 2)
+
+    def test_heredoc_not_read_by_gh_passes(self):
+        cmd = "python3 - <<'EOF'\nprint('the hook checks gh posts; secretname stays local')\nEOF"
+        self.assertEqual(self.bash(cmd).returncode, 0)
+
     def test_bad_json_passes(self):
         self.assertEqual(self.run_hook(stdin="not json").returncode, 0)
 
