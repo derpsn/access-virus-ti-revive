@@ -120,7 +120,8 @@ talk with the user (Linux may start); hil-win on the tuned VM: yes; update check
    (nerd mode, OPTIONS, BACKUP & RESTORE with the real RAM banks) look right on macOS (user + screenshots). Open: the
    Windows look in the VM; new README/site nerd mode screenshot (docs/images/control-center-nerd-mode.png is old).
 2. #30 knob automation in Logic (E542): build 1 (timer only) failed (gate editors_open_ > 0); fix 2 = queue gestures
-   whenever a tick runs; CI next -> Logic test (Latch, window closed) -> tell Chris + new RC.
+   whenever a tick runs; CI 43711710236 (8cf200b) green, pkg e037cae9 pushed to ~/Downloads/TI-Revive-0.8.42-ci8cf200b
+   -> Logic test (Latch, window closed) -> tell Chris + new RC.
    #30 (reopened): early audio waits on the reporter's settings (E540/E541: not reproduced on our Mac/Logic/TI2 at 48k). If 44.1 kHz:
    measure that on our Mac; Snow: only the reporter. New RC promised once fixed.
 3. v0.8.42-rc1 pre-release out; wait for #37. build.yml "New in 0.8.42" = rc1 text: rewrite before the final (update
