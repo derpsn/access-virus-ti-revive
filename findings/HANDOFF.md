@@ -133,7 +133,12 @@ talk with the user (Linux may start); hil-win on the tuned VM: yes; update check
 4. What's New scrollbar + Prepare a Bug Report: checked by the user on Linux AND the Mac (2026-11-15). Scrollbar: CODE DONE (InfoScroll in
    infopage.h, test first; newest version that fits nowhere at 9 pt -> whole at 11 pt + scrollbar: wheel, track click,
    thumb drag). User 2026-11-15: "scrollbars work".
-5. Windows MIDI ports: CODE WRITTEN (user OK: in-box API only, read-only, installed only where supported; design in
+5. Control Center in the Access look (user 2026-11-15, design agreed): nerd mode as a page in the Access frame (table
+   with columns, status box, LIVE/PLUG-IN LOG/BROKER LOG, PAUSE/CLOCK/RECORD/SAVE LOGS; no side view), then Options,
+   then the plain view's content into BACKUP & RESTORE (plain window = fallback without Access files). Step 1 done:
+   cc/nerdview.h (LogScroll, fit_text) + test_nerdview. Next: SkinView (gradient, panels, wheel), Live into a shared
+   file, the nerd page in skinpage.cpp; test on Linux with the simulator (virus-ti-sim m4/run.py DIR -- CMD).
+6. Windows MIDI ports: CODE WRITTEN (user OK: in-box API only, read-only, installed only where supported; design in
    design-midi-ports.md "Implementation"): helper src/midiports-win (MSVC, never built yet), vtikeyport_win.c +
    midifeed.h + umpconv.h (tests), MSI condition, CI step. CI 43694600597 (1db7d3e, 0.8.42) ALL GREEN, helper
    compiled. win11 VM: build 26300.9974 (26H2), midisrv there (Manual), NO System32 Windows.Devices.Midi2.dll ->
@@ -141,5 +146,5 @@ talk with the user (Linux may start); hil-win on the tuned VM: yes; update check
    VTI_MIDI2_ALLOW_SDK=1 + Preview 11 DLL by hand: after the fix (5e510e4, one device per port + retries) WinMM
    inputs "Virus TI Synth" / "Virus TI MIDI", no outputs, note/CC/SysEx through both (fed by hand); #1047 hang seen
    (pre-fix Windows). Open: real keys/DIN traffic; Windows' own API (end Nov). README/site written. VM off, clean.
-6. Later (user): Mac push of a package + live-later 160 keystamp test there; Windows MIDI ports only after a talk.
-7. Waiting on reporters (table above); check issues only together with the user.
+7. Later (user): Mac push of a package + live-later 160 keystamp test there; Windows MIDI ports only after a talk.
+8. Waiting on reporters (table above); check issues only together with the user.
