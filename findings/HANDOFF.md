@@ -49,7 +49,7 @@ Last update: 2026-11-15 afternoon: Control Center Access-look pages done (Linux/
 |---|---|---|---|
 | #26 | Snow, Linux REAPER timing | reporter: pw-jack test; 0.8.41 note | 2026-11-14 |
 | #28 | numbers 100-127 moved 5 px | reporter: confirm, close on yes | 2026-11-09 |
-| #30 | ALSO: Virus knob -> Logic automation only with the plug-in window open (E542, fix: own gesture timer, untested in Logic). | | |
+| #30 | knob automation in Logic fixed in rc2 (E542, works on our Mac) | Chris: test rc2 | 2026-11-15 |
 | #30 | REOPENED: Virus audio a few ms early in Logic (E540); NOT reproduced on our Mac/Logic/TI2 at 48k, 128/512, LL on (E541: 0.00 ms) | Chris: 15 ms, buffer 32, LL on -> exact here at 48k AND 44.1k (E541); left: Snow or his project; asked for his Logic project | 2026-11-15 |
 | #31 | Win10 VirtualBox, Snow, setup with the Access driver | reporter: setup unplug step report; 0.8.41 note | 2026-11-14 |
 | #32 | (no change since 11-10) | reporter | before 11-10 |
@@ -119,8 +119,8 @@ talk with the user (Linux may start); hil-win on the tuned VM: yes; update check
 1. Mac: test build CI 43708448485 (9a003ee, pkg db140751) installed 2026-11-15; the three new Control Center pages
    (nerd mode, OPTIONS, BACKUP & RESTORE with the real RAM banks) look right on macOS (user + screenshots). Open: the
    Windows look in the VM; new README/site nerd mode screenshot (docs/images/control-center-nerd-mode.png is old).
-2. #30 knob automation in Logic (E542): fix 2 WORKS on our Mac (user 2026-11-15, Logic Latch, window closed). Tagging
-   v0.8.42-rc2 (round-0.8.42) for Chris; then post in #30 with the RC link.
+2. #30 knob automation in Logic (E542): fix 2 WORKS on our Mac. v0.8.42-rc2 RELEASED as pre-release (tag on a164a98,
+   run 43713472544 green, 7 assets); posted in #30 (issuecomment-6894318752): Chris to test rc2.
    #30 (reopened): early audio waits on the reporter's settings (E540/E541: not reproduced on our Mac/Logic/TI2 at 48k). If 44.1 kHz:
    measure that on our Mac; Snow: only the reporter. New RC promised once fixed.
 3. v0.8.42-rc1 out (#37 waits). build.yml "New in 0.8.42" + What's New entry written for rc2 (all round items).
