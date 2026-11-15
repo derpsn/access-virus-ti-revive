@@ -58,7 +58,7 @@ Last update: 2026-11-15 morning: live-later 160, Linux MIDI ports, hil-win tuned
 | #38 | macOS 27 Live: AU/editor crash, not reproduced | reporter: crash report + log with 0.8.41 | 2026-11-14 |
 | #40 | (ours) macOS libusb audio as an option? | #39 reporter; #37 = first real data point (works) | 2026-11-13 |
 
-#39 closed by the reporter (doubled notes = Local On + Monitor In, E530/E531). #30 closed by us 2026-11-14 with the
+#30 follow-up (Logic arrange meters of multi-timbral tracks): reproduced on our Mac = Logic's display (E538), answered 2026-11-15 (issuecomment-6892430267), stays closed. #39 closed by the reporter (doubled notes = Local On + Monitor In, E530/E531). #30 closed by us 2026-11-14 with the
 user: all works, Snow meters visible in the plug-in (E536). 2026-11-15 check: no new replies; a fork
 (insolentconstruct) syncing our commits shows as "added a commit that references" events, nothing to do. Quiet-issue rule: 7 days after our
 last request, close with the AGENTS.md message, only in a joint check with the user: #28 from 2026-11-16, the

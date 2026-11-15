@@ -4899,3 +4899,13 @@ hil-win on the TUNED win11 VM (E533's tuning; host governor performance; 2026-11
 - **Method:** hil-win.ps1 + hil_check.py; broker log reading
 - **Confidence:** HIGH (the results as graded) / LOW (the cause of run 1's H1; one occurrence)
 - **Hardware:** yes (TI2 Desktop, Windows 11 VM build 26300 on the tuned host)
+
+### E538
+
+#30 follow-up (reporter 2026-11-15: playing MIDI channel 1 of a 4-part TI Revive in Logic, the plug-in's and the mixer's meters show only that part, but the Arrangement window's meters of the tracks for MIDI channels 2-4 move too): reproduced on our Mac, and it is Logic's display. Setup: MacBook Air M3, macOS 27.2.1, Logic Pro (German UI), TI Revive 0.8.42 test build (CI 43696948011, pkg 6786702f, AU plug-in 786d9fcc), TI2 Desktop on USB; new project, Software Instrument "TI Revive Virus Control" with Logic's Multi-timbral option, 4 parts; notes from Musical Typing on track 1 only (only it selected and armed); screenshots over SSH (user's OK). (1) Stereo version: Logic names the tracks "Inst 1 | Ch1" to "Inst 1 | Ch4", all on the one channel strip "Inst 1"; the level bars of all four track headers are equal while only channel 1 plays. (2) Multi-output version with two aux channels added in the mixer: only "Inst 1" (input TI Revive, outputs 1-2) shows a level (-15.3 dB), "Aux 1" (TI Rev3-4) and "Aux 2" (TI Rev5-6) stay silent; the track headers "Inst 1 | Ch1" and "Inst 1 | Ch2" show the same level. Reading: the Arrangement window's track meter shows the level of the track's channel strip; Logic's multi-timbral tracks for channels 2-4 are on the "Inst 1" channel strip, not on the aux channels, so they move with any part on that strip. The mixer and the plug-in show the real per-part levels. Not checked: the original Virus Control in Logic (no Access software on this Mac), a Snow (the reporter's model; ours is a TI2 Desktop).
+
+- **Date:** 2026-11-15
+- **Pointer:** issue #30 (christopherdoerr 2026-11-15 09:02 UTC); screenshots in the session scratchpad (not in git)
+- **Method:** Logic on our Mac, screenshots read by eye
+- **Confidence:** HIGH (what Logic shows, one session) / MED (the reading of Logic's rule, not from Apple's documentation)
+- **Hardware:** yes (TI2 Desktop, macOS, Logic)
