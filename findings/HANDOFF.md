@@ -5,7 +5,7 @@ NEXT. At most 150 lines; the Stop hook (`.claude/hooks/handoff-check.sh`) refuse
 how goes into the dated log [`log/2026-11.md`](log/2026-11.md) (newest first); older logs are in [`log/`](log/).
 Device/protocol knowledge goes into [`evidence.md`](evidence.md). Update this file in the same commit as the work._
 
-Last update: 2026-11-15 morning: live-later 160, Linux MIDI ports, hil-win tuned VM (E537), update check + bug report done; dev build installed on Linux.
+Last update: 2026-11-15 afternoon: Control Center Access-look pages done (Linux/sim), #30 reopened + measured (E541), Mac round tasks done.
 
 ## Where things stand
 
@@ -115,33 +115,16 @@ talk with the user (Linux may start); hil-win on the tuned VM: yes; update check
 
 ## NEXT
 
-1. Linux has the DEV build installed (plug-in 7220de21 from a1153d9, broker 1f2fc540, CC + tirevive-cc from
-   1435b04; 0.8.41 release backed up in ~/.vst3-backup/0.8.41-release). User smoke test 2026-11-15 PASSED: Options
-   8th row visible (8 rows fit, no scroll: right), switching it on ran a real check (update.txt latest 0.8.41);
-   plug-in ? menu "Prepare a Bug Report..." saved the logs and opened the form; plug-in played, no crash.
-2. #39: NO automatic latency switch (user 2026-11-15); the recording hint was built, did not show in Live (no hint
-   line although Live recorded; most likely Live sets no recording flag for VST3, not proven) and is REMOVED (user:
-   "if it is not working for all we should leave it out"). Live Mode stays the advice.
-3. v0.8.42-rc1 is out as pre-release (tag 5a83f34, CI 43645282349, 7 assets incl. the mac-libusb zip); wait for #37's
-   report. build.yml "New in 0.8.42" = rc1 text: rewrite before the final (live-later 160, Linux MIDI ports, update
-   check, bug report).
-4. What's New scrollbar + Prepare a Bug Report: checked by the user on Linux AND the Mac (2026-11-15). Scrollbar: CODE DONE (InfoScroll in
-   infopage.h, test first; newest version that fits nowhere at 9 pt -> whole at 11 pt + scrollbar: wheel, track click,
-   thumb drag). User 2026-11-15: "scrollbars work".
-5. Control Center in the Access look (user 2026-11-15): ALL THREE DONE on Linux (user: "works! awesome"): nerd mode
-   page (table, pause snapshot, cached text: median draw 7.8 ms), OPTIONS page (check boxes, wrap_text, scroll),
-   BACKUP & RESTORE panel (RAM banks via bank info, note, CANCEL, ~70 % see-through); PLAIN VIEW button gone (plain
-   window = fallback without Access files). Tested against virus-ti-sim (scratchpad cc-sim.sh). Open: the look on the
-   Mac and Windows (next CI build); README/site screenshot docs/images/control-center-nerd-mode.png is the old page.
-6. Windows MIDI ports: CODE WRITTEN (user OK: in-box API only, read-only, installed only where supported; design in
-   design-midi-ports.md "Implementation"): helper src/midiports-win (MSVC, never built yet), vtikeyport_win.c +
-   midifeed.h + umpconv.h (tests), MSI condition, CI step. CI 43694600597 (1db7d3e, 0.8.42) ALL GREEN, helper
-   compiled. win11 VM: build 26300.9974 (26H2), midisrv there (Manual), NO System32 Windows.Devices.Midi2.dll ->
-   can't test yet; no API in Windows Update either. User: test with the SDK in the VM: helper switch
-   VTI_MIDI2_ALLOW_SDK=1 + Preview 11 DLL by hand: after the fix (5e510e4, one device per port + retries) WinMM
-   inputs "Virus TI Synth" / "Virus TI MIDI", no outputs, note/CC/SysEx through both (fed by hand); #1047 hang seen
-   (pre-fix Windows). Open: real keys/DIN traffic; Windows' own API (end Nov). README/site written. VM off, clean.
-7. #30 early audio: measured on our Mac (E541): exact on the grid in all variants; waits on the reporter's settings (Snow,
-   44.1 kHz?). New RC promised once fixed. Side: one stray sample (exactly 2^-6) after record start (E541), source open.
-8. Later (user): Mac push of a package + live-later 160 keystamp test there; Windows MIDI ports only after a talk.
-9. Waiting on reporters (table above); check issues only together with the user.
+1. CI build of round-0.8.42 (Access-look Control Center, live-later 128, recording hint removed) -> Mac package push +
+   look at the three new Control Center pages there (screenshots); Windows look in the VM. New README/site screenshot
+   for nerd mode (docs/images/control-center-nerd-mode.png is the old page): ask the user which (Linux 11:25 or Mac).
+2. #30 (reopened): waits on the reporter's settings (E540/E541: not reproduced on our Mac/Logic/TI2 at 48k). If 44.1 kHz:
+   measure that on our Mac; Snow: only the reporter. New RC promised once fixed.
+3. v0.8.42-rc1 pre-release out; wait for #37. build.yml "New in 0.8.42" = rc1 text: rewrite before the final (update
+   check + bug report, Linux/Windows MIDI ports, What's New scrollbar, Control Center pages, MIDI port texts).
+4. Windows MIDI ports: real path waits for Windows' own API (end of Nov update) in the VM: installer must then add the
+   helper by itself; real key/DIN traffic untested (no keyed Virus here).
+5. Open, low: stray single sample 2^-6 after record start (E541); proposed sim items (discuss one at a time).
+6. Linux: DEV build installed (plug-in from a1153d9; release backed up in ~/.vst3-backup/0.8.41-release); Mac: test
+   build CI 43696948011 installed; TI2 on the Mac's USB. #28 quiet-issue limit 2026-11-16 (joint check).
+7. Waiting on reporters (table above); check issues only together with the user.
