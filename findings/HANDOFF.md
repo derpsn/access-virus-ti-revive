@@ -142,9 +142,10 @@ talk with the user (Linux may start); hil-win on the tuned VM: yes; update check
    check, bug report).
 4. What's New scrollbar (user 2026-11-15: 0.8.41's notes overlapped the buttons): CODE DONE (InfoScroll in
    infopage.h, test first; newest version that fits nowhere at 9 pt -> whole at 11 pt + scrollbar: wheel, track click,
-   thumb drag). Dev plug-in b4fbdc1d installed: user to look at ? > What's New in TI Revive.
-5. Windows MIDI ports (user: "detects if your windows supports it and if not its not installed"): research done
-   (Windows MIDI Services: 25H2+ only, API in-box with the Nov 2026 CFR, C++/WinRT helper, virtual device with
-   BlockOutput function blocks); design to show the user next.
+   thumb drag). User 2026-11-15: "scrollbars work".
+5. Windows MIDI ports: CODE WRITTEN (user OK: in-box API only, read-only, installed only where supported; design in
+   design-midi-ports.md "Implementation"): helper src/midiports-win (MSVC, never built yet), vtikeyport_win.c +
+   midifeed.h + umpconv.h (tests), MSI condition, CI step. Next: CI build, then the win11 VM (build 26300: has the
+   in-box API?), MIDI monitor test; README/site only after that.
 6. Later (user): Mac push of a package + live-later 160 keystamp test there; Windows MIDI ports only after a talk.
 7. Waiting on reporters (table above); check issues only together with the user.

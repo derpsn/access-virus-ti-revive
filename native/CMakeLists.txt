@@ -160,6 +160,24 @@ if(WIN32)
     target_link_libraries(asiohost PRIVATE ole32)
 endif()
 
+# Windows MIDI ports (user 2026-11-15): tirevive-midiports.exe, the broker's helper for Windows MIDI Services
+# (src/midiports-win). C++/WinRT: the projection of Windows.Devices.Midi2 is made from its .winmd (the API-lock
+# package of microsoft/MIDI, used only to compile against: its DLL is never shipped, Windows' own copy is used).
+# CI passes both paths (build.yml); without them the target is left out.
+if(MSVC AND VTI_MIDI2_WINMD AND VTI_CPPWINRT_EXE)
+    set(VTI_MIDI2_GEN ${CMAKE_BINARY_DIR}/midi2-projection)
+    add_custom_command(OUTPUT ${VTI_MIDI2_GEN}/winrt/Windows.Devices.Midi2.h
+                       COMMAND ${VTI_CPPWINRT_EXE} -input sdk -input ${VTI_MIDI2_WINMD} -output ${VTI_MIDI2_GEN}
+                       DEPENDS ${VTI_MIDI2_WINMD} COMMENT "C++/WinRT projection of Windows MIDI Services")
+    add_custom_target(midi2-projection DEPENDS ${VTI_MIDI2_GEN}/winrt/Windows.Devices.Midi2.h)
+    add_executable(tirevive-midiports ../src/midiports-win/tirevive-midiports.cpp)
+    add_dependencies(tirevive-midiports midi2-projection)
+    target_include_directories(tirevive-midiports PRIVATE ${VTI_MIDI2_GEN} ../src/midiports-win ../src/broker)
+    target_compile_features(tirevive-midiports PRIVATE cxx_std_17)
+    target_compile_options(tirevive-midiports PRIVATE /EHsc /bigobj /permissive-)
+    target_link_libraries(tirevive-midiports PRIVATE WindowsApp advapi32)
+endif()
+
 # unit tests (no Virus needed; tests on the Access files skip without them): ctest --test-dir build
 enable_testing()
 add_executable(vtitests tests/main.cpp tests/test_usbmidi.cpp tests/test_state.cpp tests/test_model.cpp
@@ -176,7 +194,7 @@ add_executable(vtitests tests/main.cpp tests/test_usbmidi.cpp tests/test_state.c
                tests/test_blockevents.cpp tests/test_outputdelay.cpp tests/test_lcdhover.cpp
                tests/test_heldnotes.cpp tests/test_factoryorder.cpp tests/test_ratemeter.cpp tests/test_sectionlock.cpp tests/test_resync.cpp tests/test_slipwatch.cpp tests/test_freezewatch.cpp
                tests/test_editormenus.cpp tests/test_infopage.cpp tests/test_rambackup.cpp tests/test_undohistory.cpp
-               tests/test_comparestate.cpp tests/test_randomizer.cpp tests/test_trafficring.cpp tests/test_capture.cpp tests/test_keyport.cpp tests/test_closeseq.cpp tests/test_utf8.cpp tests/test_winusb_errors.cpp tests/test_markerscan.cpp tests/test_rxqueue.cpp tests/test_linkrule.cpp tests/test_optionslayout.cpp tests/test_owneruid.cpp tests/test_macgiveback.cpp tests/test_seqevent.cpp tests/test_updatecheck.cpp tests/test_recordhint.cpp)
+               tests/test_comparestate.cpp tests/test_randomizer.cpp tests/test_trafficring.cpp tests/test_capture.cpp tests/test_keyport.cpp tests/test_closeseq.cpp tests/test_utf8.cpp tests/test_winusb_errors.cpp tests/test_markerscan.cpp tests/test_rxqueue.cpp tests/test_linkrule.cpp tests/test_optionslayout.cpp tests/test_owneruid.cpp tests/test_macgiveback.cpp tests/test_seqevent.cpp tests/test_updatecheck.cpp tests/test_recordhint.cpp tests/test_midiports.cpp)
 target_link_libraries(vtitests PRIVATE vticore)
 add_test(NAME vtitests COMMAND vtitests)
 

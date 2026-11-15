@@ -24,6 +24,24 @@
       <Directory Id="OLDTESTFOLDER" Name="virus-ti-native" />
     </StandardDirectory>
 
+    <!-- Windows MIDI ports (user 2026-11-15: "it detects if your windows supports it and if not its not installed"):
+         tirevive-midiports.exe goes in only on Windows 11 25H2 or later (build 26200) whose OWN copy of the Windows
+         MIDI Services API is in System32 (it comes with a Windows update; we never ship one) and that is not in
+         legacy MIDI mode. The helper checks the same again at every start (src/midiports-win). -->
+    <Property Id="TIREVIVE_WINBUILD">
+      <RegistrySearch Root="HKLM" Key="SOFTWARE\Microsoft\Windows NT\CurrentVersion" Name="CurrentBuildNumber"
+                      Type="raw" Bitness="always64" />
+    </Property>
+    <Property Id="TIREVIVE_LEGACYMIDI">
+      <RegistrySearch Root="HKLM" Key="SOFTWARE\Microsoft\Windows NT\CurrentVersion\Drivers32" Name="UseLegacyMidi"
+                      Type="raw" Bitness="always64" />
+    </Property>
+    <Property Id="TIREVIVE_MIDI2DLL">
+      <DirectorySearch Id="SystemMidi2Dir" Path="[System64Folder]" Depth="0">
+        <FileSearch Name="Windows.Devices.Midi2.dll" />
+      </DirectorySearch>
+    </Property>
+
     <ComponentGroup Id="Native">
       <Component Directory="OLDTESTFOLDER" Guid="9D3A61F2-5C47-4E1B-A8E9-0B7D2C4F6E31">
         <RegistryValue Root="HKLM" Key="Software\TI Revive\Installer" Name="NativeTestFolderRemoved" Type="integer"
@@ -58,6 +76,12 @@
         <RemoveFolder Id="oldbundle" Directory="OLDBUNDLE" On="install" />
       </Component>
 
+      <!-- the MIDI port helper, only where Windows supports it (the properties above); the broker starts it when it
+           finds it next to itself (src/broker/vtikeyport_win.c) -->
+      <Component Directory="INSTALLFOLDER"
+                 Condition="TIREVIVE_WINBUILD &gt;= 26200 AND TIREVIVE_MIDI2DLL AND NOT (TIREVIVE_LEGACYMIDI = &quot;#1&quot;)">
+        <File Id="tirevivemidiports" Source="$(var.NativeBin)\tirevive-midiports.exe" KeyPath="yes" />
+      </Component>
       <!-- Control Center, command line (read-only: device info, backup of the RAM banks, library export) -->
       <Component Directory="INSTALLFOLDER">
         <File Id="tirevivecc" Source="$(var.NativeBin)\tirevive-cc.exe" KeyPath="yes" />

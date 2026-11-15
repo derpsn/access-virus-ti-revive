@@ -23,6 +23,8 @@
 #include "vtiusbaudio.h"
 #include "ratesw.h"
 #include "linkrule.h"
+#include "keyport.h"
+#include "vtikeyport.h"
 #include <windows.h>
 #include <stdarg.h>
 #include <stdio.h>
@@ -524,9 +526,22 @@ static void obs_status(int dev_open) // once a second (device thread)
 
 static volatile LONG g_rate_lever; // a recovery switch ran (E331): log the Virus' report of the rate's global (E257)
 
+static void keyport_out(void *user, const uint8_t *msg, int n)
+{
+    (void)user;
+    vti_keyport_send(msg, n);
+}
+static void dinport_out(void *user, const uint8_t *msg, int n)
+{
+    (void)user;
+    vti_dinport_send(msg, n);
+}
+
 static void on_rx(void *user, uint8_t ep, const uint8_t *data, int len)
 {
     (void)user;
+    vti_keyport_filter(ep, data, len, keyport_out, NULL); // the Virus keys to the MIDI ports (vtikeyport_win.c)
+    vti_dinport_filter(ep, data, len, dinport_out, NULL); // its DIN MIDI In
     if (g_verbose)
         blog("rx ep%02x %d bytes", ep, len);
     if (g_rate_lever && ep == VTI_EP_MI04_IN) {
@@ -583,6 +598,7 @@ static DWORD WINAPI device_thread(LPVOID unused)
                 if (g_dev)
                     vti_close(g_dev);
                 blog("no clients for %d s: exiting", IDLE_EXIT_MS / 1000);
+                vti_keyport_log_counts();
                 ExitProcess(0);
             }
             LeaveCriticalSection(&g_cs_clients);
@@ -871,6 +887,8 @@ int main(int argc, char **argv)
     g_shm->out_ch = VTI_AUDIO_OUT_CH;
     g_shm->ring_frames = VTI_AUDIO_RING;
     blog("vtibroker starting (protocol %d)", VTI_PROTO_VERSION);
+    if (!getenv("VTI_NO_MIDI_PORT")) // as on macOS and Linux: a test switch; the ports are read-only
+        vti_keyport_start();
     CloseHandle(CreateThread(NULL, 0, device_thread, NULL, 0, NULL));
     for (;;) {
         HANDLE p = CreateNamedPipeA(VTI_PIPE_NAME, PIPE_ACCESS_DUPLEX | FILE_FLAG_OVERLAPPED,

@@ -52,10 +52,33 @@ jobs:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
         with:
           submodules: recursive
+      - name: Windows MIDI Services to compile against (the MIDI port helper; nothing of it is shipped)
+        shell: pwsh
+        run: |
+          # microsoft/MIDI's API-lock package (In-box Preview 11) for its .winmd, and C++/WinRT's code generator;
+          # both pinned by SHA-256. The package's DLL is not used: the helper takes Windows' own copy (user 2026-11-15)
+          New-Item -ItemType Directory midi2 | Out-Null
+          $get = @(
+            @{ url = 'https://github.com/microsoft/MIDI/releases/download/inbox-preview-11/Windows.Devices.Midi2.0.99.92-preview.11.nupkg';
+               file = 'midi2\midi2.zip'; sha = '13AFC6E6DA2ADAC309AB8C174352F46F1C0EBE2D79E65475BD6274DEFB73DF74' },
+            @{ url = 'https://www.nuget.org/api/v2/package/Microsoft.Windows.CppWinRT/2.0.250303.1';
+               file = 'midi2\cppwinrt.zip'; sha = '955E3051B35DB1C00177ED14AB6B7B995C3B32A53FDB6C184EA53B1DBA66E439' })
+          foreach ($g in $get) {
+            Invoke-WebRequest -Uri $g.url -OutFile $g.file
+            $h = (Get-FileHash $g.file -Algorithm SHA256).Hash
+            if ($h -ne $g.sha) { throw "$($g.file): SHA-256 $h, expected $($g.sha)" }
+          }
+          Add-Type -AssemblyName System.IO.Compression.FileSystem
+          $z = [IO.Compression.ZipFile]::OpenRead("$PWD\midi2\midi2.zip")
+          [IO.Compression.ZipFileExtensions]::ExtractToFile(($z.Entries | ? FullName -eq 'ref/native/Windows.Devices.Midi2.winmd'), "$PWD\midi2\Windows.Devices.Midi2.winmd")
+          $z.Dispose()
+          $z = [IO.Compression.ZipFile]::OpenRead("$PWD\midi2\cppwinrt.zip")
+          [IO.Compression.ZipFileExtensions]::ExtractToFile(($z.Entries | ? FullName -eq 'bin/cppwinrt.exe'), "$PWD\midi2\cppwinrt.exe")
+          $z.Dispose()
       - name: Build
         run: |
-          cmake -S native -B native-build -G "Visual Studio 17 2022" -A x64
-          cmake --build native-build --config Release --target VirusTINative VirusTINative_ASIO tirevive-cc TIReviveControlCenter vtitests
+          cmake -S native -B native-build -G "Visual Studio 17 2022" -A x64 -DVTI_MIDI2_WINMD="$PWD\midi2\Windows.Devices.Midi2.winmd" -DVTI_CPPWINRT_EXE="$PWD\midi2\cppwinrt.exe"
+          cmake --build native-build --config Release --target VirusTINative VirusTINative_ASIO tirevive-cc TIReviveControlCenter vtitests tirevive-midiports
       - name: Pester 5 (installer script tests in ctest)
         shell: pwsh
         run: |
@@ -72,6 +95,7 @@ jobs:
           Copy-Item native-build\bin\Release\VirusTINative_ASIO.dll nativebin\
           Copy-Item native-build\bin\Release\tirevive-cc.exe nativebin\
           Copy-Item native-build\ccapp\TIReviveControlCenter.exe nativebin\
+          Copy-Item native-build\bin\Release\tirevive-midiports.exe nativebin\
       - uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
         with:
           name: nativebin
