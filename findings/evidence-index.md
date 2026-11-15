@@ -829,7 +829,7 @@ Entries: 538. Marks after an entry: its lowest confidence level when below HIGH,
 - [E540](evidence.md#e540) #30 (reporter, 2026-11-15 10:45 UTC, Logic on macOS, Snow): TI Revive's audio sent to a bus and recorded on ... (MED; open; not on hardware)
 - [E541](evidence.md#e541) E540 measured on our Mac (2026-11-15 12:05-12:20 local, MacBook Air M3, macOS 27.2.1, Logic Pro, TI Revive ... (open)
 
-## Sound problems: crackle, silence, dropouts (168)
+## Sound problems: crackle, silence, dropouts (169)
 
 - [E046](evidence.md#e046) Sound check with the wrapper (M2): notes from the plugin reach the synth (user: synth reacts; capture ...
 - [E054](evidence.md#e054) Plugin audio INPUT source found (MED)
@@ -999,6 +999,7 @@ Entries: 538. Marks after an entry: its lowest confidence level when below HIGH,
 - [E535](evidence.md#e535) #37's libusb audio run on Catalina (reporter, 2026-11-14 ~19:57-20:06 UTC; Intel MacBook, macOS 10.15.7, TI ... (LOW)
 - [E537](evidence.md#e537) hil-win on the TUNED win11 VM (E533's tuning; host governor performance; 2026-11-15 08:15 and 08:21 local; ... (LOW)
 - [E538](evidence.md#e538) #30 follow-up (reporter 2026-11-15: playing MIDI channel 1 of a 4-part TI Revive in Logic, the plug-in's and ... (MED)
+- [E541](evidence.md#e541) E540 measured on our Mac (2026-11-15 12:05-12:20 local, MacBook Air M3, macOS 27.2.1, Logic Pro, TI Revive ... (open)
 
 ## Access software (Virus Control, Control Center, installer) (215)
 
