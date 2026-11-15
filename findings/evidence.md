@@ -4947,8 +4947,8 @@ E540 measured on our Mac (2026-11-15 12:05-12:20 local, MacBook Air M3, macOS 27
 - **Date:** 2026-11-15
 - **Pointer:** issue #30 (christopherdoerr 11:42 UTC); native/plugin/source/virusplugin.cpp (gesture_timer_), viruseditor.cpp; vst3sdk public.sdk/source/vst/auwrapper/auwrapper.mm (onTimer, beginEdit)
 - **Method:** user test on our Mac (Logic AU vs Live VST3) + code reading
-- **Confidence:** HIGH (the two paths and the AU wrapper's handling, from the code; the symptom seen on our Mac) / open (the fix in Logic)
-- **Hardware:** yes (TI2 Desktop, macOS, Logic and Live)
+- **Confidence:** HIGH (the two paths and the AU wrapper's handling, from the code; the symptom seen on our Mac) / HIGH (the fix in Logic: works on our Mac, and the reporter confirms rc2 in #30 2026-11-15 13:47 UTC: "The Automation Recording is working")
+- **Hardware:** yes (TI2 Desktop, macOS, Logic and Live; the reporter's setup)
 
 ### E543
 
