@@ -31,7 +31,6 @@ Last update: 2026-11-15 morning: live-later 160, Linux MIDI ports, hil-win tuned
   MC4, MC5 pass; VM W2, W3 pass, WC4 skipped, W1 passed by the user as VM-related (E533). Found and fixed in the
   round: the Control Center Options page cut off its 7th row (cc/optionslayout.h, b7b6779). M2 (E534): live-later
   halves the played-note spread (<= 1.3 ms instead of 2.7 ms) but is not exact; texts made honest, code unchanged.
-- Contents of 0.8.41: build.yml "New in 0.8.41" (release page) and the What's New entry (native/src/editor/infopage.h).
 
 ## Machines and the Virus
 
