@@ -4919,3 +4919,13 @@ live-later at 160 frames (0.8.42, E534's reading: half a 64-frame step off the e
 - **Method:** keystamp (native/tools/keystamp.c) + the plug-in's klog (virusplugin.cpp klog_check), counted with a short Python script
 - **Confidence:** HIGH (the counts of both runs) / LOW (any reading of why)
 - **Hardware:** yes (TI2 Desktop, macOS, Live 12)
+
+### E540
+
+#30 (reporter, 2026-11-15 10:45 UTC, Logic on macOS, Snow): TI Revive's audio sent to a bus and recorded on an audio track sits "a few milliseconds before the grid", a Logic instrument's on the grid (screenshot, zoomed in, no time scale readable). Matches E518 (4) on our Mac in Ableton Live (48 kHz, block 128): the recorded sound of lead-stamped notes sat 7.2 ms before the note position in every case, noted then as "a constant of this routing" and not looked into. Reading (LOW, not measured): the reported latency (lead + block + 512) is a few ms larger than the real path from the stamped note to the plug-in's audio output on macOS, so after the host's delay compensation the audio lands early; the nativehost runs (hil_check) fit the grid to the onsets and would not show a constant offset. To do: measure in Logic on our Mac (the same notes from a Logic instrument and from TI Revive, both bounced through a bus; the distance in samples), at 48 kHz with blocks 128 and 512, low-latency option off and on; then the same on Linux/REAPER (absolute first onset, E1252 style).
+
+- **Date:** 2026-11-15
+- **Pointer:** issue #30 (christopherdoerr 2026-11-15 10:45 UTC, screenshot); reply issuecomment-6893311972 (reopened)
+- **Method:** user report; E518 (4) for our own reading
+- **Confidence:** open (the size and the cause); MED that it is the same effect as E518 (4)
+- **Hardware:** no (reporter's Snow, Logic); E518 yes (our TI2, Live)

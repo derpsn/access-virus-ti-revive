@@ -49,6 +49,7 @@ Last update: 2026-11-15 morning: live-later 160, Linux MIDI ports, hil-win tuned
 |---|---|---|---|
 | #26 | Snow, Linux REAPER timing | reporter: pw-jack test; 0.8.41 note | 2026-11-14 |
 | #28 | numbers 100-127 moved 5 px | reporter: confirm, close on yes | 2026-11-09 |
+| #30 | REOPENED: Virus audio a few ms before the grid in Logic (bus recording), E540 = likely E518 (4) 7.2 ms; new RC when fixed | us: measure in Logic on our Mac, fix | 2026-11-15 |
 | #31 | Win10 VirtualBox, Snow, setup with the Access driver | reporter: setup unplug step report; 0.8.41 note | 2026-11-14 |
 | #32 | (no change since 11-10) | reporter | before 11-10 |
 | #33 | Intel Mac 0.8.39: Logic distorted until a buffer change; log clean on the way in, not a slip (E532) | reporter: Logic output device, distortion on the unit's outputs?, 0.8.41 log | 2026-11-14 |
@@ -66,14 +67,8 @@ others from 2026-11-21 (#40 is ours: no closing; #32: look up its date first).
 
 ## Not verified on hardware
 
-- libusb reader stall handling (E503) at kernel level with 8 transfers pending (level 2, needs sudo); sim held.
-- Windows broker error 433 = device gone: unit test only (WC4 skipped in the VM).
-- Windows setup unplug step (E504): never run with a Virus on the Access driver (win10 snapshot `pre-i36-access`
-  could do it).
-- Mac "Virus TI MIDI": the input shows up (M1); nothing played through it (no keyboard at the MIDI In here).
-- Unlink on a real Keyboard/Polar: sim only (E525); on Linux, Windows (W3) and our Desktop the link lines are fine.
-- Mac pkg refusing macOS < 14.4: no old Mac here.
-- Full list: `python3 -I scripts/evidence.py list --no-hardware`.
+Full list: `python3 -I scripts/evidence.py list --no-hardware` (libusb stall level 2, Windows error 433, setup
+unplug step on the Access driver, Mac "Virus TI MIDI" played through, Keyboard/Polar unlink, Mac pkg refusing < 14.4).
 
 ## Round 0.8.42 candidates (decided unless marked proposed)
 
@@ -146,5 +141,7 @@ talk with the user (Linux may start); hil-win on the tuned VM: yes; update check
    VTI_MIDI2_ALLOW_SDK=1 + Preview 11 DLL by hand: after the fix (5e510e4, one device per port + retries) WinMM
    inputs "Virus TI Synth" / "Virus TI MIDI", no outputs, note/CC/SysEx through both (fed by hand); #1047 hang seen
    (pre-fix Windows). Open: real keys/DIN traffic; Windows' own API (end Nov). README/site written. VM off, clean.
-7. Later (user): Mac push of a package + live-later 160 keystamp test there; Windows MIDI ports only after a talk.
-8. Waiting on reporters (table above); check issues only together with the user.
+7. #30 early audio (E540): measure in Logic on our Mac (Logic instrument vs TI Revive, bounced via bus, samples), fix the
+   reported latency, new RC in #30 (promised 2026-11-15).
+8. Later (user): Mac push of a package + live-later 160 keystamp test there; Windows MIDI ports only after a talk.
+9. Waiting on reporters (table above); check issues only together with the user.
