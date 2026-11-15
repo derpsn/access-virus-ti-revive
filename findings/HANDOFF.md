@@ -5,7 +5,7 @@ NEXT. At most 150 lines; the Stop hook (`.claude/hooks/handoff-check.sh`) refuse
 how goes into the dated log [`log/2026-11.md`](log/2026-11.md) (newest first); older logs are in [`log/`](log/).
 Device/protocol knowledge goes into [`evidence.md`](evidence.md). Update this file in the same commit as the work._
 
-Last update: 2026-11-15 afternoon: Access-look Control Center on all 3 OS, rc2 out (#30 knob fix), stray sample not reproduced.
+Last update: 2026-11-15 evening: rc3 out (#37 fixes), #30 project measured on our Mac (E545), both wait on the reporters.
 
 ## Where things stand
 
@@ -56,7 +56,7 @@ Last update: 2026-11-15 afternoon: Access-look Control Center on all 3 OS, rc2 o
 | #33 | Intel Mac 0.8.39: Logic distorted until a buffer change; log clean on the way in, not a slip (E532) | reporter: Logic output device, distortion on the unit's outputs?, 0.8.41 log | 2026-11-14 |
 | #34 | TI2/Keyboard macOS crackle, bank sync failed 11.9 s (E529) | reporter: new log with 0.8.41 | 2026-11-14 |
 | #36 | Windows Cubase bank sync 0/128 | reporter: BC2001.syx, new log with 0.8.41 | 2026-11-14 |
-| #37 | rc1 libusb: NO crackle (E543); fixes PREPARED (E544, untested on a Mac): MIDI ports via a helper in the user session, latency re-announce + log (offset hypothesis LOW); reply draft waits for the user | reporter: test rc3 (MIDI ports, offset size, log; posted issuecomment-6896731886) | 2026-11-15 |
+| #37 | rc1 libusb: NO crackle (E543); fixes in rc3 (E544; our Mac: normal pkg fine, libusb pkg untested here): MIDI ports via a helper in the user session, latency re-announce + log (offset hypothesis LOW) | reporter: test rc3 (MIDI ports, offset size, log; posted issuecomment-6896731886) | 2026-11-15 |
 | #38 | macOS 27 Live: AU/editor crash, not reproduced | reporter: crash report + log with 0.8.41 | 2026-11-14 |
 | #40 | (ours) macOS libusb audio as an option? | #39 reporter; #37 = first real data point (works) | 2026-11-13 |
 
@@ -123,9 +123,8 @@ talk with the user (Linux may start); hil-win on the tuned VM: yes; update check
 2. #30 knob automation in Logic (E542): fix 2 WORKS on our Mac. v0.8.42-rc2 RELEASED as pre-release (tag on a164a98,
    run 43713472544 green, 7 assets); Chris CONFIRMED rc2 (13:47 UTC). His Logic project came by email (dropped):
    uploaded 17:54: measured on our Mac (E545): exact here, his take 5.6 ms early -> his setup (Snow?); rc3 log asked.
-   #30 (reopened): early audio waits on the reporter's settings (E540/E541: not reproduced on our Mac/Logic/TI2 at 48k). If 44.1 kHz:
-   measure that on our Mac; Snow: only the reporter. New RC promised once fixed.
-3. v0.8.42-rc1 out (#37 waits). build.yml "New in 0.8.42" + What's New entry written for rc2 (all round items).
+   Our Mac: Logic Recording Delay was set to -269 for the test: user to set it back to 0 (not confirmed yet).
+3. v0.8.42-rc3 out (#37 and #30 wait). build.yml "New in 0.8.42" + What's New entry written for rc2 (all round items).
 4. Windows MIDI ports: real path waits for Windows' own API (end of Nov update) in the VM: installer must then add the
    helper by itself; real key/DIN traffic untested (no keyed Virus here).
 5. Open, low: stray single sample 2^-6 after record start in Logic (E541): not reproduced in nativehost (10/10 zero, both
