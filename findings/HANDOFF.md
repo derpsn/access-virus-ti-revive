@@ -115,10 +115,9 @@ talk with the user (Linux may start); hil-win on the tuned VM: yes; update check
 
 ## NEXT
 
-1. CI 43708448485 (9a003ee, 0.8.42) GREEN; Mac package pushed to ~/Downloads/TI-Revive-0.8.42-ci9a003ee (pkg db140751),
-   user installs ->
-   look at the three new Control Center pages there (screenshots); Windows look in the VM. New README/site screenshot
-   for nerd mode (docs/images/control-center-nerd-mode.png is the old page): ask the user which (Linux 11:25 or Mac).
+1. Mac: test build CI 43708448485 (9a003ee, pkg db140751) installed 2026-11-15; the three new Control Center pages
+   (nerd mode, OPTIONS, BACKUP & RESTORE with the real RAM banks) look right on macOS (user + screenshots). Open: the
+   Windows look in the VM; new README/site nerd mode screenshot (docs/images/control-center-nerd-mode.png is old).
 2. #30 (reopened): waits on the reporter's settings (E540/E541: not reproduced on our Mac/Logic/TI2 at 48k). If 44.1 kHz:
    measure that on our Mac; Snow: only the reporter. New RC promised once fixed.
 3. v0.8.42-rc1 pre-release out; wait for #37. build.yml "New in 0.8.42" = rc1 text: rewrite before the final (update
