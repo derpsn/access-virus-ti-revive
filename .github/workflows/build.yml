@@ -382,6 +382,8 @@ jobs:
           - **Linux: MIDI inputs "Virus TI Synth" and "Virus TI MIDI"** for the keys of a Keyboard or Polar and the Virus' MIDI In, as on macOS. They show up; not yet tested with a Virus that has keys.
           - **Windows 11 25H2 and later: the same two MIDI inputs**, once Windows has its own MIDI Services (they come with the Windows update from the end of November 2026). The installer adds them only on a Windows that supports them. Tested in a Windows 11 VM with Microsoft's preview package.
           - **macOS: a separate package for Macs where Apple's USB audio driver crackles, `TI-Revive-0.8.42-mac-libusb.zip` (#37).** TI Revive's service takes the Virus' audio itself over USB, as on Linux. For Intel Macs with macOS 10.15 or newer; everyone else keeps the normal package. Not tested by us on Catalina (no such Mac here).
+          - **macOS libusb package: the MIDI inputs "Virus TI Synth" and "Virus TI MIDI" now show up there too (#37).** Its service runs as an administrator service, outside your login session, where macOS does not show MIDI ports; a small helper in your session now makes them. Not tested by us on Catalina.
+          - **Latency in Logic after loading (#37, #33):** if the host read the plug-in's latency before its final setup, the plug-in announces it again, and the log shows which latency the host uses. Meant for the slight offset some Intel Macs see after inserting the plug-in or opening a project until the buffer size is changed; not confirmed yet.
 
           Earlier versions: their own release pages, and every version's changes on one page in the
           [changelog](https://derpsn.github.io/access-virus-ti-revive/changelog.html).

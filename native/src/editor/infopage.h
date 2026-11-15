@@ -69,7 +69,9 @@ inline const std::vector<ChangeNote> &changelog()
           "show up; not yet tested with a Virus that has keys).",
           "Windows 11 25H2 and later: the same two MIDI inputs, once Windows has its own MIDI Services (with the "
           "update from the end of November 2026). Tested in a Windows 11 VM with Microsoft's preview.",
-          "macOS: a separate package for Macs where Apple's USB audio driver crackles (#37)."}},
+          "macOS: a separate package for Macs where Apple's USB audio driver crackles (#37); its MIDI inputs show "
+          "up too.",
+          "If the host read the plug-in's latency before its final setup, the plug-in announces it again (#37, #33)."}},
         {"0.8.41",
          {"Lower latency, experimental: a new option on the Control Center's Options page. At audio buffers up to 256 "
           "a note takes 36 to 48 ms instead of 76 to 87 ms (55 to 59 ms at 512). It leaves your DAW only about 20 ms "

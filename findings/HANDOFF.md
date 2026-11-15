@@ -132,7 +132,7 @@ talk with the user (Linux may start); hil-win on the tuned VM: yes; update check
 5a. #37 fixes (E544) on round-0.8.42, CI 43727531536 all green (no tag): libusb package MIDI ports (launchctl asuser helper,
    `vtibroker -midiports UID`) and the latency watch (UI timer, `the host reads latency` log line). Next: user back ->
    our Mac: normal package unchanged (ports, latency lines in Logic); libusb install on our Mac only with the user;
-   then rc3 + #37 reply (draft in the session: ask how big the offset is, MIDI ports fixed in rc3).
+   rc3 released for #37 (user 2026-11-15: post it for him to test, Catalina not testable here).
 5b. native/CMakeLists.txt project VERSION raised to 0.8.42 after rc2 (rc1/rc2 report 0.8.41): raise it at every round start.
 6. Linux: DEV build installed (plug-in from a1153d9; release backed up in ~/.vst3-backup/0.8.41-release); Mac: test
    build CI 43696948011 installed; TI2 on the Mac's USB. #28 quiet-issue limit 2026-11-16 (joint check).
