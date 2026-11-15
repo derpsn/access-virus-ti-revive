@@ -5,7 +5,7 @@ NEXT. At most 150 lines; the Stop hook (`.claude/hooks/handoff-check.sh`) refuse
 how goes into the dated log [`log/2026-11.md`](log/2026-11.md) (newest first); older logs are in [`log/`](log/).
 Device/protocol knowledge goes into [`evidence.md`](evidence.md). Update this file in the same commit as the work._
 
-Last update: 2026-11-15 evening: rc3 out (#37 fixes), #30 project measured on our Mac (E545), both wait on the reporters.
+Last update: 2026-11-15 night: #41 (the #30 reporter): rc3 puts his take on the grid, log shows why (stale latency 3085 -> 2816 = 5.6 ms); replied, RAM backup / Documents question.
 
 ## Where things stand
 
@@ -50,15 +50,16 @@ Last update: 2026-11-15 evening: rc3 out (#37 fixes), #30 project measured on ou
 | #26 | Snow, Linux REAPER timing | reporter: pw-jack test; 0.8.41 note | 2026-11-14 |
 | #28 | numbers 100-127 moved 5 px | reporter: confirm, close on yes | 2026-11-09 |
 | #30 | knob automation in Logic fixed in rc2 (E542): CONFIRMED by Chris 13:47 | - (done) | 2026-11-15 |
-| #30 | REOPENED: Virus audio a few ms early in Logic (E540); NOT reproduced on our Mac/Logic/TI2 at 48k, 128/512, LL on (E541: 0.00 ms) | Chris: 15 ms, buffer 32, LL on -> exact here at 48k AND 44.1k (E541); left: Snow or his project; his project CAME: exact on our Mac, his take 5.6 ms early, Recording Delay ruled out (E545); asked for an rc3 log of one take | 2026-11-15 |
+| #30 | REOPENED: Virus audio 5.6 ms early in Logic (E540, E541, E545): SOLVED by rc3 per #41 (his log: Logic read 3085, re-announced 2816, 269 samples = 5.6 ms at 48k; not his Snow, corrected in #41) | reporter, see #41; close #30 and #41 with the user once #41 is answered | 2026-11-15 |
 | #31 | Win10 VirtualBox, Snow, setup with the Access driver | reporter: setup unplug step report; 0.8.41 note | 2026-11-14 |
 | #32 | (no change since 11-10) | reporter | before 11-10 |
 | #33 | Intel Mac 0.8.39: Logic distorted until a buffer change; log clean on the way in, not a slip (E532) | reporter: Logic output device, distortion on the unit's outputs?, 0.8.41 log | 2026-11-14 |
 | #34 | TI2/Keyboard macOS crackle, bank sync failed 11.9 s (E529) | reporter: new log with 0.8.41 | 2026-11-14 |
 | #36 | Windows Cubase bank sync 0/128 | reporter: BC2001.syx, new log with 0.8.41 | 2026-11-14 |
-| #37 | rc1 libusb: NO crackle (E543); fixes in rc3 (E544; our Mac: normal pkg fine, libusb pkg untested here): MIDI ports via a helper in the user session, latency re-announce + log (offset hypothesis LOW) | reporter: test rc3 (MIDI ports, offset size, log; posted issuecomment-6896731886) | 2026-11-15 |
+| #37 | rc1 libusb: NO crackle (E543); fixes in rc3 (E544; our Mac: normal pkg fine, libusb pkg untested here): MIDI ports via a helper in the user session, latency re-announce + log (offset hypothesis: confirmed for #30 by #41's log, still open for #37/#33) | reporter: test rc3 (MIDI ports, offset size, log; posted issuecomment-6896731886) | 2026-11-15 |
 | #38 | macOS 27 Live: AU/editor crash, not reproduced | reporter: crash report + log with 0.8.41 | 2026-11-14 |
 | #40 | (ours) macOS libusb audio as an option? | #39 reporter; #37 = first real data point (works) | 2026-11-13 |
+| #41 | (the #30 reporter, Snow, Logic) rc3: bus recording on the grid; log + project attached (new take not measured by us). Log also: RAM backup failed, cannot write ~/Documents/... .tmp (nothing written, safe) | reporter: Logic's Documents Folder permission in Privacy & Security (issuecomment-6900513133); NEXT: evidence entry for the 3085 -> 2816 log (proposed to the user, not written yet) | 2026-11-15 |
 
 #30 follow-up (Logic arrange meters of multi-timbral tracks): reproduced on our Mac = Logic's display (E538), answered 2026-11-15 (issuecomment-6892430267), stays closed. #39 closed by the reporter (doubled notes = Local On + Monitor In, E530/E531). #30 closed by us 2026-11-14 with the
 user: all works, Snow meters visible in the plug-in (E536). 2026-11-15 check: no new replies; a fork
