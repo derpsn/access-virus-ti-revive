@@ -90,37 +90,78 @@ std::string unsupported()
     return "";
 }
 
-MidiFunctionBlock source_block(uint8_t number, const wchar_t *name, uint8_t group)
+// One port = one virtual device with one output block on group 1. On our 26H2 VM (2026-11-15) Windows named the
+// MIDI 1.0 ports of ONE device with two blocks "Virus TI" and "Virus TI Gr 2" (device name, then group number), not
+// after the blocks; a device's first port carries the device's name, so each port gets a device of its own.
+MidiVirtualDeviceCreationConfig port_config(const wchar_t *name, const wchar_t *instance)
 {
+    MidiDeclaredEndpointInfo info;
+    info.HasStaticFunctionBlocks(true);
+    info.Name(name);
+    info.ProductInstanceId(instance); // the same at every start, so programs find the port again
+    info.SupportsMidi10Protocol(true);
+    info.SupportsMidi20Protocol(false);
+    info.SupportsReceivingJitterReductionTimestamps(false);
+    info.SupportsSendingJitterReductionTimestamps(false);
+    info.SpecificationVersionMajor(1);
+    info.SpecificationVersionMinor(1);
+    MidiVirtualDeviceCreationConfig config(info.Name(), L"Access Virus TI through TI Revive (read-only)", L"TI Revive",
+                                           info);
     MidiFunctionBlock b;
-    b.Number(number);
+    b.Number(0);
     b.IsActive(true);
     b.Name(name);
-    b.FirstGroup(midi2::MidiGroup(group));
-    b.GroupCount(1);                                  // one group: Windows names the port after the block
+    b.FirstGroup(midi2::MidiGroup(static_cast<uint8_t>(0)));
+    b.GroupCount(1);
     b.Direction(MidiFunctionBlockDirection::BlockOutput); // the device sends, programs receive: read-only
     b.RepresentsMidi10Connection(MidiFunctionBlockRepresentsMidi10Connection::YesBandwidthUnrestricted);
-    return b;
+    config.FunctionBlocks().Append(b);
+    return config;
 }
 
-// the stream from the broker: frame by frame to the device, as UMP
+// Creates the device and opens its connection. Right after EnsureServiceAvailable() started the service, creation
+// failed twice on the VM (null after about 10 s) and worked with the service already running: so a few tries.
+midi2::MidiEndpointConnection open_port(midi2::MidiSession const &session, const wchar_t *name, const wchar_t *instance,
+                                        MidiVirtualDevice &device)
+{
+    for (int attempt = 1; attempt <= 10; attempt++) {
+        device = MidiVirtualDeviceManager::CreateVirtualDevice(port_config(name, instance));
+        if (device) {
+            auto conn = session.CreateEndpointConnection(device.DeviceEndpointDeviceId());
+            if (conn && conn.AddMessageProcessingPlugin(device) == midi2::MidiMessageProcessingPluginAddResult::Succeeded) {
+                conn.Open();
+                if (attempt > 1)
+                    hlog("\"%ls\": created at attempt %d", name, attempt);
+                return conn;
+            }
+        }
+        Sleep(1000);
+    }
+    hlog("no MIDI port \"%ls\": the virtual device was not created (10 attempts)", name);
+    return nullptr;
+}
+
+// the stream from the broker: frame by frame to its port's device, as UMP
 struct Feed {
-    midi2::MidiEndpointConnection conn{nullptr};
-    vti::UmpConv conv[2] = {vti::UmpConv(1), vti::UmpConv(0)}; // port 0 "Virus TI MIDI" = group 2, 1 "Synth" = group 1
+    midi2::MidiEndpointConnection conn[2] = {nullptr, nullptr}; // [0] "Virus TI MIDI", [1] "Virus TI Synth"
+    vti::UmpConv conv[2] = {vti::UmpConv(0), vti::UmpConv(0)};  // group 1 on each device
     unsigned sent = 0, failed = 0;
 };
 
 void on_frame(void *user, int port, const uint8_t *msg, int n)
 {
     auto *f = static_cast<Feed *>(user);
+    auto &conn = f->conn[port & 1];
+    if (!conn)
+        return;
     uint32_t w[8];
     const int words = f->conv[port & 1].push(msg, n, w, 8);
     for (int i = 0; i < words;) {
         const int size = (w[i] >> 28) == 3 ? 2 : 1; // type 3 (SysEx) packets are two words, types 1 and 2 one
         if (i + size > words)
             break;
-        const auto r = size == 2 ? f->conn.SendSingleMessageWords(0, w[i], w[i + 1]) // 0: send at once
-                                 : f->conn.SendSingleMessageWords(0, w[i]);
+        const auto r = size == 2 ? conn.SendSingleMessageWords(0, w[i], w[i + 1]) // 0: send at once
+                                 : conn.SendSingleMessageWords(0, w[i]);
         if (midi2::MidiEndpointConnection::SendMessageSucceeded(r)) {
             if (f->sent++ == 0)
                 hlog("first message sent to Windows");
@@ -146,39 +187,19 @@ int wmain()
             hlog("no MIDI ports: %s", why.c_str());
             return 3;
         }
-        MidiDeclaredEndpointInfo info;
-        info.HasStaticFunctionBlocks(true);
-        info.Name(L"Virus TI");
-        info.ProductInstanceId(L"TIRevive-VirusTI"); // the same at every start, so programs find the ports again
-        info.SupportsMidi10Protocol(true);
-        info.SupportsMidi20Protocol(false);
-        info.SupportsReceivingJitterReductionTimestamps(false);
-        info.SupportsSendingJitterReductionTimestamps(false);
-        info.SpecificationVersionMajor(1);
-        info.SpecificationVersionMinor(1);
-        MidiVirtualDeviceCreationConfig config(info.Name(), L"Access Virus TI through TI Revive (read-only)",
-                                               L"TI Revive", info);
-        config.FunctionBlocks().Append(source_block(0, L"Virus TI Synth", 0));
-        config.FunctionBlocks().Append(source_block(1, L"Virus TI MIDI", 1));
-        MidiVirtualDevice device = MidiVirtualDeviceManager::CreateVirtualDevice(config);
-        if (!device) {
-            hlog("no MIDI ports: the virtual device was not created");
-            return 4;
-        }
         auto session = midi2::MidiSession::Create(L"TI Revive MIDI ports");
         if (!session) {
             hlog("no MIDI ports: no MIDI session");
             return 4;
         }
         Feed feed;
-        feed.conn = session.CreateEndpointConnection(device.DeviceEndpointDeviceId());
-        if (!feed.conn ||
-            feed.conn.AddMessageProcessingPlugin(device) != midi2::MidiMessageProcessingPluginAddResult::Succeeded) {
-            hlog("no MIDI ports: the device connection failed");
+        MidiVirtualDevice synth{nullptr}, din{nullptr};
+        feed.conn[1] = open_port(session, L"Virus TI Synth", L"TIRevive-VirusTI-Synth", synth);
+        feed.conn[0] = open_port(session, L"Virus TI MIDI", L"TIRevive-VirusTI-MIDI", din);
+        if (!feed.conn[0] && !feed.conn[1])
             return 4;
-        }
-        feed.conn.Open(); // now programs see "Virus TI Synth" and "Virus TI MIDI"
-        hlog("MIDI ports \"Virus TI Synth\" and \"Virus TI MIDI\" are there (read-only)");
+        hlog("MIDI ports there (read-only):%s%s", feed.conn[1] ? " \"Virus TI Synth\"" : "",
+             feed.conn[0] ? " \"Virus TI MIDI\"" : "");
         vti_midifeed_reader reader;
         vti_midifeed_init(&reader);
         HANDLE in = GetStdHandle(STD_INPUT_HANDLE);
@@ -187,7 +208,9 @@ int wmain()
         while (ReadFile(in, buf, sizeof buf, &n, nullptr) && n > 0) // ends when the broker closes the pipe
             vti_midifeed_read(&reader, buf, (int)n, on_frame, &feed);
         hlog("the broker closed the pipe: %u messages sent, %u failed; closing the ports", feed.sent, feed.failed);
-        session.DisconnectEndpointConnection(feed.conn.ConnectionId());
+        for (auto &c : feed.conn)
+            if (c)
+                session.DisconnectEndpointConnection(c.ConnectionId());
         session.Close();
     } catch (const winrt::hresult_error &e) {
         hlog("no MIDI ports: Windows MIDI Services error 0x%08x: %ls", (unsigned)e.code(), e.message().c_str());

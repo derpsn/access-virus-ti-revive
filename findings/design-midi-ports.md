@@ -95,10 +95,17 @@ macOS and Linux (DAW to Virus would be a separate decision under rule 2).
 
 - `src/midiports-win/tirevive-midiports.exe` (MSVC, C++/WinRT, target `tirevive-midiports`): checks the build
   (>= 26200, 25H2), legacy MIDI mode (`HKLM\...\Drivers32\UseLegacyMidi` = 1), the API's activation and
-  `IsSystemProvided()`, and `EnsureServiceAvailable()`; then one virtual device "Virus TI" (ProductInstanceId
-  `TIRevive-VirusTI`) with two output function blocks, "Virus TI Synth" (group 1) and "Virus TI MIDI" (group 2),
-  one group each, so Windows should name the MIDI 1.0 ports after the blocks (microsoft/MIDI docs, "how MIDI 1.0
-  port names are generated": not checked on a PC yet). Log: `%TEMP%\tirevive-midiports.log`.
+  `IsSystemProvided()`, and `EnsureServiceAvailable()`; then one virtual device per port, "Virus TI Synth"
+  (ProductInstanceId `TIRevive-VirusTI-Synth`) and "Virus TI MIDI" (`TIRevive-VirusTI-MIDI`), each with one output
+  function block on group 1, up to 10 creation tries 1 s apart. Log: `%TEMP%\tirevive-midiports.log`.
+- Seen on the win11 VM (2026-11-15, build 26300.9974, 26H2, the Preview 11 DLL next to the helper with the test
+  switch `VTI_MIDI2_ALLOW_SDK=1`; the Virus not attached): (1) with ONE device "Virus TI" and two blocks, WinMM
+  inputs went from 0 to 2, named "Virus TI" and "Virus TI Gr 2" (not after the blocks, against the docs), outputs
+  stayed 1 (Microsoft GS Wavetable Synth only): read-only holds; hence one device per port. (2) Creating the device
+  failed twice right after the helper demand-started midisrv, worked with the service running. (3) Bug #1047 seen:
+  the helper hung in the teardown, `Restart-Service midisrv` hung, a killed helper's device stayed and blocked the
+  next creation; only a reboot cleared it (this build has not got the November fix). (4) OpenSSH ends the processes
+  it started (broker and helper) with the session: test in one session or from the console.
 - Broker (`vtikeyport_win.c`): starts the helper when it lies next to `vtibroker.exe`, feeds it the frames of
   `midifeed.h` on a non-blocking stdin pipe; the helper ends when the pipe closes, so the ports live as long as the
   broker (as on macOS and Linux). `umpconv.h` turns the bytes into UMP (unit-tested).
