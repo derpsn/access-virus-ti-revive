@@ -121,7 +121,8 @@ talk with the user (Linux may start); hil-win on the tuned VM: yes; update check
    simulator's virtual TI2 over USB/IP: user "works"). New nerd mode screenshot (Mac, 13:44, real traffic) in docs/images
    + site (860x612, not-affiliated notice under it). Site not redeployed (by hand at release).
 2. #30 knob automation in Logic (E542): fix 2 WORKS on our Mac. v0.8.42-rc2 RELEASED as pre-release (tag on a164a98,
-   run 43713472544 green, 7 assets); posted in #30 (issuecomment-6894318752): Chris to test rc2.
+   run 43713472544 green, 7 assets); Chris CONFIRMED rc2 (13:47 UTC). His Logic project came by email (dropped):
+   asked to upload it on GitHub (issuecomment-6898670509).
    #30 (reopened): early audio waits on the reporter's settings (E540/E541: not reproduced on our Mac/Logic/TI2 at 48k). If 44.1 kHz:
    measure that on our Mac; Snow: only the reporter. New RC promised once fixed.
 3. v0.8.42-rc1 out (#37 waits). build.yml "New in 0.8.42" + What's New entry written for rc2 (all round items).
