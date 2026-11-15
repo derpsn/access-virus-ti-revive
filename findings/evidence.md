@@ -4939,3 +4939,13 @@ E540 measured on our Mac (2026-11-15 12:05-12:20 local, MacBook Air M3, macOS 27
 - **Method:** Logic bus recording by the user, onset measurement over SSH
 - **Confidence:** HIGH (three variants, 12 notes each) / open (the reporter's case)
 - **Hardware:** yes (TI2 Desktop, macOS, Logic)
+
+### E542
+
+#30 (reporter 2026-11-15 11:42 UTC): turning the cutoff on the Virus while Logic writes automation records nothing. Our Mac (Logic, AU, TI2 Desktop, test build CI 43708448485, user): with the plug-in window closed the knob writes nothing; in Ableton Live (VST3) it works. Cause, from the code (HIGH): the plug-in hands a knob move to the host two ways - (1) as output parameter changes from process() (virusplugin.cpp, "device -> host"), (2) as beginEdit / performEdit / endEdit from HostGestures (hostgestures.h, E304), whose tick ran only in the editor's timer (viruseditor.cpp: plugin_->tick_gestures()), so only with the window open. Steinberg's AU wrapper (auwrapper.mm onTimer) turns (1) into SetParameter + AUParameterListenerNotify without a begin/end gesture, and only (2) into kAudioUnitEvent_Begin/EndParameterChangeGesture (AUWrapper::beginEdit/endEdit); Logic writes Latch/Touch automation from the gestures, Live records (1). Fix (0.8.42): the plug-in's own CVSTGUITimer (50 ms, created in initialize on the host's UI thread; VSTGUI is set up at module load by vstguieditor.cpp's ModuleInitializer, on Linux with the host context's run loop) runs the tick with the window closed too; the editor ticks only while that timer has not run. Not yet tested in Logic with the fix.
+
+- **Date:** 2026-11-15
+- **Pointer:** issue #30 (christopherdoerr 11:42 UTC); native/plugin/source/virusplugin.cpp (gesture_timer_), viruseditor.cpp; vst3sdk public.sdk/source/vst/auwrapper/auwrapper.mm (onTimer, beginEdit)
+- **Method:** user test on our Mac (Logic AU vs Live VST3) + code reading
+- **Confidence:** HIGH (the two paths and the AU wrapper's handling, from the code; the symptom seen on our Mac) / open (the fix in Logic)
+- **Hardware:** yes (TI2 Desktop, macOS, Logic and Live)

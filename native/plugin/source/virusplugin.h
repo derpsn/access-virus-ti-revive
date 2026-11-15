@@ -2,6 +2,7 @@
 // (automation.xml + 32 MIDI-mapping targets) and the same state format (docs/formats.md), talking to the Virus
 // through the TI Revive broker. Audio and editor follow in later steps.
 #pragma once
+#include "vstgui/lib/cvstguitimer.h"
 #include "access/accessfiles.h"
 #include "access/library.h"
 #include "device/audioin.h"
@@ -442,7 +443,9 @@ public:
     bool can_undo_drop();
     void editor_opened();  // the editor's open(): knob moves from the Virus become host edits
     void editor_closed();  // its close(): open edits end
-    void tick_gestures();  // the editor's timer (UI thread): beginEdit / performEdit / endEdit
+    void tick_gestures();  // the gesture timer (UI thread): beginEdit / performEdit / endEdit
+    // the editor ticks only while the plug-in's own gesture timer does not run (a Linux host without a run loop)
+    bool gesture_timer_running() const { return gesture_timer_ran_.load(std::memory_order_relaxed); }
     bool undo_drop(); // "Undo last operation": writes back what the last drop overwrote
     // the part's patch into a personal library (slot = position, == size: append) - writes the library file
     bool store_to_library(int part, int library, int slot);
@@ -821,6 +824,12 @@ private:
     // knob moves on the Virus as host edits while an editor is open (its timer is the UI-thread tick; E304, #10);
     // without an editor they go to the host as output parameter changes (pending_), as before
     HostGestures gestures_;
+    // knob moves on the Virus -> host edits also with the plug-in window closed (#30, 2026-11-15: in Logic, the AU
+    // wrapper turns only begin/endEdit into automation gestures, and the tick ran only in the editor's timer, so with
+    // the window closed nothing was recorded; Live records the output parameter changes). VSTGUI is set up when the
+    // module loads (vstguieditor.cpp's ModuleInitializer), so its timer runs on the host's UI thread without a window.
+    VSTGUI::SharedPointer<VSTGUI::CVSTGUITimer> gesture_timer_;
+    std::atomic<bool> gesture_timer_ran_{false};
     std::atomic<int> editors_open_{0};
     bool send_ram_writes(const std::vector<BankDrop::Write> &w); // dumps into RAM slots + cache + cache files
     // the patches `w` would overwrite into the day's "RAM Backup" library (rambackup.h); false = not backed up, the

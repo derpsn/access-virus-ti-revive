@@ -1003,6 +1003,11 @@ tresult PLUGIN_API VirusPlugin::initialize(FUnknown *context)
     tresult r = SingleComponentEffect::initialize(context);
     if (r != kResultOk)
         return r;
+    // the host's UI thread (initialize runs there): knob moves -> host edits, window open or not (gesture_timer_)
+    gesture_timer_ = VSTGUI::makeOwned<VSTGUI::CVSTGUITimer>([this](VSTGUI::CVSTGUITimer *) {
+        gesture_timer_ran_.store(true, std::memory_order_relaxed);
+        tick_gestures();
+    }, 50, true);
     if (FUnknownPtr<IHostApplication> app(context); app) { // the DAW's name, for the setup page
         String128 name{};
         if (app->getName(name) == kResultOk)
@@ -1263,6 +1268,11 @@ std::vector<std::vector<uint8_t>> VirusPlugin::startup_messages() const
 
 tresult PLUGIN_API VirusPlugin::terminate()
 {
+    if (gesture_timer_) { // before anything it calls goes away
+        gesture_timer_->stop();
+        gesture_timer_ = nullptr;
+    }
+    gestures_.flush([this](uint32_t id) { endEdit(id); });
     note_probe_flush();
     stop_warm_ = true;
     if (sync_)

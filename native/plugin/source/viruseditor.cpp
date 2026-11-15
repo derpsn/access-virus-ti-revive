@@ -1083,7 +1083,8 @@ public:
             tick_info();
             tick_tips();
             tick_alert();
-            plugin_->tick_gestures(); // knob moves on the Virus -> host edits (E304)
+            if (!plugin_->gesture_timer_running()) // the plug-in's own timer does it; this only without a run loop
+                plugin_->tick_gestures(); // knob moves on the Virus -> host edits (E304)
             if (int kb, kp; key_load_.due(now_ms(), kb, kp)) // Up/Down in the browser stopped
                 plugin_->load_patch_remembered(kb, kp, plugin_->ui_value(plugin_->layout().frame_parameter, -1));
             drop_switched_selections();
