@@ -3,6 +3,7 @@
 // original's text is a fixed image (TXT_Welcome.png, TXT_Changes.png) that points to Access' setup guide and support;
 // ours says what TI Revive is and where its help is. The changelog is compiled in. Built from plain state, no drawing.
 #pragma once
+#include <algorithm>
 #include <cstdlib>
 #include <string>
 #include <vector>
@@ -238,10 +239,13 @@ inline InfoPage log_notice_page()
 
 // What's New must fit on the page (several versions at once overflowed it, 2026-11-10): `measure(paras, size)` gives
 // the height of the paragraphs at a font size, `room` the height there is. All of it from 13 pt down to 11; then the
-// oldest version goes, and a last line says where the rest is; the newest version alone may go down to 9 pt.
+// oldest version goes, and a last line says where the rest is; the newest version alone may go down to 9 pt. When
+// even that does not fit (0.8.41's notes ran over the buttons, user 2026-11-15), it stays whole at 11 pt and the page
+// scrolls (InfoScroll).
 struct InfoFit {
     InfoPage page;
     double size = 13;
+    bool scroll = false; // taller than `room`: the editor draws a scrollbar
 };
 template <class Measure> InfoFit fit_info_page(InfoPage page, double room, Measure measure)
 {
@@ -259,7 +263,7 @@ template <class Measure> InfoFit fit_info_page(InfoPage page, double room, Measu
             if (measure(page.paras, size) <= room)
                 return {page, size};
         if (v <= 1)
-            return {page, 9}; // as good as it gets
+            return {page, 11, true}; // the newest version whole, readable, with a scrollbar
         if (trimmed)
             page.paras.pop_back(); // the pointer line, added again below
         size_t last = page.paras.size();
@@ -270,5 +274,47 @@ template <class Measure> InfoFit fit_info_page(InfoPage page, double room, Measu
         trimmed = true;
     }
 }
+
+// The scroll position of a page taller than its room, and its scrollbar's thumb (pixels; the track is as tall as
+// the room). No drawing here: unit-tested.
+struct InfoScroll {
+    double content = 0, view = 0, offset = 0;
+    static constexpr double kMinThumb = 24;
+    void set(double content_h, double view_h)
+    {
+        content = content_h, view = view_h;
+        clamp();
+    }
+    bool active() const { return content > view && view > 0; }
+    double max_offset() const { return active() ? content - view : 0; }
+    void scroll_by(double d)
+    {
+        offset += d;
+        clamp();
+    }
+    void thumb(double &y, double &h) const
+    {
+        h = active() ? std::max(kMinThumb, view * view / content) : view;
+        const double way = view - h, mo = max_offset();
+        y = mo > 0 ? way * offset / mo : 0;
+    }
+    void drag_thumb_to(double thumb_top) // where the thumb's top should be, in track pixels
+    {
+        double y, h;
+        thumb(y, h);
+        const double way = view - h;
+        offset = way > 0 ? thumb_top / way * max_offset() : 0;
+        clamp();
+    }
+    void click_track(double at) // a click at `at` on the track: the thumb centres there
+    {
+        double y, h;
+        thumb(y, h);
+        drag_thumb_to(at - h / 2);
+    }
+
+private:
+    void clamp() { offset = std::min(std::max(offset, 0.0), max_offset()); }
+};
 
 } // namespace vti

@@ -140,5 +140,11 @@ talk with the user (Linux may start); hil-win on the tuned VM: yes; update check
 3. v0.8.42-rc1 is out as pre-release (tag 5a83f34, CI 43645282349, 7 assets incl. the mac-libusb zip); wait for #37's
    report. build.yml "New in 0.8.42" = rc1 text: rewrite before the final (live-later 160, Linux MIDI ports, update
    check, bug report).
-4. Later (user): Mac push of a package + live-later 160 keystamp test there; Windows MIDI ports only after a talk.
-5. Waiting on reporters (table above); check issues only together with the user.
+4. What's New scrollbar (user 2026-11-15: 0.8.41's notes overlapped the buttons): CODE DONE (InfoScroll in
+   infopage.h, test first; newest version that fits nowhere at 9 pt -> whole at 11 pt + scrollbar: wheel, track click,
+   thumb drag). Dev plug-in b4fbdc1d installed: user to look at ? > What's New in TI Revive.
+5. Windows MIDI ports (user: "detects if your windows supports it and if not its not installed"): research done
+   (Windows MIDI Services: 25H2+ only, API in-box with the Nov 2026 CFR, C++/WinRT helper, virtual device with
+   BlockOutput function blocks); design to show the user next.
+6. Later (user): Mac push of a package + live-later 160 keystamp test there; Windows MIDI ports only after a talk.
+7. Waiting on reporters (table above); check issues only together with the user.
