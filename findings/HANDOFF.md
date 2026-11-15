@@ -5,7 +5,7 @@ NEXT. At most 150 lines; the Stop hook (`.claude/hooks/handoff-check.sh`) refuse
 how goes into the dated log [`log/2026-11.md`](log/2026-11.md) (newest first); older logs are in [`log/`](log/).
 Device/protocol knowledge goes into [`evidence.md`](evidence.md). Update this file in the same commit as the work._
 
-Last update: 2026-11-15 night: #41 (the #30 reporter): rc3 puts his take on the grid, log shows why (stale latency 3085 -> 2816 = 5.6 ms); replied, RAM backup / Documents question.
+Last update: 2026-11-15 night: #41 (the #30 reporter): rc3 puts his take on the grid, log shows why (stale latency 3085 -> 2816 = 5.6 ms); replied, RAM backup / Documents question. Private-data hook added.
 
 ## Where things stand
 
@@ -40,6 +40,9 @@ Last update: 2026-11-15 night: #41 (the #30 reporter): rc3 puts his take on the 
   work/rel-0.8.41/mac-push/TI-Revive-0.8.41-release (pkg 643f73d4, INSTALL-COMMAND + "Install test build.command");
   the Mac did not answer over SSH: push it to ~/Downloads when it is awake (scripts/mac.sh push), the user installs.
   Option files there: live-later.on (left from M2), klog.on, noteprobe.on, live-notes.on, diag.on.
+- Private-data check (user 2026-11-15): `.claude/hooks/private-data.py` runs as git pre-commit/commit-msg/pre-push
+  hook (installed here with `--install`, worktrees share it) and as Claude PreToolUse hook for `gh` posts; personal
+  words in the git-ignored work/private-patterns.txt. A block means: move it to work/HANDOFF-private.md.
 - Branches: `libusb-audio` and `libusb-catalina` (worktree ../virus-ti-re-catalina) are merged into round-0.8.42 and
   done (dev-mac there = the Catalina build; on the round dev-mac stays the normal build), `catalina-test` (old).
 

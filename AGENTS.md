@@ -40,6 +40,8 @@ The findings are free to use elsewhere; the maintainers would be happy about a m
 4. **Never claim a test you did not run.** State exactly what was built and what was tested on which hardware.
    "Compiles" is not "works".
 5. **No secrets, no personal data** in code, logs or commits (user names, serial numbers, home paths from logs).
+   `.claude/hooks/private-data.py` checks commits, pushes and `gh` posts for home folders, private IPs, e-mail
+   addresses and the words in a git-ignored `work/private-patterns.txt` (`--install` sets up the git hooks).
 6. **No history rewriting** on shared branches (no force pushes to `main`), no mass reformatting, no unrelated
    refactors in a bug-fix PR.
 
