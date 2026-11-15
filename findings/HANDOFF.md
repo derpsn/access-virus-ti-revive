@@ -49,7 +49,7 @@ Last update: 2026-11-15 morning: live-later 160, Linux MIDI ports, hil-win tuned
 |---|---|---|---|
 | #26 | Snow, Linux REAPER timing | reporter: pw-jack test; 0.8.41 note | 2026-11-14 |
 | #28 | numbers 100-127 moved 5 px | reporter: confirm, close on yes | 2026-11-09 |
-| #30 | REOPENED: Virus audio a few ms early in Logic (E540); NOT reproduced on our Mac/Logic/TI2 at 48k, 128/512, LL on (E541: 0.00 ms) | reporter: rate/buffer/LL/ms (Snow?) | 2026-11-15 |
+| #30 | REOPENED: Virus audio a few ms early in Logic (E540); NOT reproduced on our Mac/Logic/TI2 at 48k, 128/512, LL on (E541: 0.00 ms) | reporter: rate/buffer/LL/ms (Snow?); update posted 6893485002 | 2026-11-15 |
 | #31 | Win10 VirtualBox, Snow, setup with the Access driver | reporter: setup unplug step report; 0.8.41 note | 2026-11-14 |
 | #32 | (no change since 11-10) | reporter | before 11-10 |
 | #33 | Intel Mac 0.8.39: Logic distorted until a buffer change; log clean on the way in, not a slip (E532) | reporter: Logic output device, distortion on the unit's outputs?, 0.8.41 log | 2026-11-14 |
