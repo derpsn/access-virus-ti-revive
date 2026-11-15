@@ -40,7 +40,7 @@ Entries: 539. Marks after an entry: its lowest confidence level when below HIGH,
 - [E520](evidence.md#e520) A keyed unit with TI Revive on the model (simulator S134, virus-ti-sim 6aa0ea3; virtual TI1 Keyboard played ... (LOW; not on hardware)
 - [E527](evidence.md#e527) E503's stall handling and the async reader through the real Linux kernel and real libusb (simulator ... (LOW; not on hardware)
 
-## USB transport: endpoints, iso streams, stalls, errors (273)
+## USB transport: endpoints, iso streams, stalls, errors (274)
 
 - [E003](evidence.md#e003) MSI custom action `UpdateFirmware` (CAInstallerHelperDeferred!UpdateTIOS) runs at InstallExecuteSequence 6598 ...
 - [E004](evidence.md#e004) Drivers are installed by CAInstallerHelperDeferred (Prepare/Install/FinishDriverInstall, imports ...
@@ -315,6 +315,7 @@ Entries: 539. Marks after an entry: its lowest confidence level when below HIGH,
 - [E534](evidence.md#e534) The option live-later (E519: played notes stamped 128 frames later) on our Mac, the E518 run A setup ... (LOW)
 - [E535](evidence.md#e535) #37's libusb audio run on Catalina (reporter, 2026-11-14 ~19:57-20:06 UTC; Intel MacBook, macOS 10.15.7, TI ... (LOW)
 - [E537](evidence.md#e537) hil-win on the TUNED win11 VM (E533's tuning; host governor performance; 2026-11-15 08:15 and 08:21 local; ... (LOW)
+- [E541](evidence.md#e541) E540 measured on our Mac (2026-11-15 12:05-12:20 local, MacBook Air M3, macOS 27.2.1, Logic Pro, TI Revive ... (open)
 
 ## SysEx and parameter protocol (129)
 
