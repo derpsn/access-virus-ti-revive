@@ -4721,7 +4721,10 @@ void VirusPlugin::panel_message(const std::vector<uint8_t> &msg)
             meta_source(c.path, c.part, c.value, false); // e.g. the FX switches follow the send knobs on the Virus
         }
         auto it = ids_.find({c.path, c.part});
-        if (it != ids_.end() && editors_open_.load() > 0 && !PanelFollow::is_preset_path(c.path)) {
+        // whenever a tick can hand it to the host: the editor's or the plug-in's own gesture timer (#30, E542: with the
+        // window closed this went only out as an output parameter change, which Logic does not record)
+        const bool gestures_ticking = editors_open_.load() > 0 || gesture_timer_running();
+        if (it != ids_.end() && gestures_ticking && !PanelFollow::is_preset_path(c.path)) {
             // like the original: a knob moved on the Virus becomes a host edit (begin/perform/end, E304), which
             // Ableton Live's Configure mode picks up (#10); patch selections do not (the original's loads do not)
             gestures_.device_change(it->second, c.value / 127.0, now_ms());
