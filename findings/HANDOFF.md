@@ -132,7 +132,8 @@ talk with the user (Linux may start); hil-win on the tuned VM: yes; update check
    output-delay modes); next only if it shows again (Logic 48k series). Proposed sim items (discuss one at a time).
 5a. #37 fixes (E544) on round-0.8.42, CI 43727531536 all green (no tag): libusb package MIDI ports (launchctl asuser helper,
    `vtibroker -midiports UID`) and the latency watch (UI timer, `the host reads latency` log line). Next: user back ->
-   our Mac: normal package unchanged (ports, latency lines in Logic); libusb install on our Mac only with the user;
+   our Mac CHECKED (rc3 normal pkg 511b0958): ports as before, Logic reads the right latency (2432 = 1408+512+512),
+   no re-announce (E544); diag.off had been set on the Mac, removed. libusb install on our Mac only with the user;
    rc3 released for #37 (user 2026-11-15: post it for him to test, Catalina not testable here).
 5b. native/CMakeLists.txt project VERSION raised to 0.8.42 after rc2 (rc1/rc2 report 0.8.41): raise it at every round start.
 6. Linux: DEV build installed (plug-in from a1153d9; release backed up in ~/.vst3-backup/0.8.41-release); Mac: test
