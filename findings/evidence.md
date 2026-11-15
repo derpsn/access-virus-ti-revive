@@ -4949,3 +4949,13 @@ E540 measured on our Mac (2026-11-15 12:05-12:20 local, MacBook Air M3, macOS 27
 - **Method:** user test on our Mac (Logic AU vs Live VST3) + code reading
 - **Confidence:** HIGH (the two paths and the AU wrapper's handling, from the code; the symptom seen on our Mac) / open (the fix in Logic)
 - **Hardware:** yes (TI2 Desktop, macOS, Logic and Live)
+
+### E543
+
+#37's report on the rc1 libusb package (packman83, 2026-11-15 13:12 UTC; Intel MacBook, macOS 10.15.7, Logic; TI-Revive-0.8.42-mac-libusb.zip): (1) Gatekeeper asked once at the first run of the installer. (2) "working well without any crackling", knobs both ways without latency; but the Virus is "slightly out of sync" after inserting the plug-in, reopening the project or restarting Logic, and in sync again after a buffer size change (the pattern of #33, E532). Attached log (TI-Revive-logs-2026-11-15-0454.txt, collected by a Control Center reporting 0.8.41): the broker log has `usbaudio: stopped after 30387522 frames (errors 0, stalled 0 ms)`, so the libusb path ran; the plug-in found the sync marker 636 to 5873 frames after the ping across its sessions (`sync marker at frame ... (ping at ..., N frames later)`), two `audio stream restarted -> 1` (slip restarts, E488). Not analysed further yet; "slightly" not quantified. (3) He asks for the "Virus TI MIDI" driver: no Virus MIDI ports seen in Logic with this package. Reading (MED, not checked): the libusb package's broker runs as a root LaunchDaemon, and CoreMIDI virtual sources belong to the session of the process that creates them, so the broker's "Virus TI Synth" / "Virus TI MIDI" (vtikeyport_mac.c) are not in the user's session; the last 1000 broker log lines have no `MIDI port` line. Side finding from the header: the native builds of round 0.8.42 (rc1, rc2) report 0.8.41 (native/CMakeLists.txt project VERSION was not raised; fixed to 0.8.42 after rc2), so rc2's What's New does not show its own 0.8.42 entry.
+
+- **Date:** 2026-11-15
+- **Pointer:** issue #37 (packman83 13:12 UTC, log attachment); copy in the session scratchpad (not in git)
+- **Method:** user report + log reading
+- **Confidence:** HIGH (as reported / as logged) / MED (the MIDI port reading) / open (the sync offset)
+- **Hardware:** yes (reporter's TI, Intel Mac, Catalina); not on our hardware

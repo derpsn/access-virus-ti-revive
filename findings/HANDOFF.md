@@ -56,7 +56,7 @@ Last update: 2026-11-15 afternoon: Access-look Control Center on all 3 OS, rc2 o
 | #33 | Intel Mac 0.8.39: Logic distorted until a buffer change; log clean on the way in, not a slip (E532) | reporter: Logic output device, distortion on the unit's outputs?, 0.8.41 log | 2026-11-14 |
 | #34 | TI2/Keyboard macOS crackle, bank sync failed 11.9 s (E529) | reporter: new log with 0.8.41 | 2026-11-14 |
 | #36 | Windows Cubase bank sync 0/128 | reporter: BC2001.syx, new log with 0.8.41 | 2026-11-14 |
-| #37 | Catalina: libusb test WORKED (E535); 0.8.42-rc1 libusb package (installer, no Terminal) posted | reporter: install rc1 libusb zip, crackle?, after a restart?, Save logs | 2026-11-14 |
+| #37 | rc1 libusb: NO crackle (E543); open: slight sync offset until a buffer change (as #33), MIDI ports not visible (root daemon, MED); reply drafted | us | 2026-11-15 |
 | #38 | macOS 27 Live: AU/editor crash, not reproduced | reporter: crash report + log with 0.8.41 | 2026-11-14 |
 | #40 | (ours) macOS libusb audio as an option? | #39 reporter; #37 = first real data point (works) | 2026-11-13 |
 
@@ -129,6 +129,7 @@ talk with the user (Linux may start); hil-win on the tuned VM: yes; update check
    helper by itself; real key/DIN traffic untested (no keyed Virus here).
 5. Open, low: stray single sample 2^-6 after record start in Logic (E541): not reproduced in nativehost (10/10 zero, both
    output-delay modes); next only if it shows again (Logic 48k series). Proposed sim items (discuss one at a time).
+5b. native/CMakeLists.txt project VERSION raised to 0.8.42 after rc2 (rc1/rc2 report 0.8.41): raise it at every round start.
 6. Linux: DEV build installed (plug-in from a1153d9; release backed up in ~/.vst3-backup/0.8.41-release); Mac: test
    build CI 43696948011 installed; TI2 on the Mac's USB. #28 quiet-issue limit 2026-11-16 (joint check).
 7. Waiting on reporters (table above); check issues only together with the user.
