@@ -142,6 +142,6 @@ talk with the user (Linux may start); hil-win on the tuned VM: yes; update check
    inputs "Virus TI Synth" / "Virus TI MIDI", no outputs, note/CC/SysEx through both (fed by hand); #1047 hang seen
    (pre-fix Windows). Open: real keys/DIN traffic; Windows' own API (end Nov). README/site written. VM off, clean.
 7. #30 early audio: measured on our Mac (E541): exact on the grid in all variants; waits on the reporter's settings (Snow,
-   44.1 kHz?). New RC promised once fixed. Side: a stray short sound after record start (E541), not looked into.
+   44.1 kHz?). New RC promised once fixed. Side: one stray sample (exactly 2^-6) after record start (E541), source open.
 8. Later (user): Mac push of a package + live-later 160 keystamp test there; Windows MIDI ports only after a talk.
 9. Waiting on reporters (table above); check issues only together with the user.
