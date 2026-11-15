@@ -92,7 +92,7 @@ const std::vector<PluginOption> &plugin_options()
         {"plugin-log", "diag.off", "Plug-in log for bug reports (stays on this computer)", true, "Plug-in log",
          "Writes what the plug-in does to diag.log on this computer, for bug reports. Nothing is sent anywhere."},
         // off by default (0.8.41, E519): played notes a little later; 128 frames left them up to one 64-frame step
-        // apart (E534), 160 (0.8.42) the same over 5 runs (E539)
+        // apart (E534); 160, tried in 0.8.42, did the same over 5 runs (E539), so 128 stays
         {"live-later", "live-later.on", "Played notes a little later, for an evener rhythm (E519, E539)", false,
          "Even rhythm for played notes",
          "Notes you play live go about 3 ms later, so they come at most about 1.3 ms late (measured on a Mac). Off: "

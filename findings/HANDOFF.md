@@ -82,7 +82,7 @@ talk with the user (Linux may start); hil-win on the tuned VM: yes; update check
 (proposal to the user first); #39 latency note: show the text before posting; proposed sim items: discuss when there.
 
 - live-later 160 on the Mac (E539, 5 runs): like 128, played notes up to one 64-frame step apart (only run 1 all on
-  one); grid-edge reading wrong; texts "at most about 1.3 ms" kept. 160 vs 128: user to decide (no measured gain).
+  one); grid-edge reading wrong; texts "at most about 1.3 ms" kept. BACK TO 128 (user 2026-11-15), test first.
 - Linux MIDI ports: CODE DONE 2026-11-15: vtikeyport_linux.c (straight /dev/snd/seq ioctls, no alsa-lib), client
   "Virus TI", port 0 "Virus TI MIDI" (cable 0), port 1 "Virus TI Synth" (cable 1) = the kernel driver's names (E016),
   read-only; seqevent.h + test_seqevent first. Seen: ports in aconnect -l (inputs only). NOT seen: a message through
@@ -130,7 +130,7 @@ talk with the user (Linux may start); hil-win on the tuned VM: yes; update check
 3. v0.8.42-rc1 is out as pre-release (tag 5a83f34, CI 43645282349, 7 assets incl. the mac-libusb zip); wait for #37's
    report. build.yml "New in 0.8.42" = rc1 text: rewrite before the final (live-later 160, Linux MIDI ports, update
    check, bug report).
-4. What's New scrollbar (user 2026-11-15: 0.8.41's notes overlapped the buttons): CODE DONE (InfoScroll in
+4. What's New scrollbar + Prepare a Bug Report: checked by the user on Linux AND the Mac (2026-11-15). Scrollbar: CODE DONE (InfoScroll in
    infopage.h, test first; newest version that fits nowhere at 9 pt -> whole at 11 pt + scrollbar: wheel, track click,
    thumb drag). User 2026-11-15: "scrollbars work".
 5. Windows MIDI ports: CODE WRITTEN (user OK: in-box API only, read-only, installed only where supported; design in
