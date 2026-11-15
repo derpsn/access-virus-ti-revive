@@ -98,8 +98,8 @@ talk with the user (Linux may start); hil-win on the tuned VM: yes; update check
   first, test_updatecheck; mutation-checked by hand), option "update-check" (off; 8th row), Control Center checks at
   start / when switched on, once a day, system curl (Linux: wget fallback), update.txt in plugin_dir; plug-in reads
   it only: LCD note once per release + "Download TI Revive X" in ?; "Prepare a Bug Report..." = save logs + GitHub
-  form with "TI Revive <v>, <OS>" in Versions; tirevive-cc update-check. Linux: real check OK (latest 0.8.41).
-  Not run: Windows (curl.exe via CreateProcess; mingw syntax only), macOS, the GUI by eye. README/site/helptext done.
+  form with "TI Revive <v>, <OS>" in Versions; tirevive-cc update-check. Real check OK on Linux and macOS (latest
+  0.8.41, 2026-11-15); GUI checked by the user on both. Not run: Windows (curl.exe via CreateProcess).
 - #39: no latency switch (user 2026-11-15); the recording hint instead, done.
 - Windows VM: hil-win on the tuned VM DONE (E537): the probe miss is gone, no A/B needed. Open (LOW): H1's hung
   first audio read after power-on + attach; watch for it in the next hil-win, and drift limit 100 ppm vs 11 s items.
