@@ -97,6 +97,12 @@ const std::vector<PluginOption> &plugin_options()
          "Even rhythm for played notes",
          "Notes you play live go about 3 ms later, so they come at most about 1.3 ms late (measured on a Mac). Off: "
          "they are stamped like the original's, and one can come 1-3 ms late now and then."},
+        // off by default (0.8.42, user 2026-11-15): the Control Center asks GitHub once a day (updatecheck.h); the
+        // plug-in only reads the answer from update.txt and never goes online itself
+        {"update-check", "update-check.on", "Check once a day for a new TI Revive release (asks GitHub)", false,
+         "Check for updates",
+         "Once a day the Control Center asks GitHub for the newest release; nothing about you or your setup is "
+         "sent. The plug-in then shows a note and a Download entry in its ? menu."},
     };
     return opts;
 }

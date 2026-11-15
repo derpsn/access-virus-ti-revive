@@ -24,6 +24,7 @@ extern char **environ;
 #include "vstgui/lib/platform/platformfactory.h"
 #include "access/library.h"
 #include "cc/diag.h"
+#include "cc/updatecheck.h"
 #include "editor/helptext.h"
 #include "model/utf8.h"
 #include "editor/editormenus.h"
@@ -1998,7 +1999,7 @@ private:
             {"Switch the Virus off, wait a few seconds and switch it on again. Restarting the DAW or the plug-in does "
              "not help: in our tests only switching the Virus off and on cleared it."},
             {"If this happens more than once, please open an issue on GitHub with the plug-in's log (Control Center, "
-             "Nerd mode, Save logs)."},
+             "Nerd mode, Save logs, or the ? menu, Prepare a Bug Report)."},
             {"Click anywhere or press Esc to close."}};
         alert_ = true;
         invalid();
@@ -2980,6 +2981,7 @@ private:
         st.connected = plugin_->virus_connected();
         st.diag_log = vti::cc::plugin_log_enabled();
         st.snow = plugin_->is_snow();
+        st.update = vti::cc::update_available(VTI_NATIVE_VERSION, vti::cc::read_update_state()); // a file read, no network
         manual_paths_.assign(vti::kManualCount, std::string());
         const auto dirs = vti::manual_dirs(plugin_->files().source(), vti::u8env("ProgramFiles(x86)"));
         for (int k = 0; k < vti::kManualCount; k++) { // only the PDFs the user's Access setup put on disk
@@ -3030,6 +3032,9 @@ private:
         case vti::MenuAction::SaveLogs:
             save_logs_dialog();
             break;
+        case vti::MenuAction::Update:
+            open_url(vti::cc::kReleasesUrl);
+            break;
         case vti::MenuAction::DiagLog:
             if (!vti::cc::set_plugin_log(!vti::cc::plugin_log_enabled(), err))
                 plugin_->lcd_message("Detailed log", "not changed: " + err);
@@ -3062,7 +3067,7 @@ private:
         invalid();
     }
 
-    // "Save Logs for a Bug Report...": the Control Center's collection (diag.h: system, versions, the ends of the
+    // "Prepare a Bug Report...": the Control Center's collection (diag.h: system, versions, the ends of the
     // plug-in and broker logs, home folder and user name replaced) into a file the user chooses
     void save_logs_dialog()
     {
@@ -3085,10 +3090,13 @@ private:
             if (sel->getNumSelectedFiles() != 1)
                 return;
             std::string err;
-            if (vti::cc::collect_logs(sel->getSelectedFile(0), VTI_NATIVE_VERSION, err))
-                plugin->lcd_message("Logs saved", "please look through them first");
-            else
+            if (vti::cc::collect_logs(sel->getSelectedFile(0), VTI_NATIVE_VERSION, err)) {
+                plugin->lcd_message("Logs saved", "look through them, then attach");
+                // GitHub's form with the version filled in; the user attaches the file, nothing is sent by us
+                open_url(vti::cc::bug_report_url(VTI_NATIVE_VERSION, vti::cc::os_family()).c_str());
+            } else {
                 plugin->lcd_message("Logs not saved", err);
+            }
         });
         fs->forget();
     }
@@ -3247,6 +3255,13 @@ bool PLUGIN_API VirusEditor::open(void *parent, const PlatformType &platformType
     }
     plugin_->editor_event("opened");
     plugin_->editor_opened(); // only now: the early returns above leave no editor
+    // the opt-in update check's answer (the Control Center wrote it, updatecheck.h): a note once per new release
+    vti::cc::UpdateState us = vti::cc::read_update_state();
+    if (vti::cc::show_update_note(VTI_NATIVE_VERSION, us)) {
+        us.seen = us.latest;
+        vti::cc::write_update_state(us);
+        plugin_->lcd_message("TI Revive " + us.latest + " is out", "? menu: Download");
+    }
     return true;
 }
 

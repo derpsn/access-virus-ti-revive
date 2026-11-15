@@ -15,7 +15,7 @@ namespace vti {
 // where bug reports go (the "?" menu's "Report a Problem")
 inline const char *issues_url() { return "https://github.com/derpsn/access-virus-ti-revive/issues"; }
 
-enum class MenuAction { None, HelpMode, SetupTips, Welcome, WhatsNew, Manual, Website, Report, SaveLogs, DiagLog, Panic, Undo, Redo, Compare, Randomize, Size };
+enum class MenuAction { None, HelpMode, SetupTips, Welcome, WhatsNew, Manual, Website, Report, SaveLogs, Update, DiagLog, Panic, Undo, Redo, Compare, Randomize, Size };
 
 // the editor sizes of the right-click menu (the original has no such setting)
 struct EditorSize {
@@ -50,6 +50,7 @@ struct HelpMenuState {
     bool diag_log = false;    // the detailed log is on (default since 0.8.41; diag.off switches it off from the next start)
     std::vector<int> manuals; // the Access manuals found (manuals.h kManual*), in menu order; none: no group
     bool snow = false;        // a Snow: its own manuals' names
+    std::string update;       // a newer release the opt-in update check found (cc/updatecheck.h), "" = none
 };
 
 inline BuiltMenu help_menu(const HelpMenuState &s)
@@ -65,9 +66,11 @@ inline BuiltMenu help_menu(const HelpMenuState &s)
             m.add(MenuAction::Manual, manual_title(k, s.snow), true, k);
     }
     m.line();
+    if (!s.update.empty())
+        m.add(MenuAction::Update, "Download TI Revive " + s.update);
     m.add(MenuAction::Website, "TI Revive Website and Manual");
     m.add(MenuAction::Report, "Report a Problem (GitHub)");
-    m.add(MenuAction::SaveLogs, "Save Logs for a Bug Report...");
+    m.add(MenuAction::SaveLogs, "Prepare a Bug Report...");
     if (s.diag_log)
         m.checked = (int)m.items.size();
     m.add(MenuAction::DiagLog, "Detailed Log (from the Next Start)");

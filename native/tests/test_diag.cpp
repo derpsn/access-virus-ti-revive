@@ -66,7 +66,12 @@ TEST(diag_plugin_options)
 {
     Home h("vtester");
     const auto &opts = plugin_options();
-    CHECK(opts.size() == 7);
+    CHECK(opts.size() == 8);
+    // update-check (0.8.42, user 2026-11-15): the Control Center asks GitHub once a day for the latest release, OFF
+    // by default (opt-in, no telemetry); the hint says what is sent
+    CHECK(std::string(opts[7].name) == "update-check" && std::string(opts[7].file) == "update-check.on");
+    CHECK(!opts[7].default_on && !plugin_option("update-check"));
+    CHECK(std::string(opts[7].hint).find("GitHub") != std::string::npos);
     // live-later (E519, 0.8.41): played notes stamped a little later so the Virus always meets them, OFF by default
     // (off = the timing as the original, E524 (4)); live-later.on switches it on
     CHECK(std::string(opts[6].name) == "live-later" && std::string(opts[6].file) == "live-later.on");

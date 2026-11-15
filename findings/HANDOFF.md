@@ -104,7 +104,12 @@ talk with the user (Linux may start); hil-win on the tuned VM: yes; update check
   keeps the NORMAL package (install it there, check it is unchanged), then an rc1 pre-release with the libusb zip
   for #37 (promised there). Unverified: launchd socket activation as root on 10.15, SockPathMode 438, the
   postinstall's pkill of a running user broker. mac-libusb-test.command stays a dev tool (not in any package).
-- Opt-in update check in the Control Center; "Prepare bug report" button (no telemetry).
+- Update check + bug report: CODE DONE 2026-11-15 (user: "the update features fits"): cc/updatecheck.{h,cpp} (test
+  first, test_updatecheck; mutation-checked by hand), option "update-check" (off; 8th row), Control Center checks at
+  start / when switched on, once a day, system curl (Linux: wget fallback), update.txt in plugin_dir; plug-in reads
+  it only: LCD note once per release + "Download TI Revive X" in ?; "Prepare a Bug Report..." = save logs + GitHub
+  form with "TI Revive <v>, <OS>" in Versions; tirevive-cc update-check. Linux: real check OK (latest 0.8.41).
+  Not run: Windows (curl.exe via CreateProcess; mingw syntax only), macOS, the GUI by eye. README/site/helptext done.
 - #39: report the short latency while played notes come in (Live re-syncs).
 - Windows VM: hil-win on the tuned VM DONE (E537): the probe miss is gone, no A/B needed. Open (LOW): H1's hung
   first audio read after power-on + attach; watch for it in the next hil-win, and drift limit 100 ppm vs 11 s items.

@@ -285,3 +285,20 @@ TEST(editormenus_action_and_arg_out_of_range)
     CHECK(m.action_at(2) == MenuAction::None && m.arg_at(2) == 0);
     CHECK(m.action_at(-1) == MenuAction::None && m.arg_at(-1) == 0);
 }
+
+// 0.8.42 (user 2026-11-15): "Prepare a Bug Report..." (saves the logs, then opens GitHub's form with the version filled
+// in) instead of "Save Logs for a Bug Report..."; and, when the opt-in update check found a newer release, a Download
+// entry right at the top of the links. Without a known update there is no such entry.
+TEST(editormenus_help_menu_bug_report_and_update)
+{
+    HelpMenuState s;
+    BuiltMenu m = help_menu(s);
+    CHECK(m.items[index_of(m, MenuAction::SaveLogs)].text == "Prepare a Bug Report...");
+    CHECK(index_of(m, MenuAction::Update) == -1);
+    s.update = "0.8.43";
+    m = help_menu(s);
+    const int u = index_of(m, MenuAction::Update);
+    CHECK(u >= 0 && m.items[u].text == "Download TI Revive 0.8.43");
+    CHECK(u < index_of(m, MenuAction::Website));
+    CHECK(m.items.size() == m.actions.size());
+}
