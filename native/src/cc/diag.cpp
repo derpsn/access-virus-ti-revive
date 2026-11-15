@@ -91,11 +91,11 @@ const std::vector<PluginOption> &plugin_options()
         // on by default since 0.8.41 (user 2026-11-10): the plug-in's log for bug reports; diag.off switches it off
         {"plugin-log", "diag.off", "Plug-in log for bug reports (stays on this computer)", true, "Plug-in log",
          "Writes what the plug-in does to diag.log on this computer, for bug reports. Nothing is sent anywhere."},
-        // off by default (0.8.41, E519): played notes a little later; on our Mac at most one 64-frame step late
-        // instead of two (E534), not exact
-        {"live-later", "live-later.on", "Played notes a little later, for an evener rhythm (E519, E534)", false,
+        // off by default (0.8.41, E519): played notes a little later; 128 frames left them up to one 64-frame step
+        // apart (E534), 160 (0.8.42) puts all on the same step on our Mac (E539)
+        {"live-later", "live-later.on", "Played notes a little later, for an even rhythm (E519, E539)", false,
          "Even rhythm for played notes",
-         "Notes you play live go about 3 ms later, so they come at most about 1.3 ms late (measured on a Mac). Off: "
+         "Notes you play live go about 3 ms later and then all sound in the same steady rhythm (within 0.1 ms on a Mac). Off: "
          "they are stamped like the original's, and one can come 1-3 ms late now and then."},
         // off by default (0.8.42, user 2026-11-15): the Control Center asks GitHub once a day (updatecheck.h); the
         // plug-in only reads the answer from update.txt and never goes online itself

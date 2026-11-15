@@ -77,7 +77,7 @@ inline int64_t live_stamp(int64_t newest, int64_t marker, double ratio)
 // later (about 2.7 ms at 48 kHz). E534 (the same keystamp test with it on): 11 of 40 on the stamp, 29 one 64-frame
 // step late, none two - half the spread, not exact; which step follows the send phase, not the margin, so the stamp
 // sits on an edge of the Virus' 64-frame grid and 128 (a multiple of 64) cannot move it off. 0.8.42: 160 = two and
-// a half steps (about 3.3 ms at 48 kHz), half a step off that edge (not yet measured). Off by default: then the
+// a half steps (about 3.3 ms at 48 kHz), half a step off that edge: E539, all 40 played notes on one step (Mac). Off by default: then the
 // stamp is the original's or up to one block later (the original drops the note's place in the block, E524 (4)).
 constexpr int LIVE_LATER_FRAMES = 160;
 

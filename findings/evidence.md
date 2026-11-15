@@ -4909,3 +4909,13 @@ hil-win on the TUNED win11 VM (E533's tuning; host governor performance; 2026-11
 - **Method:** Logic on our Mac, screenshots read by eye
 - **Confidence:** HIGH (what Logic shows, one session) / MED (the reading of Logic's rule, not from Apple's documentation)
 - **Hardware:** yes (TI2 Desktop, macOS, Logic)
+
+### E539
+
+live-later at 160 frames (0.8.42, E534's reading: half a 64-frame step off the edge of the Virus' grid) on our Mac, the E534 setup (2026-11-15 ~10:45 local, MacBook Air M3, macOS 27.2.1, Ableton Live 12, 48 kHz, block 128, TI Revive 0.8.42 test build CI 43696948011, pkg 6786702f, AU 786d9fcc / VST3 used; TI2 Desktop; keystamp --interval-ms 500 --count 40 into the armed plug-in track, Monitor In, Live button off, no clip; the plug-in log says "stamped 160 frames later (live-later.on)"). 40 notes, 40 klog lines: K (onset in USB 1 minus the stamp, the 160 frames included) 5478-5483 for all 40 (5478 x3, 5479 x9, 5480 x9, 5481 x7, 5482 x8, 5483 x4): every note on the same 64-frame step, spread 5 frames (0.1 ms); stamps 24000 +-1 frames apart; send phase stamp + 4490..4941 (the usual sawtooth). Against E534 (128 frames: 11 on the stamp, 29 one step late, none two) and E519 (option off: 18 met, the rest one or two steps late). So the grid-edge reading of E534 holds for this setup: with the stamp half a step off the edge, the phase of the send no longer decides the step. Cost: played notes about 3.3 ms later than without the option (the 160 frames). One run of 40 notes, one host, one block size.
+
+- **Date:** 2026-11-15
+- **Pointer:** the Mac's ~/Library/Application Support/virus-ti-native/diag.log from 1794735545 (klog lines; copy in the session scratchpad, not in git)
+- **Method:** keystamp (native/tools/keystamp.c) + the plug-in's klog (virusplugin.cpp klog_check), counted with a short Python script
+- **Confidence:** HIGH (the counts, one run of 40)
+- **Hardware:** yes (TI2 Desktop, macOS, Live 12)

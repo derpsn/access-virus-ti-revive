@@ -81,9 +81,8 @@ User 2026-11-15 on the order: Mac push later; live-later 160 explained, go; MIDI
 talk with the user (Linux may start); hil-win on the tuned VM: yes; update check + bug report also in the plug-in
 (proposal to the user first); #39 latency note: show the text before posting; proposed sim items: discuss when there.
 
-- live-later at 160 frames: CODE DONE 2026-11-15 (LIVE_LATER_FRAMES 160, test first; log line prints the value).
-  Open: the same keystamp test on the Mac (armed track, Monitor In, keystamp 500 ms, klog K and onset steps); the
-  texts' "at most about 1.3 ms late (measured on a Mac)" is the 128 result: re-measure, then fix CC/README/site.
+- live-later at 160 frames: DONE and measured on the Mac 2026-11-15 (E539: all 40 played notes on one 64-frame step,
+  spread 0.1 ms; 128 had 29 of 40 one step late, E534). Texts updated (CC hint, README, site).
 - Linux MIDI ports: CODE DONE 2026-11-15: vtikeyport_linux.c (straight /dev/snd/seq ioctls, no alsa-lib), client
   "Virus TI", port 0 "Virus TI MIDI" (cable 0), port 1 "Virus TI Synth" (cable 1) = the kernel driver's names (E016),
   read-only; seqevent.h + test_seqevent first. Seen: ports in aconnect -l (inputs only). NOT seen: a message through
