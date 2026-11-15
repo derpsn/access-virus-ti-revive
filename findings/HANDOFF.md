@@ -119,7 +119,7 @@ talk with the user (Linux may start); hil-win on the tuned VM: yes; update check
 1. Mac: test build CI 43708448485 (9a003ee, pkg db140751) installed 2026-11-15; the three new Control Center pages
    (nerd mode, OPTIONS, BACKUP & RESTORE with the real RAM banks) look right on macOS (user + screenshots). Open: the
    Windows look in the VM; new README/site nerd mode screenshot (docs/images/control-center-nerd-mode.png is old).
-2. #30 knob automation in Logic (E542): fix written (plug-in's own gesture timer); CI 43710993144 (98f5dc3) running -> Logic test on our Mac
+2. #30 knob automation in Logic (E542): fix written (plug-in's own gesture timer); CI 43710993144 (98f5dc3) GREEN, pkg 58469e4a pushed to ~/Downloads/TI-Revive-0.8.42-ci98f5dc3 -> Logic test on our Mac
    (Latch, window closed, turn cutoff on the Virus) -> new RC in #30.
    #30 (reopened): early audio waits on the reporter's settings (E540/E541: not reproduced on our Mac/Logic/TI2 at 48k). If 44.1 kHz:
    measure that on our Mac; Snow: only the reporter. New RC promised once fixed.
