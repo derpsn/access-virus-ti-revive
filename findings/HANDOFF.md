@@ -145,6 +145,7 @@ talk with the user (Linux may start); hil-win on the tuned VM: yes; update check
    design-midi-ports.md "Implementation"): helper src/midiports-win (MSVC, never built yet), vtikeyport_win.c +
    midifeed.h + umpconv.h (tests), MSI condition, CI step. CI 43694600597 (1db7d3e, 0.8.42) ALL GREEN, helper
    compiled. win11 VM: build 26300.9974 (26H2), midisrv there (Manual), NO System32 Windows.Devices.Midi2.dll ->
-   can't test yet. Asked the user: wait / Windows Update in the VM / test-only SDK switch. README/site after a test.
+   can't test yet; no API in Windows Update either. User: test with the SDK in the VM: helper switch
+   VTI_MIDI2_ALLOW_SDK=1 (e8b4ae4, CI 43695312791) + Preview 11 DLL/.pri copied by hand. VM running.
 6. Later (user): Mac push of a package + live-later 160 keystamp test there; Windows MIDI ports only after a talk.
 7. Waiting on reporters (table above); check issues only together with the user.
