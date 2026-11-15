@@ -119,13 +119,11 @@ talk with the user (Linux may start); hil-win on the tuned VM: yes; update check
 1. Mac: test build CI 43708448485 (9a003ee, pkg db140751) installed 2026-11-15; the three new Control Center pages
    (nerd mode, OPTIONS, BACKUP & RESTORE with the real RAM banks) look right on macOS (user + screenshots). Open: the
    Windows look in the VM; new README/site nerd mode screenshot (docs/images/control-center-nerd-mode.png is old).
-2. #30 knob automation in Logic (E542): build 1 (timer only) failed (gate editors_open_ > 0); fix 2 = queue gestures
-   whenever a tick runs; CI 43711710236 (8cf200b) green, pkg e037cae9 pushed to ~/Downloads/TI-Revive-0.8.42-ci8cf200b
-   -> Logic test (Latch, window closed) -> tell Chris + new RC.
+2. #30 knob automation in Logic (E542): fix 2 WORKS on our Mac (user 2026-11-15, Logic Latch, window closed). Tagging
+   v0.8.42-rc2 (round-0.8.42) for Chris; then post in #30 with the RC link.
    #30 (reopened): early audio waits on the reporter's settings (E540/E541: not reproduced on our Mac/Logic/TI2 at 48k). If 44.1 kHz:
    measure that on our Mac; Snow: only the reporter. New RC promised once fixed.
-3. v0.8.42-rc1 pre-release out; wait for #37. build.yml "New in 0.8.42" = rc1 text: rewrite before the final (update
-   check + bug report, Linux/Windows MIDI ports, What's New scrollbar, Control Center pages, MIDI port texts).
+3. v0.8.42-rc1 out (#37 waits). build.yml "New in 0.8.42" + What's New entry written for rc2 (all round items).
 4. Windows MIDI ports: real path waits for Windows' own API (end of Nov update) in the VM: installer must then add the
    helper by itself; real key/DIN traffic untested (no keyed Virus here).
 5. Open, low: stray single sample 2^-6 after record start (E541); proposed sim items (discuss one at a time).

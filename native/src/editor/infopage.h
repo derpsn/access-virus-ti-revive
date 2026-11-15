@@ -56,6 +56,20 @@ struct ChangeNote {
 inline const std::vector<ChangeNote> &changelog()
 {
     static const std::vector<ChangeNote> notes = {
+        {"0.8.42",
+         {"Knobs turned on the Virus are recorded as automation in Logic also with the plug-in window closed (#30; "
+          "before, only with the window open). Tested on our Mac.",
+          "Control Center: Nerd mode, the Options and the RAM banks (on BACKUP & RESTORE) are pages of the Access "
+          "look. Nerd mode has a scrolling table and draws several times faster.",
+          "Check for updates, if you want it: switch it on in the Control Center's Options. Once a day it asks GitHub "
+          "for the newest release; the plug-in then shows a note and a Download entry in its ? menu.",
+          "? > Prepare a Bug Report saves the logs and opens GitHub's bug form with your version filled in.",
+          "What's New scrolls when a version's notes are long.",
+          "Linux: the Virus keys and its MIDI In as the MIDI inputs \"Virus TI Synth\" and \"Virus TI MIDI\" (they "
+          "show up; not yet tested with a Virus that has keys).",
+          "Windows 11 25H2 and later: the same two MIDI inputs, once Windows has its own MIDI Services (with the "
+          "update from the end of November 2026). Tested in a Windows 11 VM with Microsoft's preview.",
+          "macOS: a separate package for Macs where Apple's USB audio driver crackles (#37)."}},
         {"0.8.41",
          {"Lower latency, experimental: a new option on the Control Center's Options page. At audio buffers up to 256 "
           "a note takes 36 to 48 ms instead of 76 to 87 ms (55 to 59 ms at 512). It leaves your DAW only about 20 ms "
