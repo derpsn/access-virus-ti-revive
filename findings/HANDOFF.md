@@ -115,7 +115,7 @@ talk with the user (Linux may start); hil-win on the tuned VM: yes; update check
 
 ## NEXT
 
-1. CI build of round-0.8.42 (Access-look Control Center, live-later 128, recording hint removed) -> Mac package push +
+1. CI 43708448485 (9a003ee, 0.8.42) RUNNING (started 2026-11-15 afternoon) -> Mac package push (INSTALL-COMMAND + .command) +
    look at the three new Control Center pages there (screenshots); Windows look in the VM. New README/site screenshot
    for nerd mode (docs/images/control-center-nerd-mode.png is the old page): ask the user which (Linux 11:25 or Mac).
 2. #30 (reopened): waits on the reporter's settings (E540/E541: not reproduced on our Mac/Logic/TI2 at 48k). If 44.1 kHz:
