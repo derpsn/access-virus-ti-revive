@@ -29,7 +29,6 @@
 #include "device/hostmidi.h"
 #include "device/sendguard.h"
 #include "device/stamprule.h"
-#include "device/recordhint.h"
 #include "device/offlinepace.h"
 #include "device/blockevents.h"
 #include "device/heldnotes.h"
@@ -814,7 +813,6 @@ private:
     void wait_offline(Steinberg::Vst::ProcessData &data, double ratio, int64_t &newest, int64_t &avail);
     int64_t ring_newest(); // the newest frame of the Virus' ring, -1 without one (read under the audio gate)
     void report_offline();
-    void report_record_hint();
     // the original's sync error page (E205): events from the Virus (broker rx thread), ticks and transport (worker)
     SyncAlert sync_alert_;
     std::mutex history_mu_;
@@ -846,8 +844,6 @@ private:
     bool od_ready_seen_ = false, od_playing_seen_ = false;
     bool live_notes_ = false; // live-notes.on: notes flagged as played live skip the lead (stamprule.h)
     LiveNoteGuard live_guard_; // audio thread only: a played note-off never passes a waiting note-on
-    RecordHint record_hint_;   // audio thread only: recording a played part without Live Mode (#39, E518)
-    std::atomic<bool> record_hint_due_{false}; // set by the audio thread, shown by the worker (report_record_hint)
     // the parts section's D button (directmon.h): its state, the part as a quick check for set_part_value
     DirectMonitor dm_;
     std::mutex dm_mu_;

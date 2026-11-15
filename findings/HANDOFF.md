@@ -81,8 +81,8 @@ User 2026-11-15 on the order: Mac push later; live-later 160 explained, go; MIDI
 talk with the user (Linux may start); hil-win on the tuned VM: yes; update check + bug report also in the plug-in
 (proposal to the user first); #39 latency note: show the text before posting; proposed sim items: discuss when there.
 
-- live-later at 160 frames: DONE and measured on the Mac 2026-11-15 (E539: all 40 played notes on one 64-frame step,
-  spread 0.1 ms; 128 had 29 of 40 one step late, E534). Texts updated (CC hint, README, site).
+- live-later 160 on the Mac (E539, 5 runs): like 128, played notes up to one 64-frame step apart (only run 1 all on
+  one); grid-edge reading wrong; texts "at most about 1.3 ms" kept. 160 vs 128: user to decide (no measured gain).
 - Linux MIDI ports: CODE DONE 2026-11-15: vtikeyport_linux.c (straight /dev/snd/seq ioctls, no alsa-lib), client
   "Virus TI", port 0 "Virus TI MIDI" (cable 0), port 1 "Virus TI Synth" (cable 1) = the kernel driver's names (E016),
   read-only; seqevent.h + test_seqevent first. Seen: ports in aconnect -l (inputs only). NOT seen: a message through
@@ -124,9 +124,9 @@ talk with the user (Linux may start); hil-win on the tuned VM: yes; update check
    1435b04; 0.8.41 release backed up in ~/.vst3-backup/0.8.41-release). User smoke test 2026-11-15 PASSED: Options
    8th row visible (8 rows fit, no scroll: right), switching it on ran a real check (update.txt latest 0.8.41);
    plug-in ? menu "Prepare a Bug Report..." saved the logs and opened the form; plug-in played, no crash.
-2. #39 decided (user 2026-11-15): NO automatic latency switch ("the original also had this issue and live mode is for
-   that"); only the once-only LCD hint when recording played notes without Live Mode: CODE DONE (recordhint.h, test
-   first; help text, README, site). Not seen in a DAW yet (needs Live: Mac). Any #39 text: show the user first.
+2. #39: NO automatic latency switch (user 2026-11-15); the recording hint was built, did not show in Live (no hint
+   line although Live recorded; most likely Live sets no recording flag for VST3, not proven) and is REMOVED (user:
+   "if it is not working for all we should leave it out"). Live Mode stays the advice.
 3. v0.8.42-rc1 is out as pre-release (tag 5a83f34, CI 43645282349, 7 assets incl. the mac-libusb zip); wait for #37's
    report. build.yml "New in 0.8.42" = rc1 text: rewrite before the final (live-later 160, Linux MIDI ports, update
    check, bug report).

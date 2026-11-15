@@ -825,7 +825,7 @@ Entries: 536. Marks after an entry: its lowest confidence level when below HIGH,
 - [E535](evidence.md#e535) #37's libusb audio run on Catalina (reporter, 2026-11-14 ~19:57-20:06 UTC; Intel MacBook, macOS 10.15.7, TI ... (LOW)
 - [E536](evidence.md#e536) The plug-in's level meters work on a real Virus TI Snow, and #30's latency problem is solved with 0.8.41 ... (MED)
 - [E537](evidence.md#e537) hil-win on the TUNED win11 VM (E533's tuning; host governor performance; 2026-11-15 08:15 and 08:21 local; ... (LOW)
-- [E539](evidence.md#e539) live-later at 160 frames (0.8.42, E534's reading: half a 64-frame step off the edge of the Virus' grid) on ...
+- [E539](evidence.md#e539) live-later at 160 frames (0.8.42, E534's reading: half a 64-frame step off the edge of the Virus' grid) on ... (LOW)
 
 ## Sound problems: crackle, silence, dropouts (168)
 
@@ -1596,7 +1596,7 @@ Entries: 536. Marks after an entry: its lowest confidence level when below HIGH,
 - [E535](evidence.md#e535) #37's libusb audio run on Catalina (reporter, 2026-11-14 ~19:57-20:06 UTC; Intel MacBook, macOS 10.15.7, TI ... (LOW)
 - [E536](evidence.md#e536) The plug-in's level meters work on a real Virus TI Snow, and #30's latency problem is solved with 0.8.41 ... (MED)
 - [E538](evidence.md#e538) #30 follow-up (reporter 2026-11-15: playing MIDI channel 1 of a 4-part TI Revive in Logic, the plug-in's and ... (MED)
-- [E539](evidence.md#e539) live-later at 160 frames (0.8.42, E534's reading: half a 64-frame step off the edge of the Virus' grid) on ...
+- [E539](evidence.md#e539) live-later at 160 frames (0.8.42, E534's reading: half a 64-frame step off the edge of the Virus' grid) on ... (LOW)
 
 ## Linux (212)
 
@@ -2053,7 +2053,7 @@ Entries: 536. Marks after an entry: its lowest confidence level when below HIGH,
 - [E536](evidence.md#e536) The plug-in's level meters work on a real Virus TI Snow, and #30's latency problem is solved with 0.8.41 ... (MED)
 - [E537](evidence.md#e537) hil-win on the TUNED win11 VM (E533's tuning; host governor performance; 2026-11-15 08:15 and 08:21 local; ... (LOW)
 - [E538](evidence.md#e538) #30 follow-up (reporter 2026-11-15: playing MIDI channel 1 of a 4-part TI Revive in Logic, the plug-in's and ... (MED)
-- [E539](evidence.md#e539) live-later at 160 frames (0.8.42, E534's reading: half a 64-frame step off the edge of the Virus' grid) on ...
+- [E539](evidence.md#e539) live-later at 160 frames (0.8.42, E534's reading: half a 64-frame step off the edge of the Virus' grid) on ... (LOW)
 
 ## DAWs (230)
 
@@ -2286,7 +2286,7 @@ Entries: 536. Marks after an entry: its lowest confidence level when below HIGH,
 - [E532](evidence.md#e532) #33 Logic distortion on an Intel Mac is not E488's byte slip (2026-11-14, the reporter's Intel Mac mini 2018, ... (open; not on hardware)
 - [E534](evidence.md#e534) The option live-later (E519: played notes stamped 128 frames later) on our Mac, the E518 run A setup ... (LOW)
 - [E538](evidence.md#e538) #30 follow-up (reporter 2026-11-15: playing MIDI channel 1 of a 4-part TI Revive in Logic, the plug-in's and ... (MED)
-- [E539](evidence.md#e539) live-later at 160 frames (0.8.42, E534's reading: half a 64-frame step off the edge of the Virus' grid) on ...
+- [E539](evidence.md#e539) live-later at 160 frames (0.8.42, E534's reading: half a 64-frame step off the edge of the Virus' grid) on ... (LOW)
 
 ## User reports (GitHub issues, forums) (118)
 
