@@ -155,9 +155,12 @@ public:
             }
         if (c != kNerdCommand && c != kOptionsCommand)
             return false;
-        if (c == kNerdCommand && skin_ && look_ == kSkinPage) { // the Access look has nerd mode as a page of its own
+        if (skin_ && look_ == kSkinPage) { // the Access look has nerd mode and Options as pages of its own
             show_page(kSkinPage);
-            tirevive::show_skin_nerd(skin_);
+            if (c == kNerdCommand)
+                tirevive::show_skin_nerd(skin_);
+            else
+                tirevive::show_skin_options(skin_);
             return true;
         }
         show_page(c == kNerdCommand ? kNerdPage : kOptionsPage);

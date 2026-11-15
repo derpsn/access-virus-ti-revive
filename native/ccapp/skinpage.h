@@ -29,5 +29,6 @@ VSTGUI::CPoint skin_page_size(VSTGUI::CViewContainer *page);
 void set_skin_page_active(VSTGUI::CViewContainer *page, bool on);
 // nerd mode as a page of the Access look (2026-11-15): opens it (the page must be the one shown)
 void show_skin_nerd(VSTGUI::CViewContainer *page);
+void show_skin_options(VSTGUI::CViewContainer *page); // the Options page of the Access look
 
 } // namespace tirevive

@@ -5,6 +5,7 @@
 #pragma once
 #include <algorithm>
 #include <string>
+#include <vector>
 
 namespace vti::cc {
 
@@ -73,6 +74,37 @@ inline std::string fit_text(const std::string &text, size_t n)
     if (out.size() <= n)
         return out;
     return n >= 4 ? out.substr(0, n - 3) + "..." : out.substr(0, n);
+}
+
+// `text` in at most `max_lines` lines of `n` LCD characters, broken at spaces (the Options page's descriptions); a word
+// longer than a line is cut, and text that does not fit ends the last line in "..."
+inline std::vector<std::string> wrap_text(const std::string &text, size_t n, size_t max_lines)
+{
+    std::vector<std::string> lines;
+    const std::string t = fit_text(text, std::string::npos); // ASCII only, as the LCD font
+    size_t i = 0;
+    while (i < t.size() && lines.size() < max_lines && n > 0) {
+        while (i < t.size() && t[i] == ' ')
+            i++;
+        if (i >= t.size())
+            break;
+        if (lines.size() + 1 == max_lines && t.size() - i > n) { // the last line and more than it holds
+            lines.push_back(fit_text(t.substr(i), n));
+            return lines;
+        }
+        size_t end = std::min(t.size(), i + n);
+        if (end < t.size()) { // break at the last space that fits, else cut the long word
+            const size_t sp = t.rfind(' ', end);
+            if (sp != std::string::npos && sp > i)
+                end = sp;
+        }
+        std::string line = t.substr(i, end - i);
+        while (!line.empty() && line.back() == ' ')
+            line.pop_back();
+        lines.push_back(line);
+        i = end;
+    }
+    return lines;
 }
 
 } // namespace vti::cc

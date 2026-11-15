@@ -119,7 +119,7 @@ bool SkinView::draw_own(CDrawContext *ctx, const SkinNode &n)
     }
     if (n.type == "tr_panel") {
         if (auto path = owned(ctx->createRoundRectGraphicsPath(r, 4))) {
-            ctx->setFillColor(kPanel);
+            ctx->setFillColor((n.back & 0xff) ? rgba(n.back) : kPanel); // a colour of its own: e.g. see-through
             ctx->drawGraphicsPath(path, CDrawContext::kPathFilled);
         }
         return true;
@@ -145,6 +145,21 @@ bool SkinView::draw_own(CDrawContext *ctx, const SkinNode &n)
             ctx->setFont(font);
             ctx->setFontColor(kTitle);
             ctx->drawString(t.c_str(), r, kLeftText);
+        }
+        return true;
+    }
+    if (n.type == "tr_check") { // the Options page's switch: on = the original's separator blue with a tick
+        const bool on = state_.value(n.parameter) != 0;
+        ctx->setFillColor(on ? kSeparator : kRowDark);
+        ctx->drawRect(r, kDrawFilled);
+        ctx->setFrameColor(kThumb);
+        ctx->setLineWidth(1);
+        ctx->drawRect(r, kDrawStroked);
+        if (on) {
+            ctx->setFrameColor(CColor(255, 255, 255));
+            ctx->setLineWidth(2);
+            ctx->drawLine(CPoint(r.left + 3, r.top + n.h / 2), CPoint(r.left + n.w / 2 - 1, r.bottom - 4));
+            ctx->drawLine(CPoint(r.left + n.w / 2 - 1, r.bottom - 4), CPoint(r.right - 3, r.top + 3));
         }
         return true;
     }

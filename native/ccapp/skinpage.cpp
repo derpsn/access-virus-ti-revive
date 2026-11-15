@@ -9,6 +9,8 @@
 #include "nerdlive.h"
 #include "cc/diag.h"
 #include "cc/nerdview.h"
+#include "cc/updatecheck.h"
+#include "device/memsync.h"
 #include "vstgui/lib/cfileselector.h"
 #include "vstgui/lib/ccolor.h"
 #include "vstgui/lib/cframe.h"
@@ -29,7 +31,7 @@ namespace tirevive {
 namespace {
 
 // pages, as the original's expressions name them; kNerd is TI Revive's own (nerd mode in the Access look, 2026-11-15)
-enum Page { kStartup, kSelector, kBackup, kBurn, kUpdate, kNerd };
+enum Page { kStartup, kSelector, kBackup, kBurn, kUpdate, kNerd, kOptions }; // kNerd, kOptions: TI Revive's own
 
 // our parameters for the elements we add to the layout
 const char *kNotSupported = "TIRevive/NotSupported", *kStatus = "TIRevive/Status",
@@ -44,6 +46,15 @@ constexpr int kNerdRows = 15, kNerdRowH = 14, kTableX = 19, kTableY = 128, kTabl
 constexpr int kRowsY = kTableY + kHeadH, kRowsH = kNerdRows * kNerdRowH, kScrollW = 10;
 constexpr int kColTime = 25, kColDir = 107, kColText = 182; // live: TIME (12 characters) | DIRECTION | MESSAGE
 enum NerdMode { kNerdLive, kNerdPlugin, kNerdBroker };
+
+// the Options page in the Access look (2026-11-15): one row per plug-in option (cc/diag.h plugin_options), a check
+// box, the title and the description in two LCD lines; a click on the row switches it
+const char *kOptionsPage = "TIRevive/OptionsPage", *kOptRow = "TIRevive/OptRow", *kOptScroll = "TIRevive/OptScroll";
+constexpr int kOptRows = 6, kOptRowH = 40, kOptY = 126, kOptX = 19, kOptW = 648;
+
+// BACKUP & RESTORE gets the plain view's content: the RAM banks, the note on what is written; CANCEL while a backup
+// runs (the plain window stays only for a missing Access installation)
+const char *kBackupPanel = "TIRevive/BackupPanel", *kBusy = "TIRevive/Busy", *kCancel = "TIRevive/Cancel";
 enum NerdAct { kActPause, kActClock, kActRecord, kActSave };
 
 // USB does not tell the models apart (only the Snow by its product string): the user picks it by clicking the
@@ -71,6 +82,7 @@ public:
     ~SkinPage() noexcept override
     {
         stop_ = true;
+        cancel_ = true;
         if (worker_.joinable())
             worker_.join();
     }
@@ -115,6 +127,14 @@ public:
             return page_ == kUpdate;
         if (e == kNerdPage)
             return page_ == kNerd;
+        if (e == kOptionsPage)
+            return page_ == kOptions;
+        if (e.compare(0, 16, "TIRevive/OptSlot") == 0) // a row with an option in it
+            return opt_scroll_.first() + atoi(e.c_str() + 16) < (int)vti::cc::plugin_options().size();
+        if (e == kBackupPanel)
+            return page_ == kBackup;
+        if (e == kBusy)
+            return busy_ && backing_up_;
         if (e == kNerdLiveCols)
             return page_ == kNerd && nerd_mode_ == kNerdLive;
         if (e == kNerdLogCols)
@@ -139,7 +159,12 @@ public:
         if (p == kNerdMode)
             return nerd_mode_;
         if (p == kFooter) // the footer button of the page that is open stays down
-            return page_ == kNerd ? 0 : -1;
+            return page_ == kNerd ? 0 : page_ == kOptions ? 1 : -1;
+        if (p.compare(0, 17, "TIRevive/OptCheck") == 0) { // "TIRevive/OptCheck<row>": that row's option
+            const auto &opts = vti::cc::plugin_options();
+            const int i = opt_scroll_.first() + atoi(p.c_str() + 17);
+            return i >= 0 && i < (int)opts.size() && vti::cc::plugin_option(opts[(size_t)i].name) ? 1 : 0;
+        }
         return 0;
     }
     std::string text(const std::string &p) override
@@ -174,6 +199,20 @@ public:
                 return b.label;
         if (p.compare(0, 13, "TIRevive/Nerd") == 0)
             return nerd_text(p);
+        if (p.compare(0, 12, "TIRevive/Opt") == 0)
+            return options_text(p);
+        if (p.compare(0, 13, "TIRevive/Bank") == 0) { // 13 = strlen("TIRevive/Bank") // "TIRevive/Bank<0..3>", "TIRevive/BankTitle", "TIRevive/BankNote"
+            if (p == "TIRevive/BankTitle")
+                return "RAM BANKS";
+            if (p == "TIRevive/BankNote")
+                return "Only Restore writes to the Virus: programs into a RAM bank, never its flash. It works next to\n"
+                       "your DAW. Burn Flash, OS updates and factory reset are not offered, on purpose (they write the\n"
+                       "flash). Backups open in the plug-in once their .mid files are in the Patches folder.";
+            const int b = p.back() - '0';
+            return b >= 0 && b < 4 ? banks_[b] : "";
+        }
+        if (p == kCancel + std::string("/Label"))
+            return "CANCEL";
         return "";
     }
     bool enabled(const SkinNode &n) override
@@ -192,7 +231,7 @@ public:
         return true;
     }
     bool ready(const SkinNode &n) override { return n.expression.empty() || visible(n.expression); }
-    bool animating() override { return page_ != kNerd; } // nerd mode repaints when its rows change
+    bool animating() override { return page_ != kNerd && page_ != kOptions; } // our pages repaint when they change
     void right_click(CPoint where) override
     {
         if (actions_.size_menu)
@@ -204,10 +243,17 @@ public:
         if (page_ == kNerd) {
             scroll_.wheel((int)(dy > 0 ? dy * 3 + 0.5 : dy * 3 - 0.5)); // three lines per notch
             nerd_show();
+        } else if (page_ == kOptions) {
+            opt_scroll_.wheel(dy > 0 ? 1 : -1); // one option per notch
+            view_->invalid();
         }
     }
     bool thumb(const SkinNode &n, double &y, double &h) override
     {
+        if (n.parameter == kOptScroll) {
+            opt_scroll_.thumb(n.h, y, h);
+            return true;
+        }
         if (n.parameter != kNerdScroll)
             return false;
         scroll_.thumb(n.h, y, h);
@@ -218,13 +264,21 @@ public:
         if (n.parameter == kNerdScroll) {
             scroll_.click_track(n.h, at);
             nerd_show();
+        } else if (n.parameter == kOptScroll) {
+            opt_scroll_.click_track(n.h, at);
+            view_->invalid();
         }
     }
-    // the app's View > Nerd mode with the Access look shown: the page in the frame
+    // the app's View > Nerd mode / Options with the Access look shown: the page in the frame
     void show_nerd()
     {
         if (page_ != kNerd)
             nerd_enter();
+    }
+    void show_options()
+    {
+        if (page_ != kOptions)
+            options_enter();
     }
 
     void clicked(const SkinNode &n) override
@@ -235,20 +289,32 @@ public:
             if (found_ || n.value != 0) {
                 const bool leaving = page_ == kNerd;
                 page_ = n.value == 0 ? kBackup : n.value == 1 ? kBurn : kUpdate;
+                const bool backup_page = page_ == kBackup;
                 l.unlock();
                 if (leaving)
                     nerd_leave();
+                if (backup_page)
+                    read_banks();
             }
         } else if (p == kFooter) { // our footer buttons: radios, so the open page's stays down
             if (n.value >= 0 && n.value < (int)footer_.size() && footer_[(size_t)n.value].action)
                 footer_[(size_t)n.value].action();
+        } else if (p == kOptRow) {
+            option_toggle(n.value);
+        } else if (p == kCancel) {
+            cancel_ = true;
+            std::lock_guard<std::mutex> l(mu_);
+            status_ = "Cancelling...";
         } else if (p == kNerdMode) {
             nerd_set_mode(n.value);
         } else if (p == kNerdAction) {
             nerd_action(n.value);
         } else if (p == "ControlCenter/SelectVirus/SelectVirusOK") {
-            std::lock_guard<std::mutex> l(mu_);
-            page_ = kBackup;
+            {
+                std::lock_guard<std::mutex> l(mu_);
+                page_ = kBackup;
+            }
+            read_banks();
         } else if (p == "ControlCenter/VirusTI/TriggerBackup") {
             std::lock_guard<std::mutex> l(mu_); // the default target at once; the path field changes it
             target_ = vti::cc::default_backup_dir();
@@ -298,6 +364,12 @@ private:
     std::string product_, usb_, status_ = "Looking for the Virus...", backup_text_, target_;
     std::thread worker_;
 
+    // the Options page and BACKUP & RESTORE's panel
+    vti::cc::LogScroll opt_scroll_; // in rows of options
+    std::string opt_msg_;
+    std::string banks_[4];          // mu_: "RAM A: 128 programs, ..." (the worker fills them)
+    std::atomic<bool> backing_up_{false}, cancel_{false};
+
     // nerd mode (UI thread only; text() reads it under mu_ like the rest)
     Live live_;
     Page nerd_back_ = kSelector; // where NERD MODE pressed again returns to
@@ -341,10 +413,10 @@ private:
                     t.h = 20;
                     page.children.push_back(t);
                 }
-        footer_ = {{"TIRevive/Nerd", "NERD MODE", [this] { page_ == kNerd ? nerd_leave_to_back() : nerd_enter(); }},
-                   {"TIRevive/Options", "OPTIONS", actions_.options},
-                   {"TIRevive/Convert", "CONVERT LIBRARY", actions_.convert_library},
-                   {"TIRevive/Plain", "PLAIN VIEW", actions_.plain_view}};
+        // PLAIN VIEW is gone (2026-11-15): its content is on BACKUP & RESTORE; the plain window is only the fallback
+        footer_ = {{"TIRevive/Nerd", "NERD MODE", [this] { page_ == kNerd ? leave_to_back() : nerd_enter(); }},
+                   {"TIRevive/Options", "OPTIONS", [this] { page_ == kOptions ? leave_to_back() : options_enter(); }},
+                   {"TIRevive/Convert", "CONVERT LIBRARY", actions_.convert_library}};
         for (auto &n : layout_.nodes) {
             if (!n.container || n.background.find("Footer") == std::string::npos)
                 continue;
@@ -369,6 +441,9 @@ private:
             if (n.container && n.background.empty() && n.y == 42 && !n.children.empty() &&
                 n.children.front().expression.find("tab1active") != std::string::npos) {
                 n.children.push_back(nerd_nodes(n.x, n.y, n.w, n.h));
+                n.children.push_back(options_nodes(n.x, n.y, n.w, n.h));
+                n.children.push_back(backup_nodes());
+                add_cancel(n.children);
                 break;
             }
     }
@@ -511,17 +586,48 @@ private:
         return "";
     }
 
-    void nerd_enter()
+    // our pages (nerd mode, Options) open over the original's; the way back is the original page they came from
+    void enter_own(Page p)
     {
+        Page was;
         {
             std::lock_guard<std::mutex> l(mu_);
-            if (page_ != kNerd)
+            was = page_;
+            if (page_ != kNerd && page_ != kOptions)
                 nerd_back_ = page_ == kStartup ? kSelector : page_;
-            page_ = kNerd;
+            page_ = p;
         }
+        if (was == kNerd && p != kNerd)
+            nerd_leave();
+        view_->invalid();
+    }
+    void leave_to_back() // the open page's footer button pressed again
+    {
+        Page was;
+        {
+            std::lock_guard<std::mutex> l(mu_);
+            was = page_;
+            page_ = nerd_back_;
+        }
+        if (was == kNerd)
+            nerd_leave();
+        if (nerd_back_ == kBackup)
+            read_banks();
+        view_->invalid();
+    }
+    void nerd_enter()
+    {
+        enter_own(kNerd);
         if (nerd_mode_ == kNerdLive)
             live_.start();
         nerd_refresh(true);
+        view_->invalid();
+    }
+    void options_enter()
+    {
+        enter_own(kOptions);
+        opt_scroll_.update((int)vti::cc::plugin_options().size(), kOptRows);
+        opt_msg_.clear();
         view_->invalid();
     }
     void nerd_leave() // the page was left by a tab
@@ -530,14 +636,7 @@ private:
             live_.stop();
         view_->invalid();
     }
-    void nerd_leave_to_back() // NERD MODE pressed again: back to where it was opened from
-    {
-        {
-            std::lock_guard<std::mutex> l(mu_);
-            page_ = nerd_back_;
-        }
-        nerd_leave();
-    }
+
     void nerd_set_mode(int m)
     {
         if (m < 0 || m > 2 || m == nerd_mode_)
@@ -749,6 +848,160 @@ private:
             nerd_msg_ = "No file dialog could be opened (Linux: install zenity or kdialog).";
     }
 
+    // ---- the Options page ----
+    std::string options_text(const std::string &p) // mu_ held (text())
+    {
+        const auto &opts = vti::cc::plugin_options();
+        if (p == "TIRevive/OptTitle")
+            return "OPTIONS";
+        if (p == "TIRevive/OptIntro")
+            return "The plug-in reads these when it starts: a change applies from its next start (reload it or restart\n"
+                   "the DAW). The update check is the Control Center's own. Nothing here is sent to the Virus.";
+        if (p == "TIRevive/OptMsg")
+            return opt_msg_;
+        for (const char *what : {"TIRevive/OptName", "TIRevive/OptHint"})
+            if (p.compare(0, strlen(what), what) == 0) {
+                const int i = opt_scroll_.first() + atoi(p.c_str() + strlen(what));
+                if (i < 0 || i >= (int)opts.size())
+                    return "";
+                const auto &o = opts[(size_t)i];
+                if (what[12] == 'N') // "TIRevive/OptName" against "TIRevive/OptHint"
+                    return vti::cc::fit_text(o.title, 98);
+                std::string out;
+                for (auto &l : vti::cc::wrap_text(o.hint, 98, 2))
+                    out += (out.empty() ? "" : "\n") + l;
+                return out;
+            }
+        return "";
+    }
+    void option_toggle(int row)
+    {
+        const auto &opts = vti::cc::plugin_options();
+        const int i = opt_scroll_.first() + row;
+        if (i < 0 || i >= (int)opts.size())
+            return;
+        const auto &o = opts[(size_t)i];
+        const bool on = !vti::cc::plugin_option(o.name);
+        std::string err, msg;
+        if (!vti::cc::set_plugin_option(o.name, on, err)) {
+            msg = "Not changed: " + err;
+        } else if (std::string(o.name) == "update-check") { // the Control Center's own job, at once
+            msg = on ? "Check for updates: on - checking now, then once a day when the Control Center opens."
+                     : "Check for updates: off - nothing is asked any more.";
+            if (on)
+                vti::cc::start_update_check_if_due(true);
+        } else {
+            msg = std::string(o.title) + (on ? ": on" : ": off") + " - from the next start of the plug-in.";
+        }
+        std::lock_guard<std::mutex> l(mu_);
+        opt_msg_ = vti::cc::fit_text(msg, 107);
+    }
+    SkinNode options_nodes(int x, int y, int w, int h)
+    {
+        SkinNode page;
+        page.container = true;
+        page.x = x, page.y = y, page.w = w, page.h = h;
+        page.expression = kOptionsPage;
+        auto &c = page.children;
+        c.push_back(own("tr_backdrop", x, y, w, h, "", 52));
+        c.push_back(own("tr_title", 21, y + 10, 220, 31, "TIRevive/OptTitle"));
+        SkinNode intro = label(21, kOptY - 24, 646, "TIRevive/OptIntro");
+        intro.h = 20;
+        c.push_back(intro);
+        c.push_back(own("tr_panel", kOptX, kOptY, kOptW, kOptRows * kOptRowH + 4));
+        c.push_back(own("tr_rows", kOptX, kOptY, kOptW - kScrollW - 2, kOptRows * kOptRowH, "", kOptRowH));
+        for (int r = 0; r < kOptRows; r++) {
+            const int ry = kOptY + r * kOptRowH;
+            const std::string slot = "TIRevive/OptSlot" + std::to_string(r);
+            SkinNode box = own("tr_check", kOptX + 10, ry + 12, 16, 16, "TIRevive/OptCheck" + std::to_string(r));
+            box.expression = slot;
+            c.push_back(box);
+            c.push_back(label(kOptX + 36, ry + 6, 590, "TIRevive/OptName" + std::to_string(r)));
+            SkinNode hint = label(kOptX + 36, ry + 19, 590, "TIRevive/OptHint" + std::to_string(r));
+            hint.h = 20;
+            c.push_back(hint);
+            SkinNode hit = own("button", kOptX, ry, kOptW - kScrollW - 2, kOptRowH, kOptRow, r); // the whole row
+            hit.expression = slot;
+            c.push_back(hit);
+        }
+        c.push_back(own("tr_scroll", kOptX + kOptW - kScrollW - 2, kOptY, kScrollW, kOptRows * kOptRowH, kOptScroll));
+        c.push_back(label(21, kOptY + kOptRows * kOptRowH + 12, 646, "TIRevive/OptMsg"));
+        return page;
+    }
+
+    // ---- BACKUP & RESTORE: the RAM banks and the note (the plain view's content) ----
+    SkinNode backup_nodes()
+    {
+        SkinNode p;
+        p.container = true;
+        p.x = 19, p.y = 218, p.w = 648, p.h = 152;
+        p.expression = kBackupPanel;
+        SkinNode panel = own("tr_panel", p.x, p.y, p.w, p.h);
+        panel.back = 0x49535db4; // the panel colour (73,83,93) at ~70 %: the photo shows through, as in the file path field
+        p.children.push_back(panel);
+        p.children.push_back(label(p.x + 8, p.y + 8, 300, "TIRevive/BankTitle"));
+        for (int b = 0; b < 4; b++)
+            p.children.push_back(label(p.x + 8, p.y + 26 + b * 14, 632, "TIRevive/Bank" + std::to_string(b)));
+        SkinNode note = label(p.x + 8, p.y + 92, 632, "TIRevive/BankNote");
+        note.h = 30;
+        p.children.push_back(note);
+        return p;
+    }
+    void add_cancel(std::vector<SkinNode> &into) // where the original's pages have their OK button, left of it
+    {
+        SkinNode b = button(398, 380, kCancel, 0);
+        b.expression = kBusy;
+        into.push_back(b);
+        SkinNode t = centred(398, 380, kCancel + std::string("/Label"));
+        t.expression = kBusy;
+        into.push_back(t);
+    }
+    // the four RAM banks: how many programs the plug-in's cache has current (the plain view's lines); a read-only
+    // request per bank, the same as the plug-in's bank sync
+    void read_banks()
+    {
+        if (!found_ || busy_)
+            return;
+        {
+            std::lock_guard<std::mutex> l(mu_);
+            for (auto &b : banks_)
+                b = "...";
+        }
+        run([this] {
+            vti::Broker broker;
+            broker.set_name("TI Revive Control Center");
+            std::string err;
+            if (!broker.open(err) || !broker.device_present()) {
+                std::lock_guard<std::mutex> l(mu_);
+                for (auto &b : banks_)
+                    b.clear();
+                banks_[0] = "No Virus found";
+                return;
+            }
+            vti::MemorySync sync(broker);
+            const std::string cache = vti::cc::cache_dir();
+            for (int bank = 1; bank <= 4 && !stop_; bank++) {
+                const std::string name = std::string("RAM ") + (char)('A' + bank - 1);
+                const auto fp = sync.bank_info(bank);
+                std::string line;
+                if (fp.size() != 128) {
+                    line = name + ":  no answer";
+                } else {
+                    vti::Bank b;
+                    int current = 0;
+                    if (vti::load_bank_file(cache + "/" + name, b))
+                        for (int p = 0; p < 128; p++)
+                            current += vti::RemoteDevice::single_fingerprint(b[p]) == fp[p];
+                    line = name + ":  128 programs, " + std::to_string(current) + " current in the cache";
+                    if (current)
+                        line += "  (1: " + vti::cc::patch_name(b[0]) + ")";
+                }
+                std::lock_guard<std::mutex> l(mu_);
+                banks_[bank - 1] = vti::cc::fit_text(line, 105);
+            }
+        });
+    }
+
     template <class F> void run(F &&f)
     {
         if (busy_.exchange(true))
@@ -831,7 +1084,13 @@ private:
         }
         if (out.empty())
             return;
+        cancel_ = false;
+        backing_up_ = true; // CANCEL shows while it runs
         run([this, out] {
+            struct Done {
+                std::atomic<bool> &f;
+                ~Done() { f = false; }
+            } done{backing_up_};
             vti::Broker broker;
             broker.set_name("TI Revive Control Center");
             std::string err;
@@ -847,10 +1106,11 @@ private:
                 snprintf(s, sizeof s, "Backing up RAM %c: %d / 128", 'A' + bank - 1, p + 1);
                 std::lock_guard<std::mutex> l(mu_);
                 status_ = s;
-            }, err, &stop_);
+            }, err, &cancel_);
             std::lock_guard<std::mutex> l(mu_);
             done_ = ok;
-            status_ = ok ? "Done: " + std::to_string(fetched) + " read, RAM A..D saved" : "Not finished: " + err;
+            status_ = ok ? "Done: " + std::to_string(fetched) + " read, RAM A..D saved"
+                         : cancel_ ? "Backup cancelled" : "Not finished: " + err;
         });
     }
 };
@@ -882,6 +1142,12 @@ void show_skin_nerd(CViewContainer *page)
 {
     if (auto *p = dynamic_cast<SkinPage *>(page))
         p->show_nerd();
+}
+
+void show_skin_options(CViewContainer *page)
+{
+    if (auto *p = dynamic_cast<SkinPage *>(page))
+        p->show_options();
 }
 
 } // namespace tirevive

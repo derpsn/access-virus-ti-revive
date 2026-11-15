@@ -10,7 +10,8 @@
 // TI Revive's own pages in the same frame (nerd mode, 2026-11-15) add element types drawn in the original's colours
 // (sampled from BG_DeviceSelector.png): tr_backdrop (the page gradient, a separator line `value` pixels down),
 // tr_panel (a dark rounded panel), tr_rows (alternating row stripes, `value` pixels high), tr_vline (a column line),
-// tr_title (a page title in a plain light font, text from the state) and tr_scroll (a scrollbar, thumb from the state).
+// tr_title (a page title in a plain light font, text from the state), tr_scroll (a scrollbar, thumb from the state) and
+// tr_check (a check box, on when the state's value of its parameter is not 0).
 #pragma once
 #include "access/accessfiles.h"
 #include "cc/ccskin.h"

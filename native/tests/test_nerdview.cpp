@@ -71,3 +71,22 @@ TEST(nerdview_text_fits_the_lcd_columns)
     CHECK(fit_text("tab\there", 20) == "tab here"); // the LCD font has ASCII 32..127 only
     CHECK(fit_text("caf\xc3\xa9", 20) == "caf?");   // UTF-8 beyond ASCII: one ? per character
 }
+
+// The Options page in the Access look: each option's description in at most two LCD lines, broken at spaces
+TEST(nerdview_wrap_text_for_the_option_rows)
+{
+    auto w = wrap_text("Writes what the plug-in does to diag.log on this computer, for bug reports.", 40, 2);
+    CHECK(w.size() == 2);
+    CHECK(w[0] == "Writes what the plug-in does to diag.log");
+    CHECK(w[1] == "on this computer, for bug reports.");
+    w = wrap_text("short", 40, 2);
+    CHECK(w.size() == 1 && w[0] == "short");
+    // longer than two lines: the second ends in "..."
+    w = wrap_text("one two three four five six seven eight nine ten eleven twelve", 20, 2);
+    CHECK(w.size() == 2 && w[0] == "one two three four" && w[1].size() <= 20);
+    CHECK(w[1].substr(w[1].size() - 3) == "...");
+    // a word longer than a line is cut
+    w = wrap_text("abcdefghijklmnopqrstuvwxyz", 10, 2);
+    CHECK(w[0].size() == 10);
+    CHECK(wrap_text("", 10, 2).empty());
+}

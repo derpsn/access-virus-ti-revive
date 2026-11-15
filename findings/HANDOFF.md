@@ -133,11 +133,11 @@ talk with the user (Linux may start); hil-win on the tuned VM: yes; update check
 4. What's New scrollbar + Prepare a Bug Report: checked by the user on Linux AND the Mac (2026-11-15). Scrollbar: CODE DONE (InfoScroll in
    infopage.h, test first; newest version that fits nowhere at 9 pt -> whole at 11 pt + scrollbar: wheel, track click,
    thumb drag). User 2026-11-15: "scrollbars work".
-5. Control Center in the Access look (user 2026-11-15): NERD MODE DONE (user: "awesome now"), tested on Linux against
-   virus-ti-sim (m4/run.py local/cc-ui; scratchpad helper cc-sim.sh start|stop): page in the Access frame, table
-   with scrollbar/wheel, LIVE/PLUG-IN LOG/BROKER LOG, PAUSE (snapshot), CLOCK, RECORD, SAVE LOGS; clock time for
-   traffic + broker lines; draws cached (median 34.6 -> 7.8 ms, p90 203 -> 19 ms). Next: OPTIONS page in the same
-   look, then the plain view's content into BACKUP & RESTORE (plain window = fallback). Mac look: not checked yet.
+5. Control Center in the Access look (user 2026-11-15): ALL THREE DONE on Linux (user: "works! awesome"): nerd mode
+   page (table, pause snapshot, cached text: median draw 7.8 ms), OPTIONS page (check boxes, wrap_text, scroll),
+   BACKUP & RESTORE panel (RAM banks via bank info, note, CANCEL, ~70 % see-through); PLAIN VIEW button gone (plain
+   window = fallback without Access files). Tested against virus-ti-sim (scratchpad cc-sim.sh). Open: the look on the
+   Mac and Windows (next CI build); README/site screenshot docs/images/control-center-nerd-mode.png is the old page.
 6. Windows MIDI ports: CODE WRITTEN (user OK: in-box API only, read-only, installed only where supported; design in
    design-midi-ports.md "Implementation"): helper src/midiports-win (MSVC, never built yet), vtikeyport_win.c +
    midifeed.h + umpconv.h (tests), MSI condition, CI step. CI 43694600597 (1db7d3e, 0.8.42) ALL GREEN, helper
