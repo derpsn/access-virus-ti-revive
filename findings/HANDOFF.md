@@ -5,7 +5,7 @@ NEXT. At most 150 lines; the Stop hook (`.claude/hooks/handoff-check.sh`) refuse
 how goes into the dated log [`log/2026-11.md`](log/2026-11.md) (newest first); older logs are in [`log/`](log/).
 Device/protocol knowledge goes into [`evidence.md`](evidence.md). Update this file in the same commit as the work._
 
-Last update: 2026-11-15 afternoon: Control Center Access-look pages done (Linux/sim), #30 reopened + measured (E541), Mac round tasks done.
+Last update: 2026-11-15 afternoon: Access-look Control Center on all 3 OS, rc2 out (#30 knob fix), stray sample not reproduced.
 
 ## Where things stand
 
@@ -127,7 +127,8 @@ talk with the user (Linux may start); hil-win on the tuned VM: yes; update check
 3. v0.8.42-rc1 out (#37 waits). build.yml "New in 0.8.42" + What's New entry written for rc2 (all round items).
 4. Windows MIDI ports: real path waits for Windows' own API (end of Nov update) in the VM: installer must then add the
    helper by itself; real key/DIN traffic untested (no keyed Virus here).
-5. Open, low: stray single sample 2^-6 after record start (E541); proposed sim items (discuss one at a time).
+5. Open, low: stray single sample 2^-6 after record start in Logic (E541): not reproduced in nativehost (10/10 zero, both
+   output-delay modes); next only if it shows again (Logic 48k series). Proposed sim items (discuss one at a time).
 6. Linux: DEV build installed (plug-in from a1153d9; release backed up in ~/.vst3-backup/0.8.41-release); Mac: test
    build CI 43696948011 installed; TI2 on the Mac's USB. #28 quiet-issue limit 2026-11-16 (joint check).
 7. Waiting on reporters (table above); check issues only together with the user.
