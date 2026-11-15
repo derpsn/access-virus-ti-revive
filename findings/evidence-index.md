@@ -1611,7 +1611,7 @@ Entries: 541. Marks after an entry: its lowest confidence level when below HIGH,
 - [E539](evidence.md#e539) live-later at 160 frames (0.8.42, E534's reading: half a 64-frame step off the edge of the Virus' grid) on ... (LOW)
 - [E540](evidence.md#e540) #30 (reporter, 2026-11-15 10:45 UTC, Logic on macOS, Snow): TI Revive's audio sent to a bus and recorded on ... (MED; open; not on hardware)
 - [E541](evidence.md#e541) E540 measured on our Mac (2026-11-15 12:05-12:20 local, MacBook Air M3, macOS 27.2.1, Logic Pro, TI Revive ... (open)
-- [E542](evidence.md#e542) #30 (reporter 2026-11-15 11:42 UTC): turning the cutoff on the Virus while Logic writes automation records ... (open)
+- [E542](evidence.md#e542) #30 (reporter 2026-11-15 11:42 UTC): turning the cutoff on the Virus while Logic writes automation records ...
 - [E543](evidence.md#e543) #37's report on the rc1 libusb package (packman83, 2026-11-15 13:12 UTC; Intel MacBook, macOS 10.15.7, Logic; ... (MED; open)
 - [E544](evidence.md#e544) Fixes prepared for #37 (E543), not tested on any Mac yet (2026-11-15; the user away, our Mac asleep) (LOW; open; not on hardware)
 
@@ -1830,7 +1830,7 @@ Entries: 541. Marks after an entry: its lowest confidence level when below HIGH,
 - [E527](evidence.md#e527) E503's stall handling and the async reader through the real Linux kernel and real libusb (simulator ... (LOW; not on hardware)
 - [E529](evidence.md#e529) #34 "bank sync failed" and #36 "patch(es) skipped" looked into from the reporters' logs (2026-11-14), and ... (MED; open; not on hardware)
 - [E540](evidence.md#e540) #30 (reporter, 2026-11-15 10:45 UTC, Logic on macOS, Snow): TI Revive's audio sent to a bus and recorded on ... (MED; open; not on hardware)
-- [E542](evidence.md#e542) #30 (reporter 2026-11-15 11:42 UTC): turning the cutoff on the Virus while Logic writes automation records ... (open)
+- [E542](evidence.md#e542) #30 (reporter 2026-11-15 11:42 UTC): turning the cutoff on the Virus while Logic writes automation records ...
 - [E544](evidence.md#e544) Fixes prepared for #37 (E543), not tested on any Mac yet (2026-11-15; the user away, our Mac asleep) (LOW; open; not on hardware)
 
 ## Models: Snow, Polar, Keyboard, TI2 (242)
@@ -2076,7 +2076,7 @@ Entries: 541. Marks after an entry: its lowest confidence level when below HIGH,
 - [E539](evidence.md#e539) live-later at 160 frames (0.8.42, E534's reading: half a 64-frame step off the edge of the Virus' grid) on ... (LOW)
 - [E540](evidence.md#e540) #30 (reporter, 2026-11-15 10:45 UTC, Logic on macOS, Snow): TI Revive's audio sent to a bus and recorded on ... (MED; open; not on hardware)
 - [E541](evidence.md#e541) E540 measured on our Mac (2026-11-15 12:05-12:20 local, MacBook Air M3, macOS 27.2.1, Logic Pro, TI Revive ... (open)
-- [E542](evidence.md#e542) #30 (reporter 2026-11-15 11:42 UTC): turning the cutoff on the Virus while Logic writes automation records ... (open)
+- [E542](evidence.md#e542) #30 (reporter 2026-11-15 11:42 UTC): turning the cutoff on the Virus while Logic writes automation records ...
 
 ## DAWs (233)
 
@@ -2312,7 +2312,7 @@ Entries: 541. Marks after an entry: its lowest confidence level when below HIGH,
 - [E539](evidence.md#e539) live-later at 160 frames (0.8.42, E534's reading: half a 64-frame step off the edge of the Virus' grid) on ... (LOW)
 - [E540](evidence.md#e540) #30 (reporter, 2026-11-15 10:45 UTC, Logic on macOS, Snow): TI Revive's audio sent to a bus and recorded on ... (MED; open; not on hardware)
 - [E541](evidence.md#e541) E540 measured on our Mac (2026-11-15 12:05-12:20 local, MacBook Air M3, macOS 27.2.1, Logic Pro, TI Revive ... (open)
-- [E542](evidence.md#e542) #30 (reporter 2026-11-15 11:42 UTC): turning the cutoff on the Virus while Logic writes automation records ... (open)
+- [E542](evidence.md#e542) #30 (reporter 2026-11-15 11:42 UTC): turning the cutoff on the Virus while Logic writes automation records ...
 
 ## User reports (GitHub issues, forums) (123)
 
@@ -2436,7 +2436,7 @@ Entries: 541. Marks after an entry: its lowest confidence level when below HIGH,
 - [E538](evidence.md#e538) #30 follow-up (reporter 2026-11-15: playing MIDI channel 1 of a 4-part TI Revive in Logic, the plug-in's and ... (MED)
 - [E540](evidence.md#e540) #30 (reporter, 2026-11-15 10:45 UTC, Logic on macOS, Snow): TI Revive's audio sent to a bus and recorded on ... (MED; open; not on hardware)
 - [E541](evidence.md#e541) E540 measured on our Mac (2026-11-15 12:05-12:20 local, MacBook Air M3, macOS 27.2.1, Logic Pro, TI Revive ... (open)
-- [E542](evidence.md#e542) #30 (reporter 2026-11-15 11:42 UTC): turning the cutoff on the Virus while Logic writes automation records ... (open)
+- [E542](evidence.md#e542) #30 (reporter 2026-11-15 11:42 UTC): turning the cutoff on the Virus while Logic writes automation records ...
 - [E543](evidence.md#e543) #37's report on the rc1 libusb package (packman83, 2026-11-15 13:12 UTC; Intel MacBook, macOS 10.15.7, Logic; ... (MED; open)
 - [E544](evidence.md#e544) Fixes prepared for #37 (E543), not tested on any Mac yet (2026-11-15; the user away, our Mac asleep) (LOW; open; not on hardware)
 
