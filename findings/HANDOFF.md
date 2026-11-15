@@ -5,7 +5,7 @@ NEXT. At most 150 lines; the Stop hook (`.claude/hooks/handoff-check.sh`) refuse
 how goes into the dated log [`log/2026-11.md`](log/2026-11.md) (newest first); older logs are in [`log/`](log/).
 Device/protocol knowledge goes into [`evidence.md`](evidence.md). Update this file in the same commit as the work._
 
-Last update: 2026-11-14 night: round 0.8.42 started; libusb package for #37 built by CI (green), rc1 next.
+Last update: 2026-11-15: task order agreed with the user (see Round 0.8.42 candidates); GitHub checked together, nothing new.
 
 ## Where things stand
 
@@ -47,8 +47,8 @@ Last update: 2026-11-14 night: round 0.8.42 started; libusb package for #37 buil
   the Mac did not answer over SSH: push it to ~/Downloads when it is awake (scripts/mac.sh push), the user installs.
   Option files there: live-later.on (left from M2), klog.on, noteprobe.on, live-notes.on, diag.on.
 - Branches: `libusb-audio` and `libusb-catalina` (worktree ../virus-ti-re-catalina) are merged into round-0.8.42 and
-  done (dev-mac there = the Catalina build; on the round dev-mac stays the normal build), `catalina-test` (old). Local scratch branch
-  `release-0.8.41` (merge worktree in this session's scratchpad) can be deleted.
+  done (dev-mac there = the Catalina build; on the round dev-mac stays the normal build), `catalina-test` (old).
+  Scratch branch `release-0.8.41` deleted, dead scratchpad worktrees pruned (2026-11-15).
 
 ## Open issues (checked with the user 2026-11-14 evening; check GitHub only together with the user)
 
@@ -66,7 +66,8 @@ Last update: 2026-11-14 night: round 0.8.42 started; libusb package for #37 buil
 | #40 | (ours) macOS libusb audio as an option? | #39 reporter; #37 = first real data point (works) | 2026-11-13 |
 
 #39 closed by the reporter (doubled notes = Local On + Monitor In, E530/E531). #30 closed by us 2026-11-14 with the
-user: all works, Snow meters visible in the plug-in (evidence entry still to write). Quiet-issue rule: 7 days after our
+user: all works, Snow meters visible in the plug-in (E536). 2026-11-15 check: no new replies; a fork
+(insolentconstruct) syncing our commits shows as "added a commit that references" events, nothing to do. Quiet-issue rule: 7 days after our
 last request, close with the AGENTS.md message, only in a joint check with the user: #28 from 2026-11-16, the
 others from 2026-11-21 (#40 is ours: no closing; #32: look up its date first).
 
@@ -82,6 +83,10 @@ others from 2026-11-21 (#40 is ours: no closing; #32: look up its date first).
 - Full list: `python3 -I scripts/evidence.py list --no-hardware`.
 
 ## Round 0.8.42 candidates (decided unless marked proposed)
+
+User 2026-11-15 on the order: Mac push later; live-later 160 explained, go; MIDI ports: Windows part only after a
+talk with the user (Linux may start); hil-win on the tuned VM: yes; update check + bug report also in the plug-in
+(proposal to the user first); #39 latency note: show the text before posting; proposed sim items: discuss when there.
 
 - live-later at 160 frames (half a 64-frame step; E534 reading: the stamp sits on the Virus' 64-frame grid edge),
   then the same keystamp test on the Mac (armed track, Monitor In, keystamp 500 ms, klog K and onset steps).
