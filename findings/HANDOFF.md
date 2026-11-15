@@ -5,7 +5,7 @@ NEXT. At most 150 lines; the Stop hook (`.claude/hooks/handoff-check.sh`) refuse
 how goes into the dated log [`log/2026-11.md`](log/2026-11.md) (newest first); older logs are in [`log/`](log/).
 Device/protocol knowledge goes into [`evidence.md`](evidence.md). Update this file in the same commit as the work._
 
-Last update: 2026-11-15: task order agreed with the user (see Round 0.8.42 candidates); GitHub checked together, nothing new.
+Last update: 2026-11-15 morning: live-later 160, Linux MIDI ports, hil-win tuned VM (E537), update check + bug report done; dev build installed on Linux.
 
 ## Where things stand
 
@@ -130,9 +130,15 @@ talk with the user (Linux may start); hil-win on the tuned VM: yes; update check
 
 ## NEXT
 
-1. v0.8.42-rc1 RELEASED as pre-release (tag on 5a83f34, CI 43645282349 all green, 7 assets incl.
-   TI-Revive-0.8.42-mac-libusb.zip); #37 install steps posted (issuecomment-6884879936). Wait for #37's report
-   (crackle, after a Mac restart, Save logs). build.yml "New in 0.8.42" = rc1 text: rewrite before the final.
-2. Mac awake: push the 0.8.41 release package or the round's normal package (see Machines), the user installs it.
-3. Then live-later 160 + its Mac test, Linux MIDI ports.
-3. Waiting on reporters (table above); check issues only together with the user.
+1. Linux has the DEV build installed (plug-in 08c1f920, broker 1f2fc540, CC + tirevive-cc from 1435b04; the
+   0.8.41 release backed up in ~/.vst3-backup/0.8.41-release). User smoke test asked: Options page 8th row "Check for
+   updates" (scrolls?), switching it on writes update.txt; plug-in ? menu "Prepare a Bug Report..." opens the form.
+   Optional: fake latest 0.8.99 in update.txt to see the note + Download entry (restore after).
+2. #39 "tight" option (plug-in reports the short latency while played notes come in): proposed to the user: REA look
+   at how the original reports latency around live notes first, then a design to show; waits on the user's OK.
+   Any #39 text: show the user before posting.
+3. v0.8.42-rc1 is out as pre-release (tag 5a83f34, CI 43645282349, 7 assets incl. the mac-libusb zip); wait for #37's
+   report. build.yml "New in 0.8.42" = rc1 text: rewrite before the final (live-later 160, Linux MIDI ports, update
+   check, bug report).
+4. Later (user): Mac push of a package + live-later 160 keystamp test there; Windows MIDI ports only after a talk.
+5. Waiting on reporters (table above); check issues only together with the user.
