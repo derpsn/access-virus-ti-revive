@@ -117,8 +117,8 @@ talk with the user (Linux may start); hil-win on the tuned VM: yes; update check
 ## NEXT
 
 1. Mac: test build CI 43708448485 (9a003ee, pkg db140751) installed 2026-11-15; the three new Control Center pages
-   (nerd mode, OPTIONS, BACKUP & RESTORE with the real RAM banks) look right on macOS (user + screenshots). Open: the
-   Windows look in the VM; new README/site nerd mode screenshot (docs/images/control-center-nerd-mode.png is old).
+   (nerd mode, OPTIONS, BACKUP & RESTORE with the real RAM banks) look right on macOS AND Windows (win11 VM, rc2, the
+   simulator's virtual TI2 over USB/IP: user "works"). Open: new README/site nerd mode screenshot (old in docs/images).
 2. #30 knob automation in Logic (E542): fix 2 WORKS on our Mac. v0.8.42-rc2 RELEASED as pre-release (tag on a164a98,
    run 43713472544 green, 7 assets); posted in #30 (issuecomment-6894318752): Chris to test rc2.
    #30 (reopened): early audio waits on the reporter's settings (E540/E541: not reproduced on our Mac/Logic/TI2 at 48k). If 44.1 kHz:
