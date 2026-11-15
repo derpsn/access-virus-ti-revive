@@ -35,8 +35,13 @@
 #include <unistd.h>
 #ifdef __APPLE__
 #include "vtimidi_mac.h"
-#include "vtikeyport_mac.h"
 #include <launch.h>
+#endif
+// The Virus keys and its DIN MIDI In as MIDI sources for the DAW (vtikeyport.h): CoreMIDI on macOS, the ALSA
+// sequencer on Linux
+#if defined(__APPLE__) || defined(__linux__)
+#define VTI_KEYPORT 1
+#include "vtikeyport.h"
 #endif
 // The Virus' audio streamed by the broker (libusb + shared ring): always on Linux; on macOS compiled in the
 // libusb-audio branch and used only when the broker runs as root with VTI_LIBUSB_AUDIO=1 (E511) - otherwise the
@@ -509,7 +514,7 @@ static void f5_second(void);
 
 static volatile int g_rate_lever; // a recovery switch ran (E331): log the Virus' report of the rate's global (E257)
 
-#ifdef __APPLE__
+#ifdef VTI_KEYPORT
 static void keyport_out(void *user, const uint8_t *msg, int n)
 {
     (void)user;
@@ -534,6 +539,8 @@ static void on_rx(void *user, uint8_t ep, const uint8_t *data, int len)
 #ifdef __APPLE__
     if (ep == VTI_EP_MI04_IN)
         vtimidi_rx(data, len);
+#endif
+#ifdef VTI_KEYPORT
     vti_keyport_filter(ep, data, (int)len, keyport_out, NULL); // the Virus keys to the DAW (#29)
     vti_dinport_filter(ep, data, (int)len, dinport_out, NULL); // its DIN MIDI In to the DAW (E517)
 #endif
@@ -901,7 +908,7 @@ static void *device_thread(void *unused)
             last_busy = time(NULL);
         else if (!g_stay && time(NULL) - last_busy > IDLE_EXIT_S) {
             blog("no clients for %d s: exiting", IDLE_EXIT_S);
-#ifdef __APPLE__
+#ifdef VTI_KEYPORT
             vti_keyport_log_counts();
 #endif
             pthread_mutex_lock(&g_cs_dev);
@@ -1392,11 +1399,13 @@ int main(int argc, char **argv)
         blog("TCP listener on 127.0.0.1:%d (token required)", g_tcp_port);
 #endif
     blog("vtibroker starting (protocol %d, %s)", VTI_PROTO_VERSION, sa.sun_path);
+#ifdef VTI_KEYPORT
+    if (!getenv("VTI_NO_MIDI_PORT")) // a test switch; the port is read-only and harmless when nothing listens
+        vti_keyport_start();
+#endif
 #ifdef __APPLE__
     // stand-in for Access' MIDI driver towards the original Virus Control (E100): only the classic path of 0.7.x
     // (bridge + Rosetta helper, src/mac) used it; the native plug-in talks to the broker directly. Opt-in.
-    if (!getenv("VTI_NO_MIDI_PORT")) // a test switch; the port is read-only and harmless when nothing listens
-        vti_keyport_start();
     if (getenv("VTI_BROKER_MIDISHIM") && atoi(getenv("VTI_BROKER_MIDISHIM")) == 1) {
         if (vtimidi_start(midi_write))
             blog("MIDI slot memory could not be created");

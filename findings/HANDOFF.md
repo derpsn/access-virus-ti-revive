@@ -91,7 +91,11 @@ talk with the user (Linux may start); hil-win on the tuned VM: yes; update check
 - live-later at 160 frames: CODE DONE 2026-11-15 (LIVE_LATER_FRAMES 160, test first; log line prints the value).
   Open: the same keystamp test on the Mac (armed track, Monitor In, keystamp 500 ms, klog K and onset steps); the
   texts' "at most about 1.3 ms late (measured on a Mac)" is the 128 result: re-measure, then fix CC/README/site.
-- MIDI ports: Linux first (ALSA sequencer virtual ports from the broker, keyport.h filter), then Windows (Windows
+- Linux MIDI ports: CODE DONE 2026-11-15: vtikeyport_linux.c (straight /dev/snd/seq ioctls, no alsa-lib), client
+  "Virus TI", port 0 "Virus TI MIDI" (cable 0), port 1 "Virus TI Synth" (cable 1) = the kernel driver's names (E016),
+  read-only; seqevent.h + test_seqevent first. Seen: ports in aconnect -l (inputs only). NOT seen: a message through
+  them (Desktop has no keys, no keyboard at the DIN In; sim's virtual Keyboard could). README/site texts after that.
+- MIDI ports Windows: talk with the user first (Windows
   MIDI Services virtual devices on Win11 25H2+, design-midi-ports.md option A; option C, a forwarding VST3, for
   Windows 10).
 - FIRST (code written, see Where things stand): the libusb package; open: CI build of both Mac jobs, our Mac

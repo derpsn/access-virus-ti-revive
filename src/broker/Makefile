@@ -14,10 +14,10 @@ $(OUT)/linux/vtiprobe: vtiprobe.c vticore.c $(SRC_MIDI) vticore.h vtireaderr.h r
 
 # Broker for macOS / Linux on libusb (vtibroker_posix.c); on macOS: make -C src/broker mac (needs libusb from Homebrew)
 $(OUT)/linux/vtibroker: vtibroker_posix.c vticore.c vtiusbaudio_libusb.c $(SRC_MIDI) vticore.h vtireaderr.h rxqueue.h linkrule.h trafficring.h vtiproto.h brokerinfo.h ctrlguard.h owner.h pktstat.h resetguard.h giveback.h ratesw.h ratelever.h \
-		vtiaudioshm.h vtiusbaudio_libusb.h stallfill.h owneruid.h
+		vtiaudioshm.h vtiusbaudio_libusb.h stallfill.h owneruid.h keyport.h vtikeyport.h vtikeyport_linux.c seqevent.h
 	mkdir -p $(OUT)/linux
 	$(CC) $(CFLAGS) $(VDEF) $(shell pkg-config --cflags libusb-1.0) -o $@ vtibroker_posix.c vticore.c vtiusbaudio_libusb.c \
-		$(SRC_MIDI) $(shell pkg-config --libs libusb-1.0) -lpthread
+		vtikeyport_linux.c $(SRC_MIDI) $(shell pkg-config --libs libusb-1.0) -lpthread
 
 # Linux test client of the broker audio (protocol 3): vtiaudiotest-linux [seconds]
 $(OUT)/linux/vtiaudiotest: vtiaudiotest_posix.c vtiproto.h vtiaudioshm.h
@@ -55,7 +55,7 @@ $(OUT)/vtiaudiotest.exe: vtiaudiotest.c vticore_pipe.c $(SRC_MIDI) vticore.h vti
 
 # macOS (run on the Mac): native broker (a separate process, so arm64 is fine; only our libVirusUSB.dylib
 # replacement must be x86_64 for the Rosetta DAW); libusb from Homebrew (brew install libusb pkg-config)
-mac: vtibroker_posix.c vtimidi_mac.c vtikeyport_mac.c vticore.c $(SRC_MIDI) vticore.h vtireaderr.h rxqueue.h linkrule.h trafficring.h keyport.h vtiproto.h brokerinfo.h ctrlguard.h owner.h vtimidi_mac.h vtikeyport_mac.h vtiusbaudio_libusb.c vtiusbaudio_libusb.h vtiaudioshm.h owneruid.h macgiveback.h
+mac: vtibroker_posix.c vtimidi_mac.c vtikeyport_mac.c vticore.c $(SRC_MIDI) vticore.h vtireaderr.h rxqueue.h linkrule.h trafficring.h keyport.h vtiproto.h brokerinfo.h ctrlguard.h owner.h vtimidi_mac.h vtikeyport.h vtiusbaudio_libusb.c vtiusbaudio_libusb.h vtiaudioshm.h owneruid.h macgiveback.h
 	mkdir -p $(OUT)/mac
 	clang $(CFLAGS) $(VDEF) $$(pkg-config --cflags libusb-1.0) -o $(OUT)/mac/vtibroker vtibroker_posix.c vtimidi_mac.c vtikeyport_mac.c vticore.c vtiusbaudio_libusb.c \
 		$(SRC_MIDI) $$(pkg-config --libs libusb-1.0) -lpthread -framework CoreFoundation -framework CoreMIDI
@@ -64,7 +64,7 @@ mac: vtibroker_posix.c vtimidi_mac.c vtikeyport_mac.c vticore.c $(SRC_MIDI) vtic
 # #33); LIBUSB_PREFIX = a universal static libusb (scripts/mac-build-release.sh builds one)
 # universal by default; a Catalina test build (#37) passes MAC_ARCH_FLAGS="-arch x86_64"
 MAC_ARCH_FLAGS ?= -arch arm64 -arch x86_64
-mac-static: vtibroker_posix.c vtimidi_mac.c vtikeyport_mac.c vticore.c $(SRC_MIDI) vticore.h vtireaderr.h rxqueue.h linkrule.h trafficring.h keyport.h vtiproto.h brokerinfo.h ctrlguard.h owner.h vtimidi_mac.h vtikeyport_mac.h vtiusbaudio_libusb.c vtiusbaudio_libusb.h vtiaudioshm.h owneruid.h macgiveback.h
+mac-static: vtibroker_posix.c vtimidi_mac.c vtikeyport_mac.c vticore.c $(SRC_MIDI) vticore.h vtireaderr.h rxqueue.h linkrule.h trafficring.h keyport.h vtiproto.h brokerinfo.h ctrlguard.h owner.h vtimidi_mac.h vtikeyport.h vtiusbaudio_libusb.c vtiusbaudio_libusb.h vtiaudioshm.h owneruid.h macgiveback.h
 	mkdir -p $(OUT)/mac
 	clang $(CFLAGS) $(VDEF) $(MAC_ARCH_FLAGS) -I$(LIBUSB_PREFIX)/include/libusb-1.0 -o $(OUT)/mac/vtibroker vtibroker_posix.c \
 		vtimidi_mac.c vtikeyport_mac.c vticore.c vtiusbaudio_libusb.c $(SRC_MIDI) $(LIBUSB_PREFIX)/lib/libusb-1.0.a -lpthread -framework CoreFoundation \

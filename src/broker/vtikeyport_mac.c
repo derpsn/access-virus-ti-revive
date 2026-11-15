@@ -1,5 +1,5 @@
-// vtikeyport_mac.c - see vtikeyport_mac.h
-#include "vtikeyport_mac.h"
+// vtikeyport_mac.c - see vtikeyport.h
+#include "vtikeyport.h"
 #include "vticore.h"
 #include <CoreFoundation/CoreFoundation.h>
 #include <CoreMIDI/CoreMIDI.h>
