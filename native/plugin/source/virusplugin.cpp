@@ -1177,6 +1177,7 @@ tresult PLUGIN_API VirusPlugin::initialize(FUnknown *context)
         load_reported_presets();
         send_output_delays();
         report_offline();
+        report_record_hint();
         tick_sync_alert();
         diag_report(); // also with the editor closed (host rate and block sizes, E187)
     });
@@ -1954,6 +1955,10 @@ tresult PLUGIN_API VirusPlugin::process(ProcessData &data)
                 evs.add(at(e.sampleOffset), m, 3,
                         live_guard_.note_on(m[0] & 15, m[1], is_live_note(live_notes_, e.flags), at(e.sampleOffset),
                                             live_guard_window(timing_a(), virus_rate()))); // E456, E466
+                if (record_hint_.note_on(data.processContext && (data.processContext->state & ProcessContext::kRecording),
+                                         is_live_note(live_notes_, e.flags),
+                                         out_ && out_->no_stamps.load(std::memory_order_relaxed)))
+                    record_hint_due_.store(true, std::memory_order_relaxed); // #39: the worker shows it
                 held_notes_.note_on(m[0] & 15, m[1]);
                 auto &mt = meter_[e.noteOn.channel & 15]; // MIDI activity meter: the highest velocity, decays in tick_meters
                 if (mt.load(std::memory_order_relaxed) < m[2])
@@ -2156,6 +2161,16 @@ void VirusPlugin::tick_sync_alert()
         out_->log("Virus TI native: %d sync reports from the Virus so far (%d since Play)\n", sync_alert_.total(),
                   sync_alert_.since_play());
     }
+}
+
+// worker thread: the once-only hint for recording a played part without Live Mode (recordhint.h, #39, E518)
+void VirusPlugin::report_record_hint()
+{
+    if (!record_hint_due_.exchange(false, std::memory_order_relaxed))
+        return;
+    lcd_message("Recording what you play?", "Live Mode puts it in place");
+    if (out_)
+        out_->log("Virus TI native: recording a played part without Live Mode: hint shown (E518)\n");
 }
 
 // worker thread: an offline render in the log and on the LCD, and waits that gave up

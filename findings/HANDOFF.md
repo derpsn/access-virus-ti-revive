@@ -110,7 +110,7 @@ talk with the user (Linux may start); hil-win on the tuned VM: yes; update check
   it only: LCD note once per release + "Download TI Revive X" in ?; "Prepare a Bug Report..." = save logs + GitHub
   form with "TI Revive <v>, <OS>" in Versions; tirevive-cc update-check. Linux: real check OK (latest 0.8.41).
   Not run: Windows (curl.exe via CreateProcess; mingw syntax only), macOS, the GUI by eye. README/site/helptext done.
-- #39: report the short latency while played notes come in (Live re-syncs).
+- #39: no latency switch (user 2026-11-15); the recording hint instead, done.
 - Windows VM: hil-win on the tuned VM DONE (E537): the probe miss is gone, no A/B needed. Open (LOW): H1's hung
   first audio read after power-on + attach; watch for it in the next hil-win, and drift limit 100 ppm vs 11 s items.
 - Proposed (sim list): freeze guard (73 00 10 vv vs stream rate), single re-sync after a detected +64 (E492/E498),
@@ -134,9 +134,9 @@ talk with the user (Linux may start); hil-win on the tuned VM: yes; update check
    0.8.41 release backed up in ~/.vst3-backup/0.8.41-release). User smoke test asked: Options page 8th row "Check for
    updates" (scrolls?), switching it on writes update.txt; plug-in ? menu "Prepare a Bug Report..." opens the form.
    Optional: fake latest 0.8.99 in update.txt to see the note + Download entry (restore after).
-2. #39 "tight" option (plug-in reports the short latency while played notes come in): proposed to the user: REA look
-   at how the original reports latency around live notes first, then a design to show; waits on the user's OK.
-   Any #39 text: show the user before posting.
+2. #39 decided (user 2026-11-15): NO automatic latency switch ("the original also had this issue and live mode is for
+   that"); only the once-only LCD hint when recording played notes without Live Mode: CODE DONE (recordhint.h, test
+   first; help text, README, site). Not seen in a DAW yet (needs Live: Mac). Any #39 text: show the user first.
 3. v0.8.42-rc1 is out as pre-release (tag 5a83f34, CI 43645282349, 7 assets incl. the mac-libusb zip); wait for #37's
    report. build.yml "New in 0.8.42" = rc1 text: rewrite before the final (live-later 160, Linux MIDI ports, update
    check, bug report).
