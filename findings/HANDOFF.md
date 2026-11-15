@@ -26,14 +26,7 @@ Last update: 2026-11-15 morning: live-later 160, Linux MIDI ports, hil-win tuned
   audio stop. Plug-in: mac-usb-audio is no Options switch any more (cc::mac_usb_audio()). CI: build.yml job
   `mac-libusb` (macos-15-intel) + release asset. CI 43644097519 (ff629fd, version 0.8.42) ALL GREEN incl. mac and
   mac-libusb (its package checks: plain pkg, marker, no UTI, CC min 10.15). Not run on any Mac yet.
-- Test round of 0.8.41: checklist https://claude.ai/artifact/7j2tvTcAc19iNynNjfnSwM (spec
-  scripts/checklists/round-0.8.41.json). Linux L1-L4 + LC4 pass (hil.sh ALL PASS); Mac hil-mac ALL PASS, M1-M3,
-  MC4, MC5 pass; VM W2, W3 pass, WC4 skipped, W1 passed by the user as VM-related (E533). Found and fixed in the
-  round: the Control Center Options page cut off its 7th row (cc/optionslayout.h, b7b6779). M2 (E534): live-later
-  halves the played-note spread (<= 1.3 ms instead of 2.7 ms) but is not exact; texts made honest, code unchanged.
-
-## Machines and the Virus
-
+- Test round of 0.8.41: all passed (details in log/2026-11.md, checklist spec scripts/checklists/round-0.8.41.json).
 - Our TI2 Desktop: on **Linux** USB (2026-11-14 evening). User flashed ROM Z on it in early November (E500).
 - Linux: 0.8.41 release installed (plug-in 184badb2, broker 728db830, Control Center 0.8.41).
 - win11 VM: 0.8.41 release installed (/quiet exit 0), shut down. hil-win on the tuned VM 2026-11-15 (E537): run 1
