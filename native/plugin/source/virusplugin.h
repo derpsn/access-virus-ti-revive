@@ -29,6 +29,7 @@
 #include "device/audiogate.h"
 #include "device/hostmidi.h"
 #include "device/sendguard.h"
+#include "device/latencywatch.h"
 #include "device/stamprule.h"
 #include "device/offlinepace.h"
 #include "device/blockevents.h"
@@ -873,7 +874,10 @@ private:
     static int vidx(int virus_rate) { return virus_rate == 48000 ? 1 : 0; }
     Resampler resampler_[2];
     int vrate_seen_ = 0;           // audio thread: the Virus rate of the last block (a change resets the converters)
-    int64_t latency_reported_ = -1; // what getLatencySamples last told the host
+    std::atomic<int64_t> latency_reported_{-1}; // what getLatencySamples last told the host (any thread)
+    std::atomic<bool> active_{false};           // between setActive(true) and setActive(false)
+    vti::LatencyWatch latency_watch_;           // UI timer: the host's latency right? (#37, E544)
+    void check_latency();
     std::vector<float> rs_src_[6]; // USB 1 L/R, USB 2 L/R, USB 3 L/R
     // the Virus' USB IO configuration ("Global USB/Virus Control USB IO Configuration": 0 = 2 Outs / No Input,
     // 1 = 3 Outs / No Input, 2 = 3 Outs / 1 Input), kept per computer like the original's "IO Configuration"

@@ -1320,6 +1320,14 @@ int main(int argc, char **argv)
     sigaddset(&sigs, SIGHUP);
     pthread_sigmask(SIG_BLOCK, &sigs, NULL);
     vti_log = on_vti_log;
+#if defined(__APPLE__) && defined(VTI_KEYPORT)
+    // the MIDI port helper of the libusb package's root service (keyporthelper.h, #37): only the ports, no USB, no
+    // socket; it ends when the broker closes its standard input
+    if (argc == 3 && !strcmp(argv[1], "-midiports")) {
+        pthread_sigmask(SIG_UNBLOCK, &sigs, NULL);
+        return vti_keyport_helper_main(argv[2]);
+    }
+#endif
     const char *tp = getenv("VTI_TRACE");
     if (tp && (g_trace = fopen(tp, "ab"))) {
         if (ftell(g_trace) == 0)

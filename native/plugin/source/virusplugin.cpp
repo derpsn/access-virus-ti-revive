@@ -1007,6 +1007,7 @@ tresult PLUGIN_API VirusPlugin::initialize(FUnknown *context)
     gesture_timer_ = VSTGUI::makeOwned<VSTGUI::CVSTGUITimer>([this](VSTGUI::CVSTGUITimer *) {
         gesture_timer_ran_.store(true, std::memory_order_relaxed);
         tick_gestures();
+        check_latency();
     }, 50, true);
     if (FUnknownPtr<IHostApplication> app(context); app) { // the DAW's name, for the setup page
         String128 name{};
@@ -1359,12 +1360,31 @@ tresult PLUGIN_API VirusPlugin::setActive(TBool state)
                   ok ? "" : " (not switched: the broker kept its rate)");
     }
     const tresult res = SingleComponentEffect::setActive(state);
+    active_ = state != 0;
     // the host read a latency before that is no longer right (the resampler's look-ahead and the rate's share of the
     // frame constants change with the Virus' rate): it asks again
     if (state && latency_before >= 0 &&
         latency_before != (int64_t)std::lround(latency_frames() * rate_ / virus_rate()) && componentHandler)
         componentHandler->restartComponent(kLatencyChanged);
     return res;
+}
+
+// the UI timer (50 ms): the host's last read latency against the current one (latencywatch.h). A host that read it
+// before its last set-up (Logic, #37) gets the change announced once more, now outside that set-up; every new value
+// the host reads goes to the log, so a report shows what the host compensates
+void VirusPlugin::check_latency()
+{
+    const int64_t read = latency_reported_.load();
+    const int64_t now = std::lround(latency_frames() * rate_ / virus_rate());
+    if (latency_watch_.read_changed(read) && out_)
+        out_->log("Virus TI native: the host reads latency %lld samples (block %d, %.0f Hz)\n", (long long)read, block_,
+                  rate_);
+    if (latency_watch_.announce(active_.load(), read, now) && componentHandler) {
+        if (out_)
+            out_->log("Virus TI native: latency now %lld samples, the host last read %lld - announced again\n",
+                      (long long)now, (long long)read);
+        componentHandler->restartComponent(kLatencyChanged);
+    }
 }
 
 tresult PLUGIN_API VirusPlugin::activateBus(MediaType type, BusDirection dir, int32 index, TBool state)

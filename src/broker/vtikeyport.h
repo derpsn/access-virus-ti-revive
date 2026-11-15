@@ -10,3 +10,8 @@ void vti_keyport_start(void);                     // in the background; a failur
 void vti_keyport_send(const uint8_t *msg, int n); // one complete channel message, from the USB reader thread
 void vti_dinport_send(const uint8_t *msg, int n); // the bytes of one cable-0 packet (a SysEx piece too), same thread
 void vti_keyport_log_counts(void);                // what went to macOS, for the log when the broker exits
+#ifdef __APPLE__
+// `vtibroker -midiports UID`: the helper a root broker starts in its user's session (keyporthelper.h, #37); returns
+// the exit code when the broker closes its standard input
+int vti_keyport_helper_main(const char *uid_arg);
+#endif
