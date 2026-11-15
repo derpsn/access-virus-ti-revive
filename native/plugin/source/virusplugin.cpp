@@ -1145,9 +1145,13 @@ tresult PLUGIN_API VirusPlugin::initialize(FUnknown *context)
         vti::cc::rotate_log(own_cache_dir() + "/../diag.log", vti::cc::kPluginLogLimit); // on for everyone: kept small
         out_->set_diag_path(own_cache_dir() + "/../diag.log");
     }
-    if (live_notes_) // after set_diag_path, or the line never reaches diag.log
+    if (live_notes_) { // after set_diag_path, or the line never reaches diag.log
+        char later[64] = "";
+        if (out_->live_later.load())
+            snprintf(later, sizeof later, ", stamped %d frames later (live-later.on)", out_->live_later.load());
         out_->log("Virus TI native: live notes on (default; live-notes.off switches it off): notes flagged as played go without the lead%s\n",
-                  out_->live_later.load() ? ", stamped 128 frames later (live-later.on)" : "");
+                  later);
+    }
     out_->log("Virus TI native: timing: lead %d frames, safety net %s%s\n", timing_a_, timing_classic_ ? "off" : "on",
               timing_classic_ ? " (timing-classic.on)" : "");
     if (od_changes_only_)

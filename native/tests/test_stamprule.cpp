@@ -213,13 +213,15 @@ TEST(stamprule_live_stamp_from_the_timeline_is_steady)
 }
 
 // E519: the Virus met a live stamp late by one or two of its 64-frame steps in 22 of 40 played notes on our Mac.
-// The Control Center option live-later moves played notes LIVE_LATER_FRAMES later so it always meets them; off, the
-// stamp stays where the original puts it or up to one block later (E524 (4)).
-TEST(stamprule_live_later_moves_a_played_note_by_two_virus_steps)
+// The Control Center option live-later moves played notes LIVE_LATER_FRAMES later; off, the stamp stays where the
+// original puts it or up to one block later (E524 (4)). E534: 128 (two whole steps) halved the spread but left the
+// stamp on the same edge of the Virus' 64-frame grid, so 0.8.42 tries two and a half steps: half a step off the edge.
+TEST(stamprule_live_later_moves_a_played_note_off_the_virus_grid_edge)
 {
     const int S = 5000;
     const int64_t mk = 1000;
-    CHECK_EQ(LIVE_LATER_FRAMES, 128); // the largest lateness seen (E519 (1): K 5438 .. 5566)
-    CHECK(live_stamp_tl(100000, S, mk, 1.0, LIVE_LATER_FRAMES) == live_stamp_tl(100000, S, mk, 1.0) + 128);
+    CHECK_EQ(LIVE_LATER_FRAMES, 160);
+    CHECK_EQ(LIVE_LATER_FRAMES % 64, 32); // half a 64-frame step: not a multiple of the grid (E534)
+    CHECK(live_stamp_tl(100000, S, mk, 1.0, LIVE_LATER_FRAMES) == live_stamp_tl(100000, S, mk, 1.0) + 160);
     CHECK(live_stamp_tl(100000, S, mk, 1.0, 0) == live_stamp_tl(100000, S, mk, 1.0));
 }

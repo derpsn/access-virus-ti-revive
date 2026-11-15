@@ -88,8 +88,9 @@ User 2026-11-15 on the order: Mac push later; live-later 160 explained, go; MIDI
 talk with the user (Linux may start); hil-win on the tuned VM: yes; update check + bug report also in the plug-in
 (proposal to the user first); #39 latency note: show the text before posting; proposed sim items: discuss when there.
 
-- live-later at 160 frames (half a 64-frame step; E534 reading: the stamp sits on the Virus' 64-frame grid edge),
-  then the same keystamp test on the Mac (armed track, Monitor In, keystamp 500 ms, klog K and onset steps).
+- live-later at 160 frames: CODE DONE 2026-11-15 (LIVE_LATER_FRAMES 160, test first; log line prints the value).
+  Open: the same keystamp test on the Mac (armed track, Monitor In, keystamp 500 ms, klog K and onset steps); the
+  texts' "at most about 1.3 ms late (measured on a Mac)" is the 128 result: re-measure, then fix CC/README/site.
 - MIDI ports: Linux first (ALSA sequencer virtual ports from the broker, keyport.h filter), then Windows (Windows
   MIDI Services virtual devices on Win11 25H2+, design-midi-ports.md option A; option C, a forwarding VST3, for
   Windows 10).
