@@ -50,7 +50,7 @@ Last update: 2026-11-15 afternoon: Access-look Control Center on all 3 OS, rc2 o
 | #26 | Snow, Linux REAPER timing | reporter: pw-jack test; 0.8.41 note | 2026-11-14 |
 | #28 | numbers 100-127 moved 5 px | reporter: confirm, close on yes | 2026-11-09 |
 | #30 | knob automation in Logic fixed in rc2 (E542): CONFIRMED by Chris 13:47 | - (done) | 2026-11-15 |
-| #30 | REOPENED: Virus audio a few ms early in Logic (E540); NOT reproduced on our Mac/Logic/TI2 at 48k, 128/512, LL on (E541: 0.00 ms) | Chris: 15 ms, buffer 32, LL on -> exact here at 48k AND 44.1k (E541); left: Snow or his project; his project sent by email did not arrive; asked to upload it on GitHub (issuecomment-6898670509) | 2026-11-15 |
+| #30 | REOPENED: Virus audio a few ms early in Logic (E540); NOT reproduced on our Mac/Logic/TI2 at 48k, 128/512, LL on (E541: 0.00 ms) | Chris: 15 ms, buffer 32, LL on -> exact here at 48k AND 44.1k (E541); left: Snow or his project; his project CAME: exact on our Mac, his take 5.6 ms early, Recording Delay ruled out (E545); asked for an rc3 log of one take | 2026-11-15 |
 | #31 | Win10 VirtualBox, Snow, setup with the Access driver | reporter: setup unplug step report; 0.8.41 note | 2026-11-14 |
 | #32 | (no change since 11-10) | reporter | before 11-10 |
 | #33 | Intel Mac 0.8.39: Logic distorted until a buffer change; log clean on the way in, not a slip (E532) | reporter: Logic output device, distortion on the unit's outputs?, 0.8.41 log | 2026-11-14 |
@@ -122,7 +122,7 @@ talk with the user (Linux may start); hil-win on the tuned VM: yes; update check
    + site (860x612, not-affiliated notice under it). Site not redeployed (by hand at release).
 2. #30 knob automation in Logic (E542): fix 2 WORKS on our Mac. v0.8.42-rc2 RELEASED as pre-release (tag on a164a98,
    run 43713472544 green, 7 assets); Chris CONFIRMED rc2 (13:47 UTC). His Logic project came by email (dropped):
-   asked to upload it on GitHub (issuecomment-6898670509).
+   uploaded 17:54: measured on our Mac (E545): exact here, his take 5.6 ms early -> his setup (Snow?); rc3 log asked.
    #30 (reopened): early audio waits on the reporter's settings (E540/E541: not reproduced on our Mac/Logic/TI2 at 48k). If 44.1 kHz:
    measure that on our Mac; Snow: only the reporter. New RC promised once fixed.
 3. v0.8.42-rc1 out (#37 waits). build.yml "New in 0.8.42" + What's New entry written for rc2 (all round items).
