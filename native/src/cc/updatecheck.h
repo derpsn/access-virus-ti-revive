@@ -44,8 +44,8 @@ bool write_update_state(const UpdateState &s);
 // release; `s` gets the time and the version. `error` says why not (no curl, no network, an odd answer).
 bool run_update_check(UpdateState &s, std::string &error);
 
-// The Control Center's call (at its start and when the option is switched on): when "update-check" is on and a day
-// has passed, runs the check on a thread of its own and writes update.txt. Returns at once.
-void start_update_check_if_due();
+// The Control Center's call: at its start (when "update-check" is on and a day has passed) and, with `now`, when the
+// option is switched on (then at once). Runs the check on a thread of its own and writes update.txt; returns at once.
+void start_update_check_if_due(bool now = false);
 
 } // namespace vti::cc

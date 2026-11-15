@@ -362,9 +362,9 @@ bool run_update_check(UpdateState &s, std::string &error)
     return true;
 }
 
-void start_update_check_if_due()
+void start_update_check_if_due(bool now)
 {
-    if (!plugin_option("update-check") || !check_due((long long)time(nullptr), read_update_state()))
+    if (!plugin_option("update-check") || (!now && !check_due((long long)time(nullptr), read_update_state())))
         return;
     std::thread([] {
         UpdateState s = read_update_state();

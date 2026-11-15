@@ -67,7 +67,7 @@ public:
                                " - from the next start of the plug-in (reload it or restart the DAW).")
                                   .c_str());
         if (update && on)
-            vti::cc::start_update_check_if_due();
+            vti::cc::start_update_check_if_due(true);
         refresh();
     }
 
