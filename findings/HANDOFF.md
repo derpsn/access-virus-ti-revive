@@ -49,7 +49,7 @@ Last update: 2026-11-15 morning: live-later 160, Linux MIDI ports, hil-win tuned
 |---|---|---|---|
 | #26 | Snow, Linux REAPER timing | reporter: pw-jack test; 0.8.41 note | 2026-11-14 |
 | #28 | numbers 100-127 moved 5 px | reporter: confirm, close on yes | 2026-11-09 |
-| #30 | REOPENED: Virus audio a few ms before the grid in Logic (bus recording), E540 = likely E518 (4) 7.2 ms; new RC when fixed | us: measure in Logic on our Mac, fix | 2026-11-15 |
+| #30 | REOPENED: Virus audio a few ms early in Logic (E540); NOT reproduced on our Mac/Logic/TI2 at 48k, 128/512, LL on (E541: 0.00 ms) | reporter: rate/buffer/LL/ms (Snow?) | 2026-11-15 |
 | #31 | Win10 VirtualBox, Snow, setup with the Access driver | reporter: setup unplug step report; 0.8.41 note | 2026-11-14 |
 | #32 | (no change since 11-10) | reporter | before 11-10 |
 | #33 | Intel Mac 0.8.39: Logic distorted until a buffer change; log clean on the way in, not a slip (E532) | reporter: Logic output device, distortion on the unit's outputs?, 0.8.41 log | 2026-11-14 |
@@ -141,7 +141,7 @@ talk with the user (Linux may start); hil-win on the tuned VM: yes; update check
    VTI_MIDI2_ALLOW_SDK=1 + Preview 11 DLL by hand: after the fix (5e510e4, one device per port + retries) WinMM
    inputs "Virus TI Synth" / "Virus TI MIDI", no outputs, note/CC/SysEx through both (fed by hand); #1047 hang seen
    (pre-fix Windows). Open: real keys/DIN traffic; Windows' own API (end Nov). README/site written. VM off, clean.
-7. #30 early audio (E540): measure in Logic on our Mac (Logic instrument vs TI Revive, bounced via bus, samples), fix the
-   reported latency, new RC in #30 (promised 2026-11-15).
+7. #30 early audio: measured on our Mac (E541): exact on the grid in all variants; waits on the reporter's settings (Snow,
+   44.1 kHz?). New RC promised once fixed. Side: a stray short sound after record start (E541), not looked into.
 8. Later (user): Mac push of a package + live-later 160 keystamp test there; Windows MIDI ports only after a talk.
 9. Waiting on reporters (table above); check issues only together with the user.

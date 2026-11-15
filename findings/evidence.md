@@ -4929,3 +4929,13 @@ live-later at 160 frames (0.8.42, E534's reading: half a 64-frame step off the e
 - **Method:** user report; E518 (4) for our own reading
 - **Confidence:** open (the size and the cause); MED that it is the same effect as E518 (4)
 - **Hardware:** no (reporter's Snow, Logic); E518 yes (our TI2, Live)
+
+### E541
+
+E540 measured on our Mac (2026-11-15 12:05-12:20 local, MacBook Air M3, macOS 27.2.1, Logic Pro, TI Revive 0.8.42 test build CI 43696948011 (AU 786d9fcc), TI2 Desktop; project 48 kHz, Plug-in Latency Compensation All, 120 BPM; track 1 a Logic drum instrument, track 2 TI Revive with the Init patch, the same MIDI region (12 quarter notes); outputs to Bus 1 / Bus 2, recorded on two audio tracks, the reporter's routing; the 24-bit WAVs read with a short Python script, onset = first sample over 5 % of the peak walked back to 1 %). Buffer 128: the Virus' 12 onsets exactly on the grid (0.00 ms, to the sample), the Logic instrument's +0.38..+0.81 ms (its slower attack against the threshold). Buffer 512: the Virus 0.00 ms (12/12), Logic +0.35..+0.85. Buffer 128 with the low-latency option (diag.log: "lead 1792 frames ... low-latency option"): the Virus 0.00 ms (12/12), Logic +0.35..+1.31. So on this setup TI Revive's audio is not early in Logic; the reporter's offset is not reproduced, and E518 (4)'s 7.2 ms (Live, resampled Post FX) is a different case. Open: the Snow (its audio path never measured), 44.1 kHz, the reporter's routing; asked in #30. Side finding: the Virus track had one short sound shortly after the recording started where no note is (take 2 at 0.069 s, take 3 at 0.589 s, none in take 1); not looked into.
+
+- **Date:** 2026-11-15
+- **Pointer:** the Mac's ~/Music/TI-Revive-30-test.logicx (takes #01-#03); copies and onsets.py in the session scratchpad (not in git)
+- **Method:** Logic bus recording by the user, onset measurement over SSH
+- **Confidence:** HIGH (three variants, 12 notes each) / open (the reporter's case)
+- **Hardware:** yes (TI2 Desktop, macOS, Logic)
