@@ -42,7 +42,7 @@ Last update: 2026-11-15 night: #41 (the #30 reporter): rc3 puts his take on the 
   Option files there: live-later.on (left from M2), klog.on, noteprobe.on, live-notes.on, diag.on.
 - Private-data check (user 2026-11-15): `.claude/hooks/private-data.py` runs as git pre-commit/commit-msg/pre-push
   hook (installed here with `--install`, worktrees share it) and as Claude PreToolUse hook for `gh` posts; personal
-  words in the git-ignored work/private-patterns.txt. A block means: move it to work/HANDOFF-private.md.
+  words in the git-ignored work/private-patterns.txt. A block means: move it to work/HANDOFF-private.md. 33 unit tests (93633f8: heredocs count only for gh stdin bodies).
 - Branches: `libusb-audio` and `libusb-catalina` (worktree ../virus-ti-re-catalina) are merged into round-0.8.42 and
   done (dev-mac there = the Catalina build; on the round dev-mac stays the normal build), `catalina-test` (old).
 
