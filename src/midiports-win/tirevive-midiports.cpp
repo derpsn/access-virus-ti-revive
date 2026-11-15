@@ -11,6 +11,8 @@
 #include <windows.h>
 #include <cstdarg>
 #include <cstdio>
+#include <cstdlib>
+#include <cstring>
 #include <string>
 #include <winrt/Windows.Foundation.h>
 #include <winrt/Windows.Foundation.Collections.h>
@@ -74,8 +76,15 @@ std::string unsupported()
     if (!statics)
         return "this Windows has no Windows MIDI Services API yet (it comes with a Windows update)";
     auto statics2 = statics.try_as<midi2::IMidiApiStatics2>();
-    if (!statics2 || !statics2.IsSystemProvided())
-        return "the Windows MIDI Services API found is not Windows' own copy";
+    if (!statics2 || !statics2.IsSystemProvided()) {
+        // TEST ONLY (user 2026-11-15: test in the VM before the API is in Windows): with VTI_MIDI2_ALLOW_SDK=1 a copy
+        // of the API next to the helper (from microsoft/MIDI's Preview 11 package) is taken too. Releases never put
+        // one there, and the installer installs the helper only where Windows has its own.
+        const char *allow = getenv("VTI_MIDI2_ALLOW_SDK");
+        if (!(allow && !strcmp(allow, "1")))
+            return "the Windows MIDI Services API found is not Windows' own copy";
+        hlog("TEST: VTI_MIDI2_ALLOW_SDK=1, taking a copy of the API that is not Windows' own");
+    }
     if (!statics.EnsureServiceAvailable())
         return "the Windows MIDI service (midisrv) does not start";
     return "";
