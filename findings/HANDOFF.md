@@ -139,7 +139,8 @@ talk with the user (Linux may start); hil-win on the tuned VM: yes; update check
    midifeed.h + umpconv.h (tests), MSI condition, CI step. CI 43694600597 (1db7d3e, 0.8.42) ALL GREEN, helper
    compiled. win11 VM: build 26300.9974 (26H2), midisrv there (Manual), NO System32 Windows.Devices.Midi2.dll ->
    can't test yet; no API in Windows Update either. User: test with the SDK in the VM: helper switch
-   VTI_MIDI2_ALLOW_SDK=1 + Preview 11 DLL by hand: ports seen in WinMM (read-only holds), names wrong ("Virus TI",
-   "Virus TI Gr 2") -> one device per port + retries (CI pending); #1047 hang seen (reboot). Messages: untested.
+   VTI_MIDI2_ALLOW_SDK=1 + Preview 11 DLL by hand: after the fix (5e510e4, one device per port + retries) WinMM
+   inputs "Virus TI Synth" / "Virus TI MIDI", no outputs, note/CC/SysEx through both (fed by hand); #1047 hang seen
+   (pre-fix Windows). Open: real keys/DIN traffic; Windows' own API (end Nov). README/site written. VM off, clean.
 6. Later (user): Mac push of a package + live-later 160 keystamp test there; Windows MIDI ports only after a talk.
 7. Waiting on reporters (table above); check issues only together with the user.

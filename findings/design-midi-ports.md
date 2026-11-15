@@ -106,6 +106,12 @@ macOS and Linux (DAW to Virus would be a separate decision under rule 2).
   the helper hung in the teardown, `Restart-Service midisrv` hung, a killed helper's device stayed and blocked the
   next creation; only a reboot cleared it (this build has not got the November fix). (4) OpenSSH ends the processes
   it started (broker and helper) with the session: test in one session or from the console.
+- Second VM run (helper of 5e510e4, CI 43696948011, one device per port, same test setup): WinMM inputs "Virus TI
+  Synth" and "Virus TI MIDI", outputs unchanged. Message path tested by feeding the helper's stdin with midifeed
+  frames (scratchpad test script, as the broker would) while a WinMM program listened (midiInOpen, callback):
+  on each port note on 90 3C 64, CC B0 01 40, note off 80 3C 00 and SysEx F0 7E 7F 06 01 F7 arrived unchanged.
+  After a cold boot the first device came at attempt 2 (the retry works). Not tested: the broker's USB side with
+  real key or DIN traffic (no keyed Virus, nothing at the DIN In), Windows' own copy of the API (not out yet).
 - Broker (`vtikeyport_win.c`): starts the helper when it lies next to `vtibroker.exe`, feeds it the frames of
   `midifeed.h` on a non-blocking stdin pipe; the helper ends when the pipe closes, so the ports live as long as the
   broker (as on macOS and Linux). `umpconv.h` turns the bytes into UMP (unit-tested).

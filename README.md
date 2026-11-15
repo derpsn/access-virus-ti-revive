@@ -438,7 +438,8 @@ the Virus' flash and can brick it. Details: [native/docs/controlcenter.md](nativ
   (as with the old Access driver), so "Line (Virus TI)" / "Speakers (Virus TI)" no longer appear in Windows;
   use the ASIO device in your DAW. When you update from TI Revive 0.2.x, the audio part of the Virus switches to
   WinUSB automatically; if the Virus audio does not work afterwards, unplug and replug the Virus once.
-- **Windows MIDI ports** ("Virus TI MIDI"/"Virus TI Synth") of the old driver are not provided, so on Windows the keys of a Keyboard or Polar cannot be recorded in a DAW yet.
+- **Windows MIDI ports** (since 0.8.42): on Windows 11 25H2 or later, once Windows has Windows MIDI Services built in (it comes with the Windows update from the end of November 2026), TI Revive offers the MIDI inputs "Virus TI Synth" (the keys, wheels and pedals of a Keyboard or Polar) and "Virus TI MIDI" (what arrives at the Virus' MIDI In), as the Access driver did. Virus to DAW only. The installer adds them only on a Windows that supports them: on Windows 10 and older Windows 11 there are none, as before. Tested in a Windows 11 VM with Microsoft's preview package and messages fed in by hand; not yet with Windows' own copy or with a Virus that has keys.
+- **The keys of a Keyboard or Polar and the Virus' MIDI In on Linux** (since 0.8.42): the MIDI inputs "Virus TI Synth" and "Virus TI MIDI" in the ALSA sequencer, with the names the Linux kernel's own driver gave them. Choose them as the MIDI input of the track with the plug-in and arm it, as on macOS. They exist while the plug-in or the Control Center is open. Virus to DAW only. They show up on our TI2 Desktop; no note has been played through them yet (it has no keys).
 - **Keyed Virus on Linux after the DAW closes:** On Linux a Keyboard or Polar can stay silent on its own keys after the DAW closes: the Linux kernel's USB audio driver links the Virus to the computer each time it takes the device (when it is plugged in, after a reset, and when TI Revive gives it back), so the keys keep going to USB. TI Revive unlinks it at the close like the original driver; the kernel links it again. Unplugging the USB cable brings the keys back. Seen with a simulated Virus through the real Linux kernel (E527); not checked on a real Keyboard.
 
 **macOS**
@@ -729,7 +730,7 @@ measurements: [`findings/design-linux.md`](findings/design-linux.md), evidence E
 | Control Center app + command line `tirevive-cc` (device info, backup, restore into RAM, library export) | done: CLI tested on macOS (M3), app on Linux, both with a TI2 |
 | Control Center: restore into RAM | done in 0.8.30: RAM only, tested with a TI2 on Linux, Windows 11 (VM) and macOS (E313, E314); flash functions and OS update: never |
 | MIDI input for the keys, macOS | done in 0.8.38: by user reports, not tested by us |
-| Windows MIDI ports | open |
+| MIDI inputs for the keys, Linux and Windows | done in 0.8.42: Linux ports seen, Windows ports tested in a VM with Microsoft's preview package; no keys played through them yet |
 | **Windows** | |
 | WinUSB driver package, broker with USB audio, unplug recovery, Windows 11 with memory integrity (HVCI) | done |
 | MSI + setup.exe (GitHub Actions build) | done |
