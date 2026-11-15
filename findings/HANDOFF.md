@@ -49,7 +49,6 @@ Last update: 2026-11-15 morning: live-later 160, Linux MIDI ports, hil-win tuned
   Option files there: live-later.on (left from M2), klog.on, noteprobe.on, live-notes.on, diag.on.
 - Branches: `libusb-audio` and `libusb-catalina` (worktree ../virus-ti-re-catalina) are merged into round-0.8.42 and
   done (dev-mac there = the Catalina build; on the round dev-mac stays the normal build), `catalina-test` (old).
-  Scratch branch `release-0.8.41` deleted, dead scratchpad worktrees pruned (2026-11-15).
 
 ## Open issues (checked with the user 2026-11-14 evening; check GitHub only together with the user)
 
