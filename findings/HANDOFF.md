@@ -5,7 +5,7 @@ NEXT. At most 150 lines; the Stop hook (`.claude/hooks/handoff-check.sh`) refuse
 how goes into the dated log [`log/2026-11.md`](log/2026-11.md) (newest first); older logs are in [`log/`](log/).
 Device/protocol knowledge goes into [`evidence.md`](evidence.md). Update this file in the same commit as the work._
 
-Last update: 2026-11-15 night: #41 (the #30 reporter): rc3 puts his take on the grid, log shows why (stale latency 3085 -> 2816 = 5.6 ms); replied, RAM backup / Documents question. Private-data hook added.
+Last update: 2026-11-16: joint issue check with the user (no new replies); #28 closed (quiet-issue rule); E546 written (#41 log: stale latency 3085 -> 2816 = the 5.6 ms).
 
 ## Where things stand
 
@@ -46,12 +46,11 @@ Last update: 2026-11-15 night: #41 (the #30 reporter): rc3 puts his take on the 
 - Branches: `libusb-audio` and `libusb-catalina` (worktree ../virus-ti-re-catalina) are merged into round-0.8.42 and
   done (dev-mac there = the Catalina build; on the round dev-mac stays the normal build), `catalina-test` (old).
 
-## Open issues (checked with the user 2026-11-14 evening; check GitHub only together with the user)
+## Open issues (checked with the user 2026-11-16; check GitHub only together with the user)
 
 | Issue | Topic | Waits on | Last from us |
 |---|---|---|---|
 | #26 | Snow, Linux REAPER timing | reporter: pw-jack test; 0.8.41 note | 2026-11-14 |
-| #28 | numbers 100-127 moved 5 px | reporter: confirm, close on yes | 2026-11-09 |
 | #30 | knob automation in Logic fixed in rc2 (E542): CONFIRMED by Chris 13:47 | - (done) | 2026-11-15 |
 | #30 | REOPENED: Virus audio 5.6 ms early in Logic (E540, E541, E545): SOLVED by rc3 per #41 (his log: Logic read 3085, re-announced 2816, 269 samples = 5.6 ms at 48k; not his Snow, corrected in #41) | reporter, see #41; close #30 and #41 with the user once #41 is answered | 2026-11-15 |
 | #31 | Win10 VirtualBox, Snow, setup with the Access driver | reporter: setup unplug step report; 0.8.41 note | 2026-11-14 |
@@ -62,12 +61,12 @@ Last update: 2026-11-15 night: #41 (the #30 reporter): rc3 puts his take on the 
 | #37 | rc1 libusb: NO crackle (E543); fixes in rc3 (E544; our Mac: normal pkg fine, libusb pkg untested here): MIDI ports via a helper in the user session, latency re-announce + log (offset hypothesis: confirmed for #30 by #41's log, still open for #37/#33) | reporter: test rc3 (MIDI ports, offset size, log; posted issuecomment-6896731886) | 2026-11-15 |
 | #38 | macOS 27 Live: AU/editor crash, not reproduced | reporter: crash report + log with 0.8.41 | 2026-11-14 |
 | #40 | (ours) macOS libusb audio as an option? | #39 reporter; #37 = first real data point (works) | 2026-11-13 |
-| #41 | (the #30 reporter, Snow, Logic) rc3: bus recording on the grid; log + project attached (new take not measured by us). Log also: RAM backup failed, cannot write ~/Documents/... .tmp (nothing written, safe) | reporter: Logic's Documents Folder permission in Privacy & Security (issuecomment-6900513133); NEXT: evidence entry for the 3085 -> 2816 log (proposed to the user, not written yet) | 2026-11-15 |
+| #41 | (the #30 reporter, Snow, Logic) rc3: bus recording on the grid; log + project attached (new take not measured by us). Log also: RAM backup failed, cannot write ~/Documents/... .tmp (nothing written, safe) | reporter: Logic's Documents Folder permission in Privacy & Security (issuecomment-6900513133); 3085 -> 2816 log = E546 | 2026-11-15 |
 
 #30 follow-up (Logic arrange meters of multi-timbral tracks): reproduced on our Mac = Logic's display (E538), answered 2026-11-15 (issuecomment-6892430267), stays closed. #39 closed by the reporter (doubled notes = Local On + Monitor In, E530/E531). #30 closed by us 2026-11-14 with the
 user: all works, Snow meters visible in the plug-in (E536). 2026-11-15 check: no new replies; a fork
 (insolentconstruct) syncing our commits shows as "added a commit that references" events, nothing to do. Quiet-issue rule: 7 days after our
-last request, close with the AGENTS.md message, only in a joint check with the user: #28 from 2026-11-16, the
+last request, close with the AGENTS.md message, only in a joint check with the user: #28 closed 2026-11-16 (issuecomment-6924172903), the
 others from 2026-11-21 (#40 is ours: no closing; #32: look up its date first).
 
 ## Not verified on hardware
@@ -140,5 +139,5 @@ talk with the user (Linux may start); hil-win on the tuned VM: yes; update check
    rc3 released for #37 (user 2026-11-15: post it for him to test, Catalina not testable here).
 5b. native/CMakeLists.txt project VERSION raised to 0.8.42 after rc2 (rc1/rc2 report 0.8.41): raise it at every round start.
 6. Linux: DEV build installed (plug-in from a1153d9; release backed up in ~/.vst3-backup/0.8.41-release); Mac: test
-   build CI 43696948011 installed; TI2 on the Mac's USB. #28 quiet-issue limit 2026-11-16 (joint check).
+   build CI 43696948011 installed; TI2 on the Mac's USB.
 7. Waiting on reporters (table above); check issues only together with the user.

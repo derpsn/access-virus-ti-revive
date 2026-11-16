@@ -4979,3 +4979,13 @@ Fixes prepared for #37 (E543), not tested on any Mac yet (2026-11-15; the user a
 - **Method:** recordings on our Mac in his project + WAV onset measurement + Logic editor zoom (screenshots)
 - **Confidence:** HIGH (his take 5.6 ms early, ours exact in the same project; Recording Delay does not move bus recordings) / open (the cause on his side)
 - **Hardware:** yes (TI2 Desktop, Apple Silicon Mac, Logic); his Snow not
+
+### E546
+
+#41's rc3 log (the #30 reporter, Virus TI Snow, Logic on macOS, TI-Revive-logs-2026-11-15-2010.txt, Control Center 0.8.42, 48 kHz, block 512) shows the latency watch of E544 (2) at work: `the host reads latency 3085 samples`, then `latency now 2816 samples, the host last read 3085 - announced again`, then `the host reads latency 2816`. So Logic first held a value 269 samples above the current one and read the new value only after the plug-in announced it again. 269 samples = 5.60 ms at 48 kHz: the steady offset of his old take (E545, every beat -5.60 ms), and the Recording Delay we had to set on our Mac (-269) to match it. A host that compensates 269 samples too much puts the recording that much early, which is what E545 measured. His report with rc3: "recorded audio via Bus sits exactly on grid now"; his new take ("Project Latency_1 #02.wav", 20:09) is attached to #41 but not measured by us. This confirms the E544 (2) reading (a stale latency value in the host, cured by announcing it again) for #30. Where the 3085 came from is open: it does not match the current setup (2816 = lead + block 512 + margin 512 at 48 kHz, reported_frames in stamprule.h, the same value as E505 R2), so Logic read it under an earlier setup. Still open for #37 and #33 (no rc3 log from them yet). The same log also has `RAM backup failed (cannot write ~/Documents/Access Music/Virus TI/Patches/RAM Backup 2026-11-15.mid.tmp), nothing written to RAM` (the backup stopped before any write, as designed); the cause, perhaps Logic lacking macOS' Documents Folder permission, is not verified (asked in #41).
+
+- **Date:** 2026-11-15
+- **Pointer:** issue #41 (log attachment, not in git), issuecomment-6900513133; E544, E545; native/src/device/latencywatch.h, VirusPlugin::check_latency
+- **Method:** reporter's plug-in log read line by line + arithmetic against E545's onset measurement; his statement for the rc3 take
+- **Confidence:** HIGH (the log lines and 3085 - 2816 = 269 = the E545 offset) / MED (that the re-announce is what put his take on the grid: his report, his take not measured by us) / open (origin of 3085, #37/#33, the RAM backup cause)
+- **Hardware:** yes (the reporter's Snow + Mac + Logic); not reproduced on our TI2 (our Logic read the right value at once, E544)
