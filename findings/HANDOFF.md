@@ -5,7 +5,7 @@ NEXT. At most 150 lines; the Stop hook (`.claude/hooks/handoff-check.sh`) refuse
 how goes into the dated log [`log/2026-11.md`](log/2026-11.md) (newest first); older logs are in [`log/`](log/).
 Device/protocol knowledge goes into [`evidence.md`](evidence.md). Update this file in the same commit as the work._
 
-Last update: 2026-11-16: joint issue check with the user (no new replies); #28 closed (quiet-issue rule); E546 written (#41 log: stale latency 3085 -> 2816 = the 5.6 ms).
+Last update: 2026-11-17: joint issue check with the user: new #42 (Snow, macOS, vtibroker ~30 % CPU idle; reply not posted yet), no other new replies.
 
 ## Where things stand
 
@@ -46,7 +46,7 @@ Last update: 2026-11-16: joint issue check with the user (no new replies); #28 c
 - Branches: `libusb-audio` and `libusb-catalina` (worktree ../virus-ti-re-catalina) are merged into round-0.8.42 and
   done (dev-mac there = the Catalina build; on the round dev-mac stays the normal build), `catalina-test` (old).
 
-## Open issues (checked with the user 2026-11-16; check GitHub only together with the user)
+## Open issues (checked with the user 2026-11-17; check GitHub only together with the user)
 
 | Issue | Topic | Waits on | Last from us |
 |---|---|---|---|
@@ -62,6 +62,7 @@ Last update: 2026-11-16: joint issue check with the user (no new replies); #28 c
 | #38 | macOS 27 Live: AU/editor crash, not reproduced | reporter: crash report + log with 0.8.41 | 2026-11-14 |
 | #40 | (ours) macOS libusb audio as an option? | #39 reporter; #37 = first real data point (works) | 2026-11-13 |
 | #41 | (the #30 reporter, Snow, Logic) rc3: bus recording on the grid; log + project attached (new take not measured by us). Log also: RAM backup failed, cannot write ~/Documents/... .tmp (nothing written, safe) | reporter: Logic's Documents Folder permission in Privacy & Security (issuecomment-6900513133); 3085 -> 2816 log = E546 | 2026-11-15 |
+| #42 | Snow, M4 Pro, macOS 15.8.2, Live 12, Anker hub: vtibroker ~30 % CPU while idle (Activity Monitor; Live's meter normal); no logs, no version; no known evidence | us: reply (version, broker log + Diagnostics, without Live/hub?, `sample vtibroker` 10 s) needs the user's OK; check vtibroker CPU on our Mac in idle | - |
 
 #30 follow-up (Logic arrange meters of multi-timbral tracks): reproduced on our Mac = Logic's display (E538), answered 2026-11-15 (issuecomment-6892430267), stays closed. #39 closed by the reporter (doubled notes = Local On + Monitor In, E530/E531). #30 closed by us 2026-11-14 with the
 user: all works, Snow meters visible in the plug-in (E536). 2026-11-15 check: no new replies; a fork
