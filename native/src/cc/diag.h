@@ -45,6 +45,8 @@ bool mac_usb_audio();
 // Where the broker logs: a file on Windows (%TEMP%\vtibroker.log) and macOS (/tmp/tirevive-vtibroker.log), the user
 // journal on Linux (systemd unit tirevive-broker). For display.
 std::string broker_log_location();
+// macOS: the user's own broker logs to /tmp; the libusb package's root service to a root-only folder (audit #6)
+std::string mac_broker_log(bool usb_audio);
 
 // The last `n` lines of a text file / of the broker's log (empty if there is none).
 std::vector<std::string> tail_file(const std::string &path, size_t n);

@@ -34,6 +34,6 @@ Double-click "Uninstall TI Revive.command" (also in /Library/Application Support
 USB cable and plug it in again.
 
 Logs (for bug reports): the Control Center's Nerd mode > "Save logs...", or ~/Library/Application Support/
-virus-ti-native/diag.log and /tmp/tirevive-vtibroker.log.
+virus-ti-native/diag.log and /Library/Logs/TI Revive/vtibroker.log.
 
 Not affiliated with Access Music or Kemper. https://github.com/derpsn/access-virus-ti-revive

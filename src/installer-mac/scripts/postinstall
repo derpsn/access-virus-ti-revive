@@ -58,11 +58,15 @@ if [ -f "$(dirname "$0")/libusb-audio" ] && [ -n "${USER_ID:-}" ]; then
         <key>SockPathName</key><string>/tmp/vtibroker-$USER_ID.sock</string>
         <key>SockPathMode</key><integer>438</integer>
     </dict></dict>
-    <key>StandardErrorPath</key><string>/tmp/tirevive-vtibroker.log</string>
+    <key>StandardErrorPath</key><string>/Library/Logs/TI Revive/vtibroker.log</string>
 </dict>
 </plist>
 PLIST
     chown root:wheel "$SVC_PLIST" && chmod 644 "$SVC_PLIST"
+    # root's log in a folder only root writes (a fixed file in /tmp, made first by the user's broker, let a symlink
+    # point root's writes at any file: audit 2026-11-17 #6); a root log left in /tmp by an earlier install goes
+    rm -rf "/Library/Logs/TI Revive" && install -d -o root -g wheel -m 755 "/Library/Logs/TI Revive"
+    rm -f /tmp/tirevive-vtibroker.log
     OPT="/Users/$USER_NAME/Library/Application Support/virus-ti-native"
     mkdir -p "$OPT" && touch "$OPT/mac-usb-audio.on" && chown -R "$USER_NAME" "$OPT"
     launchctl bootstrap system "$SVC_PLIST"
@@ -71,6 +75,7 @@ elif [ -f "$SVC_PLIST" ]; then
     rm -f "$SVC_PLIST"
     [ -z "${USER_NAME:-}" ] || rm -f "/Users/$USER_NAME/Library/Application Support/virus-ti-native/mac-usb-audio.on"
     [ -z "${USER_ID:-}" ] || rm -f "/tmp/vtibroker-$USER_ID.sock"
-    rm -f /tmp/tirevive-vtibroker.log # root's, from the service; the user's own service writes a new one
+    rm -rf "/Library/Logs/TI Revive" # root's, from the service
+    rm -f /tmp/tirevive-vtibroker.log  # root's from a service before 0.8.42; the user's own broker writes a new one
 fi
 exit 0

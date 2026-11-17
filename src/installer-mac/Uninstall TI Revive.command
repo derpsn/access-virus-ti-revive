@@ -10,6 +10,7 @@ USBAUDIO=/Library/LaunchDaemons/io.github.derpsn.tirevive.usbaudio.plist
 if [ -f "$USBAUDIO" ]; then
     sudo launchctl bootout system/io.github.derpsn.tirevive.usbaudio 2>/dev/null
     sudo rm -f "$USBAUDIO" "/tmp/vtibroker-$(id -u).sock" /tmp/tirevive-vtibroker.log
+    sudo rm -rf "/Library/Logs/TI Revive"
     rm -f "$HOME/Library/Application Support/virus-ti-native/mac-usb-audio.on"
     LIBUSB_NOTE=1
 fi

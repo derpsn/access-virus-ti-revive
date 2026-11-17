@@ -276,3 +276,12 @@ TEST(diag_broker_log_tail_line_ends)
 }
 #endif
 #endif
+
+// audit 2026-11-17 #6: the libusb package's root service logs into a folder only root can write; a fixed file in
+// /tmp, which the user's broker creates first, let a symlink point root's log at any file. The user's own broker
+// (not root) keeps /tmp. Nerd mode and the bug report read the one that runs.
+TEST(diag_mac_broker_log_of_the_root_service_is_not_in_tmp)
+{
+    CHECK(mac_broker_log(false) == "/tmp/tirevive-vtibroker.log");
+    CHECK(mac_broker_log(true) == "/Library/Logs/TI Revive/vtibroker.log");
+}

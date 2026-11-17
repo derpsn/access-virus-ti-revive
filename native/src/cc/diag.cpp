@@ -141,6 +141,13 @@ bool set_plugin_option(const std::string &name, bool on, std::string &error)
     return set_flag(o->file, o->default_on ? !on : on, error);
 }
 
+std::string mac_broker_log(bool usb_audio)
+{
+    // the root service's log must not sit in /tmp: the user's broker creates that file first, and a symlink there
+    // made root append to any file (audit 2026-11-17 #6); postinstall creates the folder root:wheel 755
+    return usb_audio ? "/Library/Logs/TI Revive/vtibroker.log" : "/tmp/tirevive-vtibroker.log";
+}
+
 #if defined(_WIN32) || defined(__APPLE__) // Linux: the journal
 static std::string broker_log_file()
 {
@@ -148,7 +155,7 @@ static std::string broker_log_file()
     const std::string t = u8env("TEMP");
     return t.empty() ? std::string() : t + "\\vtibroker.log";
 #else
-    return "/tmp/tirevive-vtibroker.log";
+    return mac_broker_log(mac_usb_audio());
 #endif
 }
 #endif
