@@ -5029,3 +5029,13 @@ Issue #42 (Snow, M4 Pro, macOS 15.8.2), the reporter's test of v0.8.42-rc5 (1 ms
 - **Method:** reporter's broker/plug-in log and Activity Monitor screenshots; unit tests for the option
 - **Confidence:** HIGH (rc5 rates from the broker's own counters) / LOW (the option's CPU effect: estimate)
 - **Hardware:** yes (reporter's Snow, rc5) / no (the option: not run on a Snow, we have none)
+
+### E551
+
+Why the Virus TI Snow streams FF FE 00 00 on bulk EP 0x85 (towards E387, E547, E550): sim finding S147 (virus-ti-sim c3ef06e), a static reading of the Snow's TUSB3200A code (vti_snow.bin at F060) against the TI2's, with Ghidra headless (REA does not take 8051 images). (1) The chip's main loop (0x00EC .. 0x0305) checks EP 0x85's count register 0xFF43 on every pass; when its NAK bit says the host took the last packet, it writes FF FE 00 00 into the IN buffer 0xFED8 (0x00F6-0x012C) and arms 4 bytes (0x0133). No timer or interval (not a 300 ms Active Sensing): real 4-byte packets, one per completed read. Real MIDI is copied from the ring later in the same pass (0x0320) and also waits for the NAK bit, so a message that arrives while an idle packet is armed goes out one read later. EP 0x86 has no filler; the TI2's code has the same ring copy (0x0430) and no filler at all (HIGH). (2) So the rate is per IN transaction: the slower of the host's read turnaround and the chip's loop time (loop time not measured; E387 ~3000/s and E547 ~3300/s with 8 pending suggest the loop is the ceiling - inferred, LOW). (3) The only gate is bit 0x1B, set and cleared from the USB interrupt dispatch (0x18A8 switch, vectors 0x16/0x15, read as suspend/resume by the sim); no vendor request or SysEx reaches it, so no command switches the stream off; only a suspended bus stops it (HIGH that 0x1B is the only gate, MED that it means suspend). Consequence for idlepace.h: with paced reads a real message can wait up to one extra pace interval (1 ms, 4 ms with snow-idle-slow) - inferred, matches the design. Would show this wrong: a usbmon capture of a Snow with EP 0x85 NAKed for long stretches on an active bus without MIDI, or a command that stops the idle packets without a suspend
+
+- **Date:** 2026-11-17
+- **Pointer:** virus-ti-sim S147 (commit c3ef06e), vti_snow_tusbcode.bin 0x00EC-0x0305, 0x0133, 0x0320, 0x18A8; vti_2_tusbcode.bin 0x0430, 0x0C0F; E387, E547, E548, E550
+- **Method:** static analysis of the firmware's USB chip code (sim session, Ghidra headless); no run
+- **Confidence:** HIGH (fill on every read, no switch-off command) / LOW (what limits the rate)
+- **Hardware:** no (static; the rates come from reporters' logs, E547, E550)
