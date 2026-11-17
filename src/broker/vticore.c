@@ -55,6 +55,8 @@ typedef struct rxep {
     int quiet;                // the reader clears a halt: transfers cancelled, parked until the clear (S142)
     int pace;                 // the Snow's bulk EP 0x85: idle-only reads rest their transfer (idlepace.h, #42)
     vti_pace pc;
+    char opt_path[512];       // the option snow-idle-slow in the user's TI Revive folder ("" = none), read every 2 s
+    uint64_t opt_next_ns;
     vti_rx_rec recs[RX_QCAP];
     vti_rxq q;
     pthread_mutex_t mu;
@@ -142,6 +144,8 @@ static int rx_submit(rxep *e, int slot)
 
 // Any thread that handles libusb events runs this (the event thread, a sync write, the Linux audio thread): queue and
 // resubmit only, never block. An error goes to the reader as a record and its transfer waits for the reader.
+static uint64_t mono_ns(void);
+
 static void LIBUSB_CALL rx_done(struct libusb_transfer *t)
 {
     rxep *e = t->user_data;
@@ -170,7 +174,9 @@ static void LIBUSB_CALL rx_done(struct libusb_transfer *t)
             vti_park(&e->parked, slot);
         else if (rx_submit(e, slot))
             vti_rxq_push(&e->q, slot, -4, NULL, 0); // a failed resubmit: the device is going, the reader decides
-        if (e->pace && t->actual_length > 0) // data: every rested transfer goes out again (a dump runs at full speed)
+        if (e->pace && t->actual_length > 0) // data: the 1 ms pace again (the option's quiet time starts over) ...
+            vti_pace_data(&e->pc, mono_ns());
+        if (e->pace && t->actual_length > 0) // ... and every rested transfer goes out again (a dump runs at full speed)
             for (uint32_t m = vti_pace_wake_all(&e->pc); m; m &= m - 1) {
                 const int s = __builtin_ctz(m);
                 if (!vti_rxq_may_resubmit(&e->q, (unsigned)e->inflight + 1))
@@ -215,7 +221,17 @@ static uint64_t mono_ns(void)
 static void rx_pace(rxep *e)
 {
     int slot;
-    if (!e->pace || e->v->closing || e->quiet || (slot = vti_pace_due(&e->pc, mono_ns())) < 0)
+    if (!e->pace)
+        return;
+    const uint64_t now = mono_ns();
+    if (now >= e->opt_next_ns) { // the Control Center's switch takes effect within 2 s, no restart needed
+        const int slow = e->opt_path[0] && access(e->opt_path, F_OK) == 0;
+        if (slow != e->pc.slow)
+            vti_log("vti: Snow idle reads %s (option snow-idle-slow)\n", slow ? "slower after a quiet second" : "every 1 ms");
+        e->pc.slow = slow;
+        e->opt_next_ns = now + 2000000000ull;
+    }
+    if (e->v->closing || e->quiet || (slot = vti_pace_due(&e->pc, now)) < 0)
         return;
     if (!vti_rxq_may_resubmit(&e->q, (unsigned)e->inflight + 1))
         vti_park(&e->parked, slot);
@@ -339,6 +355,14 @@ static int rx_start(vti *v)
         e->ep = v->rd_ep[i];
         e->pace = e->ep == VTI_EP_MI03_IN && v->bulk[e->ep & 15]; // only the Snow idles on it (E387)
         vti_pace_init(&e->pc);
+        e->opt_next_ns = 0;
+#ifdef __APPLE__
+        const int mac = 1;
+#else
+        const int mac = 0;
+#endif
+        if (vti_pace_option_path(e->opt_path, sizeof e->opt_path, getenv("HOME"), mac)) // no home (root service): off
+            e->opt_path[0] = 0;
         pthread_mutex_init(&e->mu, NULL);
         pthread_cond_init(&e->cv, NULL);
         vti_rxq_init(&e->q, e->recs, RX_QCAP);

@@ -103,9 +103,17 @@ const std::vector<PluginOption> &plugin_options()
          "Check for updates",
          "Once a day the Control Center asks GitHub for the newest release; nothing about you or your setup is "
          "sent. The plug-in then shows a note and a Download entry in its ? menu."},
+        // off by default (0.8.42, #42, user 2026-11-17): read by the broker every 2 s (src/broker/idlepace.h), not by
+        // the plug-in; macOS and Linux (the Windows broker does not pace the Snow)
+        {"snow-idle-slow", "snow-idle-slow.on", "Virus TI Snow: ask less often while it is idle (#42)", false,
+         "Snow: less CPU while idle",
+         "Virus TI Snow on macOS and Linux: after a quiet second the service asks the Snow for MIDI every 4 ms "
+         "instead of every 1 ms. The first message after a pause can then come up to 3 ms later."},
     };
     return opts;
 }
+
+bool option_applies_at_once(const std::string &name) { return name == "snow-idle-slow"; }
 
 static const PluginOption *find_option(const std::string &name)
 {

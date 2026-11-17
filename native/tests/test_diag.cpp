@@ -66,7 +66,14 @@ TEST(diag_plugin_options)
 {
     Home h("vtester");
     const auto &opts = plugin_options();
-    CHECK(opts.size() == 8);
+    CHECK(opts.size() == 9);
+    // snow-idle-slow (0.8.42, #42, user 2026-11-17): a Snow that only idles is asked every 4 ms instead of every 1 ms
+    // after a quiet second; OFF by default, read by the broker (not the plug-in), and the hint says the price
+    CHECK(std::string(opts[8].name) == "snow-idle-slow" && std::string(opts[8].file) == "snow-idle-slow.on");
+    CHECK(!opts[8].default_on && !plugin_option("snow-idle-slow"));
+    CHECK(std::string(opts[8].hint).find("Snow") != std::string::npos &&
+          std::string(opts[8].hint).find("ms") != std::string::npos);
+    CHECK(option_applies_at_once("snow-idle-slow") && !option_applies_at_once("live-notes"));
     // update-check (0.8.42, user 2026-11-15): the Control Center asks GitHub once a day for the latest release, OFF
     // by default (opt-in, no telemetry); the hint says what is sent
     CHECK(std::string(opts[7].name) == "update-check" && std::string(opts[7].file) == "update-check.on");

@@ -9,13 +9,19 @@
 //   - a read with anything else in it hands the data on as before and wakes every rested transfer at once, so a SysEx
 //     dump or a knob turn runs at full speed. A message that starts in a quiet moment waits at most VTI_PACE_NS for
 //     the next read (the Virus holds it until it is asked, E517 (5)).
+//   - the option "snow-idle-slow" (off by default, #42, user 2026-11-17): after VTI_PACE_QUIET_NS without real data
+//     the paced reads come every VTI_PACE_SLOW_NS instead; the first message after a pause may then wait up to that
+//     long, real data brings back the 1 ms pace at once. The broker reads the option from the user's TI Revive folder.
 // The TI/TI2 interrupt endpoints send nothing when idle and never get here.
 // Plain C, no locking (the caller holds its endpoint mutex), no I/O, no clock of its own; the unit test calls it.
 #pragma once
 #include <stdint.h>
 #include <string.h>
 
-#define VTI_PACE_NS 1000000ull // 1 ms between paced reads while idle
+#define VTI_PACE_NS 1000000ull       // 1 ms between paced reads while idle
+#define VTI_PACE_SLOW_NS 4000000ull  // the option: 4 ms once the Snow has been quiet ...
+#define VTI_PACE_QUIET_NS 1000000000ull // ... for a second
+#define VTI_PACE_OPTION "snow-idle-slow.on"
 
 // 1 when b holds n > 0 bytes that are all whole FF FE 00 00 packets
 static inline int vti_idle_only(const uint8_t *b, int n)
@@ -30,14 +36,29 @@ static inline int vti_idle_only(const uint8_t *b, int n)
 }
 
 typedef struct {
-    uint32_t rested;  // one bit per transfer slot (0..31)
-    uint64_t next_ns; // monotonic time the next rested transfer may go out
+    uint32_t rested;      // one bit per transfer slot (0..31)
+    uint64_t next_ns;     // monotonic time the next rested transfer may go out
+    int slow;             // the option snow-idle-slow (set by the broker)
+    int have_data;        // last_data_ns is known
+    uint64_t last_data_ns; // the last real data; without any, the first paced read starts the quiet time
 } vti_pace;
 
 static inline void vti_pace_init(vti_pace *p)
 {
     p->rested = 0;
     p->next_ns = 0;
+    p->slow = 0;
+    p->have_data = 0;
+    p->last_data_ns = 0;
+}
+
+// the callback: real data came at now_ns; the quiet time starts again and the next paced read may go at once
+static inline void vti_pace_data(vti_pace *p, uint64_t now_ns)
+{
+    p->have_data = 1;
+    p->last_data_ns = now_ns;
+    if (p->next_ns > now_ns)
+        p->next_ns = now_ns;
 }
 
 // the callback: an idle-only read, keep this transfer back
@@ -65,7 +86,12 @@ static inline int vti_pace_due(vti_pace *p, uint64_t now_ns)
     while (!(p->rested & (1u << s)))
         s++;
     p->rested &= ~(1u << s);
-    p->next_ns = now_ns + VTI_PACE_NS;
+    if (!p->have_data) { // no data seen yet: quiet from now on
+        p->have_data = 1;
+        p->last_data_ns = now_ns;
+    }
+    const int quiet = p->slow && now_ns - p->last_data_ns >= VTI_PACE_QUIET_NS;
+    p->next_ns = now_ns + (quiet ? VTI_PACE_SLOW_NS : VTI_PACE_NS);
     return s;
 }
 
@@ -78,4 +104,20 @@ static inline uint64_t vti_pace_wait(const vti_pace *p, uint64_t now_ns, uint64_
         return 0;
     const uint64_t d = p->next_ns - now_ns;
     return d < cap ? d : cap;
+}
+
+// the broker: where the option's file is for the user it runs as (home = $HOME; mac = 1 on macOS), the plug-in's
+// folder (native/src/cc/diag.h plugin_dir); 0, or -1 without a home or when the path does not fit
+static inline int vti_pace_option_path(char *buf, size_t size, const char *home, int mac)
+{
+    if (!buf || !size || !home || !*home)
+        return -1;
+    const char *mid = mac ? "/Library/Application Support/virus-ti-native/" : "/.local/share/virus-ti-native/";
+    const size_t a = strlen(home), b = strlen(mid), c = strlen(VTI_PACE_OPTION);
+    if (a + b + c + 1 > size) // never a cut path
+        return -1;
+    memcpy(buf, home, a);
+    memcpy(buf + a, mid, b);
+    memcpy(buf + a + b, VTI_PACE_OPTION, c + 1);
+    return 0;
 }

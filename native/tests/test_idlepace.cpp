@@ -76,3 +76,60 @@ TEST(idlepace_ignores_slots_out_of_range)
     vti_pace_rest(&p, 31);
     CHECK_EQ(vti_pace_wake_all(&p), 0x80000001u);
 }
+
+// the option "snow-idle-slow" (#42, user 2026-11-17, off by default): after a second without real data the paced reads
+// come every 4 ms instead of every millisecond; real data brings back the 1 ms pace (and wakes everything, as before)
+TEST(idlepace_slow_mode_after_a_quiet_second)
+{
+    vti_pace p;
+    vti_pace_init(&p);
+    CHECK(!p.slow); // off unless the option is set
+    p.slow = 1;
+    vti_pace_data(&p, 100 * ms); // real data at 100 ms
+    vti_pace_rest(&p, 0);
+    CHECK_EQ(vti_pace_due(&p, 500 * ms), 0);
+    vti_pace_rest(&p, 0);
+    CHECK_EQ(vti_pace_due(&p, 501 * ms), 0); // within the quiet second: still 1 ms
+    vti_pace_rest(&p, 0);
+    CHECK_EQ(vti_pace_due(&p, 1100 * ms), 0); // a second after the data: this one sets the slow pace
+    vti_pace_rest(&p, 0);
+    CHECK_EQ(vti_pace_due(&p, 1101 * ms), -1);
+    CHECK_EQ(vti_pace_wait(&p, 1101 * ms, 200 * ms), 3 * ms);
+    CHECK_EQ(vti_pace_due(&p, 1104 * ms), 0);
+    vti_pace_data(&p, 1105 * ms); // data again: the next one after 1 ms
+    vti_pace_rest(&p, 0);
+    CHECK_EQ(vti_pace_due(&p, 1105 * ms), 0);
+    vti_pace_rest(&p, 0);
+    CHECK_EQ(vti_pace_due(&p, 1106 * ms), 0);
+}
+
+TEST(idlepace_slow_mode_off_keeps_one_millisecond)
+{
+    vti_pace p;
+    vti_pace_init(&p);
+    vti_pace_data(&p, 0);
+    for (uint64_t t = 5000; t < 5010; t++) { // long quiet, option off: every millisecond
+        vti_pace_rest(&p, 2);
+        CHECK_EQ(vti_pace_due(&p, t * ms), 2);
+    }
+    p.slow = 1; // without any data seen yet the quiet time counts from the first paced read
+    vti_pace_init(&p);
+    p.slow = 1;
+    vti_pace_rest(&p, 1);
+    CHECK_EQ(vti_pace_due(&p, 7000 * ms), 1);
+    vti_pace_rest(&p, 1);
+    CHECK_EQ(vti_pace_due(&p, 7001 * ms), 1);
+}
+
+// where the broker looks for the option: the plug-in's folder of the user it runs as
+TEST(idlepace_option_path)
+{
+    char b[256];
+    CHECK(vti_pace_option_path(b, sizeof b, "/home/u", 0) == 0);
+    CHECK(std::string(b) == "/home/u/.local/share/virus-ti-native/snow-idle-slow.on");
+    CHECK(vti_pace_option_path(b, sizeof b, "/Users/u", 1) == 0);
+    CHECK(std::string(b) == "/Users/u/Library/Application Support/virus-ti-native/snow-idle-slow.on");
+    CHECK(vti_pace_option_path(b, sizeof b, nullptr, 0) < 0); // no HOME: off
+    CHECK(vti_pace_option_path(b, sizeof b, "", 0) < 0);
+    CHECK(vti_pace_option_path(b, 16, "/home/u", 0) < 0); // never cut
+}

@@ -33,6 +33,9 @@ struct PluginOption {
 const std::vector<PluginOption> &plugin_options();
 bool plugin_option(const std::string &name);                                  // false for an unknown name
 bool set_plugin_option(const std::string &name, bool on, std::string &error); // refuses an unknown name
+// true for an option TI Revive's service reads by itself every few seconds (snow-idle-slow), so a change applies
+// without restarting the plug-in
+bool option_applies_at_once(const std::string &name);
 
 // macOS libusb audio (E511, #37): the plug-in reads the Virus' audio from TI Revive's root service instead of Core
 // Audio. No Options page switch: only the separate libusb package writes mac-usb-audio.on (with its service), so the

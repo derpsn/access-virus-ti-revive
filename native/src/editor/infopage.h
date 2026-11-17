@@ -72,7 +72,8 @@ inline const std::vector<ChangeNote> &changelog()
           "macOS: a separate package for Macs where Apple's USB audio driver crackles (#37); its MIDI inputs show "
           "up too.",
           "If the host read the plug-in's latency before its final setup, the plug-in announces it again (#37, #33).",
-          "Virus TI Snow: much less CPU for the TI Revive service while the Snow is idle (#42).",
+          "Virus TI Snow: much less CPU for the TI Revive service while the Snow is idle (#42); an option in the "
+          "Control Center asks it even less often (off by default).",
           "Control Center: restoring a library into a RAM bank no longer stops at a fixed patch (#43)."}},
         {"0.8.41",
          {"Lower latency, experimental: a new option on the Control Center's Options page. At audio buffers up to 256 "

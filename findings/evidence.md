@@ -5019,3 +5019,13 @@ RAM restore of a library stopped at a fixed slot with "the Virus has another pat
 - **Method:** byte comparison of stored patches with their library originals; static analysis (REA/Ghidra); unit tests
 - **Confidence:** HIGH (the Virus does not keep byte 10 on a RAM store, on a TI2; the #43 slot pattern matches it exactly) / MED (the same on the original TI: only the reporter's slot pattern) / open (their other libraries, not seen)
 - **Hardware:** no (TI2 data from earlier sessions, no new run; the fix is not run on hardware)
+
+### E550
+
+Issue #42 (Snow, M4 Pro, macOS 15.8.2), the reporter's test of v0.8.42-rc5 (1 ms pace of idle-only reads, idlepace.h, E547): broker log (TI-Revive-logs-2026-11-17-1701.txt) idle packets dropped on bulk EP 0x85 per broker session: 0.8.40 865030 in 260.6 s (~3320/s) and 101067 in 31.3 s (~3230/s); rc5 25419 in 31.0 s (~820/s) and, with the plug-in in Live and notes played, 351382 in 409.9 s (~857/s). Activity Monitor (reporter's screenshots): vtibroker 19.2 % with 910 idle wake-ups/s while Live plays a chord (0.8.40: 32.9 % with the Control Center only, E547); about 15 % with the Control Center only (reporter's words); with nothing open the broker exits after 30 s. Knobs respond without delay (reporter). Plug-in log: 0 audio drops, process calls max 57 us, err 0..0; 33 Virus sync reports in about 6 min, 1-2 per Play (the timing path to the Virus, not changed by rc5; no 0.8.40 plug-in log to compare). So the 1 ms pace cuts the reads about 4x and the remaining load is the 1 kHz re-arm itself. Follow-up (user 2026-11-17): option "snow-idle-slow", OFF by default: after 1 s without real data the paced reads come every 4 ms (VTI_PACE_SLOW_NS), real data restores 1 ms at once; the broker reads snow-idle-slow.on from the user's TI Revive folder every 2 s (macOS ~/Library/Application Support/virus-ti-native, Linux ~/.local/share/virus-ti-native; a root broker without that HOME, the macOS libusb package, never sees it); Control Center Options page. Expected about 250 reads/s while idle (estimate, not measured); the first message after a pause can wait up to 4 ms instead of 1 ms
+
+- **Date:** 2026-11-17
+- **Pointer:** issue #42 (reporter comment 2026-11-17 17:13 UTC, log + 2 screenshots); src/broker/idlepace.h, src/broker/vticore.c (rx_pace, rx_done), native/src/cc/diag.cpp (option), tests test_idlepace.cpp (slow mode, option path), test_diag.cpp
+- **Method:** reporter's broker/plug-in log and Activity Monitor screenshots; unit tests for the option
+- **Confidence:** HIGH (rc5 rates from the broker's own counters) / LOW (the option's CPU effect: estimate)
+- **Hardware:** yes (reporter's Snow, rc5) / no (the option: not run on a Snow, we have none)

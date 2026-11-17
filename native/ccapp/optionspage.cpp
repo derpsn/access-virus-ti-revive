@@ -62,6 +62,10 @@ public:
         else if (update)
             message_->setText(on ? "Check for updates: on - checking now, then once a day when the Control Center opens."
                                  : "Check for updates: off - nothing is asked any more.");
+        else if (vti::cc::option_applies_at_once(opts[(size_t)i].name))
+            message_->setText((std::string(opts[(size_t)i].title) + (on ? ": on" : ": off") +
+                               " - TI Revive's service picks it up within a few seconds.")
+                                  .c_str());
         else
             message_->setText((std::string(opts[(size_t)i].title) + (on ? ": on" : ": off") +
                                " - from the next start of the plug-in (reload it or restart the DAW).")
