@@ -869,6 +869,7 @@ void DeviceOut::run()
             uint8_t m[32][3];
             for (int i = 0, n = HeldNotes::panic(m); i < n; i++)
                 send({m[i][0], m[i][1], m[i][2]});
+            pedals_up.store(true, std::memory_order_relaxed);
         }
         if (!piece.empty()) { // a piece of a dump (dumppacer.h)
             bool wok = broker_.write(EP_PLUGIN_OUT, piece.data(), piece.size());
@@ -1311,6 +1312,7 @@ bool VirusPlugin::panic()
     held_notes_.forget();
     for (int i = 0; i < n; i++)
         out_->send({m[i][0], m[i][1], m[i][2]});
+    out_->pedals_up.store(true, std::memory_order_relaxed);
     out_->log("Virus TI native: panic, sustain off + all notes off on 16 channels\n");
     return true;
 }
@@ -1327,6 +1329,7 @@ tresult PLUGIN_API VirusPlugin::setActive(TBool state)
         const int n = held_notes_.release(rel);
         for (int i = 0; i < n; i++)
             out_->send({rel[i][0], rel[i][1], rel[i][2]});
+        out_->pedals_up.store(true, std::memory_order_relaxed);
         for (int i = 0; n > 0 && i < 50 && out_->busy(); i++) // at most 32 messages, a few ms; at most 250 ms
             std::this_thread::sleep_for(std::chrono::milliseconds(5));
     }
@@ -1836,6 +1839,9 @@ tresult PLUGIN_API VirusPlugin::process(ProcessData &data)
     // not fit is counted and logged (blockevents.h)
     BlockEvents evs;
     auto add = [&](int64_t stamp, const uint8_t *m, size_t n) { evs.add(stamp, m, n); };
+    block_no_++; // a waiting mapped controller keeps its offset only within its own block
+    if (out_ && out_->pedals_up.exchange(false, std::memory_order_relaxed))
+        pedals_ = PedalSwitch{}; // pedal up went out: the host's next pedal value goes again
     // Virus frames of this block: exact on average (a fractional rest carries over), so other host rates do not drift
     tl_acc_ += data.numSamples * ratio;
     int64_t block_frames = (int64_t)std::floor(tl_acc_ + 1e-9);
@@ -1913,8 +1919,16 @@ tresult PLUGIN_API VirusPlugin::process(ProcessData &data)
             ParamID id = q->getParameterId();
             if (id >= MIDI_MAP_BASE) { // a controller, aftertouch or pitch bend of channel (id - base) / 0x1000
                 uint8_t m[3];
-                if (size_t n = mapped_message((int)((id - MIDI_MAP_BASE) >> 12) & 15, (int)(id & 0xFFF), v, m)) {
-                    add(at(offset), m, n); // data bytes always < 0x80 (hostmidi.h)
+                const int ch = (int)((id - MIDI_MAP_BASE) >> 12) & 15, ctl = (int)(id & 0xFFF);
+                if (size_t n = mapped_message(ch, ctl, v, m)) { // data bytes always < 0x80 (hostmidi.h)
+                    // through the automation budget below, the latest value only (audit 2026-11-17 #4, rule 2)
+                    MappedPending::Slot gone;
+                    if (PedalSwitch::pedal(ctl)) { // a switch: at once, on a flip only (hostmidi.h)
+                        if (pedals_.flips(ch, ctl, m[2]))
+                            add(at(offset), m, n);
+                    } else if (mapped_.set(ch, ctl, m, n, offset, block_no_) && !automation_.push(id)) {
+                        mapped_.take(ch, ctl, gone); // queue full: not waiting, or it would never go out
+                    }
                     if ((m[0] & 0xF0) == 0xB0 && m[1] == 64)
                         held_notes_.sustain(m[0] & 15, m[2]);
                     size_t w = pu_w_.load(std::memory_order_relaxed); // a controller's value for the state: below
@@ -1947,6 +1961,13 @@ tresult PLUGIN_API VirusPlugin::process(ProcessData &data)
     automation_.refill(data.numSamples, rate_);
     if (out_)
         automation_.drain(96 - evs.n, [&](uint32_t id) {
+            if (id >= MIDI_MAP_BASE) { // a mapped controller: at its own offset if it came in this block
+                MappedPending::Slot sl;
+                if (!mapped_.take((int)((id - MIDI_MAP_BASE) >> 12) & 15, (int)(id & 0xFFF), sl))
+                    return false;
+                add(sl.block == block_no_ ? at(sl.offset) : at(0), sl.m, sl.n);
+                return true;
+            }
             auto it = params_.find(id);
             if (it == params_.end() || it->second.pending < 0)
                 return false;

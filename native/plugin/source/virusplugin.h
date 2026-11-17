@@ -178,6 +178,7 @@ public:
     std::atomic<bool> live_notes{false};
     std::atomic<bool> no_stamps{false}; // Live Mode / Plugin Latency Minimal: no F5 at all (stamprule.h timing_mode)
     std::atomic<double> live_ratio{1.0}; // Virus frames per host frame, for a live stamp
+    std::atomic<bool> pedals_up{false};  // a panic or release sent pedal up: process() forgets its pedal switches
     std::atomic<int> live_s{5000};       // the timeline's distance behind the newest frame (S), for a live stamp (E512)
     std::atomic<int> live_later{0};      // Control Center option live-later: frames added to a live stamp (E519)
     static constexpr int64_t floor_min = 1024;
@@ -623,6 +624,9 @@ private:
     // Virus' audio until a power cycle - changes are coalesced per parameter and sent at <= AUTOMATION_RATE/s
     static constexpr double AUTOMATION_RATE = 250; // 1000/s still hung together with 2750 notes/s
     AutomationQueue automation_{AUTOMATION_RATE};
+    MappedPending mapped_; // bend, aftertouch, controllers from the host: the same budget (audit 2026-11-17 #4)
+    PedalSwitch pedals_;   // CC 64..69 skip that budget: switches, sent on a flip only
+    uint64_t block_no_ = 0;
     RemoteDevice dev_, ed_;
     std::unique_ptr<AccessFiles> files_;
     const DeviceType type_; // TI or Snow plug-in (E361)

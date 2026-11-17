@@ -1,7 +1,8 @@
 // blockevents.h - the events process() collects for one block before they go to the Virus, sorted by stamp. At most
-// MAX: automation takes at most 96 slots and clock/bend/aftertouch a few dozen, so notes keep 100+. What does not fit
-// used to vanish without a trace; now it is counted (logged off the audio thread) and a lost note-off is flagged, so
-// the worker can send all notes off instead of leaving a note hanging ("missing notes" report, 2026-10-24).
+// MAX: automation (with the host's bend, aftertouch and controllers) takes at most 96 slots, the clock a few, so
+// notes keep 100+. What does not fit used to vanish without a trace; now it is counted (logged off the audio thread)
+// and a lost note-off is flagged, so the worker can send all notes off instead of leaving a note hanging ("missing
+// notes" report, 2026-10-24).
 // Fixed size, no allocation (audio thread).
 #pragma once
 #include <cstdint>

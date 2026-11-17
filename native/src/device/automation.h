@@ -12,7 +12,7 @@ namespace vti {
 
 class AutomationQueue {
 public:
-    static constexpr int MAX = 4096; // > the number of automatable parameters: each is queued at most once
+    static constexpr int MAX = 8192; // > 2703 automatable parameters (E111) + 16 x 122 mapped controllers: each queued at most once
     explicit AutomationQueue(double rate = 250, double burst = 64) : rate_(rate), burst_(burst) {}
 
     // a parameter got a new value and was not waiting yet (the caller keeps the "waiting" flag); false if full
