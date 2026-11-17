@@ -55,6 +55,7 @@
 #include <sys/mman.h>
 #endif
 #include "owneruid.h"
+#include "sendtimeout.h"
 static unsigned g_owner_uid; // the user served: getuid(), or SUDO_UID for the sudo broker (owneruid.h)
 static int g_usb_audio = 1;  // macOS: only with VTI_LIBUSB_AUDIO=1 (main)
 
@@ -151,6 +152,8 @@ static int send_msg(client *c, uint16_t type, const void *a, int alen, const voi
     pthread_mutex_lock(&c->wr);
     int r = write_all(c->fd, &h, sizeof h) || (alen && write_all(c->fd, a, (size_t)alen)) ||
             (blen && write_all(c->fd, b, (size_t)blen));
+    if (r) // timed out or gone: a half-sent frame cannot be resumed; the client's own thread sees the EOF, cleans up
+        shutdown(c->fd, SHUT_RDWR);
     pthread_mutex_unlock(&c->wr);
     return r;
 }
@@ -430,6 +433,7 @@ static void obs_attach(client *c, int replay)
     pthread_mutex_init(&q->mu, NULL);
     pthread_cond_init(&q->cv, NULL);
     c->q = q;
+    vti_send_timeout(c->fd, 0); // its writer thread holds no broker lock while it sends: a slow capture may wait
     pthread_create(&q->th, NULL, obs_writer, q);
     pthread_mutex_lock(&g_cs_pre); // nothing new between the replay and the attach, nothing twice
     if (replay) {
@@ -1452,6 +1456,7 @@ int main(int argc, char **argv)
                 close(fd);
                 continue;
             }
+            vti_send_timeout(fd, VTI_SEND_TIMEOUT_MS); // a client that stops reading must not stall the broker
             client *c = calloc(1, sizeof *c);
             c->fd = fd;
             c->tcp = k == 1;
