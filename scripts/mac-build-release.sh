@@ -26,13 +26,13 @@ BUILD="$OUT/build"
 rm -rf "$BUILD" && mkdir -p "$BUILD"
 
 echo "== libusb (static, built for macOS $MACOSX_DEPLOYMENT_TARGET; Homebrew's targets the build machine's macOS)"
-LIBUSB_VER=1.0.30
+. "$REPO/scripts/libusb.sh" # LIBUSB_VER, the pinned SHA-256, libusb_fetch (audit #7)
 # universal (arm64 + x86_64): the broker has to run on Intel Macs too (issue #33: it was arm64 only, the plug-in was
 # universal). One build per architecture, joined with lipo: libusb's configure does not take two -arch flags at once.
 LIBUSB="$OUT/libusb-$LIBUSB_VER-macos$MACOSX_DEPLOYMENT_TARGET-${MAC_ARCHS// /-}"
 if [ ! -f "$LIBUSB/lib/libusb-1.0.a" ]; then
     T=$(mktemp -d)
-    curl -fsSL "https://github.com/libusb/libusb/releases/download/v$LIBUSB_VER/libusb-$LIBUSB_VER.tar.bz2" -o "$T/libusb.tar.bz2"
+    libusb_fetch "$T/libusb.tar.bz2"
     for A in $MAC_ARCHS; do
         H=$([ "$A" = arm64 ] && echo aarch64 || echo x86_64)-apple-darwin
         mkdir -p "$T/$A" && tar -xjf "$T/libusb.tar.bz2" -C "$T/$A"

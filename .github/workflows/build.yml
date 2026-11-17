@@ -401,8 +401,7 @@ jobs:
               cat notes.md; } > notes-pre.md && mv notes-pre.md notes.md
           fi
           # LGPL: the source of the libusb the macOS/Linux brokers link statically goes with every release
-          curl -fsSL https://github.com/libusb/libusb/releases/download/v1.0.30/libusb-1.0.30.tar.bz2 -o out/libusb-1.0.30.tar.bz2
-          echo "fea36f34f9156400209595e300840767ab1a385ede1dc7ee893015aea9c6dbaf  out/libusb-1.0.30.tar.bz2" | sha256sum -c -
+          . repo/scripts/libusb.sh && libusb_fetch "out/libusb-$LIBUSB_VER.tar.bz2" # version + SHA-256 pinned there
           gh release create "$GITHUB_REF_NAME" out/TI-Revive-*-setup.exe out/TI-Revive-*.msi out/TI-Revive-*-mac.zip \
-            out/TI-Revive-*-mac-libusb.zip out/TI-Revive-*-linux.tar.gz repo/scripts/tirevive-usbinfo.ps1 out/libusb-1.0.30.tar.bz2 \
+            out/TI-Revive-*-mac-libusb.zip out/TI-Revive-*-linux.tar.gz repo/scripts/tirevive-usbinfo.ps1 "out/libusb-$LIBUSB_VER.tar.bz2" \
             --repo "$GITHUB_REPOSITORY" --title "TI Revive $v" --notes-file notes.md $pre

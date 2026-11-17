@@ -14,11 +14,11 @@ BUILD="$OUT/build-linux"
 rm -rf "$BUILD" && mkdir -p "$BUILD"
 
 echo "== libusb (static, without udev: the broker finds the Virus through sysfs)"
-LIBUSB_VER=1.0.30
+. "$REPO/scripts/libusb.sh" # LIBUSB_VER, the pinned SHA-256, libusb_fetch (audit #7)
 LIBUSB="$OUT/libusb-$LIBUSB_VER-linux-static"
 if [ ! -f "$LIBUSB/lib/libusb-1.0.a" ]; then
     T=$(mktemp -d)
-    curl -fsSL "https://github.com/libusb/libusb/releases/download/v$LIBUSB_VER/libusb-$LIBUSB_VER.tar.bz2" -o "$T/libusb.tar.bz2"
+    libusb_fetch "$T/libusb.tar.bz2"
     tar -xjf "$T/libusb.tar.bz2" -C "$T"
     (cd "$T/libusb-$LIBUSB_VER" && ./configure -q --disable-shared --enable-static --disable-udev --prefix="$LIBUSB" \
         CFLAGS="-O2 -fPIC" >/dev/null && make -s -j4 install >/dev/null)
