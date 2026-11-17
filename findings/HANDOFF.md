@@ -5,7 +5,7 @@ NEXT. At most 150 lines; the Stop hook (`.claude/hooks/handoff-check.sh`) refuse
 how goes into the dated log [`log/2026-11.md`](log/2026-11.md) (newest first); older logs are in [`log/`](log/).
 Device/protocol knowledge goes into [`evidence.md`](evidence.md). Update this file in the same commit as the work._
 
-Last update: 2026-11-17: joint issue check with the user: new #42 (Snow, macOS, vtibroker ~30 % CPU idle; reply not posted yet), no other new replies.
+Last update: 2026-11-17: branding cleanup parked (NEXT 8); joint issue check earlier the same day.
 
 ## Where things stand
 
@@ -145,3 +145,5 @@ talk with the user (Linux may start); hil-win on the tuned VM: yes; update check
 6. Linux: DEV build installed (plug-in from a1153d9; release backed up in ~/.vst3-backup/0.8.41-release); Mac: test
    build CI 43696948011 installed; TI2 on the Mac's USB.
 7. Waiting on reporters (table above); check issues only together with the user.
+8. PARKED (owner 2026-11-17, come back later): branding cleanup (logos in screenshots, plug-in/ASIO names, repo/site
+   name, wording). Audit, file list and order in work/HANDOFF-private.md; nothing started.
