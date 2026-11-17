@@ -5,7 +5,7 @@ NEXT. At most 150 lines; the Stop hook (`.claude/hooks/handoff-check.sh`) refuse
 how goes into the dated log [`log/2026-11.md`](log/2026-11.md) (newest first); older logs are in [`log/`](log/).
 Device/protocol knowledge goes into [`evidence.md`](evidence.md). Update this file in the same commit as the work._
 
-Last update: 2026-11-17: #43 restore fix (E549) + rc6 for the reporter; branding cleanup parked (NEXT 8).
+Last update: 2026-11-17 evening: #43 restore fix (E549, rc6 waits on a GitHub Mac runner, rerun ~21:35 UTC); #42 option snow-idle-slow (E550, E551); branding cleanup parked (NEXT 8).
 
 ## Where things stand
 
