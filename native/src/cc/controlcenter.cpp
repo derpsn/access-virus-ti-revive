@@ -131,11 +131,22 @@ bool backup_ram(Broker &broker, const std::string &banks, const std::string &out
     return true;
 }
 
-// the sound and name of two single dumps: all but the header (bank, program) and the two checksums
+// The first byte where the sound or name of two single dumps differ, 0 when they are the same patch. Left out: the
+// header (bank, program), the two checksums and byte 10 = page A parameter 1, the patch management flags (E156):
+// library files often carry 0x20 there, the Virus stores 0 (#43, E549), so such a patch would never read back equal.
+static int patch_difference(const Dump &a, const Dump &b)
+{
+    if (a.size() != 524 || b.size() != 524)
+        return -1;
+    for (int i = 9; i < 522; i++)
+        if (i != 10 && i != 265 && a[(size_t)i] != b[(size_t)i])
+            return i;
+    return 0;
+}
+
 static bool same_patch(const Dump &a, const Dump &b)
 {
-    return a.size() == 524 && b.size() == 524 && std::equal(a.begin() + 9, a.begin() + 265, b.begin() + 9) &&
-           std::equal(a.begin() + 266, a.begin() + 522, b.begin() + 266);
+    return patch_difference(a, b) == 0;
 }
 
 std::vector<RestoreWrite> restore_plan(int bank, const std::vector<Dump> &backup, const Bank &current)
@@ -224,8 +235,14 @@ bool restore_ram(Broker &broker, int bank, const std::vector<Dump> &backup,
         std::this_thread::sleep_for(std::chrono::milliseconds(20));
         // read back: the Virus has the patch, the cache gets what it says
         Dump r = sync.single(bank, plan[i].slot);
-        if (!same_patch(r, plan[i].dump)) {
+        int at = patch_difference(r, plan[i].dump);
+        if (at != 0) {
             error = name + " " + std::to_string(plan[i].slot) + ": the Virus has another patch after the restore";
+            if (at > 0) // which byte, so a report says what the Virus changed
+                error += " (byte " + std::to_string(at) + ": Virus " + std::to_string(r[(size_t)at]) + ", file " +
+                         std::to_string(plan[i].dump[(size_t)at]) + ")";
+            else
+                error += " (no complete dump read back)";
             break;
         }
         b[(size_t)plan[i].slot] = r;

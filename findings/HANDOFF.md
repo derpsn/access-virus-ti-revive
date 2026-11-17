@@ -5,7 +5,7 @@ NEXT. At most 150 lines; the Stop hook (`.claude/hooks/handoff-check.sh`) refuse
 how goes into the dated log [`log/2026-11.md`](log/2026-11.md) (newest first); older logs are in [`log/`](log/).
 Device/protocol knowledge goes into [`evidence.md`](evidence.md). Update this file in the same commit as the work._
 
-Last update: 2026-11-17: branding cleanup parked (NEXT 8); joint issue check earlier the same day.
+Last update: 2026-11-17: #43 restore fix (E549) + rc6 for the reporter; branding cleanup parked (NEXT 8).
 
 ## Where things stand
 
@@ -62,6 +62,7 @@ Last update: 2026-11-17: branding cleanup parked (NEXT 8); joint issue check ear
 | #38 | macOS 27 Live: AU/editor crash = SOLVED by the reporter (Access .pkg was missing; plug-in opens; Virus not connected yet) | reporter: note after connecting the Virus, then close (issuecomment-6948868845) | 2026-11-17 |
 | #40 | (ours) macOS libusb audio as an option? | #39 reporter; #37 = first real data point (works) | 2026-11-13 |
 | #41 | (the #30 reporter, Snow, Logic) rc3: bus recording on the grid; log + project attached (new take not measured by us). Log also: RAM backup failed, cannot write ~/Documents/... .tmp (nothing written, safe) | reporter: Logic's Documents Folder permission in Privacy & Security (issuecomment-6900513133); 3085 -> 2816 log = E546 | 2026-11-15 |
+| #43 | original TI, OS 5.1.7, macOS: `tirevive-cc restore` stops at a fixed slot ("another patch after the restore"). CAUSE (E549): byte 10 (patch flags, E156) is not kept by the Virus on a RAM store, the read-back compared it; Rom A slot 7 = 0x76. FIX on round-0.8.42 (controlcenter.cpp patch_difference: byte 10 left out, a real mismatch names the byte; 3 new tests); original checked with REA (stores byte 10 unchanged, no read-back). Not run on hardware | reporter: test rc6 (posted with the release) | 2026-11-17 |
 | #42 | Snow, M4 Pro, macOS 15.8.2, 0.8.40: vtibroker ~33 % CPU idle (Control Center only, Live closed). CAUSE (E547): the Snow's idle stream on bulk EP 0x85, ~3300 FF FE 00 00 packets/s (E387), one USB transfer each; our TI2 ~1 % | reporter: test rc5 (RELEASED as pre-release, CI 44066436131 all green, 7 assets; posted issuecomment-6945818139: Activity Monitor shot, logs, knobs still respond?; reporter tests tonight, install over 0.8.40 answered (issuecomment-6948868407); rc4 tag exists without a release). FIX DONE: src/broker/idlepace.h + vticore.c (Snow bulk EP 0x85 only: idle-only read rests its transfer, reader re-arms one per 1 ms, data wakes all); test_idlepace (TDD), mutation 9/11 (2 equivalent). Not run on a Snow; TI2 path unchanged (pace off on interrupt EPs), not hardware-run either (user away) | 2026-11-17 |
 
 #30 follow-up (Logic arrange meters of multi-timbral tracks): reproduced on our Mac = Logic's display (E538), answered 2026-11-15 (issuecomment-6892430267), stays closed. #39 closed by the reporter (doubled notes = Local On + Monitor In, E530/E531). #30 closed by us 2026-11-14 with the
