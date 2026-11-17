@@ -1,5 +1,6 @@
 // library.cpp - see library.h.
 #include "library.h"
+#include "device/sendguard.h"
 #include "model/remotedevice.h"
 #include "model/utf8.h"
 #include <algorithm>
@@ -56,6 +57,11 @@ bool load_library_file(const std::string &path, PatchLibrary &lib, const std::ve
             break;
         std::vector<uint8_t> m = {0xF0};
         m.insert(m.end(), d.begin() + i, end + 1);
+        if (!one_message(m.data(), m.size())) { // a status byte inside (damaged or foreign file): never on the wire
+            skip("a byte above 0x7F");
+            i = end - d.begin();
+            continue;
+        }
         // other sizes are skipped like the original's decoder does (E356); a version upgrade_single does not know
         // (e.g. 127) stays out too: the original would list it, but what such a dump does on the Virus is unknown
         if (m.size() == 524) {

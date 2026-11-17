@@ -314,3 +314,29 @@ TEST(remote_templates_records_to_send)
     CHECK(remote_edit_record("Remote Templates/MIDI String", t, 4, 31) == t.knob_record(4, 31));
     CHECK(remote_edit_record("Osc/Shape", t, 4, 7).empty());
 }
+
+// audit 2026-11-17 #3: a record from a file with a byte above 0x7F inside is not taken (it would go to the Virus
+// unchanged, and a REMOTE template is a write that stays); the last byte stays free (factory templates end in 00 00)
+TEST(remote_templates_record_with_a_status_byte_inside)
+{
+    RemoteTemplates src;
+    src.set_knob_name(2, 4, "Attack");
+    RemoteTemplates t;
+    std::vector<uint8_t> r = src.knob_record(2, 4);
+    r[20] = 0x90;
+    CHECK(!t.take_record(r));
+    r = src.knob_record(2, 4);
+    r[r.size() - 1] = 0xF4; // the last byte: F7 or a data byte, nothing else
+    CHECK(!t.take_record(r));
+    std::vector<uint8_t> n = src.name_record(2);
+    n[10] = 0xC3; // a UTF-8 byte in a name from another tool
+    CHECK(!t.take_record(n));
+    r = src.knob_record(2, 4);
+    r[60] = 0xF7; // an early end, then 00 padding: a real factory record (Steinberg "Attack 01-12.vrt", knob 16)
+    for (size_t k = 61; k < r.size(); k++)
+        r[k] = 0;
+    CHECK(t.take_record(r));
+    r[62] = 0x05; // but data after the end is not padding
+    CHECK(!t.take_record(r));
+    CHECK(t.take_record(src.knob_record(2, 4)) && t.take_record(src.name_record(2)));
+}

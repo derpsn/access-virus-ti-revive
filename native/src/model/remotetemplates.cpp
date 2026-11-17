@@ -45,6 +45,15 @@ static bool ours(const std::vector<uint8_t> &r)
     return r.size() > sizeof kHead && std::equal(kHead, kHead + sizeof kHead, r.begin());
 }
 
+// data bytes after F0 up to an F7, after it only 00 padding (Steinberg "Attack 01-12.vrt": F7 at byte 60 of a
+// 65-byte knob record), or no F7 at all (the 00 00 endings above): records from a file go to the Virus unchanged, any
+// other byte above 0x7F would put a broken message on the wire (audit 2026-11-17 #3, rule 2)
+static bool clean(const std::vector<uint8_t> &r)
+{
+    auto hi = std::find_if(r.begin() + 1, r.end(), [](uint8_t b) { return b >= 0x80; });
+    return hi == r.end() || (*hi == 0xF7 && std::all_of(hi + 1, r.end(), [](uint8_t b) { return b == 0; }));
+}
+
 static bool valid(int t, int k = 0)
 {
     return t >= 0 && t < RemoteTemplates::kTemplates && k >= 0 && k < RemoteTemplates::kKnobs;
@@ -252,7 +261,7 @@ std::vector<std::vector<uint8_t>> RemoteTemplates::template_records(int t) const
 
 bool RemoteTemplates::take_record(const std::vector<uint8_t> &r)
 {
-    if (!ours(r) || r[7] >= kTemplates)
+    if (!ours(r) || !clean(r) || r[7] >= kTemplates)
         return false;
     if (r.size() == kKnobRec) {
         if (r[8] >= kKnobs)

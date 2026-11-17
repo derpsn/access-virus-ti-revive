@@ -400,3 +400,23 @@ TEST(browser_bank_step_follows_the_menu)
     CHECK(browser_bank_step(order, 77, 1) == 0);     // not in the list (a search): the first entry
     CHECK(browser_bank_step({}, 3, 1) == 3);
 }
+
+// audit 2026-11-17 #3: a dump with a status byte inside (a damaged or foreign file) never reaches the Virus: the
+// loader found F0 .. F7 by the first F7 only, a stray F4 or F0 in between went out as an "unknown SysEx" (rule 2)
+TEST(library_skips_a_dump_with_a_status_byte_inside)
+{
+    fs::path dir = fs::temp_directory_path() / "vtitests-library-status";
+    fs::remove_all(dir);
+    fs::create_directories(dir);
+    Dump good = single(0), bad = single(1), worse = single(2);
+    bad[300] = 0xF4;
+    worse[100] = 0xF0;
+    std::string err;
+    CHECK(cc::write_syx({good, bad, worse}, (dir / "damaged.syx").string(), err));
+    PatchLibrary lib;
+    CHECK(load_library_file((dir / "damaged.syx").string(), lib));
+    CHECK(std::count_if(lib.dumps.begin(), lib.dumps.end(), [](const Dump &d) { return !d.empty(); }) == 1);
+    CHECK(lib.skipped == 2);
+    CHECK(lib.skip_why.count("a byte above 0x7F") == 1);
+    fs::remove_all(dir);
+}
