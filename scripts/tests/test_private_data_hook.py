@@ -191,7 +191,7 @@ class ClaudeHook(Base):
         self.assertEqual(self.bash("ls /home/alice").returncode, 0)
 
     def test_gh_body_file_blocks(self):
-        body = os.path.join(self.tmp.name, "reply.md")
+        body = os.path.join(self.tmp.name, "reply.md").replace(os.sep, "/")  # Windows: the hook splits like a POSIX shell, which eats backslashes
         with open(body, "w") as f:
             f.write("Thanks! Logs are in /home/alice/logs\n")
         r = self.bash(f"gh issue comment 41 --body-file {body}")
@@ -199,7 +199,7 @@ class ClaudeHook(Base):
         self.assertIn("HANDOFF-private", r.stderr)
 
     def test_gh_short_body_file_flag_blocks(self):
-        body = os.path.join(self.tmp.name, "reply.md")
+        body = os.path.join(self.tmp.name, "reply.md").replace(os.sep, "/")
         with open(body, "w") as f:
             f.write("seen on host-3\n")
         self.assertEqual(self.bash(f"gh pr create --title t -F {body}").returncode, 2)
@@ -208,13 +208,13 @@ class ClaudeHook(Base):
         self.assertEqual(self.bash('gh issue comment 41 --body "from secretname"').returncode, 2)
 
     def test_gh_clean_body_passes(self):
-        body = os.path.join(self.tmp.name, "reply.md")
+        body = os.path.join(self.tmp.name, "reply.md").replace(os.sep, "/")
         with open(body, "w") as f:
             f.write("Thanks, rc3 fixed it.\n")
         self.assertEqual(self.bash(f"gh issue comment 41 --body-file {body}").returncode, 0)
 
     def test_gh_release_notes_file_blocks(self):
-        body = os.path.join(self.tmp.name, "notes.md")
+        body = os.path.join(self.tmp.name, "notes.md").replace(os.sep, "/")
         with open(body, "w") as f:
             f.write("built on host-9\n")
         self.assertEqual(self.bash(f"gh release create v1 --notes-file {body}").returncode, 2)
