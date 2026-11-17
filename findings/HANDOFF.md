@@ -124,6 +124,8 @@ talk with the user (Linux may start); hil-win on the tuned VM: yes; update check
    (nerd mode, OPTIONS, BACKUP & RESTORE with the real RAM banks) look right on macOS AND Windows (win11 VM, rc2, the
    simulator's virtual TI2 over USB/IP: user "works"). New nerd mode screenshot (Mac, 13:44, real traffic) in docs/images
    + site (860x612, not-affiliated notice under it). Site not redeployed (by hand at release).
+   2026-11-17 (user): every screenshot caption in README + site now says "TI Revive ships no Access files; it draws this
+   look at runtime from the skin in your own Access installer" (header/hero: longer version); live site not redeployed.
 2. #30 knob automation in Logic (E542): fix 2 WORKS on our Mac. v0.8.42-rc2 RELEASED as pre-release (tag on a164a98,
    run 43713472544 green, 7 assets); Chris CONFIRMED rc2 (13:47 UTC). His Logic project came by email (dropped):
    uploaded 17:54: measured on our Mac (E545): exact here, his take 5.6 ms early -> his setup (Snow?); rc3 log asked.
