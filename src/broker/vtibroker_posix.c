@@ -1140,6 +1140,10 @@ static void *client_thread(void *arg)
             break;
         }
         case VTIMSG_WRITE:
+            if (h.len >= 1 && !vti_write_allowed(buf[0])) {
+                blog("refused a write to ep%02x (rule 2: the plug-in channel 0x06 only)", buf[0]);
+                break;
+            }
             if (h.len >= 1 && may_use(c)) {
                 if (buf[0] == VTI_EP_MI04_OUT && !c->notes && vti_has_note_on(buf + 1, h.len - 1))
                     c->notes = 1;

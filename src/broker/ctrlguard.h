@@ -15,3 +15,9 @@ static inline int vti_control_allowed(const uint8_t setup[8])
     return req == 0 /* GET_STATUS */ || req == 6 /* GET_DESCRIPTOR */ || req == 8 /* GET_CONFIGURATION */ ||
            req == 10 /* GET_INTERFACE */;
 }
+
+// may a client's VTIMSG_WRITE go to endpoint `ep`? Only the plug-in channel EP 0x06 (MI04 OUT): every client writes
+// there and nowhere else. EP 0x05 is the USB chip's command endpoint (the one known command is the driver's handshake,
+// E030, which the broker sends itself); an IN endpoint would make libusb run an IN transfer for the client (audit
+// 2026-11-17 #2)
+static inline int vti_write_allowed(uint8_t ep) { return ep == 0x06; }
