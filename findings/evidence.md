@@ -4989,3 +4989,13 @@ Fixes prepared for #37 (E543), not tested on any Mac yet (2026-11-15; the user a
 - **Method:** reporter's plug-in log read line by line + arithmetic against E545's onset measurement; his statement for the rc3 take
 - **Confidence:** HIGH (the log lines and 3085 - 2816 = 269 = the E545 offset) / MED (that the re-announce is what put his take on the grid: his report, his take not measured by us) / open (origin of 3085, #37/#33, the RAM backup cause)
 - **Hardware:** yes (the reporter's Snow + Mac + Logic); not reproduced on our TI2 (our Logic read the right value at once, E544)
+
+### E547
+
+High idle CPU load of vtibroker with a Virus TI Snow on macOS (issue #42) comes from the Snow's idle stream on bulk EP 0x85 (E387). Reporter's setup: Snow, MacBook Pro M4 Pro, macOS 15.8.2, TI Revive 0.8.40. (1) Activity Monitor: vtibroker 32.9 % CPU with only the Control Center open (Live closed), 7 threads, 3 idle wakeups. (2) Broker log: `vti: bulk endpoints 05 85 06 86 (Virus TI Snow)`, and per broker run `vti: N idle packets (FF FE 00 00) dropped on bulk EP 0x85`: 865030 in 4 min 20 s (07:28:20-07:32:41), 101067 and 100114 in about 31 s runs, 162499 in 64 s: about 3300 packets/s, the E387 rate seen on Linux. (3) `sample vtibroker 10` (0.8.40): the reader thread loops in a synchronous bulk transfer on EP 0x85 (reader -> do_sync_bulk_transfer -> libusb_handle_events -> poll); user-space top-of-stack frames are almost all waits, so the load is the per-transfer kernel/IOKit cost (one submit + completion per 4-byte idle packet), which the sample does not show. Our TI2 (interrupt endpoints, E021) on our Mac: vtibroker 0 % without a Virus, about 1.2 % with the TI2, Live 12 and the plug-in loaded (rc3, ps/top over 10 s). Current code (0.8.41+) reads EP 0x85 with asynchronous transfers but still one transfer per packet; not measured on a Snow. Fix not designed yet: how the Access driver polls the Snow's bulk endpoint is not looked up (REA), a throttled resubmit after idle-only reads would add latency to incoming knob messages
+
+- **Date:** 2026-11-17
+- **Pointer:** issue #42 (log TI-Revive-logs-2026-11-17-0737.txt, vtibroker-sample.txt, Activity Monitor screenshot; attachments, not in git); E387, E021; src/broker/vticore.c (xfer, drop_idle, rx_submit)
+- **Method:** reporter's broker log counts / timestamps (arithmetic), sample call tree, screenshot; our Mac: ps/top/sample with the TI2
+- **Confidence:** HIGH (rate, that the load comes with the Snow and without Live) / MED (that the per-transfer kernel cost is the load: inferred, kernel time not sampled) / open (0.8.41+ async path on a Snow, the fix)
+- **Hardware:** yes (reporter's Snow + Mac); TI2 comparison on our Mac
