@@ -51,8 +51,19 @@ public:
     // `replay`: first the newest traffic the broker kept from before this moment (a broker older than 0.8.38 ignores it).
     bool observe(ObserveHandler h, std::string &error, bool replay = false);
 
-    void on_rx(RxHandler h) { rx_ = std::move(h); }
-    void on_state(StateHandler h) { state_ = std::move(h); }
+    // the reader thread calls them under cb_mu_: when a setter returns, no call of the old handler still runs (a
+    // MemorySync destructor on a live broker freed what a running handler used, audit 2026-11-17 #8). A handler must
+    // not set a handler itself.
+    void on_rx(RxHandler h)
+    {
+        std::lock_guard<std::mutex> g(cb_mu_);
+        rx_ = std::move(h);
+    }
+    void on_state(StateHandler h)
+    {
+        std::lock_guard<std::mutex> g(cb_mu_);
+        state_ = std::move(h);
+    }
 
     bool write(uint8_t ep, const uint8_t *data, size_t len);
     // USB control request through the broker; returns bytes transferred or -1. `data` in/out; a reply never writes
@@ -102,6 +113,7 @@ private:
     uint32_t seq_ = 0;
     std::atomic<bool> present_{false}, elsewhere_{false}, stop_{false}, reader_done_{true};
     std::atomic<uint32_t> arrivals_{0};
+    std::mutex cb_mu_; // rx_ and state_: set by any thread, called by the reader
     RxHandler rx_;
     StateHandler state_;
     bool send(uint16_t type, const void *a, size_t alen, const void *b = nullptr, size_t blen = 0);

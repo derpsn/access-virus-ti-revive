@@ -432,16 +432,22 @@ void Broker::read_loop()
             break;
         switch (h.type) {
         case VTIMSG_RX:
-            if (h.len >= 1 && rx_)
-                rx_(buf[0], buf.data() + 1, h.len - 1u);
+            if (h.len >= 1) {
+                std::lock_guard<std::mutex> g(cb_mu_);
+                if (rx_)
+                    rx_(buf[0], buf.data() + 1, h.len - 1u);
+            }
             break;
         case VTIMSG_STATE:
             if (h.len >= 4 && buf[0] == 1 && !present_)
                 arrivals_++; // counted before present_ turns true: a caller that sees it present sees the count
             present_ = h.len >= 4 && buf[0] == 1;
             elsewhere_ = h.len >= 4 && buf[0] == 2;
-            if (state_)
-                state_(present_);
+            {
+                std::lock_guard<std::mutex> g(cb_mu_);
+                if (state_)
+                    state_(present_);
+            }
             break;
         case VTIMSG_CONTROL_REPLY:
             if (h.len >= 8) {

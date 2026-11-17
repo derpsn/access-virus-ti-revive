@@ -742,3 +742,26 @@ TEST(broker_fake_server)
     SKIP("the fake broker uses Unix sockets");
 }
 #endif
+
+// audit 2026-11-17 #8: on_rx(nullptr) while the reader thread is inside the handler returned at once, so the
+// MemorySync destructor (Control Center backup/restore on a live broker) freed what the running handler used. After
+// on_rx returns, no call of the old handler may still run.
+TEST(broker_replacing_the_rx_handler_waits_for_a_running_call)
+{
+    FakeBroker fb;
+    Broker b;
+    b.set_endpoint(fb.path);
+    std::atomic<bool> inside{false}, done{false};
+    b.on_rx([&](uint8_t, const uint8_t *, size_t) {
+        inside = true;
+        std::this_thread::sleep_for(std::chrono::milliseconds(100));
+        done = true;
+    });
+    std::string err;
+    CHECK(b.open(err));
+    fb.reply(VTIMSG_RX, Bytes{0x86, 0x29, 0x90, 0x3C, 0x64});
+    CHECK(eventually([&] { return inside.load(); }));
+    b.on_rx(nullptr);
+    CHECK(done.load()); // the running call finished before on_rx returned
+    b.close();
+}
