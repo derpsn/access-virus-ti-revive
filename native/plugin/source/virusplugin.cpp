@@ -2791,11 +2791,10 @@ void VirusPlugin::ui_set(const std::string &path, int part, int value)
         }
     auto id = ids_.find({path, part});
     if (id != ids_.end()) { // automatable: through the host, which hands it to process()
-        ParamValue n = value / 127.0;
-        beginEdit(id->second);
-        setParamNormalized(id->second, n);
-        performEdit(id->second, n);
-        endEdit(id->second);
+        setParamNormalized(id->second, value / 127.0);
+        edit_gestures_.edit( // one gesture per drag, else begin + perform + end (editgestures.h)
+            id->second, value / 127.0, [this](uint32_t i) { beginEdit(i); },
+            [this](uint32_t i, double v) { performEdit(i, v); }, [this](uint32_t i) { endEdit(i); });
     } else if (out_) { // not automatable (menus, globals): straight to the Virus
         auto msg = dev_.encode(path, value, part < 0 ? 0 : part);
         if (!msg.empty())
@@ -4135,6 +4134,7 @@ void VirusPlugin::editor_opened()
 
 void VirusPlugin::editor_closed()
 {
+    ui_drag_end(); // closed in the middle of a drag: its gesture ends
     if (--editors_open_ <= 0) {
         editors_open_ = 0;
         gestures_.flush([this](uint32_t id) { endEdit(id); });

@@ -39,6 +39,7 @@
 #include "device/presencewatch.h"
 #include "device/stallwatch.h"
 #include "model/bankdrop.h"
+#include "model/editgestures.h"
 #include "model/hostgestures.h"
 #include "model/patchhistory.h"
 #include "model/syncalert.h"
@@ -369,6 +370,12 @@ public:
     const RemoteDevice &editor_device() const { return ed_; }
     int ui_value(const std::string &path, int part);              // device, controller or editor-state value
     void ui_set(const std::string &path, int part, int value);    // a change made in the editor
+    // a knob/slider/graph drag in the editor: one host gesture per drag (E304, audit #10); ui_drag_end at mouse up
+    void ui_drag_begin() { edit_gestures_.drag_begin(); }
+    void ui_drag_end()
+    {
+        edit_gestures_.drag_end([this](uint32_t id) { endEdit(id); });
+    }
     void hover(const std::string &path, int part); // the control under the mouse on the LCD ("" = none, E353)
     std::string patch_name(int part);
     std::string bank_patch(int bank, int program); // stored patch name from the bank cache (RAM A..D)
@@ -829,6 +836,7 @@ private:
     // knob moves on the Virus as host edits while an editor is open (its timer is the UI-thread tick; E304, #10);
     // without an editor they go to the host as output parameter changes (pending_), as before
     HostGestures gestures_;
+    EditGestures edit_gestures_; // the editor's own drags (editor thread)
     // knob moves on the Virus -> host edits also with the plug-in window closed (#30, 2026-11-15: in Logic, the AU
     // wrapper turns only begin/endEdit into automation gestures, and the tick ran only in the editor's timer, so with
     // the window closed nothing was recorded; Live records the output parameter changes). VSTGUI is set up when the

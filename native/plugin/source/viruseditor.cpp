@@ -1854,6 +1854,7 @@ public:
         renderer_.highlighted.clear();
         graph_handle_ = -1;
         arp_grab_ = {};
+        plugin_->ui_drag_end(); // the drag's host gesture ends with the mouse
         drag_ = {};
         drag_rects_.clear();
         renderer_.pressed = nullptr;
@@ -2381,8 +2382,10 @@ private:
     DragSend drag_sent_;       // a drag sends a value once, not on every mouse move (dragsend.h)
     void drag_set(const std::string &path, int part, int value)
     {
-        if (drag_sent_.changed(path, part, value))
+        if (drag_sent_.changed(path, part, value)) {
+            plugin_->ui_drag_begin(); // a real drag: one host gesture until the mouse up (audit #10)
             plugin_->ui_set(path, part, value);
+        }
     }
     int edit_part_ = 0;
     std::string edit_param_; // edit_name: the REMOTE page field being edited, empty for a patch name
