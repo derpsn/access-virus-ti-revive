@@ -35,7 +35,12 @@ killall -9 AudioComponentRegistrar 2>/dev/null || true # make macOS rescan Audio
 # libusb install, so installing it over one gives the Mac its normal Core Audio setup again.
 SVC=io.github.derpsn.tirevive.usbaudio
 SVC_PLIST="/Library/LaunchDaemons/$SVC.plist"
-if [ -f "$(dirname "$0")/libusb-audio" ] && [ -n "${USER_ID:-}" ]; then
+if [ -f "$(dirname "$0")/libusb-audio" ] && [ -z "${USER_ID:-}" ]; then
+    # nobody at the Mac's screen (login window, ssh, MDM): the service is made for one user; without one it used to
+    # fall into the branch below and remove the service (audit 2026-11-17 #9). Leave it as it is and say so.
+    echo "TI Revive (libusb): no user is logged in at the Mac's screen. Log in and run this installer again." >&2
+    exit 1
+elif [ -f "$(dirname "$0")/libusb-audio" ]; then
     launchctl bootout "system/$SVC" 2>/dev/null || true
     pkill -x vtibroker 2>/dev/null || true # the user's own service holds the socket path; quit the DAW first (README)
     sleep 1
