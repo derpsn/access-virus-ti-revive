@@ -287,7 +287,7 @@ def page_landing(latest, releases, sums):
     <figure class="shot">
       <img src="plugin-filter.png" width="1280" height="724"
       alt="TI Revive Virus Control, the plug-in's filter page, drawn from the user's own Access files">
-      <figcaption>TI Revive is not affiliated with Access Music or Kemper and contains no Access files.</figcaption>
+      <figcaption>The look is Access' own: TI Revive draws it at runtime from the skin in your own Access installer. TI Revive ships no Access files: no skin graphics, no logos, no Access code, no patch banks. Not affiliated with Access Music or Kemper.</figcaption>
     </figure>
     </div>
     <p class="thanks">&#9749; <strong>Free, and it will stay free.</strong> Changes that touch the Virus are tested on the real synth,
@@ -673,8 +673,7 @@ def features_section():
       like the original's on Windows 10: menus with one column in Windows' modern look, menus with columns in the older one. Since 0.8.26 they open on the monitor they belong to on Linux, also with several monitors of different sizes.</p></div>
       <figure class="shot"><img loading="lazy" src="plugin-menus.png" width="1020" height="760"
       alt="The LOAD menu: the device entry, the bank list and RAM A's 128 patches in columns, beyond the plug-in window">
-      <figcaption>The LOAD menu reaching beyond the plug-in window (Linux), drawn from your own Access installer. TI Revive
-      is not affiliated with Access Music or Kemper.</figcaption></figure>
+      <figcaption>The LOAD menu reaching beyond the plug-in window (Linux). TI Revive ships no Access files; it draws this look at runtime from the skin in your own Access installer. Not affiliated with Access Music or Kemper.</figcaption></figure>
     </div>
 
     <div class="feature">
@@ -687,8 +686,7 @@ def features_section():
       Linux (REAPER) and Windows 11 (VM, Ableton Live 11); not tested on macOS yet.</p></div>
       <figure class="shot"><img loading="lazy" src="plugin-library-drop.png" width="907" height="513"
       alt="The browser after a drop: the upper pane shows the new library My Sounds, the LCD says Library added">
-      <figcaption>A library dropped onto the upper browser pane (Linux), drawn from your own Access installer. TI Revive
-      is not affiliated with Access Music or Kemper.</figcaption></figure>
+      <figcaption>A library dropped onto the upper browser pane (Linux). TI Revive ships no Access files; it draws this look at runtime from the skin in your own Access installer. Not affiliated with Access Music or Kemper.</figcaption></figure>
     </div>
 
     <div class="feature">
@@ -696,7 +694,7 @@ def features_section():
       <p>Like in the original (since 0.8.36, <a href="{GH}/issues/21">issue #21</a>): double-click a section's header to lock it for the selected part (the header turns red, the page tab and the part get an orange mark), double-click again to unlock it. A locked section keeps its settings when you load another patch, from the browser or on the Virus. Right-click a header for more: lock or unlock all sections of the part, unlock all parts, and presets that lock one page (OSC, Filter, LFO, Matrix, Arpeggiator, FX). Settings outside the sections, such as Transpose and Key Mode on the COMMON page, still come from the new patch, as in the original. Locks are not saved with the project, also like the original. Tested on Linux (REAPER), Windows 11 (VM, Ableton Live 11) and macOS (Ableton Live 12).</p></div>
       <figure class="shot"><img loading="lazy" src="plugin-section-lock.png" width="907" height="512"
       alt="The FILTER page with Filter 1 and the Amplifier Envelope locked: red headers with a padlock, an orange mark on the tab and part 1, a padlock next to the ?">
-      <figcaption>Two locked sections on the FILTER page (Linux), drawn from your own Access installer. TI Revive is not affiliated with Access Music or Kemper.</figcaption></figure>
+      <figcaption>Two locked sections on the FILTER page (Linux). TI Revive ships no Access files; it draws this look at runtime from the skin in your own Access installer. Not affiliated with Access Music or Kemper.</figcaption></figure>
     </div>
 
     <div class="feature">
@@ -704,7 +702,7 @@ def features_section():
       <p>Our own additions since 0.8.36, in the menu of a right-click where there is no control (next to the editor sizes). Undo and Redo take back your edits in the editor and patch loads into a part; a knob turn is one step, and Ctrl+Z / Ctrl+Shift+Z (Cmd on the Mac) work while the editor has the keyboard. The steps last for the session. Edits of the linked controls (FX switches, link buttons, LFO clock menus) are not in Undo yet. Compare switches the selected part between your edit and the patch as you loaded it, and back; an edit or a load while comparing ends it, and Undo brings your edit back. Randomize changes the selected part's sections by up to 10, 25 or 50 % of each value's range and sends one patch to the Virus; it is one Undo step. Locked sections stay as they are (lock what you want to keep), and so do Transpose, Key Mode, the patch volume, the input and vocoder settings and the arpeggiator. Tested on Linux (REAPER), Windows 11 (VM, Ableton Live 11) and macOS (Ableton Live 12).</p></div>
       <figure class="shot"><img loading="lazy" src="plugin-edit-menu.png" width="912" height="594"
       alt="The right-click menu after Randomize Medium: Undo Randomize Medium (Part 1), Compare, the three Randomize amounts, Panic and the editor sizes; the LCD shows 271 parameters, 25 %">
-      <figcaption>The right-click menu after Randomize (Linux), drawn from your own Access installer. TI Revive is not affiliated with Access Music or Kemper.</figcaption></figure>
+      <figcaption>The right-click menu after Randomize (Linux). TI Revive ships no Access files; it draws this look at runtime from the skin in your own Access installer. Not affiliated with Access Music or Kemper.</figcaption></figure>
     </div>
 
     <div class="feature">
@@ -718,15 +716,13 @@ def features_section():
       <div>
       <figure class="shot"><img loading="lazy" src="plugin-help-mode.png" width="1360" height="769"
       alt="The plug-in's help mode: a note explains the sub oscillator knob">
-      <figcaption>Help mode, drawn from your own Access installer. TI Revive is not affiliated with Access Music or
-      Kemper.</figcaption></figure>
+      <figcaption>Help mode. TI Revive ships no Access files; it draws this look at runtime from the skin in your own Access installer. Not affiliated with Access Music or Kemper.</figcaption></figure>
       <figure class="shot"><img loading="lazy" src="plugin-help-inactive.png" width="907" height="513"
       alt="A help note on the greyed-out chorus delay knob: Inactive now, Chorus Type is Off">
-      <figcaption>Help note on a greyed-out control, drawn from your own Access installer. TI Revive is not affiliated
-      with Access Music or Kemper.</figcaption></figure>
+      <figcaption>Help note on a greyed-out control. TI Revive ships no Access files; it draws this look at runtime from the skin in your own Access installer. Not affiliated with Access Music or Kemper.</figcaption></figure>
       <figure class="shot"><img loading="lazy" src="plugin-help-menu.png" width="1149" height="645"
       alt="The ? menu: Explain the Controls, website, Report a Problem, Save Logs, Detailed Log, Panic">
-      <figcaption>The ? menu (Linux), drawn from your own Access installer. TI Revive is not affiliated with Access Music or Kemper.</figcaption></figure>
+      <figcaption>The ? menu (Linux). TI Revive ships no Access files; it draws this look at runtime from the skin in your own Access installer. Not affiliated with Access Music or Kemper.</figcaption></figure>
       </div>
     </div>
 
@@ -813,9 +809,7 @@ def features_section():
       the Virus' flash.</p></div>
       <figure class="shot"><img loading="lazy" src="control-center.png" width="687" height="463"
       alt="TI Revive Control Center in the look of Access' Virus Control Center">
-      <figcaption>The Control Center in the Access look, drawn from your own installer. The Burn To Flash ROM and OS
-      Updater pages are only kept for the look: they say that TI Revive does not offer these functions. TI Revive is
-      not affiliated with Access Music or Kemper.</figcaption></figure>
+      <figcaption>The Control Center in the Access look. The Burn To Flash ROM and OS Updater pages are only kept for the look: they say that TI Revive does not offer these functions. TI Revive ships no Access files; it draws this look at runtime from the skin in your own Access installer. Not affiliated with Access Music or Kemper.</figcaption></figure>
     </div>
 
     <div class="feature cc">

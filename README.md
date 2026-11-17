@@ -19,8 +19,7 @@ Website with downloads, features and help: **[derpsn.github.io/access-virus-ti-r
   <img src="docs/images/control-center.png" alt="TI Revive Control Center in the look of Access' Virus Control Center" width="520"><br>
   <em>TI Revive Control Center: device, backups, Nerd mode</em>
 </p>
-<p align="center"><sub>Both take their look from your own Access installer at runtime; the screenshots show it,
-the software itself contains no Access material.</sub></p>
+<p align="center"><sub>The look is Access' own: TI Revive draws it at runtime from the skin in your own Access installer. TI Revive ships no Access files: no skin graphics, no logos, no Access code, no patch banks. Not affiliated with Access Music or Kemper.</sub></p>
 
 TI Revive brings the Access Virus TI (Desktop, Polar, Keyboard) back to current computers. Since 0.8.0 it comes
 with **"TI Revive Virus Control"**: a plug-in written from scratch that looks and works like the original Virus
@@ -220,12 +219,12 @@ control says why, for example "Inactive now: Chorus Type is Off." or "depends on
 
 <p align="center">
   <img src="docs/images/plugin-help-mode.png" alt="The plug-in's help mode: a note explains the sub oscillator knob" width="680"><br>
-  <sub>Help mode, drawn from your own Access installer. TI Revive is not affiliated with Access Music or Kemper.</sub>
+  <sub>Help mode. TI Revive ships no Access files; it draws this look at runtime from the skin in your own Access installer. Not affiliated with Access Music or Kemper.</sub>
 </p>
 
 <p align="center">
   <img src="docs/images/plugin-help-inactive.png" alt="A help note on the greyed-out chorus delay knob: Inactive now, Chorus Type is Off" width="680"><br>
-  <sub>Help note on a greyed-out control, drawn from your own Access installer. TI Revive is not affiliated with Access Music or Kemper.</sub>
+  <sub>Help note on a greyed-out control. TI Revive ships no Access files; it draws this look at runtime from the skin in your own Access installer. Not affiliated with Access Music or Kemper.</sub>
 </p>
 
 **Libraries by drag and drop.** Drag a library's .mid or .syx file from Explorer, Finder or your file manager onto one of the two browser panes (since 0.8.35, our own addition: the original takes no file drops). While you drag, the LCD says "Drop to add a library". The file is copied into Personal Libraries (Access Music/Virus TI/Patches in your Documents folder), never over an existing file, and the pane you dropped it on shows it at once; a .syx is saved as a .mid so the original finds it too. Dropping the same library again only shows it. Tested on Linux (REAPER) and Windows 11 (VM, Ableton Live 11); not tested on macOS yet.
@@ -234,14 +233,14 @@ control says why, for example "Inactive now: Chorus Type is Off." or "depends on
 
 <p align="center">
   <img src="docs/images/plugin-help-menu.png" alt="The ? menu: Explain the Controls, website, Report a Problem, Save Logs, Detailed Log, Panic" width="680"><br>
-  <sub>The ? menu (Linux), drawn from your own Access installer. TI Revive is not affiliated with Access Music or Kemper.</sub>
+  <sub>The ? menu (Linux). TI Revive ships no Access files; it draws this look at runtime from the skin in your own Access installer. Not affiliated with Access Music or Kemper.</sub>
 </p>
 
 **Undo, Redo, Compare and Randomize.** Our own additions since 0.8.36, in the menu of a right-click where there is no control (next to the editor sizes). Undo and Redo take back your edits in the editor and patch loads into a part; a knob turn is one step, and Ctrl+Z / Ctrl+Shift+Z (Cmd on the Mac) work while the editor has the keyboard. The steps last for the session. Edits of the linked controls (FX switches, link buttons, LFO clock menus) are not in Undo yet. Compare switches the selected part between your edit and the patch as you loaded it, and back; an edit or a load while comparing ends it, and Undo brings your edit back. Randomize changes the selected part's sections by up to 10, 25 or 50 % of each value's range and sends one patch to the Virus; it is one Undo step. Locked sections stay as they are (lock what you want to keep), and so do Transpose, Key Mode, the patch volume, the input and vocoder settings and the arpeggiator. Tested on Linux (REAPER), Windows 11 (VM, Ableton Live 11) and macOS (Ableton Live 12).
 
 <p align="center">
   <img src="docs/images/plugin-edit-menu.png" alt="The right-click menu after Randomize Medium: Undo Randomize Medium (Part 1), Compare, the three Randomize amounts, Panic and the editor sizes; the LCD shows 271 parameters, 25 %" width="680"><br>
-  <sub>The right-click menu after Randomize (Linux), drawn from your own Access installer. TI Revive is not affiliated with Access Music or Kemper.</sub>
+  <sub>The right-click menu after Randomize (Linux). TI Revive ships no Access files; it draws this look at runtime from the skin in your own Access installer. Not affiliated with Access Music or Kemper.</sub>
 </p>
 
 **RAM backup.** Before TI Revive writes patches into the Virus' RAM banks (SAVE, a drop, swap, rename or sort in the browser, Undo last operation), it saves the patches that would be overwritten in a library of the day, "RAM Backup 2026-10-31" in Personal Libraries (since 0.8.36, our own addition). To get a patch back, drag it from that library onto a RAM slot. If the backup cannot be written, nothing is written to the Virus. The backup knows what the plug-in's bank cache knows: a patch you stored on the Virus itself since the last sync is not in it. Tested on Linux with a TI2 Desktop: the backup and the drag back restored the slot byte for byte; the backup and the restore also on Windows 11 (VM, Ableton Live 11) and macOS (Ableton Live 12).
@@ -250,12 +249,12 @@ control says why, for example "Inactive now: Chorus Type is Off." or "depends on
 
 <p align="center">
   <img src="docs/images/plugin-section-lock.png" alt="The FILTER page with Filter 1 and the Amplifier Envelope locked: red headers with a padlock, an orange mark on the tab and part 1, a padlock next to the ?" width="680"><br>
-  <sub>Two locked sections on the FILTER page (Linux), drawn from your own Access installer. TI Revive is not affiliated with Access Music or Kemper.</sub>
+  <sub>Two locked sections on the FILTER page (Linux). TI Revive ships no Access files; it draws this look at runtime from the skin in your own Access installer. Not affiliated with Access Music or Kemper.</sub>
 </p>
 
 <p align="center">
   <img src="docs/images/plugin-library-drop.png" alt="The browser after a drop: the upper pane shows the new library My Sounds, the LCD says Library added" width="680"><br>
-  <sub>A library dropped onto the upper browser pane (Linux), drawn from your own Access installer. TI Revive is not affiliated with Access Music or Kemper.</sub>
+  <sub>A library dropped onto the upper browser pane (Linux). TI Revive ships no Access files; it draws this look at runtime from the skin in your own Access installer. Not affiliated with Access Music or Kemper.</sub>
 </p>
 
 **Projects bring back every patch setting** (0.8.18). Older versions saved the parts in a format the Virus converts
@@ -377,7 +376,7 @@ same with Access' own driver.
 
 <p align="center">
   <img src="docs/images/plugin-menus.png" alt="The LOAD menu: the device entry, the bank list and RAM A's 128 patches in columns, beyond the plug-in window" width="680"><br>
-  <sub>The LOAD menu reaching beyond the plug-in window (Linux), drawn from your own Access installer. TI Revive is not affiliated with Access Music or Kemper.</sub>
+  <sub>The LOAD menu reaching beyond the plug-in window (Linux). TI Revive ships no Access files; it draws this look at runtime from the skin in your own Access installer. Not affiliated with Access Music or Kemper.</sub>
 </p>
 
 #### Logs and firmware
