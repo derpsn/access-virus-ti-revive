@@ -9,6 +9,7 @@
 #include "vtireaderr.h" // when a reader clears a stall, waits, or gives up (#37)
 #include "linkrule.h"   // link at open, unlink at close like the original driver (E524)
 #include "rxqueue.h"   // 8 reads pending per MIDI endpoint, the callback only queues (E521)
+#include "idlepace.h"  // the Snow's idle reads on EP 0x85 paced to 1 ms (#42, E547)
 #include <errno.h>
 #include <sys/time.h>
 #include <unistd.h>     // usleep
@@ -52,6 +53,8 @@ typedef struct rxep {
     int inflight;
     unsigned parked;          // not resubmitted for lack of room: the reader resubmits them
     int quiet;                // the reader clears a halt: transfers cancelled, parked until the clear (S142)
+    int pace;                 // the Snow's bulk EP 0x85: idle-only reads rest their transfer (idlepace.h, #42)
+    vti_pace pc;
     vti_rx_rec recs[RX_QCAP];
     vti_rxq q;
     pthread_mutex_t mu;
@@ -156,12 +159,25 @@ static void LIBUSB_CALL rx_done(struct libusb_transfer *t)
             vti_rxq_push(&e->q, slot, 0, t->buffer, t->actual_length);
         break;
     case VTI_RX_QUEUE_RESUBMIT:
+        if (e->pace && vti_idle_only(t->buffer, t->actual_length)) { // the Snow idles: the reader sends it out later
+            e->v->idle += (unsigned long)t->actual_length / 4;
+            vti_pace_rest(&e->pc, slot);
+            break;
+        }
         if (t->actual_length > 0)
             vti_rxq_push(&e->q, slot, 0, t->buffer, t->actual_length);
         if (!vti_rxq_may_resubmit(&e->q, (unsigned)e->inflight + 1))
             vti_park(&e->parked, slot);
         else if (rx_submit(e, slot))
             vti_rxq_push(&e->q, slot, -4, NULL, 0); // a failed resubmit: the device is going, the reader decides
+        if (e->pace && t->actual_length > 0) // data: every rested transfer goes out again (a dump runs at full speed)
+            for (uint32_t m = vti_pace_wake_all(&e->pc); m; m &= m - 1) {
+                const int s = __builtin_ctz(m);
+                if (!vti_rxq_may_resubmit(&e->q, (unsigned)e->inflight + 1))
+                    vti_park(&e->parked, s);
+                else if (rx_submit(e, s))
+                    vti_rxq_push(&e->q, s, -4, NULL, 0);
+            }
         break;
     case VTI_RX_QUEUE_PARK:
         if (t->actual_length > 0)
@@ -188,19 +204,41 @@ static void *events(void *p)
     return NULL;
 }
 
-// 0, or -1 when the queue stayed empty for 200 ms (the reader then checks stop)
+static uint64_t mono_ns(void)
+{
+    struct timespec ts;
+    clock_gettime(CLOCK_MONOTONIC, &ts);
+    return (uint64_t)ts.tv_sec * 1000000000ull + (uint64_t)ts.tv_nsec;
+}
+
+// under e->mu: a rested transfer of the Snow's EP 0x85 goes out again, one per millisecond (idlepace.h)
+static void rx_pace(rxep *e)
+{
+    int slot;
+    if (!e->pace || e->v->closing || e->quiet || (slot = vti_pace_due(&e->pc, mono_ns())) < 0)
+        return;
+    if (!vti_rxq_may_resubmit(&e->q, (unsigned)e->inflight + 1))
+        vti_park(&e->parked, slot);
+    else if (rx_submit(e, slot))
+        vti_rxq_push(&e->q, slot, -4, NULL, 0);
+}
+
+// 0, or -1 when the queue stayed empty for 200 ms, or until the next paced read (the reader then checks stop)
 static int rx_take(rxep *e, vti_rx_rec *rec)
 {
     pthread_mutex_lock(&e->mu);
+    rx_pace(e);
     if (!e->q.count && !e->v->stop) {
-        struct timeval now;
-        gettimeofday(&now, NULL);
-        struct timespec until = {now.tv_sec, (now.tv_usec + 200000) * 1000L};
-        if (until.tv_nsec >= 1000000000L) {
-            until.tv_sec++;
-            until.tv_nsec -= 1000000000L;
+        const int paced = e->pace && !e->v->closing && !e->quiet; // else no spin on rested transfers at the close
+        const uint64_t wait = paced ? vti_pace_wait(&e->pc, mono_ns(), 200000000ull) : 200000000ull;
+        if (wait) {
+            struct timeval now;
+            gettimeofday(&now, NULL);
+            const uint64_t ns = (uint64_t)now.tv_usec * 1000ull + wait;
+            const struct timespec until = {now.tv_sec + (time_t)(ns / 1000000000ull), (long)(ns % 1000000000ull)};
+            pthread_cond_timedwait(&e->cv, &e->mu, &until);
         }
-        pthread_cond_timedwait(&e->cv, &e->mu, &until);
+        rx_pace(e);
     }
     int r = vti_rxq_pop(&e->q, rec);
     int slot; // data again (room, or the endpoint works after a stall): the parked transfers go out
@@ -299,6 +337,8 @@ static int rx_start(vti *v)
         rxep *e = &v->rx[i];
         e->v = v;
         e->ep = v->rd_ep[i];
+        e->pace = e->ep == VTI_EP_MI03_IN && v->bulk[e->ep & 15]; // only the Snow idles on it (E387)
+        vti_pace_init(&e->pc);
         pthread_mutex_init(&e->mu, NULL);
         pthread_cond_init(&e->cv, NULL);
         vti_rxq_init(&e->q, e->recs, RX_QCAP);
