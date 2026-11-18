@@ -10,28 +10,28 @@
 TEST(slotpick_takes_the_lowest_free_slot)
 {
     bool taken[4] = {false, false, false, false};
-    CHECK(vti::slot_choose(taken, 4, 0) == 1);
+    CHECK(vti::slot_choose(taken, 4, 0, 0) == 1);
     taken[0] = true;
-    CHECK(vti::slot_choose(taken, 4, 0) == 2);
+    CHECK(vti::slot_choose(taken, 4, 0, 0) == 2);
     taken[1] = taken[2] = taken[3] = true;
-    CHECK(vti::slot_choose(taken, 4, 0) == 0); // all taken: wait
+    CHECK(vti::slot_choose(taken, 4, 0, 0) == 0); // all taken: wait
 }
 
 TEST(slotpick_prefers_the_projects_slot_when_free)
 {
     bool taken[4] = {false, false, false, false};
-    CHECK(vti::slot_choose(taken, 4, 2) == 2); // the project was saved with Virus 2
+    CHECK(vti::slot_choose(taken, 4, 2, 0) == 2); // the project was saved with Virus 2
     taken[1] = true;
-    CHECK(vti::slot_choose(taken, 4, 2) == 1); // another instance has it: the lowest free one
-    CHECK(vti::slot_choose(taken, 4, 9) == 1); // a bad number from a project: ignored
+    CHECK(vti::slot_choose(taken, 4, 2, 0) == 1); // another instance has it: the lowest free one
+    CHECK(vti::slot_choose(taken, 4, 9, 0) == 1); // a bad number from a project: ignored
 }
 
 TEST(slotpick_gives_up_an_empty_higher_slot)
 {
-    CHECK(!vti::slot_give_up(1, false, 60000)); // Virus 1 absent: the "No Virus TI" page, as today
-    CHECK(!vti::slot_give_up(2, true, 60000));  // Virus 2 there: keep it
-    CHECK(!vti::slot_give_up(2, false, 2999));  // a new broker needs a moment to open its Virus
-    CHECK(vti::slot_give_up(2, false, 3000));   // no Virus 2: wait for Virus 1 like a second instance
+    CHECK(!vti::slot_give_up(1, false, false, 60000)); // Virus 1 absent: the "No Virus TI" page, as today
+    CHECK(!vti::slot_give_up(2, true, false, 60000));  // Virus 2 there: keep it
+    CHECK(!vti::slot_give_up(2, false, false, 2999));  // a new broker needs a moment to open its Virus
+    CHECK(vti::slot_give_up(2, false, false, 3000));   // no Virus 2: wait for Virus 1 like a second instance
 }
 
 TEST(slotpick_core_audio_device_by_usb_serial)
@@ -47,4 +47,29 @@ TEST(slotpick_core_audio_device_by_usb_serial)
     CHECK(vti::core_audio_pick(two, "", 2) == 0);
     CHECK(vti::core_audio_pick(two, "NONE", 3) == -1);
     CHECK(vti::core_audio_pick({}, "SERA", 1) == -1);
+}
+
+TEST(slotpick_skips_the_slot_just_given_up) // audit 2026-11-18 #1, #5
+{
+    bool taken[4] = {false, false, false, false};
+    // a project saved with Virus 2 on a computer with one Virus: slot 2 was tried and given up - Virus 1 next
+    CHECK(vti::slot_choose(taken, 4, 2, 2) == 1);
+    // the next round (slot 1 given up, e.g. another program has it): the project's slot again
+    CHECK(vti::slot_choose(taken, 4, 2, 1) == 2);
+    taken[0] = taken[2] = taken[3] = true;
+    CHECK(vti::slot_choose(taken, 4, 0, 2) == 2); // the only free one: tried again rather than none
+}
+
+TEST(slotpick_gives_up_a_slot_another_program_has) // audit 2026-11-18 #4: Bitwig sandbox, two DAWs
+{
+    CHECK(vti::slot_give_up(1, true, true, 3000));   // Virus 1 is another process's: try Virus 2
+    CHECK(!vti::slot_give_up(1, true, true, 2999));  // the broker's state needs a moment
+    CHECK(!vti::slot_give_up(1, true, false, 60000)); // ours: keep it
+}
+
+TEST(slotpick_saves_the_preferred_slot_between_tries) // audit 2026-11-18 #2
+{
+    CHECK(vti::slot_to_save(2, 1) == 2); // the slot in use
+    CHECK(vti::slot_to_save(0, 2) == 2); // between two tries, or not connected yet: the project's own
+    CHECK(vti::slot_to_save(0, 0) == 0); // nothing known: no record
 }

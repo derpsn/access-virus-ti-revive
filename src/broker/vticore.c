@@ -461,14 +461,17 @@ vti *vti_open(vti_rx_cb cb, void *user)
         free(v);
         return NULL;
     }
+    // the broker retries every 2 s: said once until the Virus is found (a broker 2 without a Virus 2 ran for hours,
+    // audit 2026-11-18 #3)
+    static int said_missing;
     v->h = open_slot(v->ctx);
     if (!v->h) {
-        if (vti_slot > 1)
-            vti_log("vti: Virus %d (%04x:%04x) not found or no access\n", vti_slot, VTI_VID, VTI_PID);
-        else
-            vti_log("vti: Virus TI %04x:%04x not found or no access\n", VTI_VID, VTI_PID);
+        if (!said_missing++)
+            vti_log("vti: Virus %d (%04x:%04x) not found or no access - trying again every 2 s\n", vti_slot, VTI_VID,
+                    VTI_PID);
         goto fail;
     }
+    said_missing = 0;
     libusb_set_auto_detach_kernel_driver(v->h, 1);
 #ifdef __APPLE__
     // the broker's own audio on macOS (test, E511): libusb takes the Virus from Apple's audio driver by capturing the

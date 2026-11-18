@@ -172,7 +172,7 @@ bool DeviceOut::claim_owner()
     bool taken[VTI_SLOTS_MAX];
     for (int i = 0; i < VTI_SLOTS_MAX; i++)
         taken[i] = g_owner[i] != nullptr;
-    const int s = vti::slot_choose(taken, VTI_SLOTS_MAX, slot_pref_);
+    const int s = vti::slot_choose(taken, VTI_SLOTS_MAX, slot_pref_, skip_slot_);
     if (s) {
         g_owner[s - 1] = this;
         broker_.set_slot(s);
@@ -463,8 +463,9 @@ void DeviceOut::check_presence()
     // another program's plug-in has the Virus (broker state 2) / gave it up: the same page as a second instance
     if (bool elsewhere = broker_.in_use_elsewhere(); elsewhere != elsewhere_seen_) {
         elsewhere_seen_ = elsewhere;
-        log(elsewhere ? "Virus TI native: another program's plug-in uses the Virus - waiting\n"
-                      : "Virus TI native: the other program gave up the Virus\n");
+        if (!skip_slot_) // not again at every try of a wait that goes through the slots (audit 2026-11-18 #3)
+            log(elsewhere ? "Virus TI native: another program's plug-in uses the Virus - waiting\n"
+                          : "Virus TI native: the other program gave up the Virus\n");
         if (on_waiting_ && !wait_reported_)
             on_waiting_(elsewhere);
     }
@@ -614,7 +615,7 @@ void DeviceOut::run()
                 }
                 continue;
             }
-            if (wait_reported_ && slot_ == 1) {
+            if (wait_reported_ && slot_ == 1 && !skip_slot_) {
                 wait_reported_ = false;
                 log("Virus TI native: the other instance is gone - this one takes over the Virus\n");
                 if (on_waiting_)
@@ -661,13 +662,20 @@ void DeviceOut::run()
             if (idle_)
                 idle_();
             check_presence();
-            if (slot_ > 1) { // Virus 2+ is not there (#45): wait for Virus 1 like a second instance (slotpick.h)
+            // Virus 2+ is not there, or another program's plug-in has this one (#45, audit 2026-11-18 #4): after 3 s
+            // try another slot (slotpick.h); the one given up is skipped once, the log says it once per wait
+            const bool elsewhere = broker_.in_use_elsewhere();
+            if (slot_ > 1 || elsewhere) {
                 const auto now = std::chrono::steady_clock::now();
                 if (absent_since_ == std::chrono::steady_clock::time_point{})
                     absent_since_ = now;
                 const int ms = (int)std::chrono::duration_cast<std::chrono::milliseconds>(now - absent_since_).count();
-                if (vti::slot_give_up(slot_, false, ms)) {
-                    log("Virus TI native: no Virus %d - waiting\n", slot_.load());
+                if (vti::slot_give_up(slot_, false, elsewhere, ms)) {
+                    if (!skip_slot_)
+                        log("Virus TI native: %s Virus %d - trying the others, waiting\n",
+                            elsewhere ? "another program uses" : "no", slot_.load());
+                    skip_slot_ = slot_.load();
+                    absent_since_ = std::chrono::steady_clock::time_point{};
                     lose_broker();
                     release_owner();
                     for (int i = 0; i < 200 && !stop_; i++) { // as a second instance: try again in 2 s
@@ -679,19 +687,30 @@ void DeviceOut::run()
                     }
                     continue;
                 }
+            } else if (wait_reported_ && skip_slot_ && absent_since_ == std::chrono::steady_clock::time_point{})
+                absent_since_ = std::chrono::steady_clock::now();
+            else if (wait_reported_ && skip_slot_ &&
+                     std::chrono::steady_clock::now() - absent_since_ >= std::chrono::milliseconds(vti::SLOT_GIVE_UP_MS)) {
+                // back on Virus 1 after a wait, nobody else has it but it is not there: the "No Virus TI" page
+                wait_reported_ = false;
+                skip_slot_ = 0;
+                if (on_waiting_)
+                    on_waiting_(false);
+                report_status();
             }
             std::unique_lock<std::mutex> lk(mu_);
             cv_.wait_for(lk, std::chrono::milliseconds(10), [this] { return stop_.load(); });
             continue;
         }
-        if (wait_reported_ && slot_ > 1) { // Virus 2+ answered (#45)
+        if (wait_reported_ && (slot_ > 1 || skip_slot_)) { // the Virus of this slot answered after a wait (#45)
             wait_reported_ = false;
-            absent_since_ = std::chrono::steady_clock::time_point{};
             log("Virus TI native: this instance uses Virus %d\n", slot_.load());
             if (on_waiting_)
                 on_waiting_(false);
             report_status();
         }
+        skip_slot_ = 0;
+        absent_since_ = std::chrono::steady_clock::time_point{};
         std::vector<uint8_t> msg, piece; // piece: the next part of a dump in pieces (dumppacer.h)
         bool piece_last = false;
         int64_t piece_wait_ns = 0;
@@ -5106,7 +5125,7 @@ tresult PLUGIN_API VirusPlugin::getState(IBStream *state)
                                       return parse_editor_record(r, path, part, value) && path == VIRUS_SLOT_RECORD;
                                   }),
                    recs.end());
-        if (const int s = out_ ? out_->slot() : 0)
+        if (const int s = out_ ? vti::slot_to_save(out_->slot(), out_->preferred_slot()) : 0) // audit 2026-11-18 #2
             recs.push_back(editor_record(VIRUS_SLOT_RECORD, 0, s));
         d = build_container(recs);
     }

@@ -180,7 +180,8 @@ int wmain(int argc, wchar_t **argv)
     int slot = 1; // the broker passes "-slot N" for Virus N > 1
     if (argc == 3 && !wcscmp(argv[1], L"-slot") && argv[2][0] && !argv[2][1]) {
         const char s[2] = {(char)argv[2][0], 0};
-        slot = vti_slot_parse(s) ? vti_slot_parse(s) : 1;
+        const int p = vti_slot_parse(s);
+        slot = p ? p : 1;
     }
     char sfx[4], synth_name[32], din_name[32];
     vti_slot_suffix(sfx, slot);
