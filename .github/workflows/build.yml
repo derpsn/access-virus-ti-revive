@@ -82,8 +82,9 @@ jobs:
       - name: Pester 5 (installer script tests in ctest)
         shell: pwsh
         run: |
-          if (-not (Get-Module -ListAvailable Pester | Where-Object Version -ge ([version]'5.0'))) {
-              Install-Module Pester -MinimumVersion 5.5 -Scope CurrentUser -Force -SkipPublisherCheck }
+          # exact version (audit #16); -SkipPublisherCheck because the image's Pester 3.4 has another signer (Pester docs)
+          if (-not (Get-Module -ListAvailable Pester | Where-Object Version -eq ([version]'5.9.1'))) {
+              Install-Module Pester -RequiredVersion 5.9.1 -Scope CurrentUser -Force -SkipPublisherCheck }
       - name: Unit tests
         run: ctest --test-dir native-build -C Release --output-on-failure
       - name: Collect
@@ -256,7 +257,7 @@ jobs:
           list: native-linux
       - name: CMake
         run: |
-          pip3 install --user "cmake>=3.25" # Ubuntu 22.04 ships 3.22
+          pip3 install --user "cmake==3.31.10" # Ubuntu 22.04 ships 3.22; the last 3.x (exact: audit #16)
           echo "$HOME/.local/bin" >> "$GITHUB_PATH"
       - name: Compiler cache # ccache's objects of the last run on this branch; a tag run starts empty (main builds nothing)
         uses: actions/cache@55cc8345863c7cc4c66a329aec7e433d2d1c52a9 # v6.1.0
@@ -303,7 +304,7 @@ jobs:
           list: native-linux
       - name: CMake
         run: |
-          pip3 install --user "cmake>=3.25" # Ubuntu 22.04 ships 3.22
+          pip3 install --user "cmake==3.31.10" # Ubuntu 22.04 ships 3.22; the last 3.x (exact: audit #16)
           echo "$HOME/.local/bin" >> "$GITHUB_PATH"
       - name: Coverage
         run: python3 -I scripts/coverage.py --build cov-build --min 95 --show 15

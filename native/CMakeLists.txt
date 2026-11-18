@@ -272,7 +272,7 @@ find_program(PWSH_EXECUTABLE pwsh)
 if(PWSH_EXECUTABLE)
     add_test(NAME installer_scripts
              COMMAND ${PWSH_EXECUTABLE} -NoProfile -NonInteractive -Command
-                     "if (-not (Get-Module -ListAvailable Pester | Where-Object Version -ge ([version]'5.0'))) { exit 77 }; Import-Module Pester -MinimumVersion 5.0; $r = Invoke-Pester '${CMAKE_CURRENT_SOURCE_DIR}/../src/installer/tests' -Output Detailed -PassThru; exit [int]($r.FailedCount + $r.FailedBlocksCount + $r.FailedContainersCount -gt 0)")
+                     "if (-not (Get-Module -ListAvailable Pester | Where-Object { $_.Version.Major -eq 5 })) { exit 77 }; Import-Module Pester -MinimumVersion 5.0 -MaximumVersion 5.99; $r = Invoke-Pester '${CMAKE_CURRENT_SOURCE_DIR}/../src/installer/tests' -Output Detailed -PassThru; exit [int]($r.FailedCount + $r.FailedBlocksCount + $r.FailedContainersCount -gt 0)")
     set_tests_properties(installer_scripts PROPERTIES SKIP_RETURN_CODE 77 TIMEOUT 120)
 endif()
 
