@@ -368,8 +368,10 @@ static const vti_rate_ops OPS = {NULL, op_stop, op_alt, op_sleep, op_set_cur, op
 
 int vla_start(libusb_context *ctx, libusb_device_handle *h, uint32_t rate, vla_in_fn in, vla_out_fn out, void *user)
 {
-    if (S.running)
+    if (vla_running())
         return 0;
+    if (S.h) // stopped on its own (unplug, every IN resubmit failed): event thread and transfers may still be live
+        vla_stop();
     memset(&S, 0, sizeof S);
     pthread_mutex_init(&S.mx, NULL);
     S.ctx = ctx, S.h = h, S.in = in, S.out = out, S.user = user;
@@ -438,7 +440,8 @@ int vla_switch_rate(uint32_t rate, void (*before_start)(uint32_t rate))
 
 uint32_t vla_rate(void) { return S.rate; }
 
-int vla_running(void) { return S.running; }
+// no IN transfer queued (every resubmit failed) is a stopped stream too: no audio comes, the broker starts it again
+int vla_running(void) { return S.running && S.in_flight > 0; }
 
 int vla_rate_lost(void)
 {

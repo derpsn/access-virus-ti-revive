@@ -197,6 +197,19 @@ add_executable(vtitests tests/main.cpp tests/test_usbmidi.cpp tests/test_state.c
                tests/test_comparestate.cpp tests/test_randomizer.cpp tests/test_trafficring.cpp tests/test_capture.cpp tests/test_keyport.cpp tests/test_closeseq.cpp tests/test_utf8.cpp tests/test_winusb_errors.cpp tests/test_markerscan.cpp tests/test_rxqueue.cpp tests/test_linkrule.cpp tests/test_optionslayout.cpp tests/test_owneruid.cpp tests/test_macgiveback.cpp tests/test_seqevent.cpp tests/test_updatecheck.cpp tests/test_midiports.cpp tests/test_nerdview.cpp tests/test_keyporthelper.cpp tests/test_latencywatch.cpp tests/test_idlepace.cpp $<$<NOT:$<PLATFORM_ID:Windows>>:tests/test_sendtimeout.cpp>)
 target_link_libraries(vtitests PRIVATE vticore)
 add_test(NAME vtitests COMMAND vtitests)
+# the libusb audio stream (src/broker/vtiusbaudio_libusb.c) against stub libusb functions: its own binary, built with
+# vtitests wherever libusb.h is there (Linux, macOS with libusb); nothing in it links the real library
+if(NOT WIN32)
+    find_path(VTI_LIBUSB_INC libusb.h PATH_SUFFIXES libusb-1.0)
+    if(VTI_LIBUSB_INC)
+        add_executable(vlatests tests/main.cpp tests/test_vla.cpp ../src/broker/vtiusbaudio_libusb.c)
+        target_include_directories(vlatests PRIVATE ${VTI_LIBUSB_INC} ../src/broker)
+        find_package(Threads REQUIRED)
+        target_link_libraries(vlatests PRIVATE Threads::Threads)
+        add_dependencies(vtitests vlatests)
+        add_test(NAME vlatests COMMAND vlatests)
+    endif()
+endif()
 
 # test host for the native plug-in (R3 checks)
 if(NOT TARGET sdk_hosting)
