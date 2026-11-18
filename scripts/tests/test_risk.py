@@ -192,5 +192,27 @@ class RealMap(unittest.TestCase):
         self.assertEqual(sel["class"], "B")
 
 
+
+class Changed(unittest.TestCase):
+    def test_a_moved_file_counts_with_both_paths(self):
+        # audit #31: with renames detected, a file moved out of a class C folder listed only its new path
+        import tempfile
+        with tempfile.TemporaryDirectory() as d:
+            env = dict(os.environ, GIT_AUTHOR_NAME="t", GIT_AUTHOR_EMAIL="t@t", GIT_COMMITTER_NAME="t",
+                       GIT_COMMITTER_EMAIL="t@t")
+            git = lambda *a: subprocess.run(["git", "-C", d, *a], check=True, capture_output=True, env=env)
+            git("init", "-q", "-b", "main")
+            os.makedirs(os.path.join(d, "native", "au"))
+            with open(os.path.join(d, "native", "au", "x.cpp"), "w") as f:
+                f.write("int x;\n" * 20)
+            git("add", ".")
+            git("commit", "-q", "--no-verify", "-m", "a")
+            git("checkout", "-q", "-b", "round")
+            os.makedirs(os.path.join(d, "docs"))
+            git("mv", "native/au/x.cpp", "docs/x.cpp")
+            git("commit", "-q", "--no-verify", "-m", "move")
+            self.assertEqual(sorted(risk.changed("main", d)), ["docs/x.cpp", "native/au/x.cpp"])
+
+
 if __name__ == "__main__":
     unittest.main()
