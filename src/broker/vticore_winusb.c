@@ -8,6 +8,7 @@
 #include "writeretry.h"
 #include "vtireaderr.h"
 #include "linkrule.h" // link at open, unlink at close like the original driver (E524)
+#include "idlepace.h" // vti_drop_idle: the Snow's idle packets on bulk EP 0x85 (E387)
 #include <stdio.h>
 #include <stdlib.h>
 
@@ -81,13 +82,27 @@ static DWORD WINAPI reader(LPVOID p)
     iface *f = iface_for(a.v, a.ep);
     ULONG timeout = 200; // ms, so the stop flag is noticed
     WinUsb_SetPipePolicy(f->usb, a.ep, PIPE_TRANSFER_TIMEOUT, sizeof timeout, &timeout);
+    // only the Snow's EP 0x85 is bulk, and it answers every read with FF FE 00 00 (E387): drop those here like the
+    // libusb reader does, or ~2000 of them a second reach every client and push the E392 handshake out of pre-roll
+    int snow_idle = 0;
+    for (UCHAR i = 0; a.ep == VTI_EP_MI03_IN; i++) {
+        WINUSB_PIPE_INFORMATION pi;
+        if (!WinUsb_QueryPipe(f->usb, 0, i, &pi))
+            break;
+        if (pi.PipeId == a.ep)
+            snow_idle = pi.PipeType == UsbdPipeTypeBulk;
+    }
     uint8_t buf[64];
     int fails = 0;
+    unsigned long idle = 0;
     while (!a.v->stop) {
         ULONG got = 0;
         if (WinUsb_ReadPipe(f->usb, a.ep, buf, sizeof buf, &got, NULL) && got) {
             fails = 0;
-            a.v->cb(a.v->user, a.ep, buf, (int)got);
+            int kept = snow_idle ? vti_drop_idle(buf, (int)got) : (int)got;
+            idle += ((unsigned long)got - (unsigned long)kept) / 4;
+            if (kept)
+                a.v->cb(a.v->user, a.ep, buf, kept);
         }
         else {
             DWORD e = GetLastError();
@@ -105,6 +120,8 @@ static DWORD WINAPI reader(LPVOID p)
             }
         }
     }
+    if (idle)
+        vti_log("vti: %lu idle packets (FF FE 00 00) dropped on bulk EP 0x85\n", idle);
     return 0;
 }
 

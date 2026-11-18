@@ -26,6 +26,19 @@ TEST(idlepace_idle_only_needs_whole_idle_packets)
     CHECK(!vti_idle_only(nullptr, 4));
 }
 
+TEST(idlepace_drop_idle_keeps_only_real_data)
+{
+    // audit #13: shared by the libusb and the WinUSB reader
+    uint8_t b[10] = {0xff, 0xfe, 0x00, 0x00, 0x0b, 0xb0, 0x4a, 0x40, 0xff, 0xfe};
+    CHECK_EQ(vti_drop_idle(b, 10), 6); // the cut packet at the end stays
+    CHECK(!memcmp(b, knob, 4));
+    CHECK(b[4] == 0xff && b[5] == 0xfe);
+    uint8_t i2[8];
+    memcpy(i2, idle2, 8);
+    CHECK_EQ(vti_drop_idle(i2, 8), 0);
+    CHECK_EQ(vti_drop_idle(i2, 0), 0);
+}
+
 TEST(idlepace_lets_one_rested_transfer_out_per_millisecond)
 {
     vti_pace p;

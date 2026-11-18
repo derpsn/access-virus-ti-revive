@@ -1,4 +1,5 @@
-// idlepace.h - pacing the reads on the Virus TI Snow's bulk EP 0x85 (vticore.c, Linux and macOS).
+// idlepace.h - pacing the reads on the Virus TI Snow's bulk EP 0x85 (vticore.c, Linux and macOS), and the idle
+// packet filter both readers share (vti_drop_idle, also vticore_winusb.c).
 //
 // Why: the Snow's bulk EP 0x85 answers every read at once, ~3300 times a second, with FF FE 00 00 (cable 15, Active
 // Sensing; nothing in the plug-in reads it, E387). With 8 reads kept pending (rxqueue.h) every one of them was a libusb
@@ -33,6 +34,23 @@ static inline int vti_idle_only(const uint8_t *b, int n)
         if (memcmp(b + i, idle, 4))
             return 0;
     return 1;
+}
+
+// Drops every whole FF FE 00 00 packet from b (n bytes), keeps the rest in order, a cut packet at the end too.
+// Returns the bytes kept; the packets dropped are (n - kept) / 4. Both readers (vticore.c, vticore_winusb.c) call it,
+// only on a bulk EP 0x85 (the Snow, E387): ~2000 idle packets a second would reach every client otherwise.
+static inline int vti_drop_idle(uint8_t *b, int n)
+{
+    static const uint8_t idle[4] = {0xff, 0xfe, 0x00, 0x00};
+    int w = 0, r = 0;
+    for (; r + 4 <= n; r += 4)
+        if (memcmp(b + r, idle, 4)) {
+            memmove(b + w, b + r, 4);
+            w += 4;
+        }
+    for (; r < n; r++)
+        b[w++] = b[r];
+    return w;
 }
 
 typedef struct {

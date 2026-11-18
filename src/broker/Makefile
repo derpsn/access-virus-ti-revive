@@ -24,20 +24,20 @@ $(OUT)/linux/vtiaudiotest: vtiaudiotest_posix.c vtiproto.h vtiaudioshm.h
 	mkdir -p $(OUT)/linux
 	$(CC) $(CFLAGS) -o $@ vtiaudiotest_posix.c -lm
 
-$(OUT)/vtiprobe.exe: vtiprobe.c vticore_winusb.c $(SRC_MIDI) vticore.h
+$(OUT)/vtiprobe.exe: vtiprobe.c vticore_winusb.c $(SRC_MIDI) vticore.h idlepace.h
 	mkdir -p $(OUT)
 	x86_64-w64-mingw32-gcc $(CFLAGS) -o $@ vtiprobe.c vticore_winusb.c $(SRC_MIDI) -lwinusb -lsetupapi -static -lpthread
 
-$(OUT)/vtisend.exe: vtisend.c vticore_winusb.c $(SRC_MIDI) vticore.h
+$(OUT)/vtisend.exe: vtisend.c vticore_winusb.c $(SRC_MIDI) vticore.h idlepace.h
 	mkdir -p $(OUT)
 	x86_64-w64-mingw32-gcc $(CFLAGS) -o $@ vtisend.c vticore_winusb.c $(SRC_MIDI) -lwinusb -lsetupapi -static -lpthread
 
-$(OUT)/vtiflash.exe: vtiflash.c vticore_winusb.c $(SRC_MIDI) vticore.h
+$(OUT)/vtiflash.exe: vtiflash.c vticore_winusb.c $(SRC_MIDI) vticore.h idlepace.h
 	mkdir -p $(OUT)
 	x86_64-w64-mingw32-gcc $(CFLAGS) -o $@ vtiflash.c vticore_winusb.c $(SRC_MIDI) -lwinusb -lsetupapi -static -lpthread
 
 # Broker (owns WinUSB) and a probe that goes through the broker instead of WinUSB
-$(OUT)/vtibroker.exe: vtibroker.c vticore_winusb.c $(SRC_MIDI) vticore.h trafficring.h vtiproto.h brokerinfo.h ctrlguard.h owner.h pktstat.h ratelever.h ratesw.h vtiaudioshm.h vtiusbaudio.c vtiusbaudio.h \
+$(OUT)/vtibroker.exe: vtibroker.c vticore_winusb.c $(SRC_MIDI) vticore.h idlepace.h trafficring.h vtiproto.h brokerinfo.h ctrlguard.h owner.h pktstat.h ratelever.h ratesw.h vtiaudioshm.h vtiusbaudio.c vtiusbaudio.h \
 		keyport.h vtikeyport.h vtikeyport_win.c midifeed.h
 	mkdir -p $(OUT)
 	x86_64-w64-mingw32-gcc $(CFLAGS) $(VDEF) -o $@ vtibroker.c vticore_winusb.c $(SRC_MIDI) vtiusbaudio.c vtikeyport_win.c -lwinusb -lsetupapi -static -lpthread

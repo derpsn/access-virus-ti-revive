@@ -113,24 +113,6 @@ static int xfer(vti *v, uint8_t ep, uint8_t *buf, int len, int *got, unsigned ti
                             : libusb_interrupt_transfer(v->h, ep, buf, len, got, timeout);
 }
 
-// The Snow's bulk EP 0x85 answers every read, ~2000 times a second, and the extra packets are all FF FE 00 00
-// (cable 15, CIN 0xF; nothing in the plug-in reads them - E387). They are dropped here, only on a bulk EP 0x85
-// and only that exact 4-byte packet; the TI2's interrupt endpoints never get here.
-static int drop_idle(vti *v, uint8_t *b, int n)
-{
-    static const uint8_t idle[4] = {0xff, 0xfe, 0x00, 0x00};
-    int w = 0, r = 0;
-    for (; r + 4 <= n; r += 4)
-        if (memcmp(b + r, idle, 4)) {
-            memmove(b + w, b + r, 4);
-            w += 4;
-        } else
-            v->idle++;
-    for (; r < n; r++)
-        b[w++] = b[r];
-    return w;
-}
-
 // under e->mu
 static int rx_submit(rxep *e, int slot)
 {
@@ -337,8 +319,12 @@ static void *reader(void *p)
                     libusb_error_name(last));
         fails = 0;
         int got = rec.len;
-        if (ep == VTI_EP_MI03_IN && v->bulk[ep & 15] && !(got = drop_idle(v, rec.data, got)))
-            continue;
+        if (ep == VTI_EP_MI03_IN && v->bulk[ep & 15]) { // the Snow's idle packets (vti_drop_idle, E387)
+            int kept = vti_drop_idle(rec.data, got);
+            v->idle += (unsigned long)(got - kept) / 4;
+            if (!(got = kept))
+                continue;
+        }
         v->cb(v->user, ep, rec.data, got);
     }
     return NULL;
