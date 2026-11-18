@@ -4,6 +4,7 @@
 // and the bytes. Virus to DAW only: the helper reads, it never writes back. Plain C, no I/O; the unit test calls it.
 #pragma once
 #include <stdint.h>
+#include <string.h>
 
 #define VTI_MIDIFEED_MARK 0xA0
 
@@ -17,6 +18,37 @@ static inline int vti_midifeed_frame(int port, const uint8_t *msg, int n, uint8_
     for (int i = 0; i < n; i++)
         out[2 + i] = msg[i];
     return n + 2;
+}
+
+// The writer's side of a non-blocking pipe: a write may take only part of a frame (audit #26). The rest is kept and
+// goes first next time, and a frame that comes while it cannot go is dropped whole, so the pipe only ever carries
+// whole frames. `write` returns the bytes taken (0 when full, < 0 on an error). One writer thread.
+typedef struct {
+    uint8_t rest[5]; // the tail of a frame not taken yet (at most marker + length + 3 bytes)
+    int n;
+} vti_midifeed_out;
+
+// 1: the frame is handed over (or its tail waits in `o`), 0: dropped (the pipe is full or broken)
+static inline int vti_midifeed_send(vti_midifeed_out *o, const uint8_t *frame, int len,
+                                    int (*write)(void *user, const uint8_t *b, int n), void *user)
+{
+    if (len <= 0 || len > (int)sizeof o->rest)
+        return 0;
+    if (o->n) {
+        const int w = write(user, o->rest, o->n);
+        if (w > 0) {
+            memmove(o->rest, o->rest + w, (size_t)(o->n - w));
+            o->n -= w;
+        }
+        if (o->n)
+            return 0;
+    }
+    int w = write(user, frame, len);
+    if (w < 0)
+        return 0;
+    memcpy(o->rest, frame + w, (size_t)(len - w));
+    o->n = len - w;
+    return 1;
 }
 
 typedef void (*vti_midifeed_cb)(void *user, int port, const uint8_t *msg, int n);

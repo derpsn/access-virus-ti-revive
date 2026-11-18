@@ -123,3 +123,39 @@ TEST(umpconv_sysex_continue_packets)
     CHECK((all[2] >> 20) == 0x302 && ((all[2] >> 16) & 15) == 6);
     CHECK((all[4] >> 20) == 0x303 && ((all[4] >> 16) & 15) == 2);
 }
+
+namespace {
+struct Pipe { // a non-blocking pipe that takes at most `room` bytes per write
+    std::vector<uint8_t> data;
+    int room = 64;
+};
+int pipe_write(void *u, const uint8_t *b, int n)
+{
+    auto *p = (Pipe *)u;
+    const int w = n < p->room ? n : p->room;
+    p->data.insert(p->data.end(), b, b + w);
+    return w;
+}
+} // namespace
+
+TEST(midifeed_partial_write_keeps_the_frames_whole)
+{
+    // audit #26: a non-blocking WriteFile can take part of a frame; the next frame then started inside it
+    const uint8_t note[] = {0x90, 60, 100}, at[] = {0xA0, 60, 10}, clock[] = {0xF8};
+    uint8_t f[8];
+    Pipe p;
+    vti_midifeed_out o = {};
+    p.room = 2; // only marker + length go through
+    CHECK(vti_midifeed_send(&o, f, vti_midifeed_frame(1, note, 3, f, 8), pipe_write, &p) == 1);
+    p.room = 0; // full: the tail waits, the next frame is dropped, not mixed in
+    CHECK(vti_midifeed_send(&o, f, vti_midifeed_frame(0, clock, 1, f, 8), pipe_write, &p) == 0);
+    p.room = 64;
+    CHECK(vti_midifeed_send(&o, f, vti_midifeed_frame(1, at, 3, f, 8), pipe_write, &p) == 1);
+    Frames got;
+    vti_midifeed_reader r;
+    vti_midifeed_init(&r);
+    vti_midifeed_read(&r, p.data.data(), (int)p.data.size(), on_frame, &got);
+    CHECK(got.got.size() == 2);
+    CHECK(got.got.size() == 2 && got.got[0].second == (std::vector<uint8_t>{0x90, 60, 100}) &&
+          got.got[1].second == (std::vector<uint8_t>{0xA0, 60, 10}));
+}

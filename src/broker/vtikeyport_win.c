@@ -67,6 +67,16 @@ void vti_keyport_start(void)
             "%%TEMP%%\\tirevive-midiports.log)\n");
 }
 
+// the pipe is non-blocking (PIPE_NOWAIT): WriteFile may take part of a frame or nothing; -1 on an error
+static int pipe_write(void *user, const uint8_t *b, int n)
+{
+    (void)user;
+    DWORD w = 0;
+    return WriteFile(g_pipe, b, (DWORD)n, &w, NULL) ? (int)w : -1;
+}
+
+static vti_midifeed_out g_out; // a frame's tail the pipe did not take yet (USB reader thread only)
+
 static void send_to(int port, const uint8_t *msg, int n)
 {
     if (g_pipe == INVALID_HANDLE_VALUE)
@@ -75,8 +85,7 @@ static void send_to(int port, const uint8_t *msg, int n)
     const int len = vti_midifeed_frame(port, msg, n, buf, (int)sizeof buf);
     if (len <= 0)
         return;
-    DWORD w = 0;
-    if (WriteFile(g_pipe, buf, (DWORD)len, &w, NULL) && w == (DWORD)len) {
+    if (vti_midifeed_send(&g_out, buf, len, pipe_write, NULL)) { // whole frames only (audit #26)
         if (InterlockedIncrement(&g_sent[port]) == 1)
             vti_log("MIDI port \"%s\": first message handed to the helper\n", g_name[port]);
     } else if (InterlockedIncrement(&g_failed[port]) == 1) { // once: this runs per message on the USB reader thread
