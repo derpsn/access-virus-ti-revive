@@ -76,6 +76,17 @@ class Rules(Base):
         self.assertEqual(self.staged("/Users/bob/Library\n").returncode, 1)
         self.assertEqual(self.staged("C:\\Users\\bob\\AppData\n").returncode, 1)
 
+    def test_homes_under_a_prefix_block(self):  # audit #11: WSL mounts, Fedora Silverblue
+        self.assertEqual(self.staged("/mnt/c/Users/bob/AppData\n").returncode, 1)
+        self.assertEqual(self.staged("/var/home/alice/x\n").returncode, 1)
+        self.assertEqual(self.staged("/System/Volumes/Data/Users/bob/x\n").returncode, 1)
+
+    def test_web_links_with_home_pass(self):
+        self.assertEqual(self.staged("https://docs.example.com/home/intro https://x.org/Users/Guide\n").returncode, 0)
+
+    def test_added_line_looking_like_a_header_keeps_the_scan(self):  # audit #11
+        self.assertEqual(self.staged("++ not a header\n/home/alice/x\n").returncode, 1)
+
     def test_shared_mac_and_windows_dirs_pass(self):
         self.assertEqual(self.staged("/Users/Shared/x C:\\Users\\Public\\x /Users/runner/x\n").returncode, 0)
 
@@ -227,6 +238,25 @@ class ClaudeHook(Base):
 
     def test_gh_body_from_heredoc_blocks(self):
         self.assertEqual(self.bash("gh issue comment 41 --body-file - <<'EOF'\nfrom secretname\nEOF").returncode, 2)
+
+    def test_gh_body_from_redirected_file_blocks(self):  # audit #11
+        body = os.path.join(self.tmp.name, "reply.md").replace(os.sep, "/")
+        with open(body, "w") as f:
+            f.write("from secretname\n")
+        self.assertEqual(self.bash(f"gh issue comment 41 --body-file - < {body}").returncode, 2)
+        self.assertEqual(self.bash(f"gh api repos/o/r/issues --input - <{body}").returncode, 2)
+
+    def test_gh_clean_redirected_file_passes(self):
+        body = os.path.join(self.tmp.name, "reply.md").replace(os.sep, "/")
+        with open(body, "w") as f:
+            f.write("Thanks, rc3 fixed it.\n")
+        self.assertEqual(self.bash(f"gh issue comment 41 --body-file - < {body}").returncode, 0)
+
+    def test_gh_body_from_pipe_blocks(self):  # audit #11: the hook cannot see what a pipe sends
+        r = self.bash("cat reply.md | gh issue comment 41 -F -")
+        self.assertEqual(r.returncode, 2)
+        self.assertIn("pipe", r.stderr)
+        self.assertEqual(self.bash('cat reply.md | gh pr create -F - --title "<WIP> fix"').returncode, 2)
 
     def test_heredoc_not_read_by_gh_passes(self):
         cmd = "python3 - <<'EOF'\nprint('the hook checks gh posts; secretname stays local')\nEOF"

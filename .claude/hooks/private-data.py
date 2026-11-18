@@ -37,8 +37,9 @@ NOT_EMAIL_TLDS = {"png", "jpg", "jpeg", "gif", "svg", "webp", "ico", "pdf"}
 ALLOWED_EMAIL = re.compile(r"(noreply|derpsn|^git@github\.com$|@example\.(com|org)$)", re.I)
 
 GENERIC = [
-    ("home folder with a user name", re.compile(r"(?<![\w.])/home/([a-z_][a-z0-9_.-]*)")),
-    ("macOS home folder with a user name", re.compile(r"(?<![\w.])/Users/([A-Za-z][\w.-]*)")),
+    # also under a prefix (/var/home, /mnt/c/Users in WSL, /System/Volumes/Data/Users), not inside a URL
+    ("home folder with a user name", re.compile(r"(?<![\w.:/])(?:/[\w.-]+)*?/home/([a-z_][a-z0-9_.-]*)")),
+    ("macOS home folder with a user name", re.compile(r"(?<![\w.:/])(?:/[\w.-]+)*?/Users/([A-Za-z][\w.-]*)")),
     ("Windows home folder with a user name", re.compile(r"\b[A-Za-z]:\\{1,2}Users\\{1,2}([A-Za-z][\w.-]*)", re.I)),
     ("private IP address", re.compile(
         r"(?<![\d.])(?:192\.168|10\.\d{1,3}|172\.(?:1[6-9]|2\d|3[01]))\.\d{1,3}\.\d{1,3}(?![\d.])")),
@@ -97,8 +98,13 @@ def find(text, personal):
 def added_lines(diff):
     """(file, line) for each added line of a unified diff."""
     path = None
+    in_hunk = False  # inside a hunk "+++ x" is an added line "++ x", not a file header
     for line in diff.splitlines():
-        if line.startswith("+++ "):
+        if line.startswith("diff "):
+            in_hunk = False
+        elif line.startswith("@@"):
+            in_hunk = True
+        elif line.startswith("+++ ") and not in_hunk:
             path = line[6:] if line.startswith("+++ b/") else None
         elif line.startswith("+") and path is not None:
             yield path, line[1:]
@@ -255,14 +261,21 @@ def claude_mode(personal):
     if not command or not re.search(r"(^|[\s;&|(])(gh|git)\s", command):
         return 0
     findings = []
-    stdin_body = False
     for seg in segments(command):
         for text in texts_to_check(seg):
             findings += scan_text(text, personal, " ".join(seg[:2]))
-        if seg[:1] == ["gh"] and any(a in BODY_FILE_FLAGS and b == "-" for a, b in zip(seg, seg[1:])):
-            stdin_body = True
-    if stdin_body and "<<" in command:  # gh reads its body from a heredoc
-        findings += scan_text(command.split("<<", 1)[1].split("\n", 1)[-1], personal, "gh heredoc body")
+        if seg[:1] != ["gh"] or not any(a in BODY_FILE_FLAGS and b == "-" for a, b in zip(seg, seg[1:])):
+            continue
+        # gh reads its body from stdin: a heredoc, a "< FILE" redirect, or a pipe the hook cannot see into
+        files = [b for a, b in zip(seg, seg[1:]) if a == "<"]
+        files += [t[1:] for t in seg if t.startswith("<") and not t.startswith("<<") and len(t) > 1]
+        files = [p for p in files if os.path.isfile(os.path.expanduser(p))]  # not a body text like "<WIP>"
+        for path in files:
+            findings += scan_text(read_file(path), personal, "gh body from " + path)
+        if "<<" in command:
+            findings += scan_text(command.split("<<", 1)[1].split("\n", 1)[-1], personal, "gh heredoc body")
+        elif not files:
+            findings.append("gh body from a pipe: the check cannot read it; use --body-file FILE or a heredoc")
     return report(findings, 2)
 
 
