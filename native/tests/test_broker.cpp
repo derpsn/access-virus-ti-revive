@@ -739,13 +739,6 @@ TEST(cc_restore_ram_names_the_differing_byte)
     CHECK(err.find("no complete dump read back") != std::string::npos);
     b.close();
 }
-#else
-TEST(broker_fake_server)
-{
-    SKIP("the fake broker uses Unix sockets");
-}
-#endif
-
 // audit 2026-11-17 #8: on_rx(nullptr) while the reader thread is inside the handler returned at once, so the
 // MemorySync destructor (Control Center backup/restore on a live broker) freed what the running handler used. After
 // on_rx returns, no call of the old handler may still run.
@@ -768,3 +761,10 @@ TEST(broker_replacing_the_rx_handler_waits_for_a_running_call)
     CHECK(done.load()); // the running call finished before on_rx returned
     b.close();
 }
+
+#else
+TEST(broker_fake_server)
+{
+    SKIP("the fake broker uses Unix sockets");
+}
+#endif

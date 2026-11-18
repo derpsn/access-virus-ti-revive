@@ -42,15 +42,16 @@ static inline int vti_idle_only(const uint8_t *b, int n)
 static inline int vti_drop_idle(uint8_t *b, int n)
 {
     static const uint8_t idle[4] = {0xff, 0xfe, 0x00, 0x00};
+    if (!b || n <= 0)
+        return 0;
     int w = 0, r = 0;
-    for (; r + 4 <= n; r += 4)
+    for (; n - r >= 4; r += 4) // n - r: no r + 4 that GCC 11 -O3 could see overflow (CI -Werror)
         if (memcmp(b + r, idle, 4)) {
             memmove(b + w, b + r, 4);
             w += 4;
         }
-    for (; r < n; r++)
-        b[w++] = b[r];
-    return w;
+    memmove(b + w, b + r, (size_t)(n - r)); // a cut packet at the end stays
+    return w + (n - r);
 }
 
 typedef struct {
