@@ -60,5 +60,14 @@ class SystemLogs(unittest.TestCase):
             self.assertIn("$logDir = $PSScriptRoot", text, name)
 
 
+
+class AccessScript(unittest.TestCase):
+    def test_only_the_64_bit_access_msi_is_picked(self):
+        # audit #30: the newest "*Virus TI*.msi" could be the 32-bit one, whose Virus Control.dll is refused (E345)
+        with open(os.path.join(HERE, "..", "..", "src", "installer", "tirevive-access.ps1"), encoding="utf-8") as f:
+            text = f.read()
+        self.assertIn("-Filter '*Virus TI*64-bit*.msi'", text)
+        self.assertNotIn("-Filter '*Virus TI*.msi'", text)
+
 if __name__ == "__main__":
     unittest.main()

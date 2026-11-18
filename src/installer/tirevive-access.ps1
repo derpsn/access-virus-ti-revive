@@ -158,9 +158,9 @@ $extracted = $null
 $needed_missing = -not (HaveFiles)
 $look_missing = -not ($optional | Where-Object { Test-Path (Join-Path $target "Common\$_") })
 if ($needed_missing -or $look_missing) {
-    if (-not $Msi) {
+    if (-not $Msi) { # the 64-bit one only, like install.sh: the 32-bit Virus Control.dll is refused (E345, audit #30)
         $dirs = @($SourceDir, (Join-Path $env:USERPROFILE 'Downloads'), (Join-Path $env:USERPROFILE 'Desktop')) | Where-Object { $_ }
-        $Msi = $dirs | ForEach-Object { Get-ChildItem $_ -Filter '*Virus TI*.msi' -ErrorAction SilentlyContinue } |
+        $Msi = $dirs | ForEach-Object { Get-ChildItem $_ -Filter '*Virus TI*64-bit*.msi' -ErrorAction SilentlyContinue } |
             Where-Object Name -NotMatch 'TI Revive' | Sort-Object LastWriteTime -Descending | Select-Object -First 1 -ExpandProperty FullName
     }
     if (-not $Msi -and -not $Quiet -and $needed_missing) {
