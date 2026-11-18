@@ -86,9 +86,17 @@ void MemorySync::feed(const std::vector<uint8_t> &m)
 {
     if (m.size() > 8 && m[0] == 0xF0 && m[1] == 0x00 && m[2] == 0x20 && m[3] == 0x33) {
         std::lock_guard<std::mutex> lk(mu_);
+        if (!waiting_) // the plug-in sees every Access SysEx of a session: keep only what a request waits for
+            return;
         inbox_.push_back(m);
         cv_.notify_all();
     }
+}
+
+size_t MemorySync::queued()
+{
+    std::lock_guard<std::mutex> lk(mu_);
+    return inbox_.size();
 }
 
 Dump MemorySync::transact(const Dump &request, const std::vector<uint8_t> &match, int timeout_ms, int tries)
@@ -96,12 +104,22 @@ Dump MemorySync::transact(const Dump &request, const std::vector<uint8_t> &match
     // one request at a time, also across threads: the readiness probe after a reconnect met a bank sync still
     // running, the Virus answered only the newer request (E145) and the probe waited 10 s (review 2026-10-19)
     std::lock_guard<std::mutex> one(tx_mu_);
+    struct Done { // on every return, after the reply was copied out: stop keeping SysEx, free what is left
+        MemorySync *s;
+        ~Done()
+        {
+            std::lock_guard<std::mutex> lk(s->mu_);
+            s->waiting_ = false;
+            s->inbox_.clear();
+        }
+    } done{this};
     for (int t = 0; t < tries; t++) {
         {
             std::lock_guard<std::mutex> lk(mu_);
             if (cancelled_)
                 return {};
             inbox_.clear();
+            waiting_ = true; // before the send: a fast reply must not be lost
         }
         if (!send_(request))
             return {};

@@ -86,6 +86,24 @@ TEST(memsync_transact_matches_reply)
     CHECK(r.size() == 11 && r[9] == 0x42);
 }
 
+TEST(memsync_keeps_sysex_only_while_a_request_waits)
+{
+    // audit #12: the plug-in sees every Access SysEx of a DAW session; between requests none may pile up
+    MemorySync *ms = nullptr;
+    MemorySync sync([&](const Bytes &) {
+        ms->feed(fake_single(0, 0, 1));
+        return true;
+    });
+    ms = &sync;
+    for (int i = 0; i < 100; i++)
+        sync.feed(fake_single(0, 1, i));
+    CHECK_EQ(sync.queued(), 0u);
+    CHECK_EQ(sync.transact({0xF0, 0x00, 0x20, 0x33, 0x01, 0x10, 0x30, 0x00, 0x00, 0xF7}, {0x10, 0x00, 0x00}, 500, 1)
+                 .size(),
+             524u);
+    CHECK_EQ(sync.queued(), 0u); // the reply leaves with transact, nothing stays behind
+}
+
 TEST(memsync_transact_times_out_without_reply)
 {
     MemorySync sync([](const Bytes &) { return true; });
