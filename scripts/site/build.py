@@ -86,6 +86,11 @@ def load_releases(path):
     return json.loads(out)
 
 
+def published(releases):
+    """the releases the site shows, newest first: no drafts (their published_at is null, the sort crashed on it)"""
+    return sorted((r for r in releases if not r.get("draft")), key=lambda r: r["published_at"], reverse=True)
+
+
 def summary(rel):
     """the part of a release text that is new in that version"""
     tag, body = rel["tag_name"], rel.get("body") or ""
@@ -149,7 +154,7 @@ def asset(rel, suffix):
 
 
 # the installers whose downloads the counter adds up (not the usbinfo script or the libusb source)
-INSTALLERS = ("-setup.exe", ".msi", "-mac.zip", "-linux.tar.gz")
+INSTALLERS = ("-setup.exe", ".msi", "-mac.zip", "-mac-libusb.zip", "-linux.tar.gz")
 
 
 def downloads(releases):
@@ -955,7 +960,7 @@ def main():
     ap.add_argument("--cache", default=os.path.join(ROOT, "site", ".cache"))
     ap.add_argument("--out", default=os.path.join(ROOT, "site", "dist"))
     a = ap.parse_args()
-    releases = sorted(load_releases(a.releases), key=lambda r: r["published_at"], reverse=True)
+    releases = published(load_releases(a.releases))
     latest = next(r for r in releases if not r.get("prerelease") and not r.get("draft"))
     sums = sha256_of_assets(latest, a.cache) if a.checksums else {}
     render(a.out, releases, sums)

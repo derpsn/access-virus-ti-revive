@@ -22,6 +22,16 @@ class Downloads(unittest.TestCase):
               rel("v0.9.0-rc1", [("TI-Revive-0.9.0-mac.zip", 3)], pre=True)]
         self.assertEqual(sitebuild.downloads(rs), 18)
 
+    def test_counts_the_mac_libusb_package(self):  # audit #29
+        rs = [rel("v0.9.0", [("TI-Revive-0.9.0-mac-libusb.zip", 6), ("TI-Revive-0.9.0-mac.zip", 1)])]
+        self.assertEqual(sitebuild.downloads(rs), 7)
+
+    def test_drafts_are_left_out_before_the_sort(self):  # audit #29: a draft has published_at null
+        rs = [{"tag_name": "v0.9.1", "draft": True, "published_at": None},
+              {"tag_name": "v0.9.0", "published_at": "2026-11-01T10:00:00Z"},
+              {"tag_name": "v0.9.1-rc1", "prerelease": True, "published_at": "2026-11-10T10:00:00Z"}]
+        self.assertEqual([r["tag_name"] for r in sitebuild.published(rs)], ["v0.9.1-rc1", "v0.9.0"])
+
     def test_skips_tools_and_sources(self):
         rs = [rel("v0.9.0", [("TI-Revive-0.9.0-mac.zip", 4), ("tirevive-usbinfo.ps1", 50),
                              ("libusb-1.0.30.tar.bz2", 9)])]
