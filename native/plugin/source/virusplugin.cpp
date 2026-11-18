@@ -1342,6 +1342,7 @@ tresult PLUGIN_API VirusPlugin::setActive(TBool state)
         {
             std::lock_guard<std::mutex> lk(state_mu_);
             state_ = default_;
+            state_index_data_ = nullptr; // a new list can reuse the old address with the same size (audit #21)
         }
         state_loaded_ = true;
         apply_state_to_params();
@@ -1555,7 +1556,8 @@ void VirusPlugin::set_part_value(int part, const std::string &path, int value)
     auto msg = dev_.encode(path, value, part < 0 ? 0 : part);
     if (msg.empty() || is_system_clock_global(msg)) // the Virus' report of its rate is not the project's (E445)
         return;
-    // index (path, part) -> record, rebuilt when the record list was replaced or grew (patch / project load); a
+    // index (path, part) -> record, rebuilt when the record list was replaced or grew (patch / project load: those
+    // reset state_index_data_, as a new list of the same size can sit at the old address); a
     // linear decode of all ~240 records per change cost ~45 us - with automation thousands of times per second
     if (state_index_data_ != state_.data() || state_index_size_ != state_.size()) {
         state_index_.clear();
@@ -4973,6 +4975,7 @@ tresult PLUGIN_API VirusPlugin::setState(IBStream *state)
     {
         std::lock_guard<std::mutex> lk(state_mu_);
         state_ = std::move(recs);
+        state_index_data_ = nullptr; // a new list can reuse the old address with the same size (audit #21)
     }
     state_loaded_ = true;
     unlock_all_parts(); // a project brings no locks: the original clears them at every project load (E378)

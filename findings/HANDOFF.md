@@ -5,7 +5,7 @@ NEXT. At most 150 lines; the Stop hook (`.claude/hooks/handoff-check.sh`) refuse
 how goes into the dated log [`log/2026-11.md`](log/2026-11.md) (newest first); older logs are in [`log/`](log/).
 Device/protocol knowledge goes into [`evidence.md`](evidence.md). Update this file in the same commit as the work._
 
-Last update: 2026-11-18: audit fixes 1-20 of 34 done and reviewed (NEXT 5b); rc6 out for #43; #42 option snow-idle-slow (E550, E551); branding cleanup parked (NEXT 8).
+Last update: 2026-11-18: audit fixes 1-21 of 34 done and reviewed (NEXT 5b); rc6 out for #43; #42 option snow-idle-slow (E550, E551); branding cleanup parked (NEXT 8).
 
 ## Where things stand
 
@@ -142,7 +142,7 @@ talk with the user (Linux may start); hil-win on the tuned VM: yes; update check
    our Mac CHECKED (rc3 normal pkg 511b0958): ports as before, Logic reads the right latency (2432 = 1408+512+512),
    no re-announce (E544); diag.off had been set on the Mac, removed. libusb install on our Mac only with the user;
    rc3 released for #37 (user 2026-11-15: post it for him to test, Catalina not testable here).
-5b. AUDIT 2026-11-17 (user: fix every point, update after each): [`audit-2026-11-17.md`](audit-2026-11-17.md), 34 items; one at a time, test first, done only after /ponytail:ponytail-review. DONE 1-20 (fff1a52.., 819 unit + 1 vlatests + 192 script tests; #15 driver script needs a win11 VM MSI run before release, validator 141/141; nothing run on hardware, Mac or DAW yet). NEXT: #21 stale plug-in state index, then 22.. in order.
+5b. AUDIT 2026-11-17 (user: fix every point, update after each): [`audit-2026-11-17.md`](audit-2026-11-17.md), 34 items; one at a time, test first, done only after /ponytail:ponytail-review. DONE 1-21 (fff1a52.., 819 unit + 1 vlatests + 192 script tests; #15 driver script needs a win11 VM MSI run before release, validator 141/141; nothing run on hardware, Mac or DAW yet). NEXT: #22 truncated project drops edits, then 23.. in order.
 6. Linux: DEV build installed (plug-in from a1153d9; release backed up in ~/.vst3-backup/0.8.41-release); Mac: test
    build CI 43696948011 installed; TI2 on the Mac's USB.
 7. Waiting on reporters (table above); check issues only together with the user.
