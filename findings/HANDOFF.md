@@ -29,7 +29,7 @@ Last update: 2026-11-18: repo audit finished, all 34 items fixed (NEXT 5b: what 
 - Test round of 0.8.41: all passed (details in log/2026-11.md, checklist spec scripts/checklists/round-0.8.41.json).
 - Our TI2 Desktop: on **Linux** USB (2026-11-14 evening). User flashed ROM Z on it in early November (E500).
 - Linux: 0.8.41 release installed (plug-in 184badb2, broker 728db830, Control Center 0.8.41).
-- win11 VM: 0.8.41 release installed (/quiet exit 0), shut down. hil-win on the tuned VM 2026-11-15 (E537): run 1
+- win11 VM: CI test build 44255563905 (0.8.42, 632d5df) installed 2026-11-18 (/quiet exit 0), shut down. hil-win on the tuned VM 2026-11-15 (E537): run 1
   4/5 (H1 silent, first session after Virus power-on + attach, audio read hung), run 2 4/5 (H2-1 drift +112 ppm
   only); probe answered every time, notes <= 0.70 ms. TUNED 2026-11-14 (E533): vCPUs pinned to P-cores
   4-7, emulator 2-3, topology 1/2/2, no emulated sound / SPICE USB redirect / balloon, evmcs+avic off, ISOs off;
@@ -142,7 +142,7 @@ talk with the user (Linux may start); hil-win on the tuned VM: yes; update check
    our Mac CHECKED (rc3 normal pkg 511b0958): ports as before, Logic reads the right latency (2432 = 1408+512+512),
    no re-announce (E544); diag.off had been set on the Mac, removed. libusb install on our Mac only with the user;
    rc3 released for #37 (user 2026-11-15: post it for him to test, Catalina not testable here).
-5b. AUDIT 2026-11-17 DONE: all 34 items of [`audit-2026-11-17.md`](audit-2026-11-17.md) fixed and reviewed (fff1a52..31c4380; 824 unit + vlatests + 199 script tests, coverage 95.4 %). Nothing of it run on hardware, Mac, Windows or in a DAW: the test round must cover #15/#28 (MSI on win11: driver.log now in Program Files\TI Revive), #13 #26 #25 #33 (Windows broker/ASIO), #14 #27 (libusb audio, idle exit), #21-#24 (plug-in in a DAW), #32 (bank sync, E552). IN PROGRESS 2026-11-18: CI test build 44255563905 (version 0.8.42; three runs before failed on Windows/GCC 11 test compiles and Windows script tests, fixed) -> win11 VM (running, rc6 installed) /quiet install: check #28 (driver.log in Program Files\TI Revive, readable by a standard user) and #15 (exit code).
+5b. AUDIT 2026-11-17 DONE: all 34 items of [`audit-2026-11-17.md`](audit-2026-11-17.md) fixed and reviewed (fff1a52..632d5df; CI 44255563905 all green). win11 VM 2026-11-18 (log): #28 PASSED (logs in Program Files by SYSTEM, a standard user reads but cannot write or add files, uninstall removes them), #15 success path PASSED (exit 0, oem13.inf recorded; failure path not provoked). Still not run: #13 #25 #26 #33 (Windows broker/ASIO with a Virus), #14 #27 (libusb audio, idle exit), #21-#24 (plug-in in a DAW), #32 (bank sync, E552).
 6. Linux: DEV build installed (plug-in from a1153d9; release backed up in ~/.vst3-backup/0.8.41-release); Mac: test
    build CI 43696948011 installed; TI2 on the Mac's USB.
 7. Waiting on reporters (table above); check issues only together with the user.
