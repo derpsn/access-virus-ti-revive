@@ -1,5 +1,6 @@
 // library.cpp - see library.h.
 #include "library.h"
+#include "model/bankdrop.h"
 #include "device/sendguard.h"
 #include "model/remotedevice.h"
 #include "model/utf8.h"
@@ -276,13 +277,7 @@ bool save_library(const PatchLibrary &lib, std::string &error)
         if (m.size() != 524) // a gap: no patch at this position (the original leaves it out, E298)
             continue;
         m[7] = 1, m[8] = (uint8_t)i;
-        unsigned a = 0;
-        for (int k = 5; k < 265; k++)
-            a += m[k];
-        m[265] = a & 0x7F;
-        for (int k = 265; k < 522; k++)
-            a += m[k];
-        m[522] = a & 0x7F;
+        vti::BankDrop::checksums(m);
         varlen(120);
         trk.push_back(0xF0);
         varlen((uint32_t)m.size() - 1);

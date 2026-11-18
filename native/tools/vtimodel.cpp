@@ -10,6 +10,7 @@
 #include "../src/access/library.h"
 #include "../src/device/memsync.h"
 #include "../src/model/remotedevice.h"
+#include "../src/model/bankdrop.h"
 #include <cstdio>
 #include <cstdlib>
 #include <cstring>
@@ -120,13 +121,7 @@ int main(int argc, char **argv)
                         values[q.path] = v;
         }
         dev.update_dump(*m, msg, values);
-        unsigned a = 0; // checksums
-        for (int i = 5; i < 265; i++)
-            a += msg[i];
-        msg[265] = a & 0x7F;
-        for (int i = 265; i < 522; i++)
-            a += msg[i];
-        msg[522] = a & 0x7F;
+        vti::BankDrop::checksums(msg);
         if (FILE *o = fopen(args[1].c_str(), "wb")) {
             fwrite(msg.data(), 1, msg.size(), o);
             fclose(o);

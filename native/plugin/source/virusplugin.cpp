@@ -1079,13 +1079,7 @@ tresult PLUGIN_API VirusPlugin::initialize(FUnknown *context)
         for (int p = 0; p < 16; p++) {
             auto d = init;
             d[7] = 0, d[8] = (uint8_t)p;
-            unsigned a = 0;
-            for (int i = 5; i < 265; i++)
-                a += d[i];
-            d[265] = a & 0x7F;
-            for (int i = 265; i < 522; i++)
-                a += d[i];
-            d[522] = a & 0x7F;
+            BankDrop::checksums(d);
             default_.push_back(d);
         }
         for (int i = 0; i < 2; i++)
@@ -3766,13 +3760,7 @@ bool VirusPlugin::load_dump(std::vector<uint8_t> d, int part)
     // patch sent at version 9 was converted by the Virus itself, which dropped the location in bytes 11..12
     d[7] = 0, d[8] = (uint8_t)part;
     RemoteDevice::upgrade_single(d);
-    unsigned a = 0;
-    for (int i = 5; i < 265; i++)
-        a += d[i];
-    d[265] = a & 0x7F;
-    for (int i = 265; i < 522; i++)
-        a += d[i];
-    d[522] = a & 0x7F;
+    BankDrop::checksums(d);
     // locked sections keep the part's current values, like the original (E378): merged into this one dump
     if (t_keep_reference == 0)
         end_compare(part); // a load while comparing: the edit stays an undo step
@@ -3817,18 +3805,9 @@ bool VirusPlugin::rename_part(int part, const std::string &name)
             state_ = default_;
         for (auto &r : state_)
             if (is_part_dump(r, part)) {
-                for (int i = 0; i < 10; i++) { // printable ASCII, padded with spaces
-                    char ch = i < (int)name.size() ? name[i] : ' ';
-                    r[249 + i] = (uint8_t)(ch >= 32 && ch < 127 ? ch : ' ');
-                }
-                unsigned a = 0;
-                for (int i = 5; i < 265; i++)
-                    a += r[i];
-                r[265] = a & 0x7F;
-                for (int i = 265; i < 522; i++)
-                    a += r[i];
-                r[522] = a & 0x7F;
-                d = r;
+                auto renamed = BankDrop::renamed(r, name); // empty for a damaged record: that one stays as it is
+                if (!renamed.empty())
+                    d = r = std::move(renamed);
             }
     }
     if (d.empty())
@@ -3854,14 +3833,7 @@ bool VirusPlugin::store_patch(int part, int bank, int program)
     }
     if (d.empty())
         return false;
-    d[7] = (uint8_t)(bank + 1), d[8] = (uint8_t)program; // a dump into RAM bank 1..4 = store
-    unsigned a = 0;
-    for (int i = 5; i < 265; i++)
-        a += d[i];
-    d[265] = a & 0x7F;
-    for (int i = 265; i < 522; i++)
-        a += d[i];
-    d[522] = a & 0x7F;
+    BankDrop::address(d, bank, program); // a dump into RAM bank 1..4 = store
     if (!backup_ram({{bank, program, d}}))
         return false;
     if (out_)

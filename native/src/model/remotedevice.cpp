@@ -1,5 +1,6 @@
 // remotedevice.cpp - see remotedevice.h. Format notes: docs/formats.md.
 #include "remotedevice.h"
+#include "bankdrop.h"
 #include <algorithm>
 #include <cstdio>
 #include <cstring>
@@ -456,16 +457,6 @@ void to_v12(uint8_t *p)
         memcpy(p + off::ENVELOPES_3_4 + 5 * e, env, 5);
 }
 
-void single_checksums(std::vector<uint8_t> &m)
-{
-    unsigned sum = 0;
-    for (int i = 5; i < 265; i++)
-        sum += m[i];
-    m[265] = sum & 0x7F;
-    for (int i = 265; i < 522; i++)
-        sum += m[i];
-    m[522] = sum & 0x7F;
-}
 } // namespace
 
 bool RemoteDevice::upgrade_single(std::vector<uint8_t> &m, const std::vector<uint8_t> &page_b)
@@ -500,7 +491,7 @@ bool RemoteDevice::upgrade_single(std::vector<uint8_t> &m, const std::vector<uin
     }
     if (v != from)
         p[off::VERSION] = (uint8_t)v;
-    single_checksums(m);
+    BankDrop::checksums(m);
     return v != from;
 }
 
