@@ -385,7 +385,14 @@ std::vector<float> AccessFiles::osc_waves() const
 
 std::vector<uint8_t> AccessFiles::init_single() const { return find_dump(0x10, 524, 249, " -Init-"); }
 
-std::vector<uint8_t> AccessFiles::default_page_b() const
+const std::vector<uint8_t> &AccessFiles::default_page_b() const
+{
+    // the search reads the whole plug-in binary (~15 MB): once per AccessFiles, not before every RAM write (audit #18)
+    std::call_once(page_b_once_, [this] { page_b_ = find_page_b(); });
+    return page_b_;
+}
+
+std::vector<uint8_t> AccessFiles::find_page_b() const
 {
     std::vector<uint8_t> bin;
     size_t off = 0;
