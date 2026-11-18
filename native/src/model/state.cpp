@@ -70,6 +70,13 @@ bool is_part_dump(const std::vector<uint8_t> &m, int part)
     return m.size() == 524 && m[0] == 0xF0 && m[6] == 0x10 && m[7] == 0x00 && m[8] == part;
 }
 
+void keep_unset_values(std::map<int, std::map<std::string, int>> &next,
+                       const std::map<int, std::map<std::string, int>> &prev)
+{
+    for (auto &[part, values] : prev)
+        next[part].insert(values.begin(), values.end()); // insert keeps what `next` already has
+}
+
 int add_missing_part_dumps(std::vector<std::vector<uint8_t>> &recs, const std::vector<std::vector<uint8_t>> &defaults)
 {
     int added = 0;

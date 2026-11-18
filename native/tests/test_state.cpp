@@ -154,3 +154,16 @@ TEST(state_missing_part_dumps_come_from_the_default)
     }
     CHECK_EQ(add_missing_part_dumps(recs, defaults), 0); // complete: nothing added
 }
+
+TEST(state_values_the_state_lacks_are_kept)
+{
+    // audit #24: a patch load rebuilt every value from the state; the System Clock the Virus reported (never in the
+    // state, E445) went back to its default on screen
+    std::map<int, std::map<std::string, int>> prev = {{-1, {{"Global/Clock", 2}, {"Global/Tempo", 90}}},
+                                                       {0, {{"Osc/Shape", 10}}}};
+    std::map<int, std::map<std::string, int>> next = {{-1, {{"Global/Tempo", 120}}}, {0, {{"Osc/Shape", 64}}}};
+    keep_unset_values(next, prev);
+    CHECK_EQ(next[-1]["Global/Clock"], 2);  // not in the state: kept
+    CHECK_EQ(next[-1]["Global/Tempo"], 120); // in the state: the state wins
+    CHECK_EQ(next[0]["Osc/Shape"], 64);
+}

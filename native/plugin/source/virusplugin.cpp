@@ -4888,6 +4888,7 @@ void VirusPlugin::apply_state_to_params(int stored)
     }
     {
         std::lock_guard<std::mutex> lk(values_mu_);
+        keep_unset_values(parts, part_values_);
         part_values_ = parts;
         if (stored == STORED_ALL)
             stored_values_ = parts;
