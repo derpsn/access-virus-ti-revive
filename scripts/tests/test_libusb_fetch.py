@@ -5,6 +5,7 @@ import hashlib
 import os
 import subprocess
 import tempfile
+import sys
 import unittest
 
 HERE = os.path.dirname(os.path.abspath(__file__))
@@ -18,6 +19,7 @@ def verify(path, sha=None):
                           capture_output=True, text=True).returncode
 
 
+@unittest.skipIf(sys.platform == "win32", "bash script of the Linux and Mac release builds, not used on Windows")
 class LibusbFetch(unittest.TestCase):
     def test_pinned_version_and_hash(self):
         out = subprocess.run(["bash", "-c", '. "$1"; echo "$LIBUSB_VER $LIBUSB_SHA256"', "bash", LIBUSB],

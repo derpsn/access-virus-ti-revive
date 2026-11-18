@@ -8,6 +8,7 @@ import shutil
 import stat
 import subprocess
 import tempfile
+import sys
 import unittest
 
 HERE = os.path.dirname(os.path.abspath(__file__))
@@ -40,6 +41,7 @@ def run(console_user, libusb):
         shutil.rmtree(d)
 
 
+@unittest.skipIf(sys.platform == "win32", "the Mac package scripts, not used on Windows")
 class MacPostinstall(unittest.TestCase):
     def test_libusb_package_without_a_console_user_stops(self):
         code, out = run("root", libusb=True)
