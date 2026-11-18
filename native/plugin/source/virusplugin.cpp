@@ -4111,7 +4111,10 @@ void VirusPlugin::editor_closed()
     ui_drag_end(); // closed in the middle of a drag: its gesture ends
     if (--editors_open_ <= 0) {
         editors_open_ = 0;
-        gestures_.flush([this](uint32_t id) { endEdit(id); });
+        // our own gesture timer keeps ticking without an editor: it still hands the last Virus knob move to the host
+        // and ends the edit; a flush here dropped that value (Latch ended early, audit #23)
+        if (!gesture_timer_running())
+            gestures_.flush([this](uint32_t id) { endEdit(id); });
     }
 }
 
