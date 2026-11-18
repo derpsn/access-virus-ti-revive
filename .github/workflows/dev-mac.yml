@@ -4,6 +4,8 @@
 name: dev-mac
 on:
   workflow_dispatch:
+permissions: # builds and uploads an artifact, nothing else (audit #34)
+  contents: read
 jobs:
   mac:
     runs-on: macos-15
@@ -32,7 +34,9 @@ jobs:
           auval -v aumu VTIr TIRv || echo "auval failed (the runner has no Access files and no Virus)"
           auval -v aumu VTIs TIRv || echo "auval (Snow) failed (the runner has no Access files and no Virus)"
       - name: Mac package (as the release builds it)
-        run: bash scripts/mac-build-release.sh "$PWD" 0.8.18-dev "$PWD/out"
+        run: | # the round's version from the CMake project (it was written in here and stayed at 0.8.18, audit #34)
+          V=$(sed -n 's/^project(virus-ti-native VERSION \([0-9.]*\).*/\1/p' native/CMakeLists.txt)
+          bash scripts/mac-build-release.sh "$PWD" "$V-dev" "$PWD/out"
       - name: Collect
         run: |
           mkdir dev && cp -R "build-native/AU/Release/TI Revive Virus Control.component" \

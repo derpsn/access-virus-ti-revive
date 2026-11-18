@@ -30,6 +30,15 @@ class Workflows(unittest.TestCase):
                 self.assertIn("-RequiredVersion", line, where)
                 self.assertNotIn("-MinimumVersion", line, where)
 
+    def test_every_workflow_limits_its_token(self):  # audit #34
+        for path in WORKFLOWS:
+            with open(path, encoding="utf-8") as f:
+                self.assertRegex(f.read(), r"(?m)^permissions:", os.path.basename(path))
+
+    def test_no_version_written_into_a_workflow(self):  # audit #34: dev-mac built "0.8.18-dev" for months
+        for where, line in lines():
+            self.assertNotRegex(line, r"\b\d+\.\d+\.\d+-dev\b", where)
+
 
 if __name__ == "__main__":
     unittest.main()
