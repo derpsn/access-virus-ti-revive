@@ -7,16 +7,19 @@
 #include "vtikeyport.h"
 #include "midifeed.h"
 #include "vticore.h"
+#include "devslot.h"
 #include <windows.h>
 #include <stdio.h>
 #include <wchar.h>
 
 static HANDLE g_pipe = INVALID_HANDLE_VALUE; // the helper's standard input
 static volatile LONG g_sent[2], g_failed[2];  // [0] "Virus TI MIDI" (cable 0), [1] "Virus TI Synth" (cable 1)
-static const char *const g_name[2] = {"Virus TI MIDI", "Virus TI Synth"};
+static char g_name[2][32] = {"Virus TI MIDI", "Virus TI Synth"}; // Virus N of several: "Virus TI N MIDI" (#45)
 
 void vti_keyport_start(void)
 {
+    vti_slot_port_name(g_name[0], sizeof g_name[0], "MIDI", vti_slot);
+    vti_slot_port_name(g_name[1], sizeof g_name[1], "Synth", vti_slot);
     wchar_t path[MAX_PATH];
     DWORD n = GetModuleFileNameW(NULL, path, MAX_PATH);
     if (n == 0 || n >= MAX_PATH)
@@ -48,8 +51,11 @@ void vti_keyport_start(void)
     si.hStdOutput = nul;
     si.hStdError = nul;
     PROCESS_INFORMATION pi;
-    wchar_t cmd[MAX_PATH + 4];
-    swprintf(cmd, MAX_PATH + 4, L"\"%ls\"", path);
+    wchar_t cmd[MAX_PATH + 16];
+    if (vti_slot > 1) // the helper names its ports and log for Virus N
+        swprintf(cmd, MAX_PATH + 16, L"\"%ls\" -slot %d", path, vti_slot);
+    else
+        swprintf(cmd, MAX_PATH + 16, L"\"%ls\"", path);
     const BOOL ok = CreateProcessW(path, cmd, NULL, NULL, TRUE, CREATE_NO_WINDOW, NULL, NULL, &si, &pi);
     const DWORD err = GetLastError();
     CloseHandle(rd);
@@ -63,8 +69,10 @@ void vti_keyport_start(void)
     CloseHandle(pi.hThread);
     CloseHandle(pi.hProcess);
     g_pipe = wr;
-    vti_log("MIDI ports: helper started (\"Virus TI MIDI\", \"Virus TI Synth\", read-only; its log: "
-            "%%TEMP%%\\tirevive-midiports.log)\n");
+    char sfx[4];
+    vti_slot_suffix(sfx, vti_slot);
+    vti_log("MIDI ports: helper started (\"%s\", \"%s\", read-only; its log: %%TEMP%%\\tirevive-midiports%s.log)\n",
+            g_name[0], g_name[1], sfx);
 }
 
 // the pipe is non-blocking (PIPE_NOWAIT): WriteFile may take part of a frame or nothing; -1 on an error

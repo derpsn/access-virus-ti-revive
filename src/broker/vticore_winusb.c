@@ -9,6 +9,7 @@
 #include "vtireaderr.h"
 #include "linkrule.h" // link at open, unlink at close like the original driver (E524)
 #include "idlepace.h" // vti_drop_idle: the Snow's idle packets on bulk EP 0x85 (E387)
+#include "winslot.h" // which Virus when several are connected (#45)
 #include <stdio.h>
 #include <stdlib.h>
 
@@ -32,36 +33,26 @@ struct vti {
 
 static int open_iface(const GUID *g, iface *out)
 {
-    HDEVINFO di = SetupDiGetClassDevsW(g, NULL, NULL, DIGCF_PRESENT | DIGCF_DEVICEINTERFACE);
-    if (di == INVALID_HANDLE_VALUE)
+    wchar_t *path = winslot_path(g, vti_slot); // the interface of this broker's Virus (#45)
+    if (!path)
         return -1;
-    SP_DEVICE_INTERFACE_DATA id = {.cbSize = sizeof id};
     int ok = -1;
-    if (SetupDiEnumDeviceInterfaces(di, NULL, g, 0, &id)) {
-        DWORD need = 0;
-        SetupDiGetDeviceInterfaceDetailW(di, &id, NULL, 0, &need, NULL);
-        SP_DEVICE_INTERFACE_DETAIL_DATA_W *d = malloc(need);
-        d->cbSize = sizeof *d;
-        if (SetupDiGetDeviceInterfaceDetailW(di, &id, d, need, NULL, NULL)) {
-            out->file = CreateFileW(d->DevicePath, GENERIC_READ | GENERIC_WRITE, FILE_SHARE_READ | FILE_SHARE_WRITE,
-                                    NULL, OPEN_EXISTING, FILE_ATTRIBUTE_NORMAL | FILE_FLAG_OVERLAPPED, NULL);
-            if (out->file != INVALID_HANDLE_VALUE && WinUsb_Initialize(out->file, &out->usb)) {
-                ok = 0;
-                // Writes must never block forever (a stuck device hung the DAW, E042): 1 s on both OUT pipes.
-                ULONG t = 1000;
-                WinUsb_SetPipePolicy(out->usb, VTI_EP_MI03_OUT, PIPE_TRANSFER_TIMEOUT, sizeof t, &t);
-                WinUsb_SetPipePolicy(out->usb, VTI_EP_MI04_OUT, PIPE_TRANSFER_TIMEOUT, sizeof t, &t);
-                // Clear halts left by aborted transfers of a previous client (reads failed with error 31).
-                static const uint8_t eps[] = {VTI_EP_MI03_OUT, VTI_EP_MI03_IN, VTI_EP_MI04_OUT, VTI_EP_MI04_IN};
-                for (size_t i = 0; i < sizeof eps; i++)
-                    WinUsb_ResetPipe(out->usb, eps[i]);
-            }
-            else
-                vti_log("vti: open %ls failed: %lu\n", d->DevicePath, GetLastError());
-        }
-        free(d);
+    out->file = CreateFileW(path, GENERIC_READ | GENERIC_WRITE, FILE_SHARE_READ | FILE_SHARE_WRITE, NULL, OPEN_EXISTING,
+                            FILE_ATTRIBUTE_NORMAL | FILE_FLAG_OVERLAPPED, NULL);
+    if (out->file != INVALID_HANDLE_VALUE && WinUsb_Initialize(out->file, &out->usb)) {
+        ok = 0;
+        // Writes must never block forever (a stuck device hung the DAW, E042): 1 s on both OUT pipes.
+        ULONG t = 1000;
+        WinUsb_SetPipePolicy(out->usb, VTI_EP_MI03_OUT, PIPE_TRANSFER_TIMEOUT, sizeof t, &t);
+        WinUsb_SetPipePolicy(out->usb, VTI_EP_MI04_OUT, PIPE_TRANSFER_TIMEOUT, sizeof t, &t);
+        // Clear halts left by aborted transfers of a previous client (reads failed with error 31).
+        static const uint8_t eps[] = {VTI_EP_MI03_OUT, VTI_EP_MI03_IN, VTI_EP_MI04_OUT, VTI_EP_MI04_IN};
+        for (size_t i = 0; i < sizeof eps; i++)
+            WinUsb_ResetPipe(out->usb, eps[i]);
     }
-    SetupDiDestroyDeviceInfoList(di);
+    else
+        vti_log("vti: open %ls failed: %lu\n", path, GetLastError());
+    free(path);
     return ok;
 }
 

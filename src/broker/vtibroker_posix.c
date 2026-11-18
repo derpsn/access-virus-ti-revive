@@ -7,7 +7,8 @@
 // function on libusb (vtiusbaudio_libusb.c) into POSIX shared memory (vtiaudioshm.h), with VTIMSG_AUDIO_TICK to
 // the audio client per block, see findings/design-linux.md.
 //
-// usage: vtibroker [-v] [-stay]     socket: /tmp/vtibroker-<uid>.sock (VTI_SOCK_FMT)
+// usage: vtibroker [-v] [-stay] [-slot N]   socket: /tmp/vtibroker-<uid>.sock (VTI_SOCK_FMT); Virus N > 1 (several
+// connected, devslot.h, #45): /tmp/vtibroker-<uid>-N.sock, its own audio memory
 #include "vticore.h"
 #include "vtiproto.h"
 #include "brokerinfo.h"
@@ -16,6 +17,7 @@
 #include "owner.h"
 #include "trafficring.h"
 #include "keyport.h"
+#include "devslot.h" // one broker per Virus when several are connected (#45)
 #include "linkrule.h"
 #include "ratelever.h"
 #include <errno.h>
@@ -59,7 +61,7 @@
 static unsigned g_owner_uid; // the user served: getuid(), or SUDO_UID for the sudo broker (owneruid.h)
 static int g_usb_audio = 1;  // macOS: only with VTI_LIBUSB_AUDIO=1 (main)
 
-#define VTI_SOCK_FMT "/tmp/vtibroker-%u.sock"
+#define VTI_SOCK_FMT "/tmp/vtibroker-%u%s.sock" // uid, slot suffix (devslot.h)
 #ifdef MSG_NOSIGNAL
 #define MSG_NOSIGNAL_OR_ZERO MSG_NOSIGNAL
 #else
@@ -596,7 +598,9 @@ static int shm_create(void)
     if (g_shm)
         return 0;
     char name[64];
-    snprintf(name, sizeof name, VTI_AUDIO_SHM_LINUX, g_owner_uid);
+    char sfx[4];
+    vti_slot_suffix(sfx, vti_slot);
+    snprintf(name, sizeof name, VTI_AUDIO_SHM_LINUX "%s", g_owner_uid, sfx); // per Virus (#45)
     // the sudo broker (E511): the ring must belong to the user it serves (the plug-in checks that, audioin.cpp), and
     // macOS refuses fchown on POSIX shared memory (EINVAL, first Mac test) - so it is made as that user, after a
     // stale one (root's from that test; macOS also sizes a shm object only once) is removed
@@ -1328,6 +1332,10 @@ int main(int argc, char **argv)
     for (int i = 1; i < argc; i++) {
         g_verbose += !strcmp(argv[i], "-v") + 2 * !strcmp(argv[i], "-vv");
         g_stay |= !strcmp(argv[i], "-stay");
+        if (!strcmp(argv[i], "-slot") && i + 1 < argc && !(vti_slot = vti_slot_parse(argv[++i]))) {
+            fprintf(stderr, "vtibroker: -slot takes 1 to %d\n", VTI_SLOTS_MAX);
+            return 2;
+        }
     }
     signal(SIGPIPE, SIG_IGN);
     clock_gettime(CLOCK_MONOTONIC, &g_t0);
@@ -1359,7 +1367,9 @@ int main(int argc, char **argv)
     // the macOS test of the broker's own audio (E511): root (Apple's driver lets only root take the Virus) and asked for
     g_usb_audio = geteuid() == 0 && getenv("VTI_LIBUSB_AUDIO") && atoi(getenv("VTI_LIBUSB_AUDIO")) == 1;
 #endif
-    snprintf(sa.sun_path, sizeof sa.sun_path, VTI_SOCK_FMT, g_owner_uid);
+    char sfx[4];
+    vti_slot_suffix(sfx, vti_slot);
+    snprintf(sa.sun_path, sizeof sa.sun_path, VTI_SOCK_FMT, g_owner_uid, sfx);
     int s = -1;
 #ifdef __APPLE__
     // Started by launchd socket activation (LaunchAgent with a "Listeners" socket, scripts/mac-install-broker.sh):

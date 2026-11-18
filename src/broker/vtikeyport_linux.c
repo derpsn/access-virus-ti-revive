@@ -6,6 +6,7 @@
 #include "vtikeyport.h"
 #include "seqevent.h"
 #include "vticore.h"
+#include "devslot.h"
 #include <errno.h>
 #include <fcntl.h>
 #include <stdatomic.h>
@@ -20,7 +21,7 @@
 static atomic_int g_fd = -1;
 static atomic_uint g_sent[2], g_failed[2]; // for the log: did the messages get as far as the sequencer
 static atomic_int g_made[2];
-static const char *const g_name[2] = {"Virus TI MIDI", "Virus TI Synth"};
+static char g_name[2][32] = {"Virus TI MIDI", "Virus TI Synth"}; // Virus N of several: "Virus TI N MIDI" (#45)
 
 static int make_port(int fd, int client, int port)
 {
@@ -43,6 +44,8 @@ static int make_port(int fd, int client, int port)
 // Quick (no server to wait for, unlike CoreMIDI): runs on the broker's start-up path
 void vti_keyport_start(void)
 {
+    vti_slot_port_name(g_name[0], sizeof g_name[0], "MIDI", vti_slot);
+    vti_slot_port_name(g_name[1], sizeof g_name[1], "Synth", vti_slot);
     // non-blocking: the USB reader thread writes, and a full sequencer pool must cost a message, never a stall
     const int fd = open("/dev/snd/seq", O_WRONLY | O_NONBLOCK | O_CLOEXEC);
     if (fd < 0) {
@@ -59,7 +62,7 @@ void vti_keyport_start(void)
     }
     ci.client = client;
     if (ioctl(fd, SNDRV_SEQ_IOCTL_GET_CLIENT_INFO, &ci) == 0) {
-        snprintf(ci.name, sizeof ci.name, "Virus TI");
+        vti_slot_port_name(ci.name, sizeof ci.name, "", vti_slot);
         if (ioctl(fd, SNDRV_SEQ_IOCTL_SET_CLIENT_INFO, &ci) < 0) // the ports still work under the default name
             vti_log("MIDI port: client name not set (%s)\n", strerror(errno));
     }

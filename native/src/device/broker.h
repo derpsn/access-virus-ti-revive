@@ -45,6 +45,10 @@ public:
     // POSIX: another socket path instead of /tmp/vtibroker-<uid>.sock (unit tests with a fake broker); "" = the
     // broker's own. Set before open(); only code sets it, never the environment.
     void set_endpoint(const std::string &path) { endpoint_ = path; }
+    // which Virus when several are connected (src/broker/devslot.h, #45): broker N serves the N-th one, on its own
+    // pipe/socket ("-N" appended; slot 1 = today's names). Set before open().
+    void set_slot(int slot) { slot_ = slot; }
+    int slot() const { return slot_; }
     // Become a read-only observer (after open): the broker refuses our writes and sends a copy of the traffic,
     // its log lines and a status line once a second to `h`. False if the broker does not confirm (older than
     // protocol 4: it would have kept us as the owner of the Virus, so the connection is closed).
@@ -102,6 +106,7 @@ private:
     std::vector<uint8_t> flash_;
     uint32_t observe_reply_ = 0;
     std::string name_, endpoint_, broker_version_;
+    int slot_ = 1;
     mutable std::mutex info_mu_;
     ObserveHandler observe_;
     std::thread reader_;

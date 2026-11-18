@@ -9,7 +9,8 @@
 // and streams it on WinUSB (vtiusbaudio.c) into the shared input ring of vtiaudioshm.h, signalling every audio
 // client's event per block, like VirusUSB.sys filled each client's mapped AudioSM.
 //
-// usage: vtibroker.exe [-v]      (-v: log every message; log file %TEMP%\vtibroker.log)
+// usage: vtibroker.exe [-v] [-slot N]  (-v: log every message; log file %TEMP%\vtibroker.log; Virus N > 1 of several
+// (devslot.h, #45): pipe, mutex, audio memory and log with "-N")
 #include "vticore.h"
 #include "vtiproto.h"
 #include "brokerinfo.h"
@@ -25,6 +26,7 @@
 #include "linkrule.h"
 #include "keyport.h"
 #include "vtikeyport.h"
+#include "devslot.h" // one broker per Virus when several are connected (#45)
 #include <windows.h>
 #include <stdarg.h>
 #include <stdio.h>
@@ -185,6 +187,7 @@ static DWORD WINAPI audio_thread(LPVOID unused)
     g_shm->out_read = g_shm->out_write; // nothing stale from a previous stream
     g_out_playing = 0;
     vua_set_out(audio_out, NULL);
+    vua_set_slot(vti_slot);
     int r = vua_run(&g_audio_running, audio_in, NULL, blog);
     g_shm->streaming = 0;
     if (g_out_frames)
@@ -853,7 +856,13 @@ int main(int argc, char **argv)
     for (int i = 1; i < argc; i++) {
         g_verbose |= !strcmp(argv[i], "-v");
         g_stay |= !strcmp(argv[i], "-stay");
+        if (!strcmp(argv[i], "-slot") && i + 1 < argc && !(vti_slot = vti_slot_parse(argv[++i]))) {
+            fprintf(stderr, "vtibroker: -slot takes 1 to %d\n", VTI_SLOTS_MAX);
+            return 2;
+        }
     }
+    char sfx[4], name[64];
+    vti_slot_suffix(sfx, vti_slot);
     g_t0 = GetTickCount64();
     InitializeCriticalSection(&g_cs_log);
     InitializeCriticalSection(&g_cs_dev);
@@ -864,19 +873,20 @@ int main(int argc, char **argv)
     InitializeCriticalSection(&g_cs_audio_ctl);
     char path[MAX_PATH + 32], tmp[MAX_PATH];
     GetTempPathA(sizeof tmp, tmp);
-    snprintf(path, sizeof path, "%svtibroker.log", tmp);
+    snprintf(path, sizeof path, "%svtibroker%s.log", tmp, sfx);
     g_log = CreateFileA(path, FILE_APPEND_DATA, FILE_SHARE_READ, NULL, OPEN_ALWAYS, 0, NULL);
     setvbuf(stdout, NULL, _IONBF, 0);
     // Single instance per session.
-    HANDLE mtx = CreateMutexA(NULL, TRUE, "Local\\vtibroker");
+    snprintf(name, sizeof name, "Local\\vtibroker%s", sfx); // single instance per session and Virus
+    HANDLE mtx = CreateMutexA(NULL, TRUE, name);
     if (GetLastError() == ERROR_ALREADY_EXISTS) {
         blog("another vtibroker is running, exiting");
         return 0;
     }
     (void)mtx;
     vti_log = on_vti_log;
-    HANDLE map = CreateFileMappingA(INVALID_HANDLE_VALUE, NULL, PAGE_READWRITE, 0, sizeof(vti_audio_shm),
-                                    VTI_AUDIO_SHM_NAME);
+    snprintf(name, sizeof name, VTI_AUDIO_SHM_NAME "%s", sfx);
+    HANDLE map = CreateFileMappingA(INVALID_HANDLE_VALUE, NULL, PAGE_READWRITE, 0, sizeof(vti_audio_shm), name);
     g_shm = map ? MapViewOfFile(map, FILE_MAP_ALL_ACCESS, 0, 0, sizeof(vti_audio_shm)) : NULL;
     if (!g_shm) {
         blog("audio shared memory failed (%lu)", GetLastError());
@@ -888,12 +898,17 @@ int main(int argc, char **argv)
     g_shm->in_ch = VTI_AUDIO_IN_CH;
     g_shm->out_ch = VTI_AUDIO_OUT_CH;
     g_shm->ring_frames = VTI_AUDIO_RING;
-    blog("vtibroker starting (protocol %d)", VTI_PROTO_VERSION);
+    if (vti_slot > 1)
+        blog("vtibroker starting (protocol %d, Virus %d)", VTI_PROTO_VERSION, vti_slot);
+    else
+        blog("vtibroker starting (protocol %d)", VTI_PROTO_VERSION);
     if (!getenv("VTI_NO_MIDI_PORT")) // as on macOS and Linux: a test switch; the ports are read-only
         vti_keyport_start();
     CloseHandle(CreateThread(NULL, 0, device_thread, NULL, 0, NULL));
+    char pipe[64];
+    snprintf(pipe, sizeof pipe, VTI_PIPE_NAME "%s", sfx);
     for (;;) {
-        HANDLE p = CreateNamedPipeA(VTI_PIPE_NAME, PIPE_ACCESS_DUPLEX | FILE_FLAG_OVERLAPPED,
+        HANDLE p = CreateNamedPipeA(pipe, PIPE_ACCESS_DUPLEX | FILE_FLAG_OVERLAPPED,
                                     PIPE_TYPE_BYTE | PIPE_READMODE_BYTE | PIPE_WAIT, PIPE_UNLIMITED_INSTANCES, 65536,
                                     65536, 0, NULL);
         if (p == INVALID_HANDLE_VALUE) {

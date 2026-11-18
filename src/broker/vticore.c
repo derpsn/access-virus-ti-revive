@@ -10,6 +10,7 @@
 #include "linkrule.h"   // link at open, unlink at close like the original driver (E524)
 #include "rxqueue.h"   // 8 reads pending per MIDI endpoint, the callback only queues (E521)
 #include "idlepace.h"  // the Snow's idle reads on EP 0x85 paced to 1 ms (#42, E547)
+#include "devslot.h"   // which Virus when several are connected (#45)
 #include <errno.h>
 #include <sys/time.h>
 #include <unistd.h>     // usleep
@@ -26,7 +27,9 @@ static int gb_reset(void *h) { return libusb_reset_device((libusb_device_handle 
 static int reset_allowed(void)
 {
     char path[64];
-    snprintf(path, sizeof path, "/tmp/tirevive-usbreset-%u", (unsigned)getuid());
+    char sfx[4];
+    vti_slot_suffix(sfx, vti_slot);
+    snprintf(path, sizeof path, "/tmp/tirevive-usbreset-%u%s", (unsigned)getuid(), sfx); // per Virus (#45)
     return vti_reset_guard(path, time(NULL), RESET_GAP_S);
 }
 #endif
@@ -411,6 +414,42 @@ static void rx_stop(vti *v)
         }
 }
 
+// the Virus of vti_slot: every 133e:0815 device keyed by bus and port path ("1-2.3"), the slot-th in key order (#45)
+static libusb_device_handle *open_slot(libusb_context *ctx)
+{
+    libusb_device **list;
+    const ssize_t n = libusb_get_device_list(ctx, &list);
+    if (n < 0)
+        return NULL;
+    char keys[VTI_SLOTS_MAX * 4][40]; // bus + up to 7 ports, 4 chars each
+    const char *kp[VTI_SLOTS_MAX * 4];
+    libusb_device *devs[VTI_SLOTS_MAX * 4];
+    int found = 0;
+    for (ssize_t i = 0; i < n && found < VTI_SLOTS_MAX * 4; i++) {
+        struct libusb_device_descriptor d;
+        if (libusb_get_device_descriptor(list[i], &d) || d.idVendor != VTI_VID || d.idProduct != VTI_PID)
+            continue;
+        uint8_t path[8];
+        const int np = libusb_get_port_numbers(list[i], path, sizeof path);
+        int o = snprintf(keys[found], sizeof keys[found], "%03u-", libusb_get_bus_number(list[i]));
+        for (int k = 0; k < np && o < (int)sizeof keys[found] - 4; k++)
+            o += snprintf(keys[found] + o, sizeof keys[found] - (size_t)o, k ? ".%03u" : "%03u", path[k]);
+        kp[found] = keys[found];
+        devs[found++] = list[i];
+    }
+    const int pick = vti_slot_pick(kp, found, vti_slot);
+    libusb_device_handle *h = NULL;
+    if (pick >= 0) {
+        const int r = libusb_open(devs[pick], &h);
+        if (r)
+            vti_log("vti: open Virus %d (USB %s): %s\n", vti_slot, kp[pick], libusb_error_name(r));
+        else if (found > 1)
+            vti_log("vti: %d Viruses connected, this broker has Virus %d (USB %s)\n", found, vti_slot, kp[pick]);
+    }
+    libusb_free_device_list(list, 1);
+    return h;
+}
+
 vti *vti_open(vti_rx_cb cb, void *user)
 {
     vti *v = calloc(1, sizeof *v);
@@ -422,9 +461,12 @@ vti *vti_open(vti_rx_cb cb, void *user)
         free(v);
         return NULL;
     }
-    v->h = libusb_open_device_with_vid_pid(v->ctx, VTI_VID, VTI_PID);
+    v->h = open_slot(v->ctx);
     if (!v->h) {
-        vti_log("vti: Virus TI %04x:%04x not found or no access\n", VTI_VID, VTI_PID);
+        if (vti_slot > 1)
+            vti_log("vti: Virus %d (%04x:%04x) not found or no access\n", vti_slot, VTI_VID, VTI_PID);
+        else
+            vti_log("vti: Virus TI %04x:%04x not found or no access\n", VTI_VID, VTI_PID);
         goto fail;
     }
     libusb_set_auto_detach_kernel_driver(v->h, 1);
@@ -628,7 +670,9 @@ void vti_libusb(vti *v, struct libusb_context **ctx, struct libusb_device_handle
 int vti_reenumerate(vti *v)
 {
     char path[64];
-    snprintf(path, sizeof path, "/tmp/tirevive-reenum-%u", (unsigned)getuid());
+    char sfx[4];
+    vti_slot_suffix(sfx, vti_slot);
+    snprintf(path, sizeof path, "/tmp/tirevive-reenum-%u%s", (unsigned)getuid(), sfx); // per Virus (#45)
     if (!v || !vti_reset_guard(path, time(NULL), REENUM_GAP_S))
         return -2;
     return libusb_reset_device(v->h);

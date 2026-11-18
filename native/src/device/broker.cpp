@@ -3,6 +3,9 @@
 extern "C" {
 #include "owneruid.h"
 #include "vtiproto.h"
+extern "C" {
+#include "devslot.h"
+}
 }
 #include <algorithm>
 #include <cerrno>
@@ -81,12 +84,14 @@ static bool broker_path(std::wstring &path)
 
 // the broker is not started at logon: the first client that finds no pipe starts it, detached from the DAW (a DAW
 // may run plug-ins in a job object that is killed with it); it exits by itself when idle
-static bool start_broker()
+static bool start_broker(int slot)
 {
     std::wstring path;
     if (!broker_path(path))
         return false;
     std::wstring cmd = L"\"" + path + L"\"";
+    if (slot > 1)
+        cmd += L" -slot " + std::to_wstring(slot);
     STARTUPINFOW si{};
     si.cb = sizeof si;
     PROCESS_INFORMATION pi{};
@@ -100,21 +105,24 @@ static bool start_broker()
     return true;
 }
 
-static intptr_t os_connect(const std::string &endpoint, std::string &error)
+static intptr_t os_connect(const std::string &endpoint, int slot, std::string &error)
 {
     (void)endpoint; // the broker's named pipe only
+    char sfx[4];
+    vti_slot_suffix(sfx, slot);
+    const std::string pipe = std::string(VTI_PIPE_NAME) + sfx;
     HANDLE h = INVALID_HANDLE_VALUE;
     bool started = false;
     for (int i = 0; i < 40 && h == INVALID_HANDLE_VALUE; i++) { // up to ~4 s for a starting or busy broker
-        h = CreateFileA(VTI_PIPE_NAME, GENERIC_READ | GENERIC_WRITE, 0, nullptr, OPEN_EXISTING, FILE_FLAG_OVERLAPPED,
+        h = CreateFileA(pipe.c_str(), GENERIC_READ | GENERIC_WRITE, 0, nullptr, OPEN_EXISTING, FILE_FLAG_OVERLAPPED,
                         nullptr);
         if (h != INVALID_HANDLE_VALUE)
             break;
         DWORD e = GetLastError();
         if (e == ERROR_PIPE_BUSY)
-            WaitNamedPipeA(VTI_PIPE_NAME, 100);
+            WaitNamedPipeA(pipe.c_str(), 100);
         else if (e == ERROR_FILE_NOT_FOUND && !started) {
-            if (!(started = start_broker())) {
+            if (!(started = start_broker(slot))) {
                 error = "vtibroker.exe not found (TI Revive not installed?)";
                 return -1;
             }
@@ -125,7 +133,7 @@ static intptr_t os_connect(const std::string &endpoint, std::string &error)
             break;
     }
     if (h == INVALID_HANDLE_VALUE) {
-        error = "cannot connect to the TI Revive broker (" VTI_PIPE_NAME ", error " + std::to_string(GetLastError()) + ")";
+        error = "cannot connect to the TI Revive broker (" + pipe + ", error " + std::to_string(GetLastError()) + ")";
         return -1;
     }
     return (intptr_t)h;
@@ -161,7 +169,7 @@ static bool io_all(intptr_t fd, void *p, size_t n, bool wr)
 // macOS has no socket activation: like TI Revive's libVirusUSB, start the installed broker when nobody answers. Started
 // from the DAW's process tree it runs in the user's GUI session; no inherited descriptors (it must not keep our sockets
 // alive); it exits by itself 30 s after its last client.
-static bool start_broker()
+static bool start_broker(int slot)
 {
     const char *path = getenv("TIREVIVE_BROKER");
     if (!path || !*path)
@@ -175,9 +183,13 @@ static bool start_broker()
     posix_spawn_file_actions_init(&fa);
     posix_spawn_file_actions_addopen(&fa, 0, "/dev/null", O_RDONLY, 0);
     posix_spawn_file_actions_addopen(&fa, 1, "/dev/null", O_WRONLY, 0);
-    posix_spawn_file_actions_addopen(&fa, 2, "/tmp/tirevive-vtibroker.log", O_WRONLY | O_CREAT | O_APPEND, 0644);
+    char sfx[4], log[64], num[4];
+    vti_slot_suffix(sfx, slot);
+    snprintf(log, sizeof log, "/tmp/tirevive-vtibroker%s.log", sfx); // Virus N of several: its own log (#45)
+    snprintf(num, sizeof num, "%d", slot);
+    posix_spawn_file_actions_addopen(&fa, 2, log, O_WRONLY | O_CREAT | O_APPEND, 0644);
     pid_t pid;
-    char *argv[] = {(char *)path, nullptr};
+    char *argv[] = {(char *)path, (char *)"-slot", num, nullptr};
     int e = posix_spawn(&pid, path, &fa, &at, argv, environ);
     posix_spawn_file_actions_destroy(&fa);
     posix_spawnattr_destroy(&at);
@@ -191,12 +203,14 @@ static bool start_broker()
 }
 #endif
 
-static intptr_t os_connect(const std::string &endpoint, std::string &error)
+static intptr_t os_connect(const std::string &endpoint, int slot, std::string &error)
 {
     sockaddr_un sa{};
     sa.sun_family = AF_UNIX;
+    char sfx[4];
+    vti_slot_suffix(sfx, slot);
     if (endpoint.empty())
-        snprintf(sa.sun_path, sizeof sa.sun_path, "/tmp/vtibroker-%u.sock", (unsigned)getuid());
+        snprintf(sa.sun_path, sizeof sa.sun_path, "/tmp/vtibroker-%u%s.sock", (unsigned)getuid(), sfx);
     else if (endpoint.size() < sizeof sa.sun_path)
         memcpy(sa.sun_path, endpoint.c_str(), endpoint.size() + 1);
     else {
@@ -206,7 +220,7 @@ static intptr_t os_connect(const std::string &endpoint, std::string &error)
     int fd = ::socket(AF_UNIX, SOCK_STREAM, 0);
     bool ok = fd >= 0 && !::connect(fd, (sockaddr *)&sa, sizeof sa);
 #ifdef __APPLE__
-    if (fd >= 0 && !ok && endpoint.empty() && start_broker()) // never start the real broker for another endpoint
+    if (fd >= 0 && !ok && endpoint.empty() && start_broker(slot)) // never start the real broker for another endpoint
         for (int i = 0; i < 40 && !ok; i++) { // up to ~4 s for the broker to listen
             usleep(100000);
             ::close(fd);
@@ -256,7 +270,7 @@ bool Broker::open(std::string &error)
 {
     {
         std::lock_guard<std::mutex> g(wr_); // senders on other threads see the handle whole (review 2026-10-19 M7)
-        fd_ = os_connect(endpoint_, error);
+        fd_ = os_connect(endpoint_, slot_, error);
     }
     if (fd_ < 0)
         return false;

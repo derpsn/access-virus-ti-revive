@@ -21,6 +21,7 @@
 #include <winrt/Windows.Devices.Midi2.Transports.Virtual.h>
 extern "C" {
 #include "midifeed.h"
+#include "devslot.h" // "-slot N": the ports of Virus N of several (#45)
 }
 #include "umpconv.h"
 
@@ -174,11 +175,21 @@ void on_frame(void *user, int port, const uint8_t *msg, int n)
 
 } // namespace
 
-int wmain()
+int wmain(int argc, wchar_t **argv)
 {
+    int slot = 1; // the broker passes "-slot N" for Virus N > 1
+    if (argc == 3 && !wcscmp(argv[1], L"-slot") && argv[2][0] && !argv[2][1]) {
+        const char s[2] = {(char)argv[2][0], 0};
+        slot = vti_slot_parse(s) ? vti_slot_parse(s) : 1;
+    }
+    char sfx[4], synth_name[32], din_name[32];
+    vti_slot_suffix(sfx, slot);
+    vti_slot_port_name(synth_name, sizeof synth_name, "Synth", slot);
+    vti_slot_port_name(din_name, sizeof din_name, "MIDI", slot);
+    const auto wide = [](const char *a) { return std::wstring(a, a + strlen(a)); }; // ASCII names
     wchar_t tmp[MAX_PATH];
     if (GetTempPathW(MAX_PATH, tmp))
-        g_log = _wfopen((std::wstring(tmp) + L"tirevive-midiports.log").c_str(), L"w");
+        g_log = _wfopen((std::wstring(tmp) + L"tirevive-midiports" + wide(sfx) + L".log").c_str(), L"w");
     hlog("tirevive-midiports starting (Windows build %lu)", windows_build());
     try {
         winrt::init_apartment();
@@ -194,12 +205,13 @@ int wmain()
         }
         Feed feed;
         MidiVirtualDevice synth{nullptr}, din{nullptr};
-        feed.conn[1] = open_port(session, L"Virus TI Synth", L"TIRevive-VirusTI-Synth", synth);
-        feed.conn[0] = open_port(session, L"Virus TI MIDI", L"TIRevive-VirusTI-MIDI", din);
+        // Virus 1 keeps the IDs programs remember; Virus N gets "-N"
+        feed.conn[1] = open_port(session, wide(synth_name).c_str(), (L"TIRevive-VirusTI-Synth" + wide(sfx)).c_str(), synth);
+        feed.conn[0] = open_port(session, wide(din_name).c_str(), (L"TIRevive-VirusTI-MIDI" + wide(sfx)).c_str(), din);
         if (!feed.conn[0] && !feed.conn[1])
             return 4;
-        hlog("MIDI ports there (read-only):%s%s", feed.conn[1] ? " \"Virus TI Synth\"" : "",
-             feed.conn[0] ? " \"Virus TI MIDI\"" : "");
+        hlog("MIDI ports there (read-only):%s%s%s%s%s", feed.conn[1] ? " \"" : "", feed.conn[1] ? synth_name : "",
+             feed.conn[1] ? "\"" : "", feed.conn[0] ? " \"" : "", feed.conn[0] ? din_name : "");
         vti_midifeed_reader reader;
         vti_midifeed_init(&reader);
         HANDLE in = GetStdHandle(STD_INPUT_HANDLE);

@@ -14,6 +14,9 @@ typedef void (*vua_log_fn)(const char *fmt, ...);
 typedef void (*vua_out_fn)(int16_t *dst, uint32_t frames, void *user);
 void vua_set_out(vua_out_fn fn, void *user);
 
+// which Virus (devslot.h, #45) vua_run streams when several are connected: 1 (default) .. VTI_SLOTS_MAX
+void vua_set_slot(int slot);
+
 // Stream until *running becomes 0. Returns -1 at once if the WinUSB audio function (MI_00) is not present or
 // cannot be opened (the caller then uses WASAPI), 0 after a normal stop, 1 after a setup/stream error.
 int vua_run(volatile LONG *running, vua_in_fn in, void *user, vua_log_fn log);

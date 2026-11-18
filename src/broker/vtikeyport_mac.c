@@ -6,6 +6,7 @@
 #include "midifeed.h"
 #include "owneruid.h"
 #include "vticore.h"
+#include "devslot.h"
 #include <CoreFoundation/CoreFoundation.h>
 #include <CoreMIDI/CoreMIDI.h>
 #include <errno.h>
@@ -28,22 +29,29 @@
 extern char **environ;
 
 // DAWs remember a port by this number, also when it comes back after the broker was gone (it exits 30 s after its last
-// client): it must stay the same. "VTI1" for the keys, "VTI0" for MIDI In (the cable numbers).
-#define KEYPORT_UNIQUE_ID 0x56544931
-#define DINPORT_UNIQUE_ID 0x56544930
+// client): it must stay the same. "VTI1" for the keys, "VTI0" for MIDI In (the cable numbers); Virus N of several
+// "VTN1" / "VTN0" (devslot.h, #45)
 
 // [0] "Virus TI Synth" (cable 1), [1] "Virus TI MIDI" (cable 0)
 static _Atomic(MIDIEndpointRef) g_source[2];
 static atomic_uint g_sent[2], g_failed[2]; // for the log: did the messages get as far as macOS (#29)
-static const char *const g_name[2] = {"Virus TI Synth", "Virus TI MIDI"};
+static char g_name[2][32] = {"Virus TI Synth", "Virus TI MIDI"}; // Virus N: "Virus TI N Synth" (names_init)
+
+static void names_init(void)
+{
+    vti_slot_port_name(g_name[0], sizeof g_name[0], "Synth", vti_slot);
+    vti_slot_port_name(g_name[1], sizeof g_name[1], "MIDI", vti_slot);
+}
 
 #pragma clang diagnostic push
 #pragma clang diagnostic ignored "-Wdeprecated-declarations" // MIDI 1.0 calls: the port speaks MIDI 1.0, macOS 10.x and up
 
-static MIDIEndpointRef make_source(MIDIClientRef client, int k, CFStringRef name, SInt32 id)
+static MIDIEndpointRef make_source(MIDIClientRef client, int k, SInt32 id)
 {
     MIDIEndpointRef src = 0;
+    CFStringRef name = CFStringCreateWithCString(NULL, g_name[k], kCFStringEncodingUTF8);
     OSStatus st = MIDISourceCreate(client, name, &src);
+    CFRelease(name);
     if (st != noErr) {
         vti_log("MIDI port \"%s\": no source (%d)\n", g_name[k], (int)st);
         return 0;
@@ -64,15 +72,15 @@ static int make_sources(void)
         return 0;
     }
     // both, as the original's Mac driver had them (E521 (4)); one failing leaves the other
-    MIDIEndpointRef keys = make_source(client, 0, CFSTR("Virus TI Synth"), KEYPORT_UNIQUE_ID);
+    MIDIEndpointRef keys = make_source(client, 0, vti_slot_port_id(1, vti_slot));
     if (keys) {
         atomic_store(&g_source[0], keys);
-        vti_log("MIDI port \"Virus TI Synth\" is there (Virus keys to the DAW, read-only)\n");
+        vti_log("MIDI port \"%s\" is there (Virus keys to the DAW, read-only)\n", g_name[0]);
     }
-    MIDIEndpointRef din = make_source(client, 1, CFSTR("Virus TI MIDI"), DINPORT_UNIQUE_ID);
+    MIDIEndpointRef din = make_source(client, 1, vti_slot_port_id(0, vti_slot));
     if (din) {
         atomic_store(&g_source[1], din);
-        vti_log("MIDI port \"Virus TI MIDI\" is there (the Virus' MIDI In to the DAW, read-only)\n");
+        vti_log("MIDI port \"%s\" is there (the Virus' MIDI In to the DAW, read-only)\n", g_name[1]);
     }
     return keys || din;
 }
@@ -140,6 +148,7 @@ static void helper_start(void)
 
 void vti_keyport_start(void)
 {
+    names_init();
     g_owner = vti_owner_uid((unsigned)geteuid(), (unsigned)getuid(),
                             vti_owner_env(getenv("VTI_OWNER_UID"), getenv("SUDO_UID")));
     if (vti_keyport_via_helper((unsigned)geteuid(), g_owner)) {
