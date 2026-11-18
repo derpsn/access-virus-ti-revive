@@ -5055,3 +5055,26 @@ wrong: a reply from another model or OS (Snow, Polar, an older OS) that the Viru
 - **Method:** script over the cache files (MIDI container, 524-byte records): recomputed both checksums per record
 - **Confidence:** HIGH for our TI2 Desktop; MED for other models (not checked)
 - **Hardware:** yes (replies of our TI2 Desktop, read earlier; no new run)
+
+### E553
+
+The original Virus Control (Windows x64, 5.1.7) is built for several Viruses on one computer, one plug-in instance per
+Virus (towards issue #45). Observed in the plug-in DLL: a process-wide device manager (class VirusDeviceManager, set
+up at 0x1800abc60) keeps a list of device records under one lock. Its poll (0x1800ac190) asks the driver for the
+device count, reads each device's info by index, and keeps one record per device, matched by the driver's per-device
+key (record +0x10); the model comes from the product string and bcdDevice as in the Mac build (E099: 0x100 TI or
+Snow, 0x300 TI2), and devices that are gone are dropped. Each record has an owner field (+0x140): an instance claims
+the best free, ready device (0x1800acea0: owner empty, state > 4, the wanted model type preferred) or the one with its
+remembered key (0x1800acfe0). The instance's device poll (0x18007ec30) remembers the key of the device it used and,
+when a different one is found, asks "This is not the Virus TI you were using before. Do you want to use this device
+instead?". So two instances in one DAW would take two different Viruses.
+Not known: whether the Access driver side (VirusUSB.sys, VirusUSB_X64.dll, the MIDI and ASIO drivers) served two at
+once, whether the remembered key is stored in the project, and whether it ever worked in practice (no capture, no
+report). TI Revive opens only the first Virus today (src/broker/vticore.c libusb_open_device_with_vid_pid,
+vticore_winusb.c interface index 0).
+
+- **Date:** 2026-11-18
+- **Pointer:** Virus Control.dll 5.1.7 x64 (the user's own, from the Access installer, not in the repo); REA snapshot work/rea/virus-control-5.1.7-x64.ghidra1214-20261109.snapshot
+- **Method:** REA (Ghidra 12.1.4) static analysis: strings ("not the Virus TI you were using before", "Unknown Device") -> xrefs -> device poll, claim and lookup functions
+- **Confidence:** HIGH that the plug-in side handles several devices with one owner each; LOW / open for the driver side and real-world use
+- **Hardware:** no (static only)
