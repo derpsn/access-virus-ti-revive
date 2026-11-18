@@ -37,6 +37,16 @@ class DriverScript(unittest.TestCase):
         self.assertIn("Show-UserMessage", self.text)
         self.assertLess(self.text.index("Get-AccessBoundVirus"), self.text.index("pnputil /delete-driver $pkg"))
 
+    def test_a_failed_driver_add_fails_the_setup(self):
+        # audit #15: the MSI action checks the exit code (Return="check"); exit 0 after a failure looked like success.
+        # Not on the signature status alone: M6 logged "UnknownError" with a working driver
+        add = self.text.index("$out = pnputil /add-driver")
+        self.assertRegex(self.text[add:], r"if \(-not \$pkg\) \{ Fail-Install ")
+        fail = self.text[self.text.index("function Fail-Install"):]
+        fail = fail[: fail.index("\n}\n")]
+        self.assertIn("Trust-Store", fail)  # no uninstall follows a failed setup: take the trust back here
+        self.assertIn("exit 1", fail)
+
 
 if __name__ == "__main__":
     unittest.main()
