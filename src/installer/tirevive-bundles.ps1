@@ -6,7 +6,7 @@
 # itself, and the running bundle must keep its own entry.
 # Per stale bundle: Uninstall\{id}, Installer\Dependencies\{id}, Package Cache\{id}; and the MSI package providers
 # ({ProductCode}_v<version>) only these bundles depended on, with their cached MSI (Package Cache\{ProductCode}v<version>).
-# Log: %ProgramData%\TI Revive\bundles.log. Tests: tests/tirevive-bundles.Tests.ps1 (dot-sources this file).
+# Log: bundles.log in the install folder. Tests: tests/tirevive-bundles.Tests.ps1 (dot-sources this file).
 param([switch]$Run)
 
 $BundleUpgradeCode = '{B785EEA0-32B6-4B72-BD0E-62ADA99417BA}' # TIReviveSetup.wxs
@@ -62,8 +62,7 @@ function Get-ProviderEntries([string]$DependenciesRoot) {
 
 if ($Run) {
     $ErrorActionPreference = 'Continue'
-    $logDir = Join-Path $env:ProgramData 'TI Revive'
-    New-Item -ItemType Directory -Force $logDir | Out-Null
+    $logDir = $PSScriptRoot # Program Files, not ProgramData: a standard user cannot plant anything here (audit #28)
     Start-Transcript -Path (Join-Path $logDir 'bundles.log') -Append | Out-Null
     $uninstall = 'HKLM:\SOFTWARE\Microsoft\Windows\CurrentVersion\Uninstall'
     $deps = 'HKLM:\SOFTWARE\Classes\Installer\Dependencies'

@@ -48,5 +48,17 @@ class DriverScript(unittest.TestCase):
         self.assertIn("exit 1", fail)
 
 
+
+class SystemLogs(unittest.TestCase):
+    def test_system_actions_log_into_the_install_folder(self):
+        # audit #28: a standard user can create %ProgramData%\TI Revive first (a junction, a planted driver.log hard
+        # link) and SYSTEM then appends wherever it points; the install folder under Program Files is not theirs
+        for name in ("tirevive-driver.ps1", "tirevive-bundles.ps1"):
+            with open(os.path.join(HERE, "..", "..", "src", "installer", name), encoding="utf-8") as f:
+                text = f.read()
+            self.assertNotIn("$logDir = Join-Path $env:ProgramData", text, name)
+            self.assertIn("$logDir = $PSScriptRoot", text, name)
+
+
 if __name__ == "__main__":
     unittest.main()

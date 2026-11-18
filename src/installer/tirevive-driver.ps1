@@ -4,12 +4,13 @@
 #            LocalMachine Root + TrustedPublisher -> the private key is deleted (cannot sign anything else) ->
 #            pnputil /add-driver /install. Removes Access driver packages (blocked on Win11 anyway).
 # uninstall: pnputil /delete-driver for our package, remove the trusted cert.
-# State: HKLM\SOFTWARE\TI Revive (DriverPackage, CertThumbprint). Log: %ProgramData%\TI Revive\driver.log
+# State: HKLM\SOFTWARE\TI Revive (DriverPackage, CertThumbprint). Log: driver.log in the install folder
 param([ValidateSet('install', 'uninstall')][string]$Action = 'install')
 $ErrorActionPreference = 'Continue'
 $here = Split-Path -Parent $MyInvocation.MyCommand.Path
-$logDir = Join-Path $env:ProgramData 'TI Revive'
-New-Item -ItemType Directory -Force $logDir | Out-Null
+# the install folder (Program Files): a standard user can create %ProgramData%\TI Revive first, and SYSTEM would then
+# append wherever their junction or planted link points (audit #28)
+$logDir = $PSScriptRoot
 Start-Transcript -Path (Join-Path $logDir 'driver.log') -Append | Out-Null
 $reg = 'HKLM:\SOFTWARE\TI Revive'
 # NOT New-Item -Force on every run: on an existing key it recreates it empty, which wiped DriverPackage /
