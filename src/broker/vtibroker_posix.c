@@ -1194,11 +1194,9 @@ static void *client_thread(void *arg)
                 uint32_t seq;
                 memcpy(&seq, buf, 4);
                 uint8_t *s = buf + 4, data[VTIMSG_MAX];
-                uint16_t wl = (uint16_t)(s[6] | s[7] << 8);
-                if (wl > VTIMSG_MAX - 16)
-                    wl = VTIMSG_MAX - 16;
+                const uint16_t wl = vti_control_len(s, h.len - 12);
                 if (!(s[0] & 0x80))
-                    memcpy(data, buf + 12, h.len - 12 < wl ? h.len - 12 : wl);
+                    memcpy(data, buf + 12, wl);
                 int owner = may_use(c), ok = vti_control_allowed(s);
                 if (!ok)
                     blog("refused control request %02x %02x (only standard reads pass, rule 2)", s[0], s[1]);

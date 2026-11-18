@@ -760,11 +760,9 @@ static DWORD WINAPI client_thread(LPVOID arg)
             if (h.len >= 12 && !c->observer) {
                 uint32_t seq = *(uint32_t *)buf;
                 uint8_t *s = buf + 4, data[VTIMSG_MAX];
-                uint16_t wl = s[6] | s[7] << 8;
-                if (wl > VTIMSG_MAX - 16)
-                    wl = VTIMSG_MAX - 16;
+                const uint16_t wl = vti_control_len(s, h.len - 12);
                 if (!(s[0] & 0x80))
-                    memcpy(data, buf + 12, h.len - 12 < wl ? h.len - 12 : wl);
+                    memcpy(data, buf + 12, wl);
                 int ok = vti_control_allowed(s);
                 if (!ok)
                     blog("refused control request %02x %02x (only standard reads pass, rule 2)", s[0], s[1]);
