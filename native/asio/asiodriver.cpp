@@ -225,11 +225,12 @@ public:
             return 0;
         }
         // no wish (0): the rate that is set stays - the host's setSampleRate decides right after (review step 4)
-        if (broker_.audio(true, 3000, 0) != 1 || !audio_.open()) {
+        // the flag as soon as the broker streams: a failed open() below must still get its audio off (audit #33)
+        audio_on_ = broker_.audio(true, 3000, 0) == 1;
+        if (!audio_on_ || !audio_.open()) {
             error_ = "the Virus' USB audio is not available (TI Revive WinUSB driver installed?)";
             return 0;
         }
-        audio_on_ = true;
         int seen;
         audio_.rate_changed(seen); // the rate the ring was opened with is no change
         char nm[64]; // Broker::audio registered this per-process event; the broker signals it for every input block
