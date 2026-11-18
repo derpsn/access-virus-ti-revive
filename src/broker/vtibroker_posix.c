@@ -903,6 +903,8 @@ static int client_count(void)
     return n;
 }
 
+static int g_exiting; // under g_cs_clients: the idle exit is decided, no client is taken any more (audit #27)
+
 static void *device_thread(void *unused)
 {
     (void)unused;
@@ -911,15 +913,25 @@ static void *device_thread(void *unused)
         if (client_count())
             last_busy = time(NULL);
         else if (!g_stay && time(NULL) - last_busy > IDLE_EXIT_S) {
-            blog("no clients for %d s: exiting", IDLE_EXIT_S);
+            // decided under the client lock, and from then on no client is taken (audit #27). The lock is not held
+            // to the end: vti_close joins the USB readers, and a reader in on_rx waits for it
+            pthread_mutex_lock(&g_cs_clients);
+            int n = 0;
+            for (int i = 0; i < MAX_CLIENTS; i++)
+                n += g_clients[i] != NULL;
+            g_exiting = !n;
+            pthread_mutex_unlock(&g_cs_clients);
+            if (g_exiting) {
+                blog("no clients for %d s: exiting", IDLE_EXIT_S);
 #ifdef VTI_KEYPORT
-            vti_keyport_log_counts();
+                vti_keyport_log_counts();
 #endif
-            pthread_mutex_lock(&g_cs_dev);
-            audio_stop();
-            if (g_dev)
-                vti_close(g_dev);
-            exit(0);
+                pthread_mutex_lock(&g_cs_dev);
+                audio_stop();
+                if (g_dev)
+                    vti_close(g_dev);
+                exit(0);
+            }
         }
         pthread_mutex_lock(&g_cs_dev);
         if (g_dev && vti_is_dead(g_dev)) {
@@ -1073,14 +1085,15 @@ static void *client_thread(void *arg)
 #endif
     int slot = -1;
     pthread_mutex_lock(&g_cs_clients);
-    for (int i = 0; i < MAX_CLIENTS && slot < 0; i++)
+    for (int i = 0; i < MAX_CLIENTS && slot < 0 && !g_exiting; i++)
         if (!g_clients[i]) {
             g_clients[i] = c;
             slot = i;
         }
+    const int exiting = g_exiting;
     pthread_mutex_unlock(&g_cs_clients);
-    if (slot < 0) {
-        blog("too many clients");
+    if (slot < 0) { // refused before it sends anything; launchd / systemd start the next broker on its retry
+        blog(exiting ? "client refused: exiting after the idle time" : "too many clients");
         close(c->fd);
         pthread_mutex_destroy(&c->wr);
         free(c);
