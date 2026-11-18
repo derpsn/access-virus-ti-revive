@@ -13,6 +13,9 @@ std::vector<std::vector<uint8_t>> parse_container(const std::vector<uint8_t> &d)
 std::vector<uint8_t> build_container(const std::vector<std::vector<uint8_t>> &recs);
 // a 524-byte single dump of `part` (F0 .. 10 00 <part>: edit buffer of that part)
 bool is_part_dump(const std::vector<uint8_t> &m, int part);
+// a truncated project lacks part dumps: each part without one gets the dump from `defaults` (the plug-in's default
+// project), appended like the default keeps them after its multi; returns how many were added (audit #22)
+int add_missing_part_dumps(std::vector<std::vector<uint8_t>> &recs, const std::vector<std::vector<uint8_t>> &defaults);
 // E174: part dumps (edit buffers, bank byte 0) older than the current format are upgraded like the Virus does on
 // receipt, so the editor shows and saves what the Virus plays; returns how many were upgraded
 int upgrade_state_dumps(std::vector<std::vector<uint8_t>> &recs);

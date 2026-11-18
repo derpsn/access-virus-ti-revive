@@ -4960,6 +4960,9 @@ tresult PLUGIN_API VirusPlugin::setState(IBStream *state)
         std::lock_guard<std::mutex> lk(undo_mu_);
         undo_.clear(); // another project: the steps belong to the one before
     }
+    // a truncated project: without a part's dump every edit and patch load of that part was dropped silently
+    if (int add = add_missing_part_dumps(recs, default_); add && out_)
+        out_->log("Virus TI native: the project has no patch for %d part(s): those start from the default\n", add);
     {
         std::lock_guard<std::mutex> lk(compare_mu_);
         compare_.clear(); // the project's patches are the parts' references
