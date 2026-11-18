@@ -5039,3 +5039,19 @@ Why the Virus TI Snow streams FF FE 00 00 on bulk EP 0x85 (towards E387, E547, E
 - **Method:** static analysis of the firmware's USB chip code (sim session, Ghidra headless); no run
 - **Confidence:** HIGH (fill on every read, no switch-off command) / LOW (what limits the rate)
 - **Hardware:** no (static; the rates come from reporters' logs, E547, E550)
+
+### E552
+
+The Virus' single dump replies carry both checksums as TI Revive computes them (BankDrop::checksums: byte 265 = the
+sum of bytes 5..264 & 0x7F, byte 522 = the sum of bytes 5..521 & 0x7F), so a reply whose checksums do not match is
+damaged on the way, not a Virus that counts differently (towards audit 2026-11-17 #32). Checked over our own TI2
+Desktop's RAM bank cache (RAM A..D, 4 x 128 = 512 replies to single dump requests, read by the plug-in's bank sync on
+2026-11-15, ROM Z flashed, E500): 512/512 match, every one ends in F7. The 640 ROM dumps in the same cache (built by
+TI Revive from firmware.bin with the same formula) match too, which says nothing about the Virus. Would show this
+wrong: a reply from another model or OS (Snow, Polar, an older OS) that the Virus sends with other checksums.
+
+- **Date:** 2026-11-18
+- **Pointer:** ~/.local/share/virus-ti-native/cache/RAM A..D (our Linux machine, written 2026-11-15); native/src/model/bankdrop.h checksums
+- **Method:** script over the cache files (MIDI container, 524-byte records): recomputed both checksums per record
+- **Confidence:** HIGH for our TI2 Desktop; MED for other models (not checked)
+- **Hardware:** yes (replies of our TI2 Desktop, read earlier; no new run)

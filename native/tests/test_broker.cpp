@@ -10,6 +10,7 @@ extern "C" {
 #include "device/memsync.h"
 #include "device/usbmidi.h"
 #include "access/library.h"
+#include "model/bankdrop.h"
 #include "model/remotedevice.h"
 #include <cstdlib>
 #include <functional>
@@ -412,6 +413,7 @@ Bytes fake_single(int bank, int program, int seed)
     for (int i = 0; i < 10; i++)
         d[249 + i] = (uint8_t)("Fake Patch"[i]);
     d[523] = 0xF7;
+    BankDrop::checksums(d); // the Virus sends both checksums right (E552)
     return d;
 }
 
@@ -606,6 +608,7 @@ struct FakeRam {
             m[10] = 0;
         if (corrupt)
             m[(size_t)corrupt] ^= 0x01;
+        BankDrop::checksums(m); // what it sends back carries the checksums of what it keeps (E552)
         return m;
     }
     Bytes get(int bank, int p)

@@ -1,6 +1,7 @@
 // memsync.cpp - see memsync.h.
 #include "memsync.h"
 #include "model/utf8.h"
+#include "../model/bankdrop.h"
 #include "../model/remotedevice.h"
 #include "usbmidi.h"
 #include <algorithm>
@@ -188,12 +189,29 @@ std::vector<int> MemorySync::bank_info(int bank)
 
 Dump MemorySync::single(int bank, int program)
 {
+    Dump bad; // the last reply with checksums other than ours
     for (int t = 0; t < 3; t++) {
         Dump r = transact({0xF0, 0x00, 0x20, 0x33, 0x01, (uint8_t)dev_, 0x30, (uint8_t)bank, (uint8_t)program, 0xF7},
                           {0x10, (uint8_t)bank, (uint8_t)program});
         note_reply("single", bank, program, r.size(), SINGLE_SIZE, t);
-        if (r.size() == SINGLE_SIZE)
-            return r;
+        if (r.size() == SINGLE_SIZE) {
+            // the Virus sends both checksums as BankDrop computes them (E552): a mismatch is a reply damaged on the
+            // way, asked again like a wrong size - it must not go into the bank cache on disk (audit #32)
+            Dump c = r;
+            BankDrop::checksums(c);
+            if (c == r)
+                return r;
+            const std::string where = "single " + std::to_string(bank) + " " + std::to_string(program);
+            if (r == bad) { // a damaged packet differs from try to try; a model that counts otherwise does not (E552)
+                if (log)
+                    log(where + ": the same reply twice with other checksums: taken as the Virus sends it");
+                return r;
+            }
+            bad = r;
+            if (log)
+                log(where + ": reply with a wrong checksum (try " + std::to_string(t + 1) + " of 3)");
+            continue;
+        }
         if (r.empty())
             break;
     }

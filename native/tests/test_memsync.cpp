@@ -2,6 +2,7 @@
 // request/reply matching, bank info, which programs a bank sync fetches, cancelling, and the cache file format
 #include "check.h"
 #include "device/memsync.h"
+#include "model/bankdrop.h"
 #include "model/remotedevice.h"
 #include <atomic>
 #include <chrono>
@@ -25,6 +26,7 @@ static Dump fake_single(int bank, int program, int seed)
     for (size_t i = 9; i < 523; i++)
         d[i] = (uint8_t)((i * 7 + seed * 13) & 0x7F);
     d[523] = 0xF7;
+    BankDrop::checksums(d); // as the Virus sends them (E552)
     return d;
 }
 
@@ -102,6 +104,49 @@ TEST(memsync_keeps_sysex_only_while_a_request_waits)
                  .size(),
              524u);
     CHECK_EQ(sync.queued(), 0u); // the reply leaves with transact, nothing stays behind
+}
+
+TEST(memsync_single_asks_again_after_a_bad_checksum)
+{
+    // audit #32: a 524-byte reply was taken on its size alone, a damaged one went into the bank cache on disk
+    MemorySync *ms = nullptr;
+    int asked = 0;
+    std::vector<std::string> logged;
+    MemorySync sync([&](const Bytes &) {
+        Dump d = fake_single(1, 5, 3);
+        if (asked++ == 0)
+            d[300] ^= 0x01; // one bit lost on the way: the checksums no longer match
+        ms->feed(d);
+        return true;
+    });
+    ms = &sync;
+    sync.log = [&](const std::string &l) { logged.push_back(l); };
+    Dump r = sync.single(1, 5);
+    CHECK_EQ(asked, 2);
+    CHECK(r == fake_single(1, 5, 3));
+    CHECK(!logged.empty() && logged[0].find("checksum") != std::string::npos);
+}
+
+TEST(memsync_single_takes_the_same_reply_twice_as_the_virus_means_it)
+{
+    // E552 covers our TI2 only: a model that counts its checksums otherwise sends the same reply every time, a damaged
+    // packet does not - so a repeated identical reply is taken (and logged), the sync still works
+    MemorySync *ms = nullptr;
+    int asked = 0;
+    MemorySync sync([&](const Bytes &) {
+        Dump d = fake_single(1, 5, 3);
+        d[265] ^= 0x01;
+        asked++;
+        ms->feed(d);
+        return true;
+    });
+    ms = &sync;
+    std::string last;
+    sync.log = [&](const std::string &l) { last = l; };
+    Dump r = sync.single(1, 5);
+    CHECK_EQ(asked, 2);
+    CHECK_EQ(r.size(), 524u);
+    CHECK(last.find("twice") != std::string::npos);
 }
 
 TEST(memsync_transact_times_out_without_reply)
