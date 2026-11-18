@@ -2,7 +2,9 @@
 #include "audioin.h"
 extern "C" {
 #include "vtiaudioshm.h"
+#include "devslot.h"
 }
+#include "slotpick.h"
 #include <algorithm>
 #include <cstdio>
 #include <cstdlib>
@@ -177,8 +179,9 @@ static int input_channels(AudioObjectID id)
     return n;
 }
 
-// the Virus as Core Audio input device: name contains "Virus", at least 6 input channels (E082 order)
-static AudioObjectID find_virus()
+// the Virus as Core Audio input device: name contains "Virus", at least 6 input channels (E082 order); with several
+// (#45) the one of this broker's Virus (slotpick.h)
+static AudioObjectID find_virus(const std::string &serial, int slot)
 {
     AudioObjectPropertyAddress a{kAudioHardwarePropertyDevices, kAudioObjectPropertyScopeGlobal,
                                  kAudioObjectPropertyElementMain};
@@ -188,11 +191,21 @@ static AudioObjectID find_virus()
     std::vector<AudioObjectID> ids(sz / sizeof(AudioObjectID));
     if (AudioObjectGetPropertyData(kAudioObjectSystemObject, &a, 0, nullptr, &sz, ids.data()))
         return kAudioObjectUnknown;
+    std::vector<AudioObjectID> found;
+    std::vector<std::string> uids;
     for (AudioObjectID id : ids)
         if (cf_string(id, kAudioObjectPropertyName).find("Virus") != std::string::npos &&
-            input_channels(id) >= VTI_AUDIO_IN_CH)
-            return id;
-    return kAudioObjectUnknown;
+            input_channels(id) >= VTI_AUDIO_IN_CH) {
+            found.push_back(id);
+            uids.push_back(cf_string(id, kAudioDevicePropertyDeviceUID));
+        }
+    const int pick = vti::core_audio_pick(uids, serial, slot);
+    if (found.size() > 1) { // the UID may carry the serial: say only how it was matched (rule 5)
+        bool by_serial = pick >= 0 && !serial.empty() && uids[pick].find(serial) != std::string::npos;
+        fprintf(stderr, "audioin: %d Virus audio devices, Virus %d %s\n", (int)found.size(), slot,
+                pick < 0 ? "not among them" : by_serial ? "found by its USB serial" : "taken by order (no serial match)");
+    }
+    return pick >= 0 ? found[pick] : kAudioObjectUnknown;
 }
 
 // the Virus' 2 output channels (its USB input in "3 Outs / 1 Input": the plug-in's Sidechain bus, E167) from the
@@ -284,8 +297,9 @@ bool AudioIn::open(const char *linux_name, int rate)
 #ifdef __APPLE__
     if (broker_ring_) { // the libusb-audio test (E511): the broker's ring, exactly as on Linux
 #endif
-    char name[64];
-    snprintf(name, sizeof name, VTI_AUDIO_SHM_LINUX, (unsigned)getuid());
+    char name[64], sfx[4];
+    vti_slot_suffix(sfx, slot_);
+    snprintf(name, sizeof name, VTI_AUDIO_SHM_LINUX "%s", (unsigned)getuid(), sfx);
     int fd = shm_open(linux_name ? linux_name : name, O_RDWR, 0);
     if (fd < 0)
         return false;
@@ -312,7 +326,10 @@ bool AudioIn::open(const char *linux_name, int rate)
 #endif
 #endif
 #if defined(_WIN32)
-    HANDLE m = OpenFileMappingA(FILE_MAP_READ | FILE_MAP_WRITE, FALSE, VTI_AUDIO_SHM_NAME);
+    char wname[64], wsfx[4];
+    vti_slot_suffix(wsfx, slot_);
+    snprintf(wname, sizeof wname, VTI_AUDIO_SHM_NAME "%s", wsfx); // broker N's ring (#45)
+    HANDLE m = OpenFileMappingA(FILE_MAP_READ | FILE_MAP_WRITE, FALSE, wname);
     if (!m)
         return false;
     void *p = MapViewOfFile(m, FILE_MAP_READ | FILE_MAP_WRITE, 0, 0, sizeof(vti_audio_shm));
@@ -328,7 +345,7 @@ bool AudioIn::open(const char *linux_name, int rate)
     return true;
 #elif defined(__APPLE__)
     auto *m = new MacAudio;
-    m->dev = find_virus();
+    m->dev = find_virus(usb_serial_, slot_);
     if (m->dev == kAudioObjectUnknown) {
         delete m;
         return false;

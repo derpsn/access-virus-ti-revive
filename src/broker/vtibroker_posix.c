@@ -950,6 +950,12 @@ static void *device_thread(void *unused)
         if (!g_dev && (g_dev = vti_open(on_rx, NULL))) {
             g_dev_gen++;
             blog("device open, handshake sent");
+#ifdef VTI_KEYPORT
+            // Virus 2+ (#45): its ports only when it exists - a second plug-in instance with one Virus starts broker 2
+            static int ports_started;
+            if (vti_slot > 1 && !ports_started++ && !getenv("VTI_NO_MIDI_PORT"))
+                vti_keyport_start();
+#endif
             pthread_mutex_lock(&g_cs_clients);
             send_states(1);
             pthread_mutex_unlock(&g_cs_clients);
@@ -1437,7 +1443,8 @@ int main(int argc, char **argv)
 #endif
     blog("vtibroker starting (protocol %d, %s)", VTI_PROTO_VERSION, sa.sun_path);
 #ifdef VTI_KEYPORT
-    if (!getenv("VTI_NO_MIDI_PORT")) // a test switch; the port is read-only and harmless when nothing listens
+    // a test switch; the port is read-only and harmless when nothing listens. Virus 2+: once it is there (below)
+    if (!getenv("VTI_NO_MIDI_PORT") && vti_slot == 1)
         vti_keyport_start();
 #endif
 #ifdef __APPLE__

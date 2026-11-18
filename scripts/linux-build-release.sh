@@ -58,7 +58,7 @@ install -m 0755 "$BUILD/vtibroker" "$P/bin/"
 install -m 0755 -s "$CC_BIN" "$P/bin/tirevive-cc"
 [ -f "$CCAPP_BIN" ] || { echo "TIReviveControlCenter missing (NATIVE_CCAPP with NATIVE_PREBUILT)"; exit 1; }
 install -m 0755 -s "$CCAPP_BIN" "$P/bin/tirevive-control-center"
-install -m 0644 "$I/tirevive-broker.socket" "$I/tirevive-broker.service" "$P/systemd/"
+install -m 0644 "$I/tirevive-broker.socket" "$I/tirevive-broker.service" "$I/tirevive-broker@.socket" "$I/tirevive-broker@.service" "$P/systemd/"
 install -m 0644 "$I/70-tirevive-virus-ti.rules" "$P/udev/"
 install -m 0755 "$I/install.sh" "$I/uninstall.sh" "$P/"
 mkdir -p "$P/native" && cp -R "$NATIVE" "$P/native/"

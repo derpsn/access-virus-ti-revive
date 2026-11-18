@@ -122,3 +122,28 @@ class FindMsi(unittest.TestCase):
 
 if __name__ == "__main__":
     unittest.main()
+
+
+class BrokerSlotUnits(unittest.TestCase):
+    """Several Viruses (#45): systemd starts broker N (vtibroker -slot N) on /tmp/vtibroker-<uid>-N.sock, the path
+    the plug-in connects to (devslot.h); the release package and the installer carry the template units."""
+    I = os.path.join(HERE, "..", "..", "src", "installer-linux")
+
+    def read(self, name):
+        with open(os.path.join(self.I, name), encoding="utf-8") as f:
+            return f.read()
+
+    def test_template_socket_and_service_match_the_broker(self):
+        self.assertIn("ListenStream=/tmp/vtibroker-%U-%i.sock", self.read("tirevive-broker@.socket"))
+        svc = self.read("tirevive-broker@.service")
+        self.assertIn("ExecStart=%h/.local/lib/tirevive/vtibroker -slot %i", svc)
+        self.assertIn("Requires=tirevive-broker@%i.socket", svc)
+
+    def test_installer_enables_virus_2_to_4_and_package_ships_them(self):
+        for script in ("install.sh", "uninstall.sh"):
+            text = self.read(script)
+            self.assertIn('for n in 2 3 4; do SOCKETS="$SOCKETS tirevive-broker@$n.socket"; done', text)
+            self.assertIn("$SOCKETS", text.split("done", 1)[1])
+        self.assertIn("tirevive-broker@.socket", self.read("uninstall.sh"))
+        with open(os.path.join(HERE, "..", "linux-build-release.sh"), encoding="utf-8") as f:
+            self.assertIn('"$I/tirevive-broker@.socket" "$I/tirevive-broker@.service"', f.read())

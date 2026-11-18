@@ -137,6 +137,15 @@ public:
     void on_status(std::function<void(bool present, bool elsewhere)> h) { status_ = std::move(h); }
     // another instance has the Virus: in this process (claim_owner) or another program's plug-in (broker state 2)
     bool waiting() const { return wait_reported_.load() || broker_.in_use_elsewhere(); }
+    // the Virus this instance claimed when several are connected (#45): 1.., 0 = none yet
+    int slot() const { return slot_.load(); }
+    // the Virus the project was saved with (setState): taken when free, also by switching over from another one
+    void prefer_slot(int s)
+    {
+        slot_pref_ = s;
+        reslot_ = true;
+        cv_.notify_one();
+    }
     std::atomic<int> generation{0}; // +1 on every return of the Virus (process() re-anchors its timeline)
     std::atomic<int> clamp_reanchors{0}; // new timelines because every read was pulled back for a second (E472)
     std::atomic<int64_t> last_note_ms{0}; // steady clock of the last note-on sent (FreezeWatch: was a note due?)
@@ -242,9 +251,14 @@ private:
     // one stamp clock and every sync ping resets it, so a second instance (Ableton: duplicated track) shifted the
     // first one's time stamps for good. The Windows broker shares the Virus between all clients (the ASIO driver
     // runs in the same process), so the guard lives here; macOS/Linux brokers also give it to one client only.
+    // Several Viruses (#45): one claim per Virus, i.e. per broker slot (slotpick.h); with one Virus as before.
     bool claim_owner();
     void release_owner();
-    std::atomic<bool> owner_{false}; // this instance holds the process-wide claim (worker writes, leave_virus reads)
+    std::atomic<bool> owner_{false}; // this instance holds a claim (worker writes, leave_virus reads)
+    std::atomic<int> slot_{0};       // the claimed slot, 1 = the first Virus (0 = none)
+    std::atomic<int> slot_pref_{0};  // the slot the project was saved with (0 = none)
+    std::atomic<bool> reslot_{false}; // prefer_slot: the worker moves to that slot when it is free
+    std::chrono::steady_clock::time_point absent_since_{}; // worker: on slot 2+, since when its broker has no Virus
     std::atomic<bool> wait_reported_{false}; // waiting for the other instance (set by the worker)
     int present_seen_ = -1; // worker: last device presence handled (-1 = unknown)
     vti::PresenceWatch presence_; // worker: gone / back / gone and back between two looks (E212)
@@ -730,6 +744,7 @@ private:
     std::vector<std::string> lib_names_, lib_paths_, lib_roots_; // lib_roots_: the library's menu
     std::mutex banks_mu_;
     void load_banks();
+    std::string bank_cache_dir() const;
     std::unique_ptr<MemorySync> sync_;
     std::thread sync_thread_;
     // the Virus came back (switched off and on, replugged): the readiness probe and note hold of a first start again

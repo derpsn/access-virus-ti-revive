@@ -620,6 +620,10 @@ static DWORD WINAPI device_thread(LPVOID unused)
             if (g_dev) {
                 g_dev_gen++;
                 blog("device open, handshake sent");
+                // Virus 2+ (#45): its ports only when it exists - a second plug-in instance with one Virus starts broker 2
+                static int ports_started;
+                if (vti_slot > 1 && !ports_started++ && !getenv("VTI_NO_MIDI_PORT"))
+                    vti_keyport_start();
                 uint32_t st = 1;
                 broadcast(VTIMSG_STATE, &st, 4, NULL, 0);
             }
@@ -902,7 +906,7 @@ int main(int argc, char **argv)
         blog("vtibroker starting (protocol %d, Virus %d)", VTI_PROTO_VERSION, vti_slot);
     else
         blog("vtibroker starting (protocol %d)", VTI_PROTO_VERSION);
-    if (!getenv("VTI_NO_MIDI_PORT")) // as on macOS and Linux: a test switch; the ports are read-only
+    if (!getenv("VTI_NO_MIDI_PORT") && vti_slot == 1) // as on macOS and Linux: a test switch; Virus 2+: once it is there
         vti_keyport_start();
     CloseHandle(CreateThread(NULL, 0, device_thread, NULL, 0, NULL));
     char pipe[64];

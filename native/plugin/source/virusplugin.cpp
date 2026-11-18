@@ -14,6 +14,10 @@
 #include "base/source/fstreamer.h"
 #include "device/closeseq.h"
 #include "device/usbmidi.h"
+#include "device/slotpick.h"
+extern "C" {
+#include "devslot.h"
+}
 #include "model/state.h"
 #include "ratesw.h"
 #include "pluginterfaces/base/ibstream.h"
@@ -158,23 +162,33 @@ void DeviceOut::leave_virus()
     sent(200);
 }
 
+static const char *const VIRUS_SLOT_RECORD = "TIRevive/Virus"; // the project's Virus of several (#45)
 static std::mutex g_owner_mu;
-static const DeviceOut *g_owner; // the instance of this process that talks to the Virus
+static const DeviceOut *g_owner[VTI_SLOTS_MAX]; // per Virus: the instance of this process that talks to it (#45)
 
 bool DeviceOut::claim_owner()
 {
     std::lock_guard<std::mutex> g(g_owner_mu);
-    if (!g_owner)
-        g_owner = this;
-    owner_ = g_owner == this;
+    bool taken[VTI_SLOTS_MAX];
+    for (int i = 0; i < VTI_SLOTS_MAX; i++)
+        taken[i] = g_owner[i] != nullptr;
+    const int s = vti::slot_choose(taken, VTI_SLOTS_MAX, slot_pref_);
+    if (s) {
+        g_owner[s - 1] = this;
+        broker_.set_slot(s);
+    }
+    slot_ = s;
+    owner_ = s != 0;
     return owner_;
 }
 
 void DeviceOut::release_owner()
 {
     std::lock_guard<std::mutex> g(g_owner_mu);
-    if (g_owner == this)
-        g_owner = nullptr;
+    const int s = slot_;
+    if (s && g_owner[s - 1] == this)
+        g_owner[s - 1] = nullptr;
+    slot_ = 0;
     owner_ = false;
 }
 
@@ -263,11 +277,23 @@ int DeviceOut::start_audio()
 {
 #ifdef __APPLE__
     audio_.use_broker_ring(mac_broker_audio());
+    if (!audio_.broker_ring()) { // several Viruses (#45): its USB serial string finds its Core Audio device
+        uint8_t dd[18] = {0}, sd[255] = {0};
+        std::string serial;
+        const int n = broker_.control(0x80, 6, 0x0100, 0, dd, sizeof dd) == (int)sizeof dd && dd[16]
+                          ? broker_.control(0x80, 6, (uint16_t)(0x0300 | dd[16]), 0x0409, sd, sizeof sd)
+                          : -1;
+        for (int i = 2; i + 1 < n && i + 1 < sd[0]; i += 2)
+            if (sd[i + 1] == 0 && sd[i] >= 32 && sd[i] < 127)
+                serial += (char)sd[i];
+        audio_.set_usb_serial(serial); // memory only, never logged (rule 5)
+    }
     // macOS: the plug-in reads the Virus' Core Audio input itself (the broker carries MIDI), or the broker's ring
     const int r = audio_.broker_ring() ? broker_.audio(true, 3000, (uint32_t)want_rate.load()) : 1;
 #else
     const int r = broker_.audio(true, 3000, (uint32_t)want_rate.load()); // the broker sets it (rate following)
 #endif
+    audio_.set_slot(slot_ ? slot_.load() : 1); // the ring of this instance's Virus (#45)
     if (r == 1 && audio_.open(nullptr, want_rate.load())) { // macOS: the Core Audio rate
         rate = audio_.rate(); // the Virus' current rate (E323; 44100 from an older broker)
         audio_gate_.open();
@@ -532,6 +558,21 @@ void DeviceOut::run()
     if (const char *e = getenv("VTI_NATIVE_MIDI_RATE")) // bytes/s of stamped traffic, 0 = unlimited (tests only)
         budget_.rate = atof(e);
     while (!stop_) {
+        if (reslot_.exchange(false) && owner_ && slot_pref_ >= 1 && slot_pref_ <= VTI_SLOTS_MAX &&
+            slot_ != slot_pref_) { // the project's Virus (#45): move over when no other instance has it
+            bool is_free;
+            {
+                std::lock_guard<std::mutex> g(g_owner_mu);
+                is_free = !g_owner[slot_pref_ - 1];
+            }
+            if (is_free) {
+                log("Virus TI native: the project used Virus %d - switching over from Virus %d\n", slot_pref_.load(),
+                    slot_.load());
+                lose_broker();
+                release_owner();
+                continue;
+            }
+        }
         if (abandon_dump_.exchange(false))
             drop_dump();
         if (!open_) {
@@ -573,12 +614,19 @@ void DeviceOut::run()
                 }
                 continue;
             }
-            if (wait_reported_) {
+            if (wait_reported_ && slot_ == 1) {
                 wait_reported_ = false;
                 log("Virus TI native: the other instance is gone - this one takes over the Virus\n");
                 if (on_waiting_)
                     on_waiting_(false);
+            } else if (slot_ > 1 && !wait_reported_) { // Virus 2+: the waiting page until that Virus answers (#45)
+                wait_reported_ = true;
+                log("Virus TI native: another instance uses Virus 1 - trying Virus %d\n", slot_.load());
+                if (on_waiting_)
+                    on_waiting_(true);
+                report_status();
             }
+            absent_since_ = std::chrono::steady_clock::time_point{};
             broker_.set_name("TI Revive Virus Control");
             open_ = broker_.open(err);
             if (open_ && !audio_ok()) { // the owner starts the Virus audio stream (Linux: shm ring)
@@ -613,9 +661,36 @@ void DeviceOut::run()
             if (idle_)
                 idle_();
             check_presence();
+            if (slot_ > 1) { // Virus 2+ is not there (#45): wait for Virus 1 like a second instance (slotpick.h)
+                const auto now = std::chrono::steady_clock::now();
+                if (absent_since_ == std::chrono::steady_clock::time_point{})
+                    absent_since_ = now;
+                const int ms = (int)std::chrono::duration_cast<std::chrono::milliseconds>(now - absent_since_).count();
+                if (vti::slot_give_up(slot_, false, ms)) {
+                    log("Virus TI native: no Virus %d - waiting\n", slot_.load());
+                    lose_broker();
+                    release_owner();
+                    for (int i = 0; i < 200 && !stop_; i++) { // as a second instance: try again in 2 s
+                        rt_r_.store(rt_w_.load(std::memory_order_acquire), std::memory_order_release);
+                        if (idle_)
+                            idle_();
+                        std::unique_lock<std::mutex> lk(mu_);
+                        cv_.wait_for(lk, std::chrono::milliseconds(10), [this] { return stop_.load(); });
+                    }
+                    continue;
+                }
+            }
             std::unique_lock<std::mutex> lk(mu_);
             cv_.wait_for(lk, std::chrono::milliseconds(10), [this] { return stop_.load(); });
             continue;
+        }
+        if (wait_reported_ && slot_ > 1) { // Virus 2+ answered (#45)
+            wait_reported_ = false;
+            absent_since_ = std::chrono::steady_clock::time_point{};
+            log("Virus TI native: this instance uses Virus %d\n", slot_.load());
+            if (on_waiting_)
+                on_waiting_(false);
+            report_status();
         }
         std::vector<uint8_t> msg, piece; // piece: the next part of a dump in pieces (dumppacer.h)
         bool piece_last = false;
@@ -3151,6 +3226,15 @@ std::vector<KnobTemplate> VirusPlugin::knob_templates()
 
 // The Virus' RAM banks: our cache (tools/virussync, later the plug-in's own sync), else the original's Access cache
 // (read only) - Windows/Wine: ProgramData/Access Music/Virus TI/Cache/<device>, Mac: /Library/Application Support/...
+// the RAM bank cache of this instance's Virus: Virus 1 (and an instance not connected yet) the folder of today, Virus N
+// of several "virus-N" in it (#45), so two Viruses never write over each other's banks
+std::string VirusPlugin::bank_cache_dir() const
+{
+    const std::string d = own_cache_dir();
+    const int s = out_ ? out_->slot() : 0;
+    return s > 1 && !d.empty() ? d + "/virus-" + std::to_string(s) : d;
+}
+
 void VirusPlugin::load_banks()
 {
     // the original's three places (E307): on the Mac the factory libraries are in "Public Libraries"
@@ -3174,7 +3258,7 @@ void VirusPlugin::load_banks()
             lib_roots_.push_back(root.menu);
         }
     // like the original: only the plug-in's own cache; without one the first start syncs the whole RAM
-    std::string d = own_cache_dir();
+    std::string d = bank_cache_dir();
     if (d.empty())
         return;
     for (int b = 0; b < 4; b++) {
@@ -3440,7 +3524,7 @@ void VirusPlugin::sync_banks()
         set_start_pages(127, 127);
         return;
     }
-    std::string dir = own_cache_dir();
+    std::string dir = bank_cache_dir();
     if (!dir.empty()) {
         std::error_code ec;
         std::filesystem::create_directories(vti::u8path(dir), ec);
@@ -3850,7 +3934,7 @@ bool VirusPlugin::store_patch(int part, int bank, int program)
             cache[p] = b[p];
         drop_.forget(); // an undo of an earlier drop must not write over this store
     }
-    std::string dir = own_cache_dir();
+    std::string dir = bank_cache_dir();
     if (!dir.empty()) {
         std::error_code ec;
         std::filesystem::create_directories(vti::u8path(dir), ec);
@@ -4090,7 +4174,7 @@ bool VirusPlugin::download_bank(int bank)
                 else
                     old[p] = cache[p];
         }
-        std::string dir = own_cache_dir();
+        std::string dir = bank_cache_dir();
         if (!dir.empty())
             save_bank_file(dir + "/RAM " + (char)('A' + bank), old);
         if (out_)
@@ -4270,7 +4354,7 @@ bool VirusPlugin::send_ram_writes(const std::vector<BankDrop::Write> &w)
             for (int p = 0; p < 128; p++)
                 caches[bank][p] = banks_[bank][p];
     }
-    std::string dir = own_cache_dir();
+    std::string dir = bank_cache_dir();
     if (!dir.empty()) {
         std::error_code ec;
         std::filesystem::create_directories(vti::u8path(dir), ec);
@@ -4979,6 +5063,12 @@ tresult PLUGIN_API VirusPlugin::setState(IBStream *state)
     // later edits of the newer fields (Input Mode, unison, envelopes 3/4 ...) reach it (E174)
     if (int up = upgrade_state_dumps(recs); up && out_)
         out_->log("Virus TI native: %d part dump(s) of the project upgraded to the current format\n", up);
+    for (auto &r : recs) { // the Virus this project used when several are connected (#45, getState)
+        std::string path;
+        int part, value;
+        if (parse_editor_record(r, path, part, value) && path == VIRUS_SLOT_RECORD && out_)
+            out_->prefer_slot(value);
+    }
     {
         std::lock_guard<std::mutex> lk(state_mu_);
         state_ = std::move(recs);
@@ -5008,6 +5098,16 @@ tresult PLUGIN_API VirusPlugin::getState(IBStream *state)
             for (auto &e : edited)
                 if (is_part_dump(r, e.first))
                     r = e.second;
+        // which Virus this instance uses (#45): kept like an editor setting, never sent to the Virus
+        recs.erase(std::remove_if(recs.begin(), recs.end(),
+                                  [](const std::vector<uint8_t> &r) {
+                                      std::string path;
+                                      int part, value;
+                                      return parse_editor_record(r, path, part, value) && path == VIRUS_SLOT_RECORD;
+                                  }),
+                   recs.end());
+        if (const int s = out_ ? out_->slot() : 0)
+            recs.push_back(editor_record(VIRUS_SLOT_RECORD, 0, s));
         d = build_container(recs);
     }
     int32 done = 0;
