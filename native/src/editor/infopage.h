@@ -59,6 +59,13 @@ struct ChangeNote {
 inline const std::vector<ChangeNote> &changelog()
 {
     static const std::vector<ChangeNote> notes = {
+        {"0.8.43",
+         {"New names: the plug-in is \"TI Revive\" (before \"TI Revive Virus Control\"), the Windows ASIO driver \"TI "
+          "Revive Audio\" and the MIDI inputs \"TI Revive Synth\" and \"TI Revive MIDI\". Projects open as before; if a "
+          "track used one of the MIDI inputs, choose it there once more.",
+          "Control Center: the Burn To Flash ROM and OS Updater buttons are gone (TI Revive never offered them).",
+          "These Info pages say at the bottom that TI Revive is not affiliated with Access Music or Kemper.",
+          "TI Revive moved to github.com/derpsn/ti-revive and derpsn.github.io/ti-revive; the old links forward."}},
         {"0.8.42",
          {"Several Viruses at once (#45): each plug-in instance takes a free Virus, the one its project was saved "
           "with when that one is free. With one Virus nothing changes.",
