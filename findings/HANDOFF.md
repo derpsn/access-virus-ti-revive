@@ -27,7 +27,8 @@ Last update: 2026-11-19: round-0.8.43 started (VERSION 0.8.43; #46 in README/sit
   + Install test build.command) to push with scripts/mac.sh push when the Mac answers; the user installs.
 - Round 0.8.43: branch round-0.8.43 from origin/main 5db2486, native VERSION 0.8.43. Plan agreed with the user
   2026-11-19: Mac push only when needed; #46 in README "Tested with" + site matrix (done).
-- Our TI2 Desktop: on **Linux** USB (2026-11-14 evening). User flashed ROM Z on it in early November (E500).
+- Our TI2 Desktop: in the win11 VM (attached 2026-11-19 evening, user; Linux broker socket stopped). Back: VM=win11
+  scripts/vm.sh detach, then systemctl --user start tirevive-broker.socket. User flashed ROM Z on it in early November (E500).
 - Linux: CI build 44588173936 (0.8.42, 42f0a12: E554 + E555 + stats label) installed 2026-11-19 (plug-in 4b9563c5, broker c280b8e6). Virus back on Linux after the VM test (node plugdev, socket active).
 - win11 VM: CI build 44588173936 (42f0a12) installed 2026-11-19 (VST3 7eafc6fc; tirevive-hil task now runs C:\vti\0842\hil) (/quiet exit 0), shut down; hil-win 2026-11-19: all pass except H2-2 drift +126 ppm (VM clock, as before). hil-win on the tuned VM 2026-11-15 (E537): run 1
   4/5 (H1 silent, first session after Virus power-on + attach, audio read hung), run 2 4/5 (H2-1 drift +112 ppm
