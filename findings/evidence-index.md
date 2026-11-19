@@ -42,7 +42,7 @@ Entries: 552. Marks after an entry: its lowest confidence level when below HIGH,
 - [E551](evidence.md#e551) Why the Virus TI Snow streams FF FE 00 00 on bulk EP 0x85 (towards E387, E547, E550): sim finding S147 ... (LOW; not on hardware)
 - [E552](evidence.md#e552) The Virus' single dump replies carry both checksums as TI Revive computes them (BankDrop::checksums: byte 265 ... (MED)
 
-## USB transport: endpoints, iso streams, stalls, errors (282)
+## USB transport: endpoints, iso streams, stalls, errors (283)
 
 - [E003](evidence.md#e003) MSI custom action `UpdateFirmware` (CAInstallerHelperDeferred!UpdateTIOS) runs at InstallExecuteSequence 6598 ...
 - [E004](evidence.md#e004) Drivers are installed by CAInstallerHelperDeferred (Prepare/Install/FinishDriverInstall, imports ...
@@ -326,6 +326,7 @@ Entries: 552. Marks after an entry: its lowest confidence level when below HIGH,
 - [E551](evidence.md#e551) Why the Virus TI Snow streams FF FE 00 00 on bulk EP 0x85 (towards E387, E547, E550): sim finding S147 ... (LOW; not on hardware)
 - [E553](evidence.md#e553) The original Virus Control (Windows x64, 5.1.7) is built for several Viruses on one computer, one plug-in ... (LOW; open; not on hardware)
 - [E554](evidence.md#e554) REAPER on Linux crashed when it opened a saved project with two TI Revive instances and at least one plug-in ... (open)
+- [E555](evidence.md#e555) With one Virus and two plug-in instances (round 0.8.42 test, user's REAPER project on Linux, TI2 Desktop) the ... (open)
 
 ## SysEx and parameter protocol (130)
 

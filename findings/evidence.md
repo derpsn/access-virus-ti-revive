@@ -5120,11 +5120,15 @@ SLOT_RETRY_MS (30 s) to find a Virus plugged in later or one another program let
 Virus answered (found_slot), else the project's own. Tests first (test_slotpick: skips the slots given up, waits when
 all are tried, retry after 30 s), 838 vtitests, ctest 7/7. Local build (plug-in f6ee43c1) with the user's project in
 REAPER for 75 s: the second instance tried Virus 3, 2, 4 once (19:14:18-19:14:34), no connect for 34 s, then 3, 2, 4
-once more (the retry), REAPER closed cleanly, no crash. Not run yet: two real or simulated Viruses (the second
-instance should then stay on Virus 2), Windows and macOS.
+once more (the retry), REAPER closed cleanly, no crash. Two Viruses (19:18-19:21, the real TI2 on USB 1-8 and the
+simulator's virtual TI2 over USB/IP vhci on 3-1): broker 1 "2 Viruses connected, this broker has Virus 1 (USB
+001-008)", broker@2 "... Virus 2 (USB 003-001)" with MIDI ports "Virus TI 2 MIDI"/"Virus TI 2 Synth"; instance 1 on
+the real one (ready 1.1 s, sync marker, 0 ms stalled), instance 2 tried Virus 3 (the old build's saved record), then
+stayed on Virus 2 (ready 1.2 s, sync marker; one 53 ms stall in the model's stream, the simulator's known lag); the user
+heard both ("works"). Not shown: a reopen after a save with this build (straight to Virus 2), Windows and macOS.
 
 - **Date:** 2026-11-19
 - **Pointer:** native/src/device/slotpick.h (slot_choose, slot_retry_due, slot_to_save), native/plugin/source/virusplugin.cpp (claim_owner, the worker's wait and give-up), broker journal of the run
 - **Method:** broker journal (connects per systemd unit) during the user's test and the rerun with the fix; unit tests
-- **Confidence:** HIGH (the cycling and its cause, the fix with one Virus) / open (two Viruses)
-- **Hardware:** yes (TI2 Desktop on Linux, one Virus)
+- **Confidence:** HIGH (the cycling and its cause, the fix with one Virus, two Viruses on Linux with one simulated) / open (two real Viruses, Windows, macOS)
+- **Hardware:** yes (TI2 Desktop on Linux; plus the simulator's virtual TI2 as Virus 2)
