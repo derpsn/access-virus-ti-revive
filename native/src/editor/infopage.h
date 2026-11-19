@@ -19,6 +19,9 @@ inline constexpr InfoRect kInfoPage{0, 45, 907, 426};            // BG_Page_Info
 inline constexpr InfoRect kInfoText{52, 45 + 25, 786, 340};      // where the original's text image sits
 inline constexpr InfoRect kInfoOk{688, 45 + 376, 123, 23};       // BTN_Ok_Red.png (two 23-pixel frames)
 inline constexpr InfoRect kInfoDontShow{548, 45 + 376, 123, 23}; // BTN_Dont_Show_Again.png
+// ours: a footer left of the buttons on every Info page, outside the text's room (the Access look needs the notice)
+inline constexpr InfoRect kInfoFooter{52, 45 + 376, 488, 23};
+inline constexpr const char *kInfoNotice = "Not affiliated with or endorsed by Access Music or Kemper.";
 
 struct InfoPara {
     std::string text;

@@ -91,6 +91,16 @@ TEST(infopage_layout_from_the_original)
     CHECK(kInfoOk.contains(700, 430) && !kInfoOk.contains(600, 430));
 }
 
+// every Info page (welcome, What's New, log notice) carries the notice in a footer left of the buttons, outside the
+// text's room, so the fitting of What's New is not touched (branding cleanup, 2026-11-19)
+TEST(infopage_footer_notice)
+{
+    CHECK(std::string(kInfoNotice).find("Not affiliated") == 0);
+    CHECK(std::string(kInfoNotice).find("Access Music") != std::string::npos);
+    CHECK(kInfoFooter.x == kInfoText.x && kInfoFooter.y == kInfoOk.y && kInfoFooter.h == kInfoOk.h);
+    CHECK(kInfoFooter.x + kInfoFooter.w <= kInfoDontShow.x - 8); // never under the Don't Show Again button
+}
+
 // What's New with several versions (from the ? menu: all of them) overflowed the page on the Mac and on Linux even at
 // 9 pt (user 2026-11-10, screenshot): the newest version always stays, older ones only while they fit at 11 pt or
 // more, and then a line where the rest is

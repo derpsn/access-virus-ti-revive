@@ -141,6 +141,7 @@ talk with the user (Linux may start); hil-win on the tuned VM: yes; update check
    user 2026-11-19): scripts/site/mask_screenshots.py covers Access' logos, "TI Revive" (Lato Black, orange TI) in the
    top logo spot, only the published PNGs (the plug-in shows the user's skin as before); repo RENAMED to
    derpsn/ti-revive 2026-11-19, old site path forwarded by the new repo derpsn/derpsn.github.io, links changed on the
-   round (log/2026-11.md); open: old /issues/45 link answered 404 (recheck), live site keeps the old canonical URL
-   until rebuilt from main, Google Search Console: new address (user); Info page footer
-   "Not affiliated ..." (kInfoFooter, test infopage_footer_notice, 839 pass) uncommitted, screenshot needs the Virus on;
+   round (log/2026-11.md); old issue links forward (user checked, logged in); main 42528a1 (site address only, user
+   OK) + site.yml 44608733253 green: canonical/sitemap on /ti-revive/; Search Console: new property verified by the user (HTML file; sitemap to submit); Info page footer
+   "Not affiliated ..." (kInfoFooter, own 11 pt font, test infopage_footer_notice) DONE, user OK on screenshots of What's New and
+   Welcome (nativehost on Xvfb, ? menu, xclick, PIL ImageGrab);
