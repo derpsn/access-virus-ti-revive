@@ -3,6 +3,8 @@
 // through the TI Revive broker. Audio and editor follow in later steps.
 #pragma once
 #include "vstgui/lib/cvstguitimer.h"
+#include "pluginterfaces/base/funknownimpl.h"
+#include "pluginterfaces/gui/iplugview.h" // Linux::IRunLoop (gesture_tick_)
 #include "access/accessfiles.h"
 #include "access/library.h"
 #include "device/audioin.h"
@@ -859,6 +861,17 @@ private:
     // the window closed nothing was recorded; Live records the output parameter changes). VSTGUI is set up when the
     // module loads (vstguieditor.cpp's ModuleInitializer), so its timer runs on the host's UI thread without a window.
     VSTGUI::SharedPointer<VSTGUI::CVSTGUITimer> gesture_timer_;
+#if SMTG_OS_LINUX
+    // Linux: the tick goes straight to the host's run loop, not through VSTGUI's adapter: the SDK replaces that adapter
+    // at a factory setHostContext and at the first editor and frees the wrappers it registered, which REAPER keeps as
+    // plain pointers - a freed onTimer crashed REAPER reopening a project with two instances (round 0.8.42, E183's kind)
+    struct GestureTick : Steinberg::U::Implements<Steinberg::U::Directly<Steinberg::Linux::ITimerHandler>> {
+        std::function<void()> fn;
+        void PLUGIN_API onTimer() override { fn(); }
+    };
+    Steinberg::IPtr<GestureTick> gesture_tick_;
+    Steinberg::FUnknownPtr<Steinberg::Linux::IRunLoop> gesture_loop_;
+#endif
     std::atomic<bool> gesture_timer_ran_{false};
     std::atomic<int> editors_open_{0};
     bool send_ram_writes(const std::vector<BankDrop::Write> &w); // dumps into RAM slots + cache + cache files

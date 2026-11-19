@@ -21,6 +21,8 @@ extern "C" {
 #include "model/state.h"
 #include "ratesw.h"
 #include "pluginterfaces/base/ibstream.h"
+#include "public.sdk/source/main/moduleinit.h"
+#include "public.sdk/source/main/pluginfactory.h"
 #include "pluginterfaces/base/ustring.h"
 #include "pluginterfaces/vst/ivstevents.h"
 #include "pluginterfaces/vst/ivstparameterchanges.h"
@@ -1093,17 +1095,49 @@ void DeviceOut::run()
 
 // ---- VirusPlugin ----------------------------------------------------------------------------------------------------
 
+#if SMTG_OS_LINUX
+// the host's run loop for the gesture timer: REAPER offers it on the factory's host context only, not on the
+// component's ("gesture timer off" without this); taken from the factory as the SDK does for VSTGUI (vstguieditor.cpp)
+static FUnknownPtr<Linux::IRunLoop> g_factory_runloop;
+static ModuleInitializer g_factory_runloop_init([] {
+    static auto factory = owned(GetPluginFactory());
+    if (auto pf = U::cast<IPluginFactoryInternal>(factory))
+        pf->addHostContextCallback([](FUnknown *ctx) {
+            if (FUnknownPtr<Linux::IRunLoop> rl(ctx); rl)
+                g_factory_runloop = rl;
+        });
+});
+static ModuleTerminator g_factory_runloop_exit([] { g_factory_runloop = nullptr; });
+#endif
+
 tresult PLUGIN_API VirusPlugin::initialize(FUnknown *context)
 {
     tresult r = SingleComponentEffect::initialize(context);
     if (r != kResultOk)
         return r;
     // the host's UI thread (initialize runs there): knob moves -> host edits, window open or not (gesture_timer_)
-    gesture_timer_ = VSTGUI::makeOwned<VSTGUI::CVSTGUITimer>([this](VSTGUI::CVSTGUITimer *) {
+    auto tick = [this] {
         gesture_timer_ran_.store(true, std::memory_order_relaxed);
         tick_gestures();
         check_latency();
-    }, 50, true);
+    };
+#if SMTG_OS_LINUX
+    // no run loop on the host context: no timer, the editor's timer ticks as in 0.8.41 (editor_closed flushes then)
+    gesture_loop_ = FUnknownPtr<Linux::IRunLoop>(context);
+    if (!gesture_loop_)
+        gesture_loop_ = g_factory_runloop;
+    if (gesture_loop_) {
+        gesture_tick_ = owned(new GestureTick);
+        gesture_tick_->fn = tick;
+        if (gesture_loop_->registerTimer(gesture_tick_, 50) != kResultTrue) {
+            gesture_tick_ = nullptr;
+            gesture_loop_ = nullptr;
+        }
+    }
+    fprintf(stderr, "Virus TI native: gesture timer %s\n", gesture_tick_ ? "on the host's run loop" : "off (no run loop)");
+#else
+    gesture_timer_ = VSTGUI::makeOwned<VSTGUI::CVSTGUITimer>([tick](VSTGUI::CVSTGUITimer *) { tick(); }, 50, true);
+#endif
     if (FUnknownPtr<IHostApplication> app(context); app) { // the DAW's name, for the setup page
         String128 name{};
         if (app->getName(name) == kResultOk)
@@ -1362,6 +1396,13 @@ tresult PLUGIN_API VirusPlugin::terminate()
         gesture_timer_->stop();
         gesture_timer_ = nullptr;
     }
+#if SMTG_OS_LINUX
+    if (gesture_tick_) {
+        gesture_loop_->unregisterTimer(gesture_tick_);
+        gesture_tick_ = nullptr;
+        gesture_loop_ = nullptr;
+    }
+#endif
     gestures_.flush([this](uint32_t id) { endEdit(id); });
     note_probe_flush();
     stop_warm_ = true;

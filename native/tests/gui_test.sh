@@ -26,7 +26,8 @@ duplicate)
         exit 77
     fi
     [ $rc -eq 0 ] || fail "nativehost exited with $rc"
-    grep -q "this one takes over the Virus" "$out" || fail "the duplicate did not take over"
+    # since #45 (several Viruses) the duplicate tries Virus 2 first and logs "this instance uses Virus 1" at the takeover
+    grep -q -e "this one takes over the Virus" -e "this instance uses Virus 1" "$out" || fail "the duplicate did not take over"
     # the editor's open and close are in the log (E287: REAPER crashes only with the editor open)
     [ "$(grep -c "editor opened" "$out")" -ge 2 ] || fail "the two editors' opening is not logged"
     grep -q "editor closed" "$out" || fail "the first editor's close is not logged"

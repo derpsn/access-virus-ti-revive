@@ -5078,3 +5078,30 @@ vticore_winusb.c interface index 0).
 - **Method:** REA (Ghidra 12.1.4) static analysis: strings ("not the Virus TI you were using before", "Unknown Device") -> xrefs -> device poll, claim and lookup functions
 - **Confidence:** HIGH that the plug-in side handles several devices with one owner each; LOW / open for the driver side and real-world use
 - **Hardware:** no (static only)
+
+### E554
+
+REAPER on Linux crashed when it opened a saved project with two TI Revive instances and at least one plug-in window
+open (user, round 0.8.42 test, CI build 44486371869 at 4045dbe; 2 of 2 by hand, 3 of 3 under gdb). gdb: SIGSEGV on
+REAPER's main thread at a heap address; the caller in REAPER loads an object from its timer list and calls slot 3 of
+its vtable (ITimerHandler::onTimer after the three FUnknown slots), so REAPER ticked a timer handler that had been
+freed. Narrowed with copies of the project: both windows, either window alone: crash; no window open: no crash; one
+instance (the other set offline) with its window: no crash; the 0.8.41 release plug-in with the same project: no
+crash. Cause: the gesture timer added for #30 (98f5dc3, E542) is a VSTGUI timer made in initialize(); on Linux it
+registers through the SDK's run-loop adapter (vstgui_linux_runloop_support.cpp), which owns the handler wrappers it
+hands to the host. The SDK installs a new adapter at every factory setHostContext and the editor sets one up at its
+first open; the old adapter is freed with its wrappers while REAPER still holds them as plain pointers (E183's
+mechanism; the editor's guard there covers only its own handlers). Fix (round-0.8.42): on Linux the gesture tick is
+our own ITimerHandler registered directly with the host's IRunLoop and unregistered in terminate(). REAPER offers
+IRunLoop only on the factory's host context, not on the component's (first try logged "gesture timer off (no run
+loop)"), so the plug-in keeps it from the factory's host-context callback as the SDK does. With the fix (local build,
+plug-in f4fb5683): no crash in all five project variants, 40 s each, every instance logs "gesture timer on the host's
+run loop"; ctest 7/7. Not checked yet: a normal close of REAPER (terminate unregisters the timer), that Virus knob
+moves with the window closed still reach REAPER as edits, Windows and macOS (unchanged: VSTGUI timers there are
+Win32/Cocoa timers, no adapter).
+
+- **Date:** 2026-11-19
+- **Pointer:** scripts/reaper-open.sh (the check), native/plugin/source/virusplugin.cpp (initialize, terminate, g_factory_runloop), gdb output in the session scratchpad
+- **Method:** gdb on REAPER 7 (Linux) with copies of the user's project; disassembly of REAPER's caller; reading the SDK's adapter code
+- **Confidence:** HIGH (the crash, the split, the fix in REAPER on Linux) / open (close path, knob edits with the window closed)
+- **Hardware:** yes (TI2 Desktop on Linux)
