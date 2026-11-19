@@ -34,6 +34,8 @@ Last update: 2026-11-19: round-0.8.43 started (VERSION 0.8.43; #46 in README/sit
   only); probe answered every time, notes <= 0.70 ms. TUNED 2026-11-14 (E533): vCPUs pinned to P-cores
   4-7, emulator 2-3, topology 1/2/2, no emulated sound / SPICE USB redirect / balloon, evmcs+avic off, ISOs off;
   guest High performance, USB selective suspend off (AC). Backup: work/vm/win11-before-tuning-20261114.xml.
+  2026-11-19: emulated sound card BACK (ich9 -> SPICE audio, user wanted sound in the VM; from the next VM start);
+  before hil-win timing runs consider removing it again (backup without it: work/vm/win11-before-sound-20261119.xml).
   Before VM timing tests: `sudo cpupower frequency-set -g performance` (user; on since 2026-11-15 08:10).
   win10 VM: snapshot `pre-i36` (0.8.36). No spare USB controller for VFIO (user: no extra hardware for now).
 - Mac (macOS 27.2.1): CI build 43620201798 installed (= 0.8.41 except texts). The RELEASE package is ready locally in
