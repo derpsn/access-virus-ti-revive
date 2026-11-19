@@ -143,7 +143,7 @@ talk with the user (Linux may start); hil-win on the tuned VM: yes; update check
    no re-announce (E544); diag.off had been set on the Mac, removed. libusb install on our Mac only with the user;
    rc3 released for #37 (user 2026-11-15: post it for him to test, Catalina not testable here).
 5b. AUDIT 2026-11-17 DONE: all 34 items of [`audit-2026-11-17.md`](audit-2026-11-17.md) fixed and reviewed (fff1a52..632d5df; CI 44255563905 all green). win11 VM 2026-11-18 (log): #28 PASSED (logs in Program Files by SYSTEM, a standard user reads but cannot write or add files, uninstall removes them), #15 success path PASSED (exit 0, oem13.inf recorded; failure path not provoked). Still not run: #13 #25 #26 #33 (Windows broker/ASIO with a Virus), #14 #27 (libusb audio, idle exit), #21-#24 (plug-in in a DAW), #32 (bank sync, E552).
-6. Linux: CI test build 44486371869 installed (multi-device incl.; old 0.8.41 in ~/.vst3-backup/0.8.42-dev-before-multidevice); Mac: test
+6. Linux: CI test build 44486371869 installed (multi-device incl.; the build before the multi-device dev build in ~/.vst3-backup/0.8.42-dev-before-multidevice); Mac: test
    build CI 43696948011 installed; TI2 on the Mac's USB.
 7. Waiting on reporters (table above); check issues only together with the user.
 8. PARKED (owner 2026-11-17, come back later): branding cleanup (logos in screenshots, plug-in/ASIO names, repo/site
