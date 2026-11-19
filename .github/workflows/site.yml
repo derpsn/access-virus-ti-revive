@@ -1,12 +1,11 @@
 # The website (GitHub Pages, https://derpsn.github.io/access-virus-ti-revive/): scripts/site/build.py turns the
-# GitHub releases and site/src into static pages and this workflow publishes them. Runs when a release is published
-# (new version, changelog, checksums), when the site's sources change on main, by hand, and once a day so the
-# download counter (GitHub's counts of the installer files) stays current.
+# GitHub releases and site/src into static pages and this workflow publishes them. Runs when the site's sources
+# change on main, by hand (after every release: gh workflow run site.yml --ref main), and once a day so the download
+# counter (GitHub's counts of the installer files) stays current. Not on release events: those run on the tag, and
+# the github-pages environment lets only main deploy (refused at every release, e.g. v0.8.42).
 name: site
 
 on:
-  release:
-    types: [published]
   push:
     branches: [main]
     paths: ['site/**', 'scripts/site/**', 'docs/images/**', '.github/workflows/site.yml']

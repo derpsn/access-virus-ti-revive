@@ -20,7 +20,8 @@ Last update: 2026-11-19: **0.8.42 RELEASED** (user "Ship it", no rc7); test roun
   the release was created BY HAND from that run's artifacts (gh release create v0.8.42 --verify-tag, the notes from
   the fixed heredoc, libusb 1.0.30 verified by libusb_verify, tirevive-usbinfo.ps1): 7 assets, Latest. The next
   tag runs the fixed job (not yet seen green). Site rebuilt (site.yml 44600240159): Download 0.8.42, several
-  Viruses in Features + Recent releases, 838 tests, coverage 95.5 %.
+  Viruses in Features + Recent releases, 838 tests, coverage 95.5 %; site.yml no longer runs on release events (the tag's deploy is refused by the
+  Pages environment, red at every release; user OK 2026-11-19).
 - Release installed: Linux (install.sh, plug-in 94257c93, broker c280b8e6), win11 VM (setup.exe /quiet exit 0, VST3
   b5cd51c9, VM shut down). Mac: work/rel-0.8.42/out/macx/TI-Revive-0.8.42-release (pkg 1f8f888c + INSTALL-COMMAND
   + Install test build.command) to push with scripts/mac.sh push when the Mac answers; the user installs.
