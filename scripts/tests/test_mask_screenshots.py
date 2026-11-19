@@ -5,12 +5,16 @@ import importlib.util
 import os
 import unittest
 
-from PIL import Image, ImageDraw
+try:  # Pillow: on the maintainers' machine, not on the CI runners (the script only runs by hand)
+    from PIL import Image, ImageDraw
+except ImportError:
+    Image = None
 
 HERE = os.path.dirname(os.path.abspath(__file__))
-spec = importlib.util.spec_from_file_location("mask", os.path.join(HERE, "..", "site", "mask_screenshots.py"))
-mask = importlib.util.module_from_spec(spec)
-spec.loader.exec_module(mask)
+if Image is not None:
+    spec = importlib.util.spec_from_file_location("mask", os.path.join(HERE, "..", "site", "mask_screenshots.py"))
+    mask = importlib.util.module_from_spec(spec)
+    spec.loader.exec_module(mask)
 
 BOX = (40, 20, 120, 44)
 
@@ -32,6 +36,7 @@ def outside_unchanged(test, a, b):
                 test.assertEqual(a.getpixel((x, y)), b.getpixel((x, y)), (x, y))
 
 
+@unittest.skipIf(Image is None, "Pillow not installed")
 class Mask(unittest.TestCase):
     def test_close_removes_a_dark_logo_on_light_ground(self):
         im = panel((190, 190, 192), (90, 90, 90))

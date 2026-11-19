@@ -146,4 +146,5 @@ talk with the user (Linux may start); hil-win on the tuned VM: yes; update check
    Center: user OK ("cc looks clean"); new CC screenshots (both still show the buttons); project test: REAPER on
    Linux PASSED (E556, scripts/reaper-projcompat), Live (win11 VM) and Logic (AU) still to do; Mac: MIDI input kept
    by unique ID?; What's New 0.8.43 + release text WRITTEN (only REAPER named as tested; add Live/Logic when done).
-   CI 44613895602 (3ff1a00, 0.8.43) for the Windows/Mac test. Linux has the local 0.8.43 dev build (0bd56d8).
+   CI 44613895602 (3ff1a00, 0.8.43): mac + mac-libusb green (Mac test uses it); native-windows/-linux red (scripts_py:
+   no Pillow on CI, risk.json lacked scripts/reaper-projcompat) - fixed, new run for Windows. Linux has the local 0.8.43 dev build (0bd56d8).
