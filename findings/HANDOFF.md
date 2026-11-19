@@ -5,7 +5,7 @@ NEXT. At most 150 lines; the Stop hook (`.claude/hooks/handoff-check.sh`) refuse
 how goes into the dated log [`log/2026-11.md`](log/2026-11.md) (newest first); older logs are in [`log/`](log/).
 Device/protocol knowledge goes into [`evidence.md`](evidence.md). Update this file in the same commit as the work._
 
-Last update: 2026-11-19: joint issue check (#47 new, reply drafted; #34 closed); CI 44486371869 started on round-0.8.42 4045dbe (version 0.8.42) = test build for #45 + #42 snow-idle-slow + #44 recall fixes: next Mac check, then to the reporters. Quiet-issue closings due from 2026-11-21.
+Last update: 2026-11-19: joint issue check (#47 new, reply posted; #34 closed); CI 44486371869 started on round-0.8.42 4045dbe (version 0.8.42) = test build for #45 + #42 snow-idle-slow + #44 recall fixes: next Mac check, then to the reporters. Quiet-issue closings due from 2026-11-21.
 
 ## Where things stand
 
@@ -55,7 +55,7 @@ Last update: 2026-11-19: joint issue check (#47 new, reply drafted; #34 closed);
 | #31 | Win10 VirtualBox, Snow, setup with the Access driver | reporter: setup unplug step report; 0.8.41 note | 2026-11-14 |
 | #32 | (no change since 11-10) | reporter | before 11-10 |
 | #33 | Intel Mac 0.8.39: Logic distorted until a buffer change; log clean on the way in, not a slip (E532) | reporter: Logic output device, distortion on the unit's outputs?, 0.8.41 log | 2026-11-14 |
-| #47 | NEW 2026-11-18: Snow "connected but not found" in Ableton; form says Windows 11 / TI Desktop, text macOS 27.0.1 / Snow; no logs, no version (E134 or E115 pattern?) | us: reply drafted 2026-11-19 (platform, model, version, Access/AURA, diag.log, broker log, ioreg, MIDI Drivers ls), waits for the user's OK to post | - |
+| #47 | NEW 2026-11-18: Snow "connected but not found" in Ableton; form says Windows 11 / TI Desktop, text macOS 27.0.1 / Snow; no logs, no version (E134 or E115 pattern?) | reporter: platform, model, version, Access/AURA, diag.log, broker log, ioreg, MIDI Drivers ls (issuecomment-7003657269) | 2026-11-19 |
 | #36 | Windows Cubase bank sync 0/128 | reporter: BC2001.syx, new log with 0.8.41 | 2026-11-14 |
 | #37 | rc3 libusb TESTED by the reporter 2026-11-18: notes in sync from the first start, no crackle; knobs as MIDI controller work in Remote mode (as the original); MIDI ports appear after loading the plug-in (by design only while the broker runs), but sometimes only after a Mac restart or Virus power cycle (cause unknown; their log had the broker start scrolled out). Log: 7 "audio arrives scrambled" restarts, 3 sync errors (asked if audible). Offset hypothesis: confirmed for #30, still open for #33 | reporter: grep "MIDI port" broker log when ports are missing, DIN MIDI In test, dropout heard? (issuecomment-6984585900); user 2026-11-18: decide on ports staying up while a Virus is connected (CPU cost, #42) only after that log; maintainer nudged 2026-11-18 19:43 | 2026-11-18 |
 | #38 | macOS 27 Live: AU/editor crash = SOLVED by the reporter (Access .pkg was missing; plug-in opens; Virus not connected yet) | reporter: note after connecting the Virus, then close (issuecomment-6948868845) | 2026-11-17 |
