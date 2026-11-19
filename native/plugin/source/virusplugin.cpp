@@ -928,14 +928,14 @@ void DeviceOut::run()
             int64_t newest = audio_ok() ? audio_.newest_frame() : -1, pos = audio_ok() ? audio_.position() : -1;
             log("stats: audio %d drops %lld filled %lld distance %lld queued %d | marker %lld aligned blocks %lld, read "
                 "margin min %lld, timeline steps %lld, last sound %lld frames ago | host frames %lld / virus frames "
-                "%lld, anchors %lld, err %lld..%lld\n",
+                "%lld, anchors %lld, err %lld..%lld | Virus %d\n", // which instance: its Virus (#45, 0 = none yet)
                 (int)audio_ok(), (long long)(audio_ok() ? audio_.drops() : -1),
                 (long long)(audio_ok() ? audio_.filled() : -1),
                 (long long)(newest >= 0 && pos >= 0 ? newest - pos : -1), queued_.load(), (long long)marker.load(),
                 (long long)aligned_blocks.exchange(0), (long long)read_margin_min.exchange(INT64_MAX),
                 (long long)tl_steps.exchange(0), (long long)(newest - last_sound.load()), (long long)host_frames.exchange(0),
                 (long long)(stats_newest_ >= 0 ? newest - stats_newest_ : -1), (long long)anchors.exchange(0),
-                (long long)err_min.exchange(INT64_MAX), (long long)err_max.exchange(INT64_MIN));
+                (long long)err_min.exchange(INT64_MAX), (long long)err_max.exchange(INT64_MIN), slot_.load());
             stats_newest_ = newest;
             int64_t pull_blocks = 0, pull_max = 0;
             pulls.take(pull_blocks, pull_max);
