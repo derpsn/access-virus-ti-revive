@@ -5163,9 +5163,11 @@ postinstall removed the old bundles; /Library/Audio/Plug-Ins held only "TI Reviv
 In Logic (user, 2026-11-19): the plug-in loads fine, its slot is named "TI Revive"; the track's MIDI input became a
 generic input. So Logic finds the Audio Unit by its codes, but remembers a MIDI input by its name, not by the port's
 CoreMIDI unique ID (kept as "VTI1"): after the rename the input has to be chosen once more, as the release notes say.
+Ableton Live on the same Mac (VST3, a project saved before the update): works with the renamed build too (user, same
+evening; no details beyond "worked").
 
 - **Date:** 2026-11-19
 - **Pointer:** native/CMakeLists.txt (vti_add_au: names changed, codes and bundle ids kept), src/installer-mac/scripts/postinstall (old bundles removed), src/broker/devslot.h (vti_slot_port_name, vti_slot_port_id)
 - **Method:** hardware test on our Mac (MacBook Air M3, macOS 27.2.1, TI2 Desktop) by the user in Logic Pro; installed files checked over SSH
-- **Confidence:** HIGH (Logic on macOS 27)
+- **Confidence:** HIGH (Logic on macOS 27) / MED (Ableton Live on macOS: the user's short report)
 - **Hardware:** yes (TI2 Desktop, Mac)

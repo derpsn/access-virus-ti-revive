@@ -328,7 +328,7 @@ Entries: 554. Marks after an entry: its lowest confidence level when below HIGH,
 - [E554](evidence.md#e554) REAPER on Linux crashed when it opened a saved project with two TI Revive instances and at least one plug-in ... (open)
 - [E555](evidence.md#e555) With one Virus and two plug-in instances (round 0.8.42 test, user's REAPER project on Linux, TI2 Desktop) the ... (open)
 - [E556](evidence.md#e556) The rename of 0.8.43 ("TI Revive Virus Control" -> "TI Revive", bundle "TI Revive Virus Control.vst3" -> "TI ... (open)
-- [E557](evidence.md#e557) Logic Pro on macOS after the rename of 0.8.43 (see E556): the user saved a Logic project with the Audio Unit ...
+- [E557](evidence.md#e557) Logic Pro on macOS after the rename of 0.8.43 (see E556): the user saved a Logic project with the Audio Unit ... (MED)
 
 ## SysEx and parameter protocol (130)
 
@@ -1026,7 +1026,7 @@ Entries: 554. Marks after an entry: its lowest confidence level when below HIGH,
 - [E543](evidence.md#e543) #37's report on the rc1 libusb package (packman83, 2026-11-15 13:12 UTC; Intel MacBook, macOS 10.15.7, Logic; ... (MED; open)
 - [E544](evidence.md#e544) Fixes prepared for #37 (E543), not tested on any Mac yet (2026-11-15; the user away, our Mac asleep) (LOW; open; not on hardware)
 - [E550](evidence.md#e550) Issue #42 (Snow, M4 Pro, macOS 15.8.2), the reporter's test of v0.8.42-rc5 (1 ms pace of idle-only reads, ... (LOW)
-- [E557](evidence.md#e557) Logic Pro on macOS after the rename of 0.8.43 (see E556): the user saved a Logic project with the Audio Unit ...
+- [E557](evidence.md#e557) Logic Pro on macOS after the rename of 0.8.43 (see E556): the user saved a Logic project with the Audio Unit ... (MED)
 
 ## Access software (Virus Control, Control Center, installer) (224)
 
@@ -1253,7 +1253,7 @@ Entries: 554. Marks after an entry: its lowest confidence level when below HIGH,
 - [E550](evidence.md#e550) Issue #42 (Snow, M4 Pro, macOS 15.8.2), the reporter's test of v0.8.42-rc5 (1 ms pace of idle-only reads, ... (LOW)
 - [E553](evidence.md#e553) The original Virus Control (Windows x64, 5.1.7) is built for several Viruses on one computer, one plug-in ... (LOW; open; not on hardware)
 - [E556](evidence.md#e556) The rename of 0.8.43 ("TI Revive Virus Control" -> "TI Revive", bundle "TI Revive Virus Control.vst3" -> "TI ... (open)
-- [E557](evidence.md#e557) Logic Pro on macOS after the rename of 0.8.43 (see E556): the user saved a Logic project with the Audio Unit ...
+- [E557](evidence.md#e557) Logic Pro on macOS after the rename of 0.8.43 (see E556): the user saved a Logic project with the Audio Unit ... (MED)
 
 ## Windows (182)
 
@@ -1656,7 +1656,7 @@ Entries: 554. Marks after an entry: its lowest confidence level when below HIGH,
 - [E554](evidence.md#e554) REAPER on Linux crashed when it opened a saved project with two TI Revive instances and at least one plug-in ... (open)
 - [E555](evidence.md#e555) With one Virus and two plug-in instances (round 0.8.42 test, user's REAPER project on Linux, TI2 Desktop) the ... (open)
 - [E556](evidence.md#e556) The rename of 0.8.43 ("TI Revive Virus Control" -> "TI Revive", bundle "TI Revive Virus Control.vst3" -> "TI ... (open)
-- [E557](evidence.md#e557) Logic Pro on macOS after the rename of 0.8.43 (see E556): the user saved a Logic project with the Audio Unit ...
+- [E557](evidence.md#e557) Logic Pro on macOS after the rename of 0.8.43 (see E556): the user saved a Logic project with the Audio Unit ... (MED)
 
 ## Linux (221)
 
@@ -2137,7 +2137,7 @@ Entries: 554. Marks after an entry: its lowest confidence level when below HIGH,
 - [E553](evidence.md#e553) The original Virus Control (Windows x64, 5.1.7) is built for several Viruses on one computer, one plug-in ... (LOW; open; not on hardware)
 - [E555](evidence.md#e555) With one Virus and two plug-in instances (round 0.8.42 test, user's REAPER project on Linux, TI2 Desktop) the ... (open)
 - [E556](evidence.md#e556) The rename of 0.8.43 ("TI Revive Virus Control" -> "TI Revive", bundle "TI Revive Virus Control.vst3" -> "TI ... (open)
-- [E557](evidence.md#e557) Logic Pro on macOS after the rename of 0.8.43 (see E556): the user saved a Logic project with the Audio Unit ...
+- [E557](evidence.md#e557) Logic Pro on macOS after the rename of 0.8.43 (see E556): the user saved a Logic project with the Audio Unit ... (MED)
 
 ## DAWs (238)
 
@@ -2378,7 +2378,7 @@ Entries: 554. Marks after an entry: its lowest confidence level when below HIGH,
 - [E554](evidence.md#e554) REAPER on Linux crashed when it opened a saved project with two TI Revive instances and at least one plug-in ... (open)
 - [E555](evidence.md#e555) With one Virus and two plug-in instances (round 0.8.42 test, user's REAPER project on Linux, TI2 Desktop) the ... (open)
 - [E556](evidence.md#e556) The rename of 0.8.43 ("TI Revive Virus Control" -> "TI Revive", bundle "TI Revive Virus Control.vst3" -> "TI ... (open)
-- [E557](evidence.md#e557) Logic Pro on macOS after the rename of 0.8.43 (see E556): the user saved a Logic project with the Audio Unit ...
+- [E557](evidence.md#e557) Logic Pro on macOS after the rename of 0.8.43 (see E556): the user saved a Logic project with the Audio Unit ... (MED)
 
 ## User reports (GitHub issues, forums) (132)
 
