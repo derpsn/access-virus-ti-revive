@@ -5179,10 +5179,11 @@ Ableton Live by the user with "TI Revive Virus Control" (the 0.8.42 code of CI 4
 round-0.8.43 setup.exe (CI 44615094701, f3d612e, d45048c3) installed with /quiet: exit 0, product version 0.8.43;
 Common Files\VST3 held only "TI Revive.vst3" (file version 0.8.43), the old "TI Revive Virus Control.vst3" was gone;
 HKLM\SOFTWARE\ASIO listed "TI Revive Audio" and no longer "TI Revive Virus Audio". In Live (user, 2026-11-19): the
-plug-in was there in the saved project, and the ASIO driver showed with the new name.
+plug-in was there in the saved project, and the ASIO driver showed with the new name. Then the TI2 was passed
+through to the VM (Windows: "Virus TI" devices OK) and the user played it in Live through "TI Revive Audio": "works".
 
 - **Date:** 2026-11-19
 - **Pointer:** native/packaging/windows/native.wxs (VCBUNDLE removal, ASIO registry key), native/asio/asiodriver.cpp (OLD_DRIVER_NAMES)
 - **Method:** silent install in the win11 VM checked over SSH (PowerShell); project reopened in Ableton Live by the user
-- **Confidence:** HIGH (Windows 11, Ableton Live, without a Virus attached) / open (with the Virus: sound through TI Revive Audio after the rename)
-- **Hardware:** no (VM without the Virus)
+- **Confidence:** HIGH (Windows 11 VM, Ableton Live: project reopen, ASIO name, sound through TI Revive Audio)
+- **Hardware:** yes (TI2 Desktop passed through to the win11 VM for the sound check)
