@@ -57,7 +57,9 @@ inline const std::vector<ChangeNote> &changelog()
 {
     static const std::vector<ChangeNote> notes = {
         {"0.8.42",
-         {"Knobs turned on the Virus are recorded as automation in Logic also with the plug-in window closed (#30; "
+         {"Several Viruses at once (#45): each plug-in instance takes a free Virus, the one its project was saved "
+          "with when that one is free. With one Virus nothing changes.",
+          "Knobs turned on the Virus are recorded as automation in Logic also with the plug-in window closed (#30; "
           "before, only with the window open). Tested on our Mac.",
           "Control Center: Nerd mode, the Options and the RAM banks (on BACKUP & RESTORE) are pages of the Access "
           "look. Nerd mode has a scrolling table and draws several times faster.",

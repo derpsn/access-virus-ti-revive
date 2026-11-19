@@ -582,6 +582,7 @@ def features_section():
       <h4>What it covers</h4>
       <ul>
         <li>All 16 parts, every parameter, the preset browser, RAM and ROM banks, patch libraries.</li>
+        <li>Several Viruses at once (since 0.8.42, <a href="{GH}/issues/45">issue #45</a>: each Virus gets its own TI Revive service, numbered by the USB port it is plugged into (Virus 1, Virus 2, ...), and each plug-in instance takes a free Virus: the one its project was saved with when that one is free, as the original did. Their MIDI inputs carry the number (&quot;Virus TI 2 Synth&quot;). On Windows the ASIO driver plays Virus 1 only. With one Virus nothing changes: a second instance waits as before. Tested on Linux with our TI2 and a simulated TI2 as the second; not yet with two real Viruses, nor with two on Windows or macOS.).</li>
         <li>VST3 on Windows, macOS and Linux; Audio Unit for Logic and GarageBand. Native on Apple Silicon and Intel Macs (Intel since 0.8.39, not tested on an Intel Mac yet).</li>
       </ul>
       <h4>Projects and export</h4>
@@ -875,7 +876,7 @@ def page_changelog_landing(releases):
 SHARED_IMAGES = ["control-center.png", "control-center-nerd-mode.png", "plugin-help-mode.png", "plugin-help-inactive.png",
                  "plugin-menus.png", "plugin-library-drop.png",
                  "plugin-section-lock.png", "plugin-edit-menu.png", "plugin-help-menu.png"]
-TESTS = 753 # unit tests in native/tests (vtitests), as of 2026-11-14 (0.8.41)
+TESTS = 838 # unit tests in native/tests (vtitests), as of 2026-11-19 (0.8.42)
 
 # Important information shown at the top of the page, newest first (empty list = no box). The README starts with the
 # same text ("Important" block), keep both identical. Remove an entry when it no longer matters to users.
@@ -893,7 +894,7 @@ def notice_section():
   </div></div>
 </section>"""
 # line coverage of vticore, measured like CI (no Access files, empty home): gcov over the test run
-COVERAGE, COVERAGE_DATE = "96.4 %", "12 Nov 2026"
+COVERAGE, COVERAGE_DATE = "95.5 %", "19 Nov 2026"
 
 # the site: one page plus the changelog archive (file name, title and description for search results and link
 # previews, content)

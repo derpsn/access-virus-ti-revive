@@ -327,6 +327,7 @@ same with Access' own driver.
 
 #### On the Virus and in the DAW
 
+- **Several Viruses at once** (since 0.8.42, [issue #45](https://github.com/derpsn/access-virus-ti-revive/issues/45): each Virus gets its own TI Revive service, numbered by the USB port it is plugged into (Virus 1, Virus 2, ...), and each plug-in instance takes a free Virus: the one its project was saved with when that one is free, as the original did. Their MIDI inputs carry the number ("Virus TI 2 Synth"). On Windows the ASIO driver plays Virus 1 only. With one Virus nothing changes: a second instance waits as before. Tested on Linux with our TI2 and a simulated TI2 as the second; not yet with two real Viruses, nor with two on Windows or macOS.)
 - **Presets, soft knobs and the part selected on the Virus itself** are followed, as in the original (the part since
   0.8.33).
 - **Knobs on the Virus reach your DAW:** knobs you turn on the Virus reach your DAW like the plug-in's own knobs while the plug-in window is open (since 0.8.29, [issue #10](https://github.com/derpsn/access-virus-ti-revive/issues/10)): Ableton Live's Configure mode adds them and automation records them. Tested in Ableton Live 11 (Windows 11, VM), Ableton Live 12 (macOS) and REAPER (Linux).
@@ -730,6 +731,7 @@ measurements: [`findings/design-linux.md`](findings/design-linux.md), evidence E
 | Control Center app + command line `tirevive-cc` (device info, backup, restore into RAM, library export) | done: CLI tested on macOS (M3), app on Linux, both with a TI2 |
 | Control Center: restore into RAM | done in 0.8.30: RAM only, tested with a TI2 on Linux, Windows 11 (VM) and macOS (E313, E314); flash functions and OS update: never |
 | MIDI input for the keys, macOS | done in 0.8.38: by user reports, not tested by us |
+| Several Viruses at once (issue #45) | done in 0.8.42: tested on Linux with our TI2 and a simulated second TI2; not yet with two real Viruses, Windows or macOS |
 | MIDI inputs for the keys, Linux and Windows | done in 0.8.42: Linux ports seen, Windows ports tested in a VM with Microsoft's preview package; no keys played through them yet |
 | **Windows** | |
 | WinUSB driver package, broker with USB audio, unplug recovery, Windows 11 with memory integrity (HVCI) | done |
