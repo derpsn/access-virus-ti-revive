@@ -101,6 +101,12 @@ unplug step on the Access driver, Mac "Virus TI MIDI" played through, Keyboard/P
 
 ## NEXT
 
+0. TOMORROW (user 2026-11-19: "we finalize it tomorrow"): release 0.8.43. Order: Virus back to Linux (VM=win11
+   scripts/vm.sh detach; systemctl --user start tirevive-broker.socket) + restart the VM for its sound card; risk.py
+   --round 0.8.43 -> hil.sh (cold, reopen, export) + Mac sleep/wake and power by hand + checklist page
+   (scripts/checklist.py); mutation run on the files risk.py names; tirevive-site-check (texts changed with the
+   rename; live site still says "looks and works like" until rebuilt); final CI from the round head; merge, tag, release
+   (first run of the fixed release job), site rebuild on main.
 1. Mac: the 0.8.42 release push is obsolete (the Mac has the 0.8.43 test package, pkg 22ae6de3).
 2. Joint issue check from 2026-11-21: quiet-issue closings (#26 #31 #33 #36; #41 from 11-22; #32 #40 are ours);
    replies from #45 (two real Viruses: first real-world test), #42 (snow-idle-slow CPU), #44 (recall), #47, #43, #37.
