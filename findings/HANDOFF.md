@@ -5,28 +5,26 @@ NEXT. At most 150 lines; the Stop hook (`.claude/hooks/handoff-check.sh`) refuse
 how goes into the dated log [`log/2026-11.md`](log/2026-11.md) (newest first); older logs are in [`log/`](log/).
 Device/protocol knowledge goes into [`evidence.md`](evidence.md). Update this file in the same commit as the work._
 
-Last update: 2026-11-19: joint issue check (#47 new, reply posted; #34 closed); CI 44486371869 on round-0.8.42 4045dbe (version 0.8.42) ALL GREEN (9 jobs, release skipped) = test build for #45 + #42 snow-idle-slow + #44 recall fixes: Linux + win11 installed; Mac pkg bb757d98 pushed to ~/Downloads/TI-Revive-0.8.42-test-4045dbe, user installs, then Mac check, then to the reporters. TEST ROUND started (Linux + win11 first, Mac when charged): checklist https://claude.ai/artifact/RyeeFb5mxzh8MsfSPMte7J (spec scripts/checklists/round-0.8.42.json, core LC4 WC4, marks rounds/0.8.42/marks); hil.sh ALL PASS (work/hil/0.8.42-ci-44486371869: H1 H2x2 H3 H6, max 0.94 ms; 6x link off, 0 read ep errors; ALSA ports seen), L1 marked; --sleep ALL PASS on the local fix build d14c0b5f (H5: slept 46 s, Virus back 0.6 s after the wake, 50/50 notes, max 0.09 ms; work/hil/0.8.42-sleep), then L2-L5, LC4, then VM. L2 FOUND E554: REAPER crashed reopening a project with two instances + an open window (gesture timer of #30 through VSTGUI's run-loop adapter); FIXED in the work tree (own ITimerHandler on the host's IRunLoop, from the factory host context), scripts/reaper-open.sh 5/5 no crash, ctest 7/7; user retried L2: 5 reopens, clean closes, no crash; L2-L4 + LC4 pass, L5 skipped (no Snow). E555: second instance cycled the empty slots every 6 s and saved the tried slot - FIXED (slot mask, wait, 30 s retry, save the found slot), checked in REAPER with one Virus. Two-Virus test PASSED with the sim's virtual TI2 as Virus 2 (E555); detached 19:24 (real TI2 node still plugdev 0660, no kernel oops; results sent to the sim). 53 ms stall on Virus 2: cause open (sim: retry with VTISIM_WARMUP=1). CI 44588173936 (42f0a12: E554+E555+'| Virus N' stats label) ALL GREEN; Linux + win11 installed; VM round DONE (W1-W3, WC4 pass, W4 check ran, update.txt latest 0.8.41). Mac: pkg fdc708ee + hil kit pushed to ~/Downloads/TI-Revive-0.8.42-test-42f0a12, checklist v2 with the Mac section (MC4 MC5 M1-M3); Mac DONE (hil-mac ALL PASS, MC4 MC5 M1-M3 pass). ROUND TEST COMPLETE (all pass; L5 untestable, W1 VM drift accepted). USER 2026-11-19: straight to the 0.8.42 RELEASE (no rc7). Site check done: several Viruses (#45) in build.yml, What's New, README (feature + status row) and site; update check also Windows; #43 restore ran on our TI2; TESTS 838, coverage 95.5 % (CI 19 Nov). MERGED locally: main 902c294 = merge of 7d1de54 + round a0450bf (tree = round head, no preview block); main PUSHED (user OK for PRIVATE_DATA_OK=1 once: audit item 11 in 15141e7 quotes example paths with user 'x'). v0.8.42 tag on fdb35d8: release CI 44598273038 built all 8 jobs but the release job FAILED (backticks in the notes heredoc ran as a command; sparse checkout lacked scripts/libusb.sh since audit #7) - no release created. FIXED in build.yml; tag moved to the fix commit (no release existed). NEXT: release CI, site rebuild by hand, install on test machines, replies to #45 #42 #44. Windows/Mac not affected (no adapter there), VM test can go on with the CI build; the build for the reporters needs a new CI run with the fix. Quiet-issue closings due from 2026-11-21.
+Last update: 2026-11-19: **0.8.42 RELEASED** (user "Ship it", no rc7); test round complete (details log/2026-11.md); replies posted on #45 #42 #44; Mac release push pending (Mac asleep). Quiet-issue closings due from 2026-11-21.
 
 ## Where things stand
 
-- **0.8.41 is released and Latest** (2026-11-14, user "Ship it"): tag v0.8.41 on main 266cb46 = merge 6e4c632
-  (main 5fc470c + round e5f84e8) + one commit that drops main's rc8 preview block from the README (it survived the
-  merge without a conflict: check that at every round merge). Release CI 43625111066 green, 6 assets. Site rebuilt
-  by hand (site.yml 43625667337): Download 0.8.41, no preview box, 753 tests, coverage 96.4 %.
-- **Round 0.8.42** (branch `round-0.8.42` from origin/main 266cb46 + round-0.8.41 docs + `libusb-audio` +
-  `libusb-catalina`; the newest files are here). First item done in code: the **libusb package** (user 2026-11-14:
-  normal Mac package stays as it is; a separate package for Macs where Apple's driver crackles; "we dont test the
-  catalina build. This needs to be done from the user that had the issue" = #37 tests, we do not):
-  `LIBUSB_AUDIO=1 MAC_MIN=10.15 MAC_ARCHS=x86_64 PLUGIN_MIN=10.15 scripts/mac-build-release.sh` ->
-  TI-Revive-<v>-mac-libusb.zip (plain component pkg, README-mac-libusb.txt); its postinstall (marker `libusb-audio`
-  in the pkg scripts) installs the LaunchDaemon io.github.derpsn.tirevive.usbaudio (root, launchd socket
-  /tmp/vtibroker-<uid>.sock 0666, VTI_OWNER_UID, -stay) and mac-usb-audio.on; the normal pkg removes a leftover
-  service; the uninstaller too. Broker: VTI_OWNER_UID (owneruid.h vti_owner_env), clients other than the owner/root
-  refused on macOS (vti_client_allowed), give-back without the abort (macgiveback.h, E535 (6)), gap timers reset at
-  audio stop. Plug-in: mac-usb-audio is no Options switch any more (cc::mac_usb_audio()). CI: build.yml job
-  `mac-libusb` (macos-15-intel) + release asset. CI 43644097519 (ff629fd, version 0.8.42) ALL GREEN incl. mac and
-  mac-libusb (its package checks: plain pkg, marker, no UTI, CC min 10.15). Not run on any Mac yet.
-- Test round of 0.8.41: all passed (details in log/2026-11.md, checklist spec scripts/checklists/round-0.8.41.json).
+- **0.8.42 is released and Latest** (2026-11-19 19:37 UTC). Round test 2026-11-19 all pass (checklist
+  https://claude.ai/artifact/RyeeFb5mxzh8MsfSPMte7J, spec scripts/checklists/round-0.8.42.json; L5 Snow option not
+  testable, W1 VM drift accepted); found and fixed in the round: E554 (REAPER crash, two instances + open window) and
+  E555 (slot cycling); two Viruses tested on Linux with the sim's virtual TI2. main 902c294 = merge (main 7d1de54 +
+  round a0450bf, tree = round head), push needed PRIVATE_DATA_OK=1 once (user OK: audit item 11 in 15141e7 quotes
+  example paths with user 'x'). Tag v0.8.42 on fdb35d8. Its release CI 44598273038: all 8 build jobs green, the
+  RELEASE JOB FAILED (backticks in the notes heredoc ran as a command; the sparse checkout lacked scripts/libusb.sh
+  since audit #7); fixed on main 9049eec (build.yml only). Moving the tag was refused by the permission check, so
+  the release was created BY HAND from that run's artifacts (gh release create v0.8.42 --verify-tag, the notes from
+  the fixed heredoc, libusb 1.0.30 verified by libusb_verify, tirevive-usbinfo.ps1): 7 assets, Latest. The next
+  tag runs the fixed job (not yet seen green). Site rebuilt (site.yml 44600240159): Download 0.8.42, several
+  Viruses in Features + Recent releases, 838 tests, coverage 95.5 %.
+- Release installed: Linux (install.sh, plug-in 94257c93, broker c280b8e6), win11 VM (setup.exe /quiet exit 0, VST3
+  b5cd51c9, VM shut down). Mac: work/rel-0.8.42/out/macx/TI-Revive-0.8.42-release (pkg 1f8f888c + INSTALL-COMMAND
+  + Install test build.command) to push with scripts/mac.sh push when the Mac answers; the user installs.
+- Next round 0.8.43: branch from origin/main (push with an explicit refspec), raise native VERSION first.
 - Our TI2 Desktop: on **Linux** USB (2026-11-14 evening). User flashed ROM Z on it in early November (E500).
 - Linux: CI build 44588173936 (0.8.42, 42f0a12: E554 + E555 + stats label) installed 2026-11-19 (plug-in 4b9563c5, broker c280b8e6). Virus back on Linux after the VM test (node plugdev, socket active).
 - win11 VM: CI build 44588173936 (42f0a12) installed 2026-11-19 (VST3 7eafc6fc; tirevive-hil task now runs C:\vti\0842\hil) (/quiet exit 0), shut down; hil-win 2026-11-19: all pass except H2-2 drift +126 ppm (VM clock, as before). hil-win on the tuned VM 2026-11-15 (E537): run 1
