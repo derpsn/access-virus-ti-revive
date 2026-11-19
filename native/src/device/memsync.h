@@ -31,6 +31,7 @@ public:
     explicit MemorySync(std::function<bool(const std::vector<uint8_t> &)> send, int device_id = 0x10);
     ~MemorySync();
     void feed(const std::vector<uint8_t> &sysex); // a SysEx from the Virus
+    size_t queued();                               // SysEx kept for a waiting request (tests)
 
     // One request/reply round trip: sends `request` (a SysEx), waits for a SysEx reply whose bytes 6..8 equal
     // `match` (prefix). Retries `tries` times with `timeout_ms` each. Empty result on failure.
@@ -79,6 +80,7 @@ private:
     std::condition_variable cv_;
     std::vector<Dump> inbox_;
     bool cancelled_ = false; // under mu_
+    bool waiting_ = false;   // under mu_: a transact is running, feed() keeps Access SysEx
 };
 
 } // namespace vti

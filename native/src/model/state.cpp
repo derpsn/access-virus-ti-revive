@@ -70,6 +70,29 @@ bool is_part_dump(const std::vector<uint8_t> &m, int part)
     return m.size() == 524 && m[0] == 0xF0 && m[6] == 0x10 && m[7] == 0x00 && m[8] == part;
 }
 
+void keep_unset_values(std::map<int, std::map<std::string, int>> &next,
+                       const std::map<int, std::map<std::string, int>> &prev)
+{
+    for (auto &[part, values] : prev)
+        next[part].insert(values.begin(), values.end()); // insert keeps what `next` already has
+}
+
+int add_missing_part_dumps(std::vector<std::vector<uint8_t>> &recs, const std::vector<std::vector<uint8_t>> &defaults)
+{
+    int added = 0;
+    for (int p = 0; p < 16; p++) {
+        auto has = [p](const std::vector<uint8_t> &r) { return is_part_dump(r, p); };
+        if (std::any_of(recs.begin(), recs.end(), has))
+            continue;
+        auto d = std::find_if(defaults.begin(), defaults.end(), has);
+        if (d != defaults.end()) {
+            recs.push_back(*d);
+            added++;
+        }
+    }
+    return added;
+}
+
 // editor-only per-part settings (LFO link buttons, ...) have no Virus message: they are kept in the state as
 // F0 7D 'V' 'T' 'N' 01 <part> <path ASCII> 00 <value> F7 (7D = non-commercial ID: the original and the Virus ignore it)
 std::vector<uint8_t> editor_record(const std::string &path, int part, int value)

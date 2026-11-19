@@ -35,7 +35,9 @@
            Control Center launcher are gone - "TI Revive Virus Control" (native.wxs) replaces them; an upgrade
            removes their files because they are no longer part of the package -->
       <Component><File Source="$(var.Src)\inf\vti_winusb.inf" /></Component>
-      <Component><File Id="driverps1" Source="$(var.Src)\installer\tirevive-driver.ps1" /></Component>
+      <Component><File Id="driverps1" Source="$(var.Src)\installer\tirevive-driver.ps1" />
+        <!-- driver.log / bundles.log of the SYSTEM actions live here (audit #28): gone with the uninstall -->
+        <RemoveFile Id="RemoveActionLogs" Name="*.log" On="uninstall" /></Component>
       <Component><File Id="virusstateps1" Source="$(var.Src)\installer\tirevive-virusstate.ps1" /></Component>
       <Component><File Id="accessps1" Source="$(var.Src)\installer\tirevive-access.ps1" /></Component>
       <Component><File Id="shortcutsps1" Source="$(var.Src)\installer\tirevive-shortcuts.ps1" /></Component>

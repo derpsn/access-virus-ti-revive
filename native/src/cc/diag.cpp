@@ -91,15 +91,29 @@ const std::vector<PluginOption> &plugin_options()
         // on by default since 0.8.41 (user 2026-11-10): the plug-in's log for bug reports; diag.off switches it off
         {"plugin-log", "diag.off", "Plug-in log for bug reports (stays on this computer)", true, "Plug-in log",
          "Writes what the plug-in does to diag.log on this computer, for bug reports. Nothing is sent anywhere."},
-        // off by default (0.8.41, E519): played notes a little later; on our Mac at most one 64-frame step late
-        // instead of two (E534), not exact
-        {"live-later", "live-later.on", "Played notes a little later, for an evener rhythm (E519, E534)", false,
+        // off by default (0.8.41, E519): played notes a little later; 128 frames left them up to one 64-frame step
+        // apart (E534); 160, tried in 0.8.42, did the same over 5 runs (E539), so 128 stays
+        {"live-later", "live-later.on", "Played notes a little later, for an evener rhythm (E519, E539)", false,
          "Even rhythm for played notes",
          "Notes you play live go about 3 ms later, so they come at most about 1.3 ms late (measured on a Mac). Off: "
          "they are stamped like the original's, and one can come 1-3 ms late now and then."},
+        // off by default (0.8.42, user 2026-11-15): the Control Center asks GitHub once a day (updatecheck.h); the
+        // plug-in only reads the answer from update.txt and never goes online itself
+        {"update-check", "update-check.on", "Check once a day for a new TI Revive release (asks GitHub)", false,
+         "Check for updates",
+         "Once a day the Control Center asks GitHub for the newest release; nothing about you or your setup is "
+         "sent. The plug-in then shows a note and a Download entry in its ? menu."},
+        // off by default (0.8.42, #42, user 2026-11-17): read by the broker every 2 s (src/broker/idlepace.h), not by
+        // the plug-in; macOS and Linux (the Windows broker does not pace the Snow)
+        {"snow-idle-slow", "snow-idle-slow.on", "Virus TI Snow: ask less often while it is idle (#42)", false,
+         "Snow: less CPU while idle",
+         "Virus TI Snow on macOS and Linux: after a quiet second the service asks the Snow for MIDI every 4 ms "
+         "instead of every 1 ms. The first message after a pause can then come up to 3 ms later."},
     };
     return opts;
 }
+
+bool option_applies_at_once(const std::string &name) { return name == "snow-idle-slow"; }
 
 static const PluginOption *find_option(const std::string &name)
 {
@@ -108,6 +122,8 @@ static const PluginOption *find_option(const std::string &name)
             return &o;
     return nullptr;
 }
+
+bool mac_usb_audio() { return flag("mac-usb-audio.on"); }
 
 bool plugin_option(const std::string &name)
 {
@@ -125,6 +141,13 @@ bool set_plugin_option(const std::string &name, bool on, std::string &error)
     return set_flag(o->file, o->default_on ? !on : on, error);
 }
 
+std::string mac_broker_log(bool usb_audio)
+{
+    // the root service's log must not sit in /tmp: the user's broker creates that file first, and a symlink there
+    // made root append to any file (audit 2026-11-17 #6); postinstall creates the folder root:wheel 755
+    return usb_audio ? "/Library/Logs/TI Revive/vtibroker.log" : "/tmp/tirevive-vtibroker.log";
+}
+
 #if defined(_WIN32) || defined(__APPLE__) // Linux: the journal
 static std::string broker_log_file()
 {
@@ -132,7 +155,7 @@ static std::string broker_log_file()
     const std::string t = u8env("TEMP");
     return t.empty() ? std::string() : t + "\\vtibroker.log";
 #else
-    return "/tmp/tirevive-vtibroker.log";
+    return mac_broker_log(mac_usb_audio());
 #endif
 }
 #endif

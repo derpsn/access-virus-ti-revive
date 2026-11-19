@@ -26,7 +26,8 @@ duplicate)
         exit 77
     fi
     [ $rc -eq 0 ] || fail "nativehost exited with $rc"
-    grep -q "this one takes over the Virus" "$out" || fail "the duplicate did not take over"
+    # since #45 (several Viruses) the duplicate tries Virus 2 first and logs "this instance uses Virus 1" at the takeover
+    grep -q -e "this one takes over the Virus" -e "this instance uses Virus 1" "$out" || fail "the duplicate did not take over"
     # the editor's open and close are in the log (E287: REAPER crashes only with the editor open)
     [ "$(grep -c "editor opened" "$out")" -ge 2 ] || fail "the two editors' opening is not logged"
     grep -q "editor closed" "$out" || fail "the first editor's close is not logged"
@@ -34,7 +35,11 @@ duplicate)
 ccclose)
     # the app crashed on closing (its timer outlived VSTGUI's platform layer), and its window kept the size it was
     # created with instead of the start page's
-    timeout 90 xvfb-run -a sh -c '
+    # its own session bus: GTK runs one instance per session, and a second start (the test while the user's Control
+    # Center is open) only hands over to that one and exits (2026-11-15)
+    bus=""
+    command -v dbus-run-session >/dev/null 2>&1 && bus="dbus-run-session --"
+    $bus timeout 90 xvfb-run -a sh -c '
         "$1" >"$3" 2>&1 &
         app=$!
         sleep 4

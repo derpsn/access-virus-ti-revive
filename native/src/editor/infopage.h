@@ -3,6 +3,7 @@
 // original's text is a fixed image (TXT_Welcome.png, TXT_Changes.png) that points to Access' setup guide and support;
 // ours says what TI Revive is and where its help is. The changelog is compiled in. Built from plain state, no drawing.
 #pragma once
+#include <algorithm>
 #include <cstdlib>
 #include <string>
 #include <vector>
@@ -55,6 +56,27 @@ struct ChangeNote {
 inline const std::vector<ChangeNote> &changelog()
 {
     static const std::vector<ChangeNote> notes = {
+        {"0.8.42",
+         {"Several Viruses at once (#45): each plug-in instance takes a free Virus, the one its project was saved "
+          "with when that one is free. With one Virus nothing changes.",
+          "Knobs turned on the Virus are recorded as automation in Logic also with the plug-in window closed (#30; "
+          "before, only with the window open). Tested on our Mac.",
+          "Control Center: Nerd mode, the Options and the RAM banks (on BACKUP & RESTORE) are pages of the Access "
+          "look. Nerd mode has a scrolling table and draws several times faster.",
+          "Check for updates, if you want it: switch it on in the Control Center's Options. Once a day it asks GitHub "
+          "for the newest release; the plug-in then shows a note and a Download entry in its ? menu.",
+          "? > Prepare a Bug Report saves the logs and opens GitHub's bug form with your version filled in.",
+          "What's New scrolls when a version's notes are long.",
+          "Linux: the Virus keys and its MIDI In as the MIDI inputs \"Virus TI Synth\" and \"Virus TI MIDI\" (they "
+          "show up; not yet tested with a Virus that has keys).",
+          "Windows 11 25H2 and later: the same two MIDI inputs, once Windows has its own MIDI Services (with the "
+          "update from the end of November 2026). Tested in a Windows 11 VM with Microsoft's preview.",
+          "macOS: a separate package for Macs where Apple's USB audio driver crackles (#37); its MIDI inputs show "
+          "up too.",
+          "If the host read the plug-in's latency before its final setup, the plug-in announces it again (#37, #33).",
+          "Virus TI Snow: much less CPU for the TI Revive service while the Snow is idle (#42); an option in the "
+          "Control Center asks it even less often (off by default).",
+          "Control Center: restoring a library into a RAM bank no longer stops at a fixed patch (#43)."}},
         {"0.8.41",
          {"Lower latency, experimental: a new option on the Control Center's Options page. At audio buffers up to 256 "
           "a note takes 36 to 48 ms instead of 76 to 87 ms (55 to 59 ms at 512). It leaves your DAW only about 20 ms "
@@ -238,10 +260,13 @@ inline InfoPage log_notice_page()
 
 // What's New must fit on the page (several versions at once overflowed it, 2026-11-10): `measure(paras, size)` gives
 // the height of the paragraphs at a font size, `room` the height there is. All of it from 13 pt down to 11; then the
-// oldest version goes, and a last line says where the rest is; the newest version alone may go down to 9 pt.
+// oldest version goes, and a last line says where the rest is; the newest version alone may go down to 9 pt. When
+// even that does not fit (0.8.41's notes ran over the buttons, user 2026-11-15), it stays whole at 11 pt and the page
+// scrolls (InfoScroll).
 struct InfoFit {
     InfoPage page;
     double size = 13;
+    bool scroll = false; // taller than `room`: the editor draws a scrollbar
 };
 template <class Measure> InfoFit fit_info_page(InfoPage page, double room, Measure measure)
 {
@@ -259,7 +284,7 @@ template <class Measure> InfoFit fit_info_page(InfoPage page, double room, Measu
             if (measure(page.paras, size) <= room)
                 return {page, size};
         if (v <= 1)
-            return {page, 9}; // as good as it gets
+            return {page, 11, true}; // the newest version whole, readable, with a scrollbar
         if (trimmed)
             page.paras.pop_back(); // the pointer line, added again below
         size_t last = page.paras.size();
@@ -270,5 +295,47 @@ template <class Measure> InfoFit fit_info_page(InfoPage page, double room, Measu
         trimmed = true;
     }
 }
+
+// The scroll position of a page taller than its room, and its scrollbar's thumb (pixels; the track is as tall as
+// the room). No drawing here: unit-tested.
+struct InfoScroll {
+    double content = 0, view = 0, offset = 0;
+    static constexpr double kMinThumb = 24;
+    void set(double content_h, double view_h)
+    {
+        content = content_h, view = view_h;
+        clamp();
+    }
+    bool active() const { return content > view && view > 0; }
+    double max_offset() const { return active() ? content - view : 0; }
+    void scroll_by(double d)
+    {
+        offset += d;
+        clamp();
+    }
+    void thumb(double &y, double &h) const
+    {
+        h = active() ? std::max(kMinThumb, view * view / content) : view;
+        const double way = view - h, mo = max_offset();
+        y = mo > 0 ? way * offset / mo : 0;
+    }
+    void drag_thumb_to(double thumb_top) // where the thumb's top should be, in track pixels
+    {
+        double y, h;
+        thumb(y, h);
+        const double way = view - h;
+        offset = way > 0 ? thumb_top / way * max_offset() : 0;
+        clamp();
+    }
+    void click_track(double at) // a click at `at` on the track: the thumb centres there
+    {
+        double y, h;
+        thumb(y, h);
+        drag_thumb_to(at - h / 2);
+    }
+
+private:
+    void clamp() { offset = std::min(std::max(offset, 0.0), max_offset()); }
+};
 
 } // namespace vti

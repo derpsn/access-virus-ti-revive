@@ -17,6 +17,7 @@
 #include "vtiusbaudio.h"
 #include "pktstat.h"
 #include "ratesw.h"
+#include "winslot.h" // which Virus when several are connected (#45)
 #include <setupapi.h>
 #include <winusb.h>
 #include <stdio.h>
@@ -58,33 +59,27 @@ typedef struct {
 static vua_log_fn g_log;
 #define LOG(...) do { if (g_log) g_log(__VA_ARGS__); } while (0)
 
+static int g_slot = 1; // vua_set_slot
+
+void vua_set_slot(int slot) { g_slot = slot; }
+
 static int open_dev(dev *d)
 {
-    HDEVINFO di = SetupDiGetClassDevsW(&GUID_MI00, NULL, NULL, DIGCF_PRESENT | DIGCF_DEVICEINTERFACE);
-    if (di == INVALID_HANDLE_VALUE)
+    // MI_00 of the same Virus as the broker's MIDI interfaces (winslot.h: by the USB port of the parent device);
+    // no path (none there, no memory): the caller falls back to WASAPI
+    wchar_t *path = winslot_path(&GUID_MI00, g_slot);
+    if (!path)
         return -1;
-    SP_DEVICE_INTERFACE_DATA id = {.cbSize = sizeof id};
     int ok = -1;
-    if (SetupDiEnumDeviceInterfaces(di, NULL, &GUID_MI00, 0, &id)) {
-        DWORD need = 0;
-        SetupDiGetDeviceInterfaceDetailW(di, &id, NULL, 0, &need, NULL);
-        // the size query failed (need too small for the struct) or no memory: no path, the caller falls back to WASAPI
-        SP_DEVICE_INTERFACE_DETAIL_DATA_W *dd = need >= sizeof *dd ? malloc(need) : NULL;
-        if (dd)
-            dd->cbSize = sizeof *dd;
-        if (dd && SetupDiGetDeviceInterfaceDetailW(di, &id, dd, need, NULL, NULL)) {
-            d->file = CreateFileW(dd->DevicePath, GENERIC_READ | GENERIC_WRITE, FILE_SHARE_READ | FILE_SHARE_WRITE,
-                                  NULL, OPEN_EXISTING, FILE_ATTRIBUTE_NORMAL | FILE_FLAG_OVERLAPPED, NULL);
-            if (d->file == INVALID_HANDLE_VALUE)
-                LOG("usbaudio: open MI_00 failed (error %lu; in use by another process?)", GetLastError());
-            else if (!WinUsb_Initialize(d->file, &d->h0))
-                LOG("usbaudio: WinUsb_Initialize failed (error %lu)", GetLastError());
-            else
-                ok = 0;
-        }
-        free(dd);
-    }
-    SetupDiDestroyDeviceInfoList(di);
+    d->file = CreateFileW(path, GENERIC_READ | GENERIC_WRITE, FILE_SHARE_READ | FILE_SHARE_WRITE, NULL, OPEN_EXISTING,
+                          FILE_ATTRIBUTE_NORMAL | FILE_FLAG_OVERLAPPED, NULL);
+    if (d->file == INVALID_HANDLE_VALUE)
+        LOG("usbaudio: open MI_00 failed (error %lu; in use by another process?)", GetLastError());
+    else if (!WinUsb_Initialize(d->file, &d->h0))
+        LOG("usbaudio: WinUsb_Initialize failed (error %lu)", GetLastError());
+    else
+        ok = 0;
+    free(path);
     return ok;
 }
 

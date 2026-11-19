@@ -152,6 +152,9 @@ int main(int argc, char **argv)
         fprintf(stderr, "vtiaudioprobe: -rate 44100 or 48000, at most 120 s\n");
         return 2;
     }
+    setenv("VTI_USBAUDIO_DIAG", "1", 1); // raw packets per second (#37: Catalina gave in-range packets of zeros)
+    const struct libusb_version *lv = libusb_get_version();
+    say("libusb %u.%u.%u\n", lv->major, lv->minor, lv->micro);
     libusb_context *ctx;
     if (libusb_init(&ctx))
         return 1;
@@ -175,6 +178,8 @@ int main(int argc, char **argv)
         return 1;
     }
     say("streaming at %d Hz after %.2f s (the system driver gave the interfaces up)\n", rate, now() - t0);
+    for (int i = 0; i <= 2; i++) // after the capture: 0 = the system driver let go of it
+        say("interface %d after the start: kernel driver active = %d\n", i, libusb_kernel_driver_active(g_h, i));
 
     pthread_t th[2];
     int midi = 0;

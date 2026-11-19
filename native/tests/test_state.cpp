@@ -128,3 +128,42 @@ TEST(state_part_dumps_upgraded)
     CHECK(recs[3] == (std::vector<uint8_t>{0xB0, 7, 100}));
     CHECK(upgrade_state_dumps(recs) == 0);         // idempotent
 }
+
+TEST(state_missing_part_dumps_come_from_the_default)
+{
+    // audit #22: a truncated project (parts 3..16 missing) dropped every edit and patch load of those parts
+    auto part = [](int p, uint8_t mark) {
+        Bytes d(524, mark);
+        const uint8_t head[9] = {0xF0, 0x00, 0x20, 0x33, 0x01, 0x10, 0x10, 0x00, (uint8_t)p};
+        std::memcpy(d.data(), head, 9);
+        d[523] = 0xF7;
+        return d;
+    };
+    std::vector<Bytes> defaults = {{0xF0, 0x11, 0xF7}};
+    for (int p = 0; p < 16; p++)
+        defaults.push_back(part(p, 0x01));
+    std::vector<Bytes> recs = {part(0, 0x22), part(1, 0x22), {0xF0, 0x42, 0xF7}};
+    CHECK_EQ(add_missing_part_dumps(recs, defaults), 14);
+    CHECK_EQ(recs.size(), 17u);
+    CHECK(recs[0][100] == 0x22 && recs[1][100] == 0x22); // the project's own parts stay
+    for (int p = 0; p < 16; p++) {
+        int n = 0;
+        for (auto &r : recs)
+            n += is_part_dump(r, p);
+        CHECK_EQ(n, 1);
+    }
+    CHECK_EQ(add_missing_part_dumps(recs, defaults), 0); // complete: nothing added
+}
+
+TEST(state_values_the_state_lacks_are_kept)
+{
+    // audit #24: a patch load rebuilt every value from the state; the System Clock the Virus reported (never in the
+    // state, E445) went back to its default on screen
+    std::map<int, std::map<std::string, int>> prev = {{-1, {{"Global/Clock", 2}, {"Global/Tempo", 90}}},
+                                                       {0, {{"Osc/Shape", 10}}}};
+    std::map<int, std::map<std::string, int>> next = {{-1, {{"Global/Tempo", 120}}}, {0, {{"Osc/Shape", 64}}}};
+    keep_unset_values(next, prev);
+    CHECK_EQ(next[-1]["Global/Clock"], 2);  // not in the state: kept
+    CHECK_EQ(next[-1]["Global/Tempo"], 120); // in the state: the state wins
+    CHECK_EQ(next[0]["Osc/Shape"], 64);
+}

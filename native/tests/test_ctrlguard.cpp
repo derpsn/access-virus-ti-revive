@@ -38,3 +38,27 @@ TEST(ctrlguard_blocks_vendor_and_writes)
     CHECK(allowed(0x83, 6) == 0);    // recipient "other"
     CHECK(allowed(0x80, 12) == 0);   // SYNCH_FRAME is not needed either
 }
+
+// audit 2026-11-17 #2: a client's WRITE names its endpoint; every client writes the plug-in channel EP 0x06 only.
+// EP 0x05 (MI03 OUT) is the USB chip's command endpoint (one known command, the driver's 4E 73 52 01 at device start, E030; the broker sends it itself); an IN endpoint on libusb
+// would run an IN transfer into the client's buffer and steal the reader's data
+TEST(ctrlguard_write_only_to_the_plugin_channel)
+{
+    CHECK(vti_write_allowed(0x06) == 1);
+    CHECK(vti_write_allowed(0x05) == 0);
+    CHECK(vti_write_allowed(0x85) == 0);
+    CHECK(vti_write_allowed(0x86) == 0);
+    CHECK(vti_write_allowed(0x00) == 0);
+    CHECK(vti_write_allowed(0x01) == 0);
+    CHECK(vti_write_allowed(0x02) == 0); // audio OUT is the broker's own (shared memory), never a client write
+    CHECK(vti_write_allowed(0xFF) == 0);
+}
+
+TEST(ctrlguard_length_never_past_what_the_client_sent)
+{
+    // audit #20: an OUT request whose wLength is larger than the data in the message logged uninitialised bytes
+    const uint8_t out[8] = {0x40, 0x01, 0, 0, 0, 0, 100, 0}, in[8] = {0x80, 0x06, 0, 1, 0, 0, 0xff, 0xff};
+    CHECK_EQ(vti_control_len(out, 4), 4u);      // 4 data bytes sent, 100 claimed
+    CHECK_EQ(vti_control_len(out, 200), 100u);  // more sent than claimed: wLength counts
+    CHECK_EQ(vti_control_len(in, 0), 4096u - 16); // a read: wLength, capped to the reply buffer
+}

@@ -33,6 +33,7 @@
 #include "../src/cc/capture.h"
 #include "../src/cc/decode.h"
 #include "../src/cc/diag.h"
+#include "../src/cc/updatecheck.h"
 #include "../src/model/remotedevice.h"
 #include "../src/model/sysinfo.h"
 #include "vtiproto.h"
@@ -62,9 +63,31 @@ static int usage()
                     "       tirevive-cc option [NAME on|off]\n"
                     "       tirevive-cc watch [--seconds N]\n"
                     "       tirevive-cc capture [--seconds N] [--out FILE]\n"
+                    "       tirevive-cc update-check   (asks GitHub once for the latest release, now)\n"
                     "Only restore writes to the Virus (RAM, never flash). Close the TI Revive plug-in (or your DAW)\n"
                     "first: the Virus serves one program at a time.\n");
     return 2;
+}
+
+#ifndef TIREVIVE_VERSION
+#define TIREVIVE_VERSION "0.0.0"
+#endif
+
+// The Options page's update check by hand: one request to GitHub, the answer into update.txt (updatecheck.h)
+static int update_check()
+{
+    vti::cc::UpdateState s = vti::cc::read_update_state();
+    std::string err;
+    if (!vti::cc::run_update_check(s, err)) {
+        fprintf(stderr, "tirevive-cc: update check: %s\n", err.c_str());
+        return 1;
+    }
+    if (!vti::cc::write_update_state(s))
+        fprintf(stderr, "tirevive-cc: %s not written\n", vti::cc::update_state_path().c_str());
+    const std::string v = vti::cc::update_available(TIREVIVE_VERSION, s);
+    printf("latest release %s, this is %s: %s\n", s.latest.c_str(), TIREVIVE_VERSION,
+           v.empty() ? "up to date" : ("update available at " + std::string(vti::cc::kReleasesUrl)).c_str());
+    return 0;
 }
 
 static bool connect(vti::Broker &broker)
@@ -264,10 +287,6 @@ static int export_(const char *in, const char *out)
     printf("%zu patches -> %s\n", n, out);
     return 0;
 }
-
-#ifndef TIREVIVE_VERSION
-#define TIREVIVE_VERSION "0.0.0"
-#endif
 
 static int logs(int argc, char **argv)
 {
@@ -479,5 +498,7 @@ int main(int argc, char **argv)
         return debug(argv[2]);
     if (cmd == "option")
         return option(argc, argv);
+    if (cmd == "update-check" && argc == 2)
+        return update_check();
     return usage();
 }

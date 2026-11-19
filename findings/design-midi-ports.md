@@ -1,6 +1,7 @@
 # Design proposal: Windows MIDI ports for the Virus TI
 
-Status: proposal (2026-10-11), not implemented. Plan item 3 in the old HANDOFF (now `log/until-2026-10-12.md`).
+Status: option A being implemented (2026-11-15, round 0.8.42), read-only, see "Implementation (0.8.42)" at the end.
+First proposal 2026-10-11 (plan item 3 in the old HANDOFF, now `log/until-2026-10-12.md`).
 
 ## Goal
 
@@ -85,3 +86,39 @@ users on Windows 10 / older Windows 11. B only if users ask for it.
 - SDK overview (C#/WinRT or C++/WinRT projections, NuGet `Windows.Devices.Midi2`): https://microsoft.github.io/MIDI/sdk-overview/
 - Microsoft dev blog, Spring 2023 update (app-to-app MIDI without an additional driver): https://devblogs.microsoft.com/windows-music-dev/the-new-windows-midi-services-spring-2023-update/
 - Release notes (virtual device sample issue): https://github.com/microsoft/MIDI/releases
+
+## Implementation (0.8.42)
+
+Decided with the user 2026-11-15: installed only where Windows supports it; only Windows' own copy of the API (no
+SDK runtime or DLL shipped by us, so the ports come with the Windows update that brings the API); read-only, as on
+macOS and Linux (DAW to Virus would be a separate decision under rule 2).
+
+- `src/midiports-win/tirevive-midiports.exe` (MSVC, C++/WinRT, target `tirevive-midiports`): checks the build
+  (>= 26200, 25H2), legacy MIDI mode (`HKLM\...\Drivers32\UseLegacyMidi` = 1), the API's activation and
+  `IsSystemProvided()`, and `EnsureServiceAvailable()`; then one virtual device per port, "Virus TI Synth"
+  (ProductInstanceId `TIRevive-VirusTI-Synth`) and "Virus TI MIDI" (`TIRevive-VirusTI-MIDI`), each with one output
+  function block on group 1, up to 10 creation tries 1 s apart. Log: `%TEMP%\tirevive-midiports.log`.
+- Seen on the win11 VM (2026-11-15, build 26300.9974, 26H2, the Preview 11 DLL next to the helper with the test
+  switch `VTI_MIDI2_ALLOW_SDK=1`; the Virus not attached): (1) with ONE device "Virus TI" and two blocks, WinMM
+  inputs went from 0 to 2, named "Virus TI" and "Virus TI Gr 2" (not after the blocks, against the docs), outputs
+  stayed 1 (Microsoft GS Wavetable Synth only): read-only holds; hence one device per port. (2) Creating the device
+  failed twice right after the helper demand-started midisrv, worked with the service running. (3) Bug #1047 seen:
+  the helper hung in the teardown, `Restart-Service midisrv` hung, a killed helper's device stayed and blocked the
+  next creation; only a reboot cleared it (this build has not got the November fix). (4) OpenSSH ends the processes
+  it started (broker and helper) with the session: test in one session or from the console.
+- Second VM run (helper of 5e510e4, CI 43696948011, one device per port, same test setup): WinMM inputs "Virus TI
+  Synth" and "Virus TI MIDI", outputs unchanged. Message path tested by feeding the helper's stdin with midifeed
+  frames (scratchpad test script, as the broker would) while a WinMM program listened (midiInOpen, callback):
+  on each port note on 90 3C 64, CC B0 01 40, note off 80 3C 00 and SysEx F0 7E 7F 06 01 F7 arrived unchanged.
+  After a cold boot the first device came at attempt 2 (the retry works). Not tested: the broker's USB side with
+  real key or DIN traffic (no keyed Virus, nothing at the DIN In), Windows' own copy of the API (not out yet).
+- Broker (`vtikeyport_win.c`): starts the helper when it lies next to `vtibroker.exe`, feeds it the frames of
+  `midifeed.h` on a non-blocking stdin pipe; the helper ends when the pipe closes, so the ports live as long as the
+  broker (as on macOS and Linux). `umpconv.h` turns the bytes into UMP (unit-tested).
+- MSI (`native/packaging/windows/native.wxs`): the helper's component only when CurrentBuildNumber >= 26200,
+  `System32\Windows.Devices.Midi2.dll` exists and UseLegacyMidi is not 1.
+- CI: the .winmd of microsoft/MIDI's API-lock package (In-box Preview 11, `0.99.92-preview.11`) and cppwinrt.exe
+  (Microsoft.Windows.CppWinRT 2.0.250303.1), both pinned by SHA-256, only to compile.
+- Known from the microsoft/MIDI repo (2026-11-14): the API comes in-box with the end-of-November 2026 update for
+  25H2 (up to 45 days to reach every PC); virtual devices could hang the service at teardown before that update
+  (#1047, #1236); WinMM apps fail to open ports after a `midisrv` restart until they restart (#1037, open).

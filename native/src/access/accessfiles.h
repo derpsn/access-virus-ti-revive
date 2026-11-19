@@ -6,6 +6,7 @@
 #pragma once
 #include <cstdint>
 #include <map>
+#include <mutex>
 #include <memory>
 #include <string>
 #include <vector>
@@ -51,7 +52,7 @@ public:
     // the default page B the original gives old (Virus C, 267-byte) single dumps when upgrading them: 256 bytes
     // next to the embedded init patch in the plug-in binary (Windows DLL: 0x400 before it; Mac binary: 0x2a0 after
     // it, E346); empty if not plausible (all bytes must be 7-bit)
-    std::vector<uint8_t> default_page_b() const;
+    const std::vector<uint8_t> &default_page_b() const; // found at the first call, then kept
     // the classic oscillator display's 64 waves (64 x 64 floats, the WaveSelect row first; E180), found in the plug-in
     // binary by content; empty if not found (the display then shows a sine for every wave)
     std::vector<float> osc_waves() const;
@@ -61,6 +62,9 @@ public:
 private:
     std::vector<uint8_t> find_dump(uint8_t cmd, size_t size, size_t name_at, const char *name,
                                    std::vector<uint8_t> *binary = nullptr, size_t *offset = nullptr) const;
+    std::vector<uint8_t> find_page_b() const;
+    mutable std::once_flag page_b_once_; // default_page_b() is called from several threads
+    mutable std::vector<uint8_t> page_b_;
     std::map<std::string, std::vector<uint8_t>> files_; // key: lower-case name
     std::string source_;
     bool pe32_ = false; // load_pe read a 32-bit (PE32) image

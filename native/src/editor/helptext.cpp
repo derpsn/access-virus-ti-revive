@@ -21,8 +21,10 @@ const Entry ENTRIES[] = {
      "Opens TI Revive's menu: Explain the Controls (this help mode: point at a control to read about it, click to "
      "keep the note on screen, click ? again or press Esc to leave; clicks change no value meanwhile), Setup Tips "
      "for Your DAW, the Access manuals (Reference, Quickstart, Atomizer, tutorials; your own copies, listed only "
-     "when TI Revive's setup found them in your Access installer), the website, Report a Problem, Save Logs for a "
-     "Bug Report, the detailed log and Panic (all notes off)."},
+     "when TI Revive's setup found them in your Access installer), Download (only when the Control Center's opt-in "
+     "update check found a newer release), the website, Report a Problem, Prepare a Bug Report (saves the logs, then "
+     "opens GitHub's form with the version filled in: attach the file there), the detailed log and Panic (all notes "
+     "off)."},
     // the displays share their parameter with the knob around them: their own notes (help mode looks them up by type)
     {"VirusControl/Filter Display", "Filter display",
      "Shows how the filter shapes the sound: the point is the cutoff (left / right) and the resonance (up / down). "

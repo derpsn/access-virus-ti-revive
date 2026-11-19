@@ -24,6 +24,7 @@ extern char **environ;
 #include "vstgui/lib/platform/platformfactory.h"
 #include "access/library.h"
 #include "cc/diag.h"
+#include "cc/updatecheck.h"
 #include "editor/helptext.h"
 #include "model/utf8.h"
 #include "editor/editormenus.h"
@@ -1082,7 +1083,8 @@ public:
             tick_info();
             tick_tips();
             tick_alert();
-            plugin_->tick_gestures(); // knob moves on the Virus -> host edits (E304)
+            if (!plugin_->gesture_timer_running()) // the plug-in's own timer does it; this only without a run loop
+                plugin_->tick_gestures(); // knob moves on the Virus -> host edits (E304)
             if (int kb, kp; key_load_.due(now_ms(), kb, kp)) // Up/Down in the browser stopped
                 plugin_->load_patch_remembered(kb, kp, plugin_->ui_value(plugin_->layout().frame_parameter, -1));
             drop_switched_selections();
@@ -1430,7 +1432,16 @@ public:
     {
         if (info_ != vti::InfoStart::None) { // only its buttons act, as on the original's Info page
             const int mx = (int)event.mousePosition.x, my = (int)event.mousePosition.y;
-            if (vti::kInfoOk.contains(mx, my))
+            if (info_scroll_.active() && info_track_.contains(mx, my)) { // the scrollbar of a long page (InfoScroll)
+                double ty, th;
+                info_scroll_.thumb(ty, th);
+                const double at = my - info_track_.y;
+                if (at >= ty && at < ty + th)
+                    info_grab_ = at - ty; // drag the thumb
+                else
+                    info_scroll_.click_track(at);
+                invalid();
+            } else if (vti::kInfoOk.contains(mx, my))
                 close_info(false);
             else if (info_ != vti::InfoStart::LogNotice && vti::kInfoDontShow.contains(mx, my))
                 close_info(true);
@@ -1703,6 +1714,12 @@ public:
 
     void onMouseMoveEvent(MouseMoveEvent &event) override
     {
+        if (info_ != vti::InfoStart::None && info_grab_ >= 0 && event.buttonState.isLeft()) {
+            info_scroll_.drag_thumb_to(event.mousePosition.y - info_track_.y - info_grab_);
+            invalid();
+            event.consumed = true;
+            return;
+        }
         if (help_ && !event.buttonState.isLeft()) {
             help_hover(event.mousePosition);
             return;
@@ -1796,8 +1813,17 @@ public:
         event.consumed = true;
     }
 
+    void onMouseWheelEvent(MouseWheelEvent &event) override
+    {
+        if (info_ != vti::InfoStart::None && info_scroll_.active()) { // a long What's New page scrolls
+            info_scroll_.scroll_by(-event.deltaY * 40);
+            invalid();
+            event.consumed = true;
+        }
+    }
     void onMouseUpEvent(MouseUpEvent &event) override
     {
+        info_grab_ = -1;
         const bool dragged = dnd_;
         if (dnd_ && drag_.element) { // dropped: onto a part strip (the part panel, x < 192) or a browser slot?
             // the cursor goes back after this event: X11 VSTGUI still holds the pointer grab here and releases it
@@ -1828,6 +1854,7 @@ public:
         renderer_.highlighted.clear();
         graph_handle_ = -1;
         arp_grab_ = {};
+        plugin_->ui_drag_end(); // the drag's host gesture ends with the mouse
         drag_ = {};
         drag_rects_.clear();
         renderer_.pressed = nullptr;
@@ -1998,7 +2025,7 @@ private:
             {"Switch the Virus off, wait a few seconds and switch it on again. Restarting the DAW or the plug-in does "
              "not help: in our tests only switching the Virus off and on cleared it."},
             {"If this happens more than once, please open an issue on GitHub with the plug-in's log (Control Center, "
-             "Nerd mode, Save logs)."},
+             "Nerd mode, Save logs, or the ? menu, Prepare a Bug Report)."},
             {"Click anywhere or press Esc to close."}};
         alert_ = true;
         invalid();
@@ -2064,6 +2091,9 @@ private:
     vti::InfoStart info_ = vti::InfoStart::None;
     vti::InfoPage info_page_;
     bool info_checked_ = false;
+    vti::InfoScroll info_scroll_;  // a page taller than its room (fit_info_page's scroll)
+    vti::InfoRect info_track_{};   // where draw_info put the scrollbar, for the mouse
+    double info_grab_ = -1;        // dragging the thumb: where it was grabbed, -1 = not
     static const char *tirevive_version()
     {
 #ifdef TIREVIVE_VERSION
@@ -2089,6 +2119,8 @@ private:
         if (tips_) // the open setup page goes away as if read (from the menu over it), so it does not come back
             close_tips();
         info_ = which;
+        info_scroll_ = vti::InfoScroll(); // a new page starts at its top
+        info_grab_ = -1;
         invalid();
     }
     bool start_pages_done() const
@@ -2139,11 +2171,14 @@ private:
         };
         const vti::InfoFit fit = vti::fit_info_page(page, vti::kInfoOk.y - 8 - a.y, measure);
         const double size = fit.size, lh = size + 4, gap = size * 0.6;
+        const int bar = 10, text_w = fit.scroll ? a.w - bar - 8 : a.w; // a scrollbar takes the right edge
         body->setSize(size), bold->setSize(size);
         std::vector<std::vector<std::string>> lines;
+        double content = 0;
         for (const vti::InfoPara &p : fit.page.paras) {
             ctx->setFont(p.bold || p.warn ? bold : body);
-            lines.push_back(wrap(ctx, p.text, a.w));
+            lines.push_back(wrap(ctx, p.text, text_w));
+            content += lines.back().size() * lh + gap;
         }
         ctx->setDrawMode(kAntiAliasing);
         double y = a.y;
@@ -2151,15 +2186,35 @@ private:
         ctx->setFontColor(CColor(20, 20, 20, 255));
         ctx->drawString(page.title.c_str(), CRect(a.x, y, a.x + a.w, y + 22), kLeftText);
         y += 22 + gap * 2;
+        const double top = y, bottom = vti::kInfoOk.y - 8; // the text's room under the title, above the buttons
+        if (fit.scroll && &page == &info_page_) {
+            info_scroll_.set(content, bottom - top);
+            info_track_ = {a.x + a.w - bar, (int)top, bar, (int)(bottom - top)};
+            y -= info_scroll_.offset;
+        }
+        CRect old_clip;
+        ctx->getClipRect(old_clip);
+        ctx->setClipRect(CRect(a.x, top, a.x + a.w, bottom)); // scrolled lines end at the room's edges
         for (size_t i = 0; i < fit.page.paras.size(); i++) {
             const vti::InfoPara &p = fit.page.paras[i];
             ctx->setFont(p.bold || p.warn ? bold : body);
             ctx->setFontColor(p.warn ? CColor(150, 25, 15, 255) : CColor(25, 25, 25, 255));
             for (const std::string &l : lines[i]) {
-                ctx->drawString(l.c_str(), CRect(a.x, y, a.x + a.w, y + lh), kLeftText);
+                if (y + lh > top && y < bottom)
+                    ctx->drawString(l.c_str(), CRect(a.x, y, a.x + text_w, y + lh), kLeftText);
                 y += lh;
             }
             y += gap;
+        }
+        ctx->setClipRect(old_clip);
+        if (fit.scroll && &page == &info_page_ && info_scroll_.active()) { // track and thumb, in the page's greys
+            const vti::InfoRect &t = info_track_;
+            double ty, th;
+            info_scroll_.thumb(ty, th);
+            ctx->setFillColor(CColor(140, 142, 146, 255));
+            ctx->drawRect(CRect(t.x, t.y, t.x + t.w, t.y + t.h), kDrawFilled);
+            ctx->setFillColor(CColor(70, 72, 76, 255));
+            ctx->drawRect(CRect(t.x + 1, t.y + ty, t.x + t.w - 1, t.y + ty + th), kDrawFilled);
         }
         if (void *ok = canvas_.image("BTN_Ok_Red.png"))
             canvas_.blit(ok, 0, 0, vti::kInfoOk.x, vti::kInfoOk.y, vti::kInfoOk.w, vti::kInfoOk.h, 1.0);
@@ -2327,8 +2382,10 @@ private:
     DragSend drag_sent_;       // a drag sends a value once, not on every mouse move (dragsend.h)
     void drag_set(const std::string &path, int part, int value)
     {
-        if (drag_sent_.changed(path, part, value))
+        if (drag_sent_.changed(path, part, value)) {
+            plugin_->ui_drag_begin(); // a real drag: one host gesture until the mouse up (audit #10)
             plugin_->ui_set(path, part, value);
+        }
     }
     int edit_part_ = 0;
     std::string edit_param_; // edit_name: the REMOTE page field being edited, empty for a patch name
@@ -2980,6 +3037,7 @@ private:
         st.connected = plugin_->virus_connected();
         st.diag_log = vti::cc::plugin_log_enabled();
         st.snow = plugin_->is_snow();
+        st.update = vti::cc::update_available(VTI_NATIVE_VERSION, vti::cc::read_update_state()); // a file read, no network
         manual_paths_.assign(vti::kManualCount, std::string());
         const auto dirs = vti::manual_dirs(plugin_->files().source(), vti::u8env("ProgramFiles(x86)"));
         for (int k = 0; k < vti::kManualCount; k++) { // only the PDFs the user's Access setup put on disk
@@ -3030,6 +3088,9 @@ private:
         case vti::MenuAction::SaveLogs:
             save_logs_dialog();
             break;
+        case vti::MenuAction::Update:
+            open_url(vti::cc::kReleasesUrl);
+            break;
         case vti::MenuAction::DiagLog:
             if (!vti::cc::set_plugin_log(!vti::cc::plugin_log_enabled(), err))
                 plugin_->lcd_message("Detailed log", "not changed: " + err);
@@ -3062,7 +3123,7 @@ private:
         invalid();
     }
 
-    // "Save Logs for a Bug Report...": the Control Center's collection (diag.h: system, versions, the ends of the
+    // "Prepare a Bug Report...": the Control Center's collection (diag.h: system, versions, the ends of the
     // plug-in and broker logs, home folder and user name replaced) into a file the user chooses
     void save_logs_dialog()
     {
@@ -3085,10 +3146,13 @@ private:
             if (sel->getNumSelectedFiles() != 1)
                 return;
             std::string err;
-            if (vti::cc::collect_logs(sel->getSelectedFile(0), VTI_NATIVE_VERSION, err))
-                plugin->lcd_message("Logs saved", "please look through them first");
-            else
+            if (vti::cc::collect_logs(sel->getSelectedFile(0), VTI_NATIVE_VERSION, err)) {
+                plugin->lcd_message("Logs saved", "look through them, then attach");
+                // GitHub's form with the version filled in; the user attaches the file, nothing is sent by us
+                open_url(vti::cc::bug_report_url(VTI_NATIVE_VERSION, vti::cc::os_family()).c_str());
+            } else {
                 plugin->lcd_message("Logs not saved", err);
+            }
         });
         fs->forget();
     }
@@ -3247,6 +3311,13 @@ bool PLUGIN_API VirusEditor::open(void *parent, const PlatformType &platformType
     }
     plugin_->editor_event("opened");
     plugin_->editor_opened(); // only now: the early returns above leave no editor
+    // the opt-in update check's answer (the Control Center wrote it, updatecheck.h): a note once per new release
+    vti::cc::UpdateState us = vti::cc::read_update_state();
+    if (vti::cc::show_update_note(VTI_NATIVE_VERSION, us)) {
+        us.seen = us.latest;
+        vti::cc::write_update_state(us);
+        plugin_->lcd_message("TI Revive " + us.latest + " is out", "? menu: Download");
+    }
     return true;
 }
 

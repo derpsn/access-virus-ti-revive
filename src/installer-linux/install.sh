@@ -112,11 +112,16 @@ if [ -n "$CC_MISSING" ]; then
     echo "      Fedora: sudo dnf install gtkmm3.0; Arch/CachyOS/Manjaro: sudo pacman -S gtkmm3."
     echo "      The plug-in and tirevive-cc work without it."
 fi
-install -m 0644 "$HERE/systemd/tirevive-broker.socket" "$HERE/systemd/tirevive-broker.service" "$UNITS/"
+install -m 0644 "$HERE/systemd/tirevive-broker.socket" "$HERE/systemd/tirevive-broker.service" \
+    "$HERE/systemd/tirevive-broker@.socket" "$HERE/systemd/tirevive-broker@.service" "$UNITS/"
 rm -f "$CONF/broker.token" # TI Revive 0.7: the TCP socket for the plug-in under Wine is gone
 if command -v systemctl >/dev/null 2>&1 && systemctl --user show-environment >/dev/null 2>&1; then
-    if systemctl --user daemon-reload && systemctl --user enable tirevive-broker.socket >/dev/null &&
-        systemctl --user restart tirevive-broker.socket; then
+    # Virus 2-4 of several (#45): their brokers (template unit, instance = the Virus number) only start when a
+    # plug-in instance connects to one
+    SOCKETS=tirevive-broker.socket
+    for n in 2 3 4; do SOCKETS="$SOCKETS tirevive-broker@$n.socket"; done
+    if systemctl --user daemon-reload && systemctl --user enable $SOCKETS >/dev/null &&
+        systemctl --user restart $SOCKETS; then
         echo "broker socket enabled (systemd user unit tirevive-broker.socket)"
     else
         echo "WARNING: could not enable the systemd user socket; start $LIB/vtibroker yourself before using the plug-in"

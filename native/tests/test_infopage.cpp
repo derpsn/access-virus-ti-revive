@@ -272,8 +272,11 @@ TEST(infopage_fit_one_version_sizes)
     InfoPage p = fake_news({3});
     InfoFit f = fit_info_page(p, p.paras.size() * (10 + 4), fake_height);
     CHECK(f.size == 10 && f.page.paras.size() == p.paras.size());
+    CHECK(!f.scroll);
+    // fits nowhere, not even at 9 pt (0.8.41's notes overlapped the buttons, user 2026-11-15): the whole version at a
+    // readable 11 pt with a scrollbar
     f = fit_info_page(p, 1, fake_height);
-    CHECK(f.size == 9 && f.page.paras.size() == p.paras.size());
+    CHECK(f.size == 11 && f.scroll && f.page.paras.size() == p.paras.size());
     CHECK(f.page.paras.back().text == "- note 2");
 }
 
@@ -319,4 +322,39 @@ TEST(infopage_fit_sub_headings_are_not_versions)
     // room for all but the sub-heading's part: 1.1 still goes whole
     InfoFit g = fit_info_page(p, (6 + 1) * (11 + 4), fake_height);
     CHECK(g.page.paras.size() == 4 && g.page.paras[2].text == "- note 1");
+}
+
+// The scrollbar of a page that does not fit (InfoScroll): the offset stays between the top and the last line, the
+// thumb shows the visible part, a click on the track or a drag of the thumb moves the text (user 2026-11-15)
+TEST(infopage_scroll_offset_and_thumb)
+{
+    InfoScroll s;
+    s.set(300, 300); // fits: no scrollbar, nothing moves
+    CHECK(!s.active());
+    s.scroll_by(50);
+    CHECK(s.offset == 0);
+    s.set(900, 300); // three pages of text
+    CHECK(s.active() && s.max_offset() == 600);
+    s.scroll_by(-10);
+    CHECK(s.offset == 0);
+    s.scroll_by(250);
+    CHECK(s.offset == 250);
+    s.scroll_by(1000);
+    CHECK(s.offset == 600);
+    double y, h;
+    s.thumb(y, h); // a third of the track, at the bottom
+    CHECK(h == 100 && y == 200);
+    s.drag_thumb_to(100); // the thumb's top halfway down its way: half the text
+    CHECK(s.offset == 300);
+    s.click_track(0); // a click at the track's top: the thumb centres there, clamped
+    CHECK(s.offset == 0);
+    s.click_track(300);
+    CHECK(s.offset == 600);
+    s.set(310, 300); // a tiny overflow: the thumb keeps a size you can grab
+    s.thumb(y, h);
+    CHECK(h >= 24);
+    s.set(900, 300);
+    s.offset = 600;
+    s.set(400, 300); // the text got shorter (a new page): the offset follows
+    CHECK(s.offset == 100);
 }

@@ -9,6 +9,8 @@
 #include "vtireaderr.h" // when a reader clears a stall, waits, or gives up (#37)
 #include "linkrule.h"   // link at open, unlink at close like the original driver (E524)
 #include "rxqueue.h"   // 8 reads pending per MIDI endpoint, the callback only queues (E521)
+#include "idlepace.h"  // the Snow's idle reads on EP 0x85 paced to 1 ms (#42, E547)
+#include "devslot.h"   // which Virus when several are connected (#45)
 #include <errno.h>
 #include <sys/time.h>
 #include <unistd.h>     // usleep
@@ -25,7 +27,9 @@ static int gb_reset(void *h) { return libusb_reset_device((libusb_device_handle 
 static int reset_allowed(void)
 {
     char path[64];
-    snprintf(path, sizeof path, "/tmp/tirevive-usbreset-%u", (unsigned)getuid());
+    char sfx[4];
+    vti_slot_suffix(sfx, vti_slot);
+    snprintf(path, sizeof path, "/tmp/tirevive-usbreset-%u%s", (unsigned)getuid(), sfx); // per Virus (#45)
     return vti_reset_guard(path, time(NULL), RESET_GAP_S);
 }
 #endif
@@ -52,6 +56,10 @@ typedef struct rxep {
     int inflight;
     unsigned parked;          // not resubmitted for lack of room: the reader resubmits them
     int quiet;                // the reader clears a halt: transfers cancelled, parked until the clear (S142)
+    int pace;                 // the Snow's bulk EP 0x85: idle-only reads rest their transfer (idlepace.h, #42)
+    vti_pace pc;
+    char opt_path[512];       // the option snow-idle-slow in the user's TI Revive folder ("" = none), read every 2 s
+    uint64_t opt_next_ns;
     vti_rx_rec recs[RX_QCAP];
     vti_rxq q;
     pthread_mutex_t mu;
@@ -75,6 +83,7 @@ struct vti {
     volatile int closing;   // rx_stop runs: transfers cancelled, nothing resubmitted, readers still draining
     uint8_t bulk[16];       // by endpoint number: 1 = bulk (Virus TI Snow), 0 = interrupt (TI/TI2 Desktop, E021) - E387
     unsigned long idle;     // FF FE 00 00 packets dropped on a bulk EP 0x85 (E387)
+    int captured;           // macOS libusb-audio test: taken from Apple's audio driver (E511), given back at close
 };
 
 // The Snow has bulk endpoints 05/85/06/86 where the TI2 Desktop has interrupt ones (E021, E387). Linux usbfs rejects
@@ -107,24 +116,6 @@ static int xfer(vti *v, uint8_t ep, uint8_t *buf, int len, int *got, unsigned ti
                             : libusb_interrupt_transfer(v->h, ep, buf, len, got, timeout);
 }
 
-// The Snow's bulk EP 0x85 answers every read, ~2000 times a second, and the extra packets are all FF FE 00 00
-// (cable 15, CIN 0xF; nothing in the plug-in reads them - E387). They are dropped here, only on a bulk EP 0x85
-// and only that exact 4-byte packet; the TI2's interrupt endpoints never get here.
-static int drop_idle(vti *v, uint8_t *b, int n)
-{
-    static const uint8_t idle[4] = {0xff, 0xfe, 0x00, 0x00};
-    int w = 0, r = 0;
-    for (; r + 4 <= n; r += 4)
-        if (memcmp(b + r, idle, 4)) {
-            memmove(b + w, b + r, 4);
-            w += 4;
-        } else
-            v->idle++;
-    for (; r < n; r++)
-        b[w++] = b[r];
-    return w;
-}
-
 // under e->mu
 static int rx_submit(rxep *e, int slot)
 {
@@ -138,6 +129,8 @@ static int rx_submit(rxep *e, int slot)
 
 // Any thread that handles libusb events runs this (the event thread, a sync write, the Linux audio thread): queue and
 // resubmit only, never block. An error goes to the reader as a record and its transfer waits for the reader.
+static uint64_t mono_ns(void);
+
 static void LIBUSB_CALL rx_done(struct libusb_transfer *t)
 {
     rxep *e = t->user_data;
@@ -155,12 +148,27 @@ static void LIBUSB_CALL rx_done(struct libusb_transfer *t)
             vti_rxq_push(&e->q, slot, 0, t->buffer, t->actual_length);
         break;
     case VTI_RX_QUEUE_RESUBMIT:
+        if (e->pace && vti_idle_only(t->buffer, t->actual_length)) { // the Snow idles: the reader sends it out later
+            e->v->idle += (unsigned long)t->actual_length / 4;
+            vti_pace_rest(&e->pc, slot);
+            break;
+        }
         if (t->actual_length > 0)
             vti_rxq_push(&e->q, slot, 0, t->buffer, t->actual_length);
         if (!vti_rxq_may_resubmit(&e->q, (unsigned)e->inflight + 1))
             vti_park(&e->parked, slot);
         else if (rx_submit(e, slot))
             vti_rxq_push(&e->q, slot, -4, NULL, 0); // a failed resubmit: the device is going, the reader decides
+        if (e->pace && t->actual_length > 0) // data: the 1 ms pace again (the option's quiet time starts over) ...
+            vti_pace_data(&e->pc, mono_ns());
+        if (e->pace && t->actual_length > 0) // ... and every rested transfer goes out again (a dump runs at full speed)
+            for (uint32_t m = vti_pace_wake_all(&e->pc); m; m &= m - 1) {
+                const int s = __builtin_ctz(m);
+                if (!vti_rxq_may_resubmit(&e->q, (unsigned)e->inflight + 1))
+                    vti_park(&e->parked, s);
+                else if (rx_submit(e, s))
+                    vti_rxq_push(&e->q, s, -4, NULL, 0);
+            }
         break;
     case VTI_RX_QUEUE_PARK:
         if (t->actual_length > 0)
@@ -187,19 +195,51 @@ static void *events(void *p)
     return NULL;
 }
 
-// 0, or -1 when the queue stayed empty for 200 ms (the reader then checks stop)
+static uint64_t mono_ns(void)
+{
+    struct timespec ts;
+    clock_gettime(CLOCK_MONOTONIC, &ts);
+    return (uint64_t)ts.tv_sec * 1000000000ull + (uint64_t)ts.tv_nsec;
+}
+
+// under e->mu: a rested transfer of the Snow's EP 0x85 goes out again, one per millisecond (idlepace.h)
+static void rx_pace(rxep *e)
+{
+    int slot;
+    if (!e->pace)
+        return;
+    const uint64_t now = mono_ns();
+    if (now >= e->opt_next_ns) { // the Control Center's switch takes effect within 2 s, no restart needed
+        const int slow = e->opt_path[0] && access(e->opt_path, F_OK) == 0;
+        if (slow != e->pc.slow)
+            vti_log("vti: Snow idle reads %s (option snow-idle-slow)\n", slow ? "slower after a quiet second" : "every 1 ms");
+        e->pc.slow = slow;
+        e->opt_next_ns = now + 2000000000ull;
+    }
+    if (e->v->closing || e->quiet || (slot = vti_pace_due(&e->pc, now)) < 0)
+        return;
+    if (!vti_rxq_may_resubmit(&e->q, (unsigned)e->inflight + 1))
+        vti_park(&e->parked, slot);
+    else if (rx_submit(e, slot))
+        vti_rxq_push(&e->q, slot, -4, NULL, 0);
+}
+
+// 0, or -1 when the queue stayed empty for 200 ms, or until the next paced read (the reader then checks stop)
 static int rx_take(rxep *e, vti_rx_rec *rec)
 {
     pthread_mutex_lock(&e->mu);
+    rx_pace(e);
     if (!e->q.count && !e->v->stop) {
-        struct timeval now;
-        gettimeofday(&now, NULL);
-        struct timespec until = {now.tv_sec, (now.tv_usec + 200000) * 1000L};
-        if (until.tv_nsec >= 1000000000L) {
-            until.tv_sec++;
-            until.tv_nsec -= 1000000000L;
+        const int paced = e->pace && !e->v->closing && !e->quiet; // else no spin on rested transfers at the close
+        const uint64_t wait = paced ? vti_pace_wait(&e->pc, mono_ns(), 200000000ull) : 200000000ull;
+        if (wait) {
+            struct timeval now;
+            gettimeofday(&now, NULL);
+            const uint64_t ns = (uint64_t)now.tv_usec * 1000ull + wait;
+            const struct timespec until = {now.tv_sec + (time_t)(ns / 1000000000ull), (long)(ns % 1000000000ull)};
+            pthread_cond_timedwait(&e->cv, &e->mu, &until);
         }
-        pthread_cond_timedwait(&e->cv, &e->mu, &until);
+        rx_pace(e);
     }
     int r = vti_rxq_pop(&e->q, rec);
     int slot; // data again (room, or the endpoint works after a stall): the parked transfers go out
@@ -282,8 +322,12 @@ static void *reader(void *p)
                     libusb_error_name(last));
         fails = 0;
         int got = rec.len;
-        if (ep == VTI_EP_MI03_IN && v->bulk[ep & 15] && !(got = drop_idle(v, rec.data, got)))
-            continue;
+        if (ep == VTI_EP_MI03_IN && v->bulk[ep & 15]) { // the Snow's idle packets (vti_drop_idle, E387)
+            int kept = vti_drop_idle(rec.data, got);
+            v->idle += (unsigned long)(got - kept) / 4;
+            if (!(got = kept))
+                continue;
+        }
         v->cb(v->user, ep, rec.data, got);
     }
     return NULL;
@@ -298,6 +342,16 @@ static int rx_start(vti *v)
         rxep *e = &v->rx[i];
         e->v = v;
         e->ep = v->rd_ep[i];
+        e->pace = e->ep == VTI_EP_MI03_IN && v->bulk[e->ep & 15]; // only the Snow idles on it (E387)
+        vti_pace_init(&e->pc);
+        e->opt_next_ns = 0;
+#ifdef __APPLE__
+        const int mac = 1;
+#else
+        const int mac = 0;
+#endif
+        if (vti_pace_option_path(e->opt_path, sizeof e->opt_path, getenv("HOME"), mac)) // no home (root service): off
+            e->opt_path[0] = 0;
         pthread_mutex_init(&e->mu, NULL);
         pthread_cond_init(&e->cv, NULL);
         vti_rxq_init(&e->q, e->recs, RX_QCAP);
@@ -360,6 +414,42 @@ static void rx_stop(vti *v)
         }
 }
 
+// the Virus of vti_slot: every 133e:0815 device keyed by bus and port path ("1-2.3"), the slot-th in key order (#45)
+static libusb_device_handle *open_slot(libusb_context *ctx)
+{
+    libusb_device **list;
+    const ssize_t n = libusb_get_device_list(ctx, &list);
+    if (n < 0)
+        return NULL;
+    char keys[VTI_SLOTS_MAX * 4][40]; // bus + up to 7 ports, 4 chars each
+    const char *kp[VTI_SLOTS_MAX * 4];
+    libusb_device *devs[VTI_SLOTS_MAX * 4];
+    int found = 0;
+    for (ssize_t i = 0; i < n && found < VTI_SLOTS_MAX * 4; i++) {
+        struct libusb_device_descriptor d;
+        if (libusb_get_device_descriptor(list[i], &d) || d.idVendor != VTI_VID || d.idProduct != VTI_PID)
+            continue;
+        uint8_t path[8];
+        const int np = libusb_get_port_numbers(list[i], path, sizeof path);
+        int o = snprintf(keys[found], sizeof keys[found], "%03u-", libusb_get_bus_number(list[i]));
+        for (int k = 0; k < np && o < (int)sizeof keys[found] - 4; k++)
+            o += snprintf(keys[found] + o, sizeof keys[found] - (size_t)o, k ? ".%03u" : "%03u", path[k]);
+        kp[found] = keys[found];
+        devs[found++] = list[i];
+    }
+    const int pick = vti_slot_pick(kp, found, vti_slot);
+    libusb_device_handle *h = NULL;
+    if (pick >= 0) {
+        const int r = libusb_open(devs[pick], &h);
+        if (r)
+            vti_log("vti: open Virus %d (USB %s): %s\n", vti_slot, kp[pick], libusb_error_name(r));
+        else if (found > 1)
+            vti_log("vti: %d Viruses connected, this broker has Virus %d (USB %s)\n", found, vti_slot, kp[pick]);
+    }
+    libusb_free_device_list(list, 1);
+    return h;
+}
+
 vti *vti_open(vti_rx_cb cb, void *user)
 {
     vti *v = calloc(1, sizeof *v);
@@ -371,12 +461,33 @@ vti *vti_open(vti_rx_cb cb, void *user)
         free(v);
         return NULL;
     }
-    v->h = libusb_open_device_with_vid_pid(v->ctx, VTI_VID, VTI_PID);
+    // the broker retries every 2 s: said once until the Virus is found (a broker 2 without a Virus 2 ran for hours,
+    // audit 2026-11-18 #3)
+    static int said_missing;
+    v->h = open_slot(v->ctx);
     if (!v->h) {
-        vti_log("vti: Virus TI %04x:%04x not found or no access\n", VTI_VID, VTI_PID);
+        if (!said_missing++)
+            vti_log("vti: Virus %d (%04x:%04x) not found or no access - trying again every 2 s\n", vti_slot, VTI_VID,
+                    VTI_PID);
         goto fail;
     }
+    said_missing = 0;
     libusb_set_auto_detach_kernel_driver(v->h, 1);
+#ifdef __APPLE__
+    // the broker's own audio on macOS (test, E511): libusb takes the Virus from Apple's audio driver by capturing the
+    // whole device, which re-enumerates it - so before the MIDI interfaces are claimed, as in vtiaudioprobe's order
+    if (geteuid() == 0 && getenv("VTI_LIBUSB_AUDIO") && atoi(getenv("VTI_LIBUSB_AUDIO")) == 1) {
+        int c = libusb_detach_kernel_driver(v->h, 0);
+        vti_log("vti: Virus taken from Apple's audio driver (capture): %s\n", c ? libusb_error_name(c) : "ok");
+        if (c == 0) {
+            // keep it until vti_close: with auto-detach on, every release of the audio interfaces (the plug-in's
+            // audio off/on at a DAW restart) re-attached Apple's driver, which re-enumerates the whole device and
+            // cut MIDI off for a moment (first Mac test: LIBUSB_ERROR_IO, then NOT_FOUND)
+            libusb_set_auto_detach_kernel_driver(v->h, 0);
+            v->captured = 1;
+        }
+    }
+#endif
     find_bulk_endpoints(v);
     for (int i = 3; i <= 4; i++)
         if ((r = libusb_claim_interface(v->h, i))) {
@@ -413,6 +524,13 @@ fail:
     return NULL;
 }
 
+#ifdef __APPLE__
+#include "macgiveback.h"
+static int mg_attach(void *p) { return libusb_attach_kernel_driver(((vti *)p)->h, 0); }
+static void mg_close(void *p) { libusb_close(((vti *)p)->h); }
+static void mg_exit(void *p) { libusb_exit(((vti *)p)->ctx); }
+#endif
+
 void vti_close(vti *v)
 {
     if (!v)
@@ -436,8 +554,22 @@ void vti_close(vti *v)
     for (int i = 3; i <= 4; i++)
         libusb_release_interface(v->h, i);
 #endif
+#ifdef __APPLE__
+    // back to Apple's audio driver (the Virus is a Core Audio device again); after a failed attach libusb_close and
+    // libusb_exit abort, so they are skipped then (macgiveback.h, #37)
+    const vti_macgiveback_ops ops = {mg_attach, mg_close, mg_exit};
+    const int g = vti_macgiveback(&ops, v, v->captured);
+    if (v->captured)
+        vti_log("vti: Virus given back to Apple's audio driver: %s\n",
+                g ? libusb_error_name(g) : "ok");
+    if (g) {
+        vti_log("vti: unplug the Virus' USB cable and plug it in again to give it to Apple's driver\n");
+        return; // v and the libusb context are left to the ending process (closing them aborts, see above)
+    }
+#else
     libusb_close(v->h);
     libusb_exit(v->ctx);
+#endif
     if (!v->leak) // else a transfer's late callback could still reach its rxep (rx_stop)
         free(v);
 }
@@ -541,7 +673,9 @@ void vti_libusb(vti *v, struct libusb_context **ctx, struct libusb_device_handle
 int vti_reenumerate(vti *v)
 {
     char path[64];
-    snprintf(path, sizeof path, "/tmp/tirevive-reenum-%u", (unsigned)getuid());
+    char sfx[4];
+    vti_slot_suffix(sfx, vti_slot);
+    snprintf(path, sizeof path, "/tmp/tirevive-reenum-%u%s", (unsigned)getuid(), sfx); // per Virus (#45)
     if (!v || !vti_reset_guard(path, time(NULL), REENUM_GAP_S))
         return -2;
     return libusb_reset_device(v->h);

@@ -1,5 +1,6 @@
 // firmware.cpp - see firmware.h.
 #include "firmware.h"
+#include "model/bankdrop.h"
 #include "model/utf8.h"
 #include <cstring>
 #include <filesystem>
@@ -96,13 +97,7 @@ std::vector<std::vector<std::vector<uint8_t>>> load_rom_banks(const std::string 
             m.insert(m.end(), src + 256, src + 512); // page B
             m.push_back(0);
             m.push_back(0xF7);
-            unsigned a = 0;
-            for (int i = 5; i < 265; i++)
-                a += m[i];
-            m[265] = a & 0x7F;
-            for (int i = 265; i < 522; i++)
-                a += m[i];
-            m[522] = a & 0x7F;
+            vti::BankDrop::checksums(m);
             bank.push_back(std::move(m));
         }
         banks.push_back(std::move(bank));

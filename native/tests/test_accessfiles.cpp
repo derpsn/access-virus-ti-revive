@@ -285,6 +285,9 @@ TEST(accessfiles_pe_page_b)
     std::string err;
     auto a = AccessFiles::open(dll.string(), err);
     CHECK(a && a->default_page_b() == Bytes(0x100, 0x07));
+    // audit #18: found once, not by reading the whole DLL again before every RAM write
+    fs::remove(dll);
+    CHECK(a && a->default_page_b() == Bytes(0x100, 0x07));
 }
 
 TEST(accessfiles_pe32_refused)

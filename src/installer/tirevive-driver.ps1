@@ -4,12 +4,13 @@
 #            LocalMachine Root + TrustedPublisher -> the private key is deleted (cannot sign anything else) ->
 #            pnputil /add-driver /install. Removes Access driver packages (blocked on Win11 anyway).
 # uninstall: pnputil /delete-driver for our package, remove the trusted cert.
-# State: HKLM\SOFTWARE\TI Revive (DriverPackage, CertThumbprint). Log: %ProgramData%\TI Revive\driver.log
+# State: HKLM\SOFTWARE\TI Revive (DriverPackage, CertThumbprint). Log: driver.log in the install folder
 param([ValidateSet('install', 'uninstall')][string]$Action = 'install')
 $ErrorActionPreference = 'Continue'
 $here = Split-Path -Parent $MyInvocation.MyCommand.Path
-$logDir = Join-Path $env:ProgramData 'TI Revive'
-New-Item -ItemType Directory -Force $logDir | Out-Null
+# the install folder (Program Files): a standard user can create %ProgramData%\TI Revive first, and SYSTEM would then
+# append wherever their junction or planted link points (audit #28)
+$logDir = $PSScriptRoot
 Start-Transcript -Path (Join-Path $logDir 'driver.log') -Append | Out-Null
 $reg = 'HKLM:\SOFTWARE\TI Revive'
 # NOT New-Item -Force on every run: on an existing key it recreates it empty, which wiped DriverPackage /
@@ -22,6 +23,17 @@ function Trust-Store([string]$name, $cert, [switch]$Remove) {
     if ($Remove) { $s.Certificates | Where-Object Thumbprint -eq $cert | ForEach-Object { $s.Remove($_) } }
     else { $s.Add($cert) }
     $s.Close()
+}
+
+# The MSI checks this action's exit code: a failure must fail the setup, not look like success (audit #15). No
+# uninstall follows a failed setup, so the certificate trusted a moment ago is taken back here.
+function Fail-Install([string]$why, [string]$thumb) {
+    "ERROR: $why - the driver is not installed, setup stops"
+    foreach ($store in 'Root', 'TrustedPublisher') { Trust-Store $store $thumb -Remove }
+    Remove-ItemProperty $reg CertThumbprint -ErrorAction SilentlyContinue
+    Remove-Item $stage -Recurse -Force -ErrorAction SilentlyContinue
+    Stop-Transcript | Out-Null
+    exit 1
 }
 
 if ($Action -eq 'install') {
@@ -68,7 +80,11 @@ if ($Action -eq 'install') {
     Set-ItemProperty $reg CertThumbprint $cert.Thumbprint
     $out = pnputil /add-driver (Join-Path $stage 'vti_winusb.inf') /install | Out-String
     $out
-    if ($out -match '(oem\d+\.inf)') { Set-ItemProperty $reg DriverPackage $Matches[1] }
+    $pkg = if ($out -match '(oem\d+\.inf)') { $Matches[1] }
+    # the one check that counts: a bad signature shows here too, while a status other than Valid alone did not stop a
+    # working install (M6: "UnknownError", driver fine)
+    if (-not $pkg) { Fail-Install "pnputil added no driver package (exit $LASTEXITCODE)" $cert.Thumbprint }
+    Set-ItemProperty $reg DriverPackage $pkg
     # a Virus still running on the Access USB driver (service VIRUSUSB, e.g. Access software installed or repaired
     # after TI Revive) keeps it until the device is re-detected: remove those device nodes, the rescan below brings
     # the Virus back on the generic composite driver with our WinUSB interfaces (issue #3, Snow)

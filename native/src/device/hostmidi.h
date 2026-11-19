@@ -71,4 +71,57 @@ inline size_t mapped_message(int ch, int ctl, double v01, uint8_t *m)
     return 3;
 }
 
+// The latest message per channel and mapped controller that waits for the automation budget (audit 2026-11-17 #4):
+// a bend ramp at 32 samples came once per block (1500/s at 48 kHz) and bypassed the 250/s limit (rule 2). process()
+// queues the id once (set() returns true when the slot was free) and sends at drain time: at its own offset when it
+// goes out in the block it came in, else at the block start. Fixed arrays, no allocation (audio thread).
+struct MappedPending {
+    struct Slot {
+        uint8_t m[3], n = 0; // n == 0: nothing waits
+        int32_t offset = 0;
+        uint64_t block = 0;
+    };
+    bool set(int ch, int ctl, const uint8_t *m, size_t n, int32_t offset, uint64_t block)
+    {
+        if (ch < 0 || ch > 15 || ctl < 0 || ctl >= CTLS || n == 0 || n > 3)
+            return false;
+        Slot &s = slot_[ch][ctl];
+        const bool fresh = s.n == 0;
+        std::memcpy(s.m, m, n);
+        s.n = (uint8_t)n, s.offset = offset, s.block = block;
+        return fresh;
+    }
+    bool take(int ch, int ctl, Slot &out)
+    {
+        if (ch < 0 || ch > 15 || ctl < 0 || ctl >= CTLS || slot_[ch][ctl].n == 0)
+            return false;
+        out = slot_[ch][ctl];
+        slot_[ch][ctl].n = 0;
+        return true;
+    }
+
+private:
+    static constexpr int CTLS = 130; // 0..127 controllers, 128 aftertouch, 129 pitch bend
+    Slot slot_[16][CTLS];
+};
+
+// The pedals CC 64..69 are switches (down from 64 on, like the Virus, heldnotes.h): they skip the automation queue
+// (a sustain-off waited behind every automated lane, review of audit #4) and go at their own offset, but only when
+// the switch flips, so a drawn pedal ramp cannot flood the Virus. The first value per channel and pedal always goes.
+struct PedalSwitch {
+    static bool pedal(int ctl) { return ctl >= 64 && ctl <= 69; }
+    bool flips(int ch, int ctl, int value)
+    {
+        const uint8_t bit = (uint8_t)(1u << (ctl - 64));
+        uint8_t &down = down_[ch & 15], &known = known_[ch & 15];
+        const bool now = value >= 64, flip = !(known & bit) || now != bool(down & bit);
+        known |= bit;
+        down = now ? (uint8_t)(down | bit) : (uint8_t)(down & ~bit);
+        return flip;
+    }
+
+private:
+    uint8_t down_[16] = {}, known_[16] = {};
+};
+
 } // namespace vti

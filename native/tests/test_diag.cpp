@@ -66,7 +66,19 @@ TEST(diag_plugin_options)
 {
     Home h("vtester");
     const auto &opts = plugin_options();
-    CHECK(opts.size() == 7);
+    CHECK(opts.size() == 9);
+    // snow-idle-slow (0.8.42, #42, user 2026-11-17): a Snow that only idles is asked every 4 ms instead of every 1 ms
+    // after a quiet second; OFF by default, read by the broker (not the plug-in), and the hint says the price
+    CHECK(std::string(opts[8].name) == "snow-idle-slow" && std::string(opts[8].file) == "snow-idle-slow.on");
+    CHECK(!opts[8].default_on && !plugin_option("snow-idle-slow"));
+    CHECK(std::string(opts[8].hint).find("Snow") != std::string::npos &&
+          std::string(opts[8].hint).find("ms") != std::string::npos);
+    CHECK(option_applies_at_once("snow-idle-slow") && !option_applies_at_once("live-notes"));
+    // update-check (0.8.42, user 2026-11-15): the Control Center asks GitHub once a day for the latest release, OFF
+    // by default (opt-in, no telemetry); the hint says what is sent
+    CHECK(std::string(opts[7].name) == "update-check" && std::string(opts[7].file) == "update-check.on");
+    CHECK(!opts[7].default_on && !plugin_option("update-check"));
+    CHECK(std::string(opts[7].hint).find("GitHub") != std::string::npos);
     // live-later (E519, 0.8.41): played notes stamped a little later so the Virus always meets them, OFF by default
     // (off = the timing as the original, E524 (4)); live-later.on switches it on
     CHECK(std::string(opts[6].name) == "live-later" && std::string(opts[6].file) == "live-later.on");
@@ -86,6 +98,16 @@ TEST(diag_plugin_options)
     CHECK(std::string(opts[3].name) == "slip-restart" && std::string(opts[3].file) == "slip-restart.off");
     CHECK(opts[3].default_on);
     CHECK(plugin_option("slip-restart"));
+    // the macOS libusb audio (E511, #37) is no Options page switch: only the separate libusb package writes its file
+    for (auto &o : opts)
+        CHECK(std::string(o.name) != "mac-usb-audio");
+    CHECK(!plugin_option("mac-usb-audio"));
+    CHECK(!mac_usb_audio());
+    fs::create_directories(h.dir / ".local/share/virus-ti-native");
+    std::ofstream(h.dir / ".local/share/virus-ti-native/mac-usb-audio.on").put('\n');
+    CHECK(mac_usb_audio());
+    fs::remove(h.dir / ".local/share/virus-ti-native/mac-usb-audio.on");
+    CHECK(!mac_usb_audio());
     // since rc6 the plug-in restarts it on macOS too (#37: 9 of 22 starts slipped on a Catalina Mac), so no option text
     // may say it is Linux and Windows only or only logged on a Mac
     for (const char *t : {opts[3].label, opts[3].hint})
@@ -253,4 +275,13 @@ TEST(diag_broker_log_tail_line_ends)
     CHECK((lines == std::vector<std::string>{"one", "two", "", "last"}));
 }
 #endif
+
+// audit 2026-11-17 #6: the libusb package's root service logs into a folder only root can write; a fixed file in
+// /tmp, which the user's broker creates first, let a symlink point root's log at any file. The user's own broker
+// (not root) keeps /tmp. Nerd mode and the bug report read the one that runs.
+TEST(diag_mac_broker_log_of_the_root_service_is_not_in_tmp)
+{
+    CHECK(mac_broker_log(false) == "/tmp/tirevive-vtibroker.log");
+    CHECK(mac_broker_log(true) == "/Library/Logs/TI Revive/vtibroker.log");
+}
 #endif

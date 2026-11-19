@@ -2,6 +2,7 @@
 #include "optionspage.h"
 #include "cc/diag.h"
 #include "cc/optionslayout.h"
+#include "cc/updatecheck.h"
 #include "vstgui/lib/controls/cbuttons.h"
 #include "vstgui/lib/controls/ctextlabel.h"
 #include "vstgui/lib/controls/icontrollistener.h"
@@ -55,12 +56,22 @@ public:
             return;
         const bool on = c->getValue() >= 0.5f;
         std::string err;
+        const bool update = std::string(opts[(size_t)i].name) == "update-check"; // the Control Center's own job
         if (!vti::cc::set_plugin_option(opts[(size_t)i].name, on, err))
             message_->setText(("Not changed: " + err).c_str());
+        else if (update)
+            message_->setText(on ? "Check for updates: on - checking now, then once a day when the Control Center opens."
+                                 : "Check for updates: off - nothing is asked any more.");
+        else if (vti::cc::option_applies_at_once(opts[(size_t)i].name))
+            message_->setText((std::string(opts[(size_t)i].title) + (on ? ": on" : ": off") +
+                               " - TI Revive's service picks it up within a few seconds.")
+                                  .c_str());
         else
             message_->setText((std::string(opts[(size_t)i].title) + (on ? ": on" : ": off") +
                                " - from the next start of the plug-in (reload it or restart the DAW).")
                                   .c_str());
+        if (update && on)
+            vti::cc::start_update_check_if_due(true);
         refresh();
     }
 

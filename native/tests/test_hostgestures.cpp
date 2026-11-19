@@ -91,3 +91,19 @@ TEST(hostgestures_flush)
     l.tick(g, 3);
     CHECK(l.calls.empty());
 }
+
+// audit 2026-11-17 #5: the AU wrapper stores the value as a Float32 and hands that back; for 108 of the 128 knob
+// values the rounding moved it by 1e-9 or more, so a knob turned on the Virus went back to it. The same 7-bit step is
+// the echo; the next step is not
+TEST(hostgestures_echo_survives_float_rounding)
+{
+    for (int k = 0; k < 128; k++) {
+        HostGestures g;
+        Log l;
+        g.device_change(4, k / 127.0, 0);
+        l.tick(g, 10);
+        CHECK(g.echo(4, (double)(float)(k / 127.0), 20));
+        if (k < 127)
+            CHECK(!g.echo(4, (double)(float)((k + 1) / 127.0), 20));
+    }
+}

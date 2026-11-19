@@ -8,6 +8,8 @@
 #include "writeretry.h"
 #include "vtireaderr.h"
 #include "linkrule.h" // link at open, unlink at close like the original driver (E524)
+#include "idlepace.h" // vti_drop_idle: the Snow's idle packets on bulk EP 0x85 (E387)
+#include "winslot.h" // which Virus when several are connected (#45)
 #include <stdio.h>
 #include <stdlib.h>
 
@@ -31,36 +33,26 @@ struct vti {
 
 static int open_iface(const GUID *g, iface *out)
 {
-    HDEVINFO di = SetupDiGetClassDevsW(g, NULL, NULL, DIGCF_PRESENT | DIGCF_DEVICEINTERFACE);
-    if (di == INVALID_HANDLE_VALUE)
+    wchar_t *path = winslot_path(g, vti_slot); // the interface of this broker's Virus (#45)
+    if (!path)
         return -1;
-    SP_DEVICE_INTERFACE_DATA id = {.cbSize = sizeof id};
     int ok = -1;
-    if (SetupDiEnumDeviceInterfaces(di, NULL, g, 0, &id)) {
-        DWORD need = 0;
-        SetupDiGetDeviceInterfaceDetailW(di, &id, NULL, 0, &need, NULL);
-        SP_DEVICE_INTERFACE_DETAIL_DATA_W *d = malloc(need);
-        d->cbSize = sizeof *d;
-        if (SetupDiGetDeviceInterfaceDetailW(di, &id, d, need, NULL, NULL)) {
-            out->file = CreateFileW(d->DevicePath, GENERIC_READ | GENERIC_WRITE, FILE_SHARE_READ | FILE_SHARE_WRITE,
-                                    NULL, OPEN_EXISTING, FILE_ATTRIBUTE_NORMAL | FILE_FLAG_OVERLAPPED, NULL);
-            if (out->file != INVALID_HANDLE_VALUE && WinUsb_Initialize(out->file, &out->usb)) {
-                ok = 0;
-                // Writes must never block forever (a stuck device hung the DAW, E042): 1 s on both OUT pipes.
-                ULONG t = 1000;
-                WinUsb_SetPipePolicy(out->usb, VTI_EP_MI03_OUT, PIPE_TRANSFER_TIMEOUT, sizeof t, &t);
-                WinUsb_SetPipePolicy(out->usb, VTI_EP_MI04_OUT, PIPE_TRANSFER_TIMEOUT, sizeof t, &t);
-                // Clear halts left by aborted transfers of a previous client (reads failed with error 31).
-                static const uint8_t eps[] = {VTI_EP_MI03_OUT, VTI_EP_MI03_IN, VTI_EP_MI04_OUT, VTI_EP_MI04_IN};
-                for (size_t i = 0; i < sizeof eps; i++)
-                    WinUsb_ResetPipe(out->usb, eps[i]);
-            }
-            else
-                vti_log("vti: open %ls failed: %lu\n", d->DevicePath, GetLastError());
-        }
-        free(d);
+    out->file = CreateFileW(path, GENERIC_READ | GENERIC_WRITE, FILE_SHARE_READ | FILE_SHARE_WRITE, NULL, OPEN_EXISTING,
+                            FILE_ATTRIBUTE_NORMAL | FILE_FLAG_OVERLAPPED, NULL);
+    if (out->file != INVALID_HANDLE_VALUE && WinUsb_Initialize(out->file, &out->usb)) {
+        ok = 0;
+        // Writes must never block forever (a stuck device hung the DAW, E042): 1 s on both OUT pipes.
+        ULONG t = 1000;
+        WinUsb_SetPipePolicy(out->usb, VTI_EP_MI03_OUT, PIPE_TRANSFER_TIMEOUT, sizeof t, &t);
+        WinUsb_SetPipePolicy(out->usb, VTI_EP_MI04_OUT, PIPE_TRANSFER_TIMEOUT, sizeof t, &t);
+        // Clear halts left by aborted transfers of a previous client (reads failed with error 31).
+        static const uint8_t eps[] = {VTI_EP_MI03_OUT, VTI_EP_MI03_IN, VTI_EP_MI04_OUT, VTI_EP_MI04_IN};
+        for (size_t i = 0; i < sizeof eps; i++)
+            WinUsb_ResetPipe(out->usb, eps[i]);
     }
-    SetupDiDestroyDeviceInfoList(di);
+    else
+        vti_log("vti: open %ls failed: %lu\n", path, GetLastError());
+    free(path);
     return ok;
 }
 
@@ -81,13 +73,27 @@ static DWORD WINAPI reader(LPVOID p)
     iface *f = iface_for(a.v, a.ep);
     ULONG timeout = 200; // ms, so the stop flag is noticed
     WinUsb_SetPipePolicy(f->usb, a.ep, PIPE_TRANSFER_TIMEOUT, sizeof timeout, &timeout);
+    // only the Snow's EP 0x85 is bulk, and it answers every read with FF FE 00 00 (E387): drop those here like the
+    // libusb reader does, or ~2000 of them a second reach every client and push the E392 handshake out of pre-roll
+    int snow_idle = 0;
+    for (UCHAR i = 0; a.ep == VTI_EP_MI03_IN; i++) {
+        WINUSB_PIPE_INFORMATION pi;
+        if (!WinUsb_QueryPipe(f->usb, 0, i, &pi))
+            break;
+        if (pi.PipeId == a.ep)
+            snow_idle = pi.PipeType == UsbdPipeTypeBulk;
+    }
     uint8_t buf[64];
     int fails = 0;
+    unsigned long idle = 0;
     while (!a.v->stop) {
         ULONG got = 0;
         if (WinUsb_ReadPipe(f->usb, a.ep, buf, sizeof buf, &got, NULL) && got) {
             fails = 0;
-            a.v->cb(a.v->user, a.ep, buf, (int)got);
+            int kept = snow_idle ? vti_drop_idle(buf, (int)got) : (int)got;
+            idle += ((unsigned long)got - (unsigned long)kept) / 4;
+            if (kept)
+                a.v->cb(a.v->user, a.ep, buf, kept);
         }
         else {
             DWORD e = GetLastError();
@@ -105,6 +111,8 @@ static DWORD WINAPI reader(LPVOID p)
             }
         }
     }
+    if (idle)
+        vti_log("vti: %lu idle packets (FF FE 00 00) dropped on bulk EP 0x85\n", idle);
     return 0;
 }
 

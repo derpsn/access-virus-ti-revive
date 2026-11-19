@@ -16,10 +16,13 @@ typedef struct vti vti;
 // Diagnostics sink (default: stderr). Embedders without a console (vtiemu inside a DAW) redirect it.
 extern void (*vti_log)(const char *fmt, ...);
 
+// Which Virus vti_open takes when several are connected (devslot.h, #45): 1 = the first in key order (default)
+extern int vti_slot;
+
 // Called from a reader thread for every completed IN transfer (raw bytes = USB-MIDI 4-byte packets).
 typedef void (*vti_rx_cb)(void *user, uint8_t ep, const uint8_t *data, int len);
 
-// Open the first Virus TI, claim MI_03 and MI_04 (detaching kernel drivers), send the handshake and
+// Open the Virus TI of vti_slot, claim MI_03 and MI_04 (detaching kernel drivers), send the handshake and
 // start the IN readers. Returns NULL on failure (message on stderr).
 vti *vti_open(vti_rx_cb cb, void *user);
 void vti_close(vti *v);

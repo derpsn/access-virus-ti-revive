@@ -4869,3 +4869,266 @@ The option live-later (E519: played notes stamped 128 frames later) on our Mac, 
 - **Method:** keystamp (native/tools/keystamp.c) + the plug-in's klog (virusplugin.cpp klog_check)
 - **Confidence:** HIGH (the counts, one run of 40) / LOW (the grid-edge reading)
 - **Hardware:** yes (TI2 Desktop, macOS)
+
+### E535
+
+#37's libusb audio run on Catalina (reporter, 2026-11-14 ~19:57-20:06 UTC; Intel MacBook, macOS 10.15.7, TI Revive dev-mac-catalina build with the 0.8.41 package, the broker started by mac-libusb-test.command through sudo with VTI_LIBUSB_AUDIO=1, Logic on the Mac's built-in output, buffers 64-1024 in the Small and Large ranges). (1) Reporter: no crackle at any buffer, latency better than with the Access software, one glitch at 512 (Large) that was gone after a few seconds. (2) Broker log (tirevive-libusb-broker.log, reporter's local clock = UTC+3:30): `Virus taken from Apple's audio driver (capture): ok`, `usbaudio: streaming 44.1 kHz on libusb (IN EP 0x82 6 ch, OUT EP 0x01 2 ch, frame pattern mirrored)`; 7 client sessions over ~9 min, every summary `errors 0, stalled 0 ms` and no packets out of range (43/44/45-byte frames only). (3) The glitch = 20:04:32 UTC in the plug-in log: `the Virus' audio arrives scrambled (byte slip, E488, ratio 0.991) - restarting the stream (1)`, `audio stream restarted -> 1`; the broker logs `audio off` / `audio on` at the same second. So the byte slip of E488/E510 still happens on this path (once in 7 starts here), but the restart works, which Apple's driver path cannot do (`not restarted on macOS` in the same log's Core Audio sessions, 18:28 UTC). (4) 1-3 sync reports from the Virus per session start, as in the same log's Core Audio sessions: nothing specific to this path. (5) After each reconnect `usb block late: ~3840 ms` = the pause since the previous session counted by the -v gap diagnostics, no real delay (gap timers now reset at audio stop, 0.8.42). (6) At the exit (Ctrl-C, 23:36:41 local) `Virus given back to Apple's audio driver: failed (replug it)` 10.15 s later, then `Assertion failed: (refcnt >= 0), function libusb_unref_device, file core.c, line 1352.` Reading of libusb 1.0.30 darwin_usb.c (not run): libusb_attach_kernel_driver re-enumerates without capture and waits up to DARWIN_REENUMERATE_TIMEOUT_US (10 s) for the device to come back; 10.15 s fits a timeout, after which the device counts no longer match and libusb_close / libusb_exit abort. On our macOS 27 Mac the same give-back worked (E513). Fix in 0.8.42: macgiveback.h skips close and exit after a failed attach and asks for a replug.
+
+- **Date:** 2026-11-14
+- **Pointer:** issue #37 (issuecomment from packman83 2026-11-14 20:16 UTC: tirevive-libusb-broker.log, TI-Revive-logs-2026-11-14-2338.txt); log 2026-11-14 late evening
+- **Method:** reporter's test + log reading; libusb 1.0.30 source reading for (6)
+- **Confidence:** HIGH (1)-(5), as logged / LOW (6) the cause (source reading only, no libusb debug log)
+- **Hardware:** yes (reporter's TI on an Intel Mac, macOS 10.15.7); not on our hardware
+
+### E536
+
+The plug-in's level meters work on a real Virus TI Snow, and #30's latency problem is solved with 0.8.41 (reporter, issue #30, 2026-11-14 20:44 UTC, Snow, Logic on macOS): "I can play and record in an endless loop with punch in and out totally on the grid and without any noticeable latency. The level meters in the snow plug in are visible". The meters for the Snow came in 0.8.41-rc5 and had been checked only on our TI2 Desktop and the simulator before. Issue closed as solved with the user the same evening.
+
+- **Date:** 2026-11-14
+- **Pointer:** issue #30 (comment 2026-11-14 20:44 UTC; closing reply issuecomment-6884273030)
+- **Method:** user report
+- **Confidence:** MED (a user's report, no log with it)
+- **Hardware:** yes (reporter's Virus TI Snow, macOS, Logic); not on our hardware
+
+### E537
+
+hil-win on the TUNED win11 VM (E533's tuning; host governor performance; 2026-11-15 08:15 and 08:21 local; 0.8.41 release installed, the hil folder of the 0.8.41 final test build CI 43620201798, scheduled task in the console session; TI2 Desktop switched on and passed through by usb hostdev about two minutes before run 1). Run 1: H1 FAIL, H2-1, H2-2, H3 (45/45, export 1.00x), H6 pass; every note at most 0.60 ms off the grid, jitter 0.03-0.29 ms. Run 2 (5 min later, same attach): H1, H2-2, H3 (45/45, 1.00x), H6 pass, H2-1 failed only its drift check (+112 ppm against the 100 ppm limit; 12 notes, none lost, max 0.50 ms, jitter 0.27 ms: about 1.2 ms over its 11 s of notes). Every session answered the probe within 1.6-1.8 s, so E533's `no reply to the probe` did not come back. Run 1's H1 has its own signature: the Virus' audio never reached the plug-in (`virus frames 0`, drops 37 then 468), the bank-info replies (`6f 0n 7e`) arrived only as a burst after the close, and the broker's stop took 3 s with no `usbaudio: stopped (rc 0)` line (an isochronous IN read that hung; every other session logs that line at once, E533's silent H1 too). Reading (LOW): the first audio start after the Virus is powered on and attached to the VM; the same H1 passed 5 min later. Before the tuning (E533) two of five stages were silent per run; with it, none after the first session. VM drift readings: +0 to +64 ppm in the other stages.
+
+- **Date:** 2026-11-15
+- **Pointer:** work/hil/win11-20261115-081553, work/hil/win11-20261115-082126 (results, git-ignored); the VM's %TEMP%\vtibroker.log 08:15:56-08:27
+- **Method:** hil-win.ps1 + hil_check.py; broker log reading
+- **Confidence:** HIGH (the results as graded) / LOW (the cause of run 1's H1; one occurrence)
+- **Hardware:** yes (TI2 Desktop, Windows 11 VM build 26300 on the tuned host)
+
+### E538
+
+#30 follow-up (reporter 2026-11-15: playing MIDI channel 1 of a 4-part TI Revive in Logic, the plug-in's and the mixer's meters show only that part, but the Arrangement window's meters of the tracks for MIDI channels 2-4 move too): reproduced on our Mac, and it is Logic's display. Setup: MacBook Air M3, macOS 27.2.1, Logic Pro (German UI), TI Revive 0.8.42 test build (CI 43696948011, pkg 6786702f, AU plug-in 786d9fcc), TI2 Desktop on USB; new project, Software Instrument "TI Revive Virus Control" with Logic's Multi-timbral option, 4 parts; notes from Musical Typing on track 1 only (only it selected and armed); screenshots over SSH (user's OK). (1) Stereo version: Logic names the tracks "Inst 1 | Ch1" to "Inst 1 | Ch4", all on the one channel strip "Inst 1"; the level bars of all four track headers are equal while only channel 1 plays. (2) Multi-output version with two aux channels added in the mixer: only "Inst 1" (input TI Revive, outputs 1-2) shows a level (-15.3 dB), "Aux 1" (TI Rev3-4) and "Aux 2" (TI Rev5-6) stay silent; the track headers "Inst 1 | Ch1" and "Inst 1 | Ch2" show the same level. Reading: the Arrangement window's track meter shows the level of the track's channel strip; Logic's multi-timbral tracks for channels 2-4 are on the "Inst 1" channel strip, not on the aux channels, so they move with any part on that strip. The mixer and the plug-in show the real per-part levels. Not checked: the original Virus Control in Logic (no Access software on this Mac), a Snow (the reporter's model; ours is a TI2 Desktop).
+
+- **Date:** 2026-11-15
+- **Pointer:** issue #30 (christopherdoerr 2026-11-15 09:02 UTC); screenshots in the session scratchpad (not in git)
+- **Method:** Logic on our Mac, screenshots read by eye
+- **Confidence:** HIGH (what Logic shows, one session) / MED (the reading of Logic's rule, not from Apple's documentation)
+- **Hardware:** yes (TI2 Desktop, macOS, Logic)
+
+### E539
+
+live-later at 160 frames (0.8.42, E534's reading: half a 64-frame step off the edge of the Virus' grid) on our Mac, the E534 setup (2026-11-15 ~10:45 local, MacBook Air M3, macOS 27.2.1, Ableton Live 12, 48 kHz, block 128, TI Revive 0.8.42 test build CI 43696948011, pkg 6786702f, AU 786d9fcc / VST3 used; TI2 Desktop; keystamp --interval-ms 500 --count 40 into the armed plug-in track, Monitor In, Live button off, no clip; the plug-in log says "stamped 160 frames later (live-later.on)"). 40 notes, 40 klog lines: K (onset in USB 1 minus the stamp, the 160 frames included) 5478-5483 for all 40 (5478 x3, 5479 x9, 5480 x9, 5481 x7, 5482 x8, 5483 x4): every note on the same 64-frame step, spread 5 frames (0.1 ms); stamps 24000 +-1 frames apart; send phase stamp + 4490..4941 (the usual sawtooth). Against E534 (128 frames: 11 on the stamp, 29 one step late, none two) and E519 (option off: 18 met, the rest one or two steps late). So the grid-edge reading of E534 holds for this setup: with the stamp half a step off the edge, the phase of the send no longer decides the step. Cost: played notes about 3.3 ms later than without the option (the 160 frames). SECOND RUN, same plug-in session and setup (~10:51 local, 40 notes, track not armed, Monitor In, so the notes were played but not recorded; no sync event, no timeline step in between): K alternated from note to note, 5429-5433 and 5493-5497 (20 each, rising 4 frames over 20 s), so neighbouring notes again one 64-frame step (1.3 ms) apart; the send phase ran the same sawtooth (4505..4956). So the first run's "all on one step" does not hold reliably: with 160 frames played notes are at most one step apart, sometimes all on one; why the step alternates in run 2 (the stamps are 24000 = 375 x 64 frames apart) is not known. Runs 3-5, same session minutes later (40 / 39 / 40 notes, run 5 recorded in Live with the track armed): lower step / one step higher 27/13, 10/29, 36/4; run 5 also had one note 1034 frames (21.5 ms) late although sent on time (stamp + 4699; "sound 36.8 ms after sending"), in the same second as the plug-in's 10 s stats line (connection not known, LOW). Over all five runs: 133 of 199 notes on the lower step, 65 one step higher, 1 outlier. So 160 frames does about as well as 128 (E534: 11 / 29): played notes up to one 64-frame step (1.3 ms) apart, only run 1 all on one step. The grid-edge reading of E534 does not hold (LOW): what decides the step is not known.
+
+- **Date:** 2026-11-15
+- **Pointer:** the Mac's ~/Library/Application Support/virus-ti-native/diag.log from 1794735545 (klog lines; copy in the session scratchpad, not in git)
+- **Method:** keystamp (native/tools/keystamp.c) + the plug-in's klog (virusplugin.cpp klog_check), counted with a short Python script
+- **Confidence:** HIGH (the counts of both runs) / LOW (any reading of why)
+- **Hardware:** yes (TI2 Desktop, macOS, Live 12)
+
+### E540
+
+#30 (reporter, 2026-11-15 10:45 UTC, Logic on macOS, Snow): TI Revive's audio sent to a bus and recorded on an audio track sits "a few milliseconds before the grid", a Logic instrument's on the grid (screenshot, zoomed in, no time scale readable). Matches E518 (4) on our Mac in Ableton Live (48 kHz, block 128): the recorded sound of lead-stamped notes sat 7.2 ms before the note position in every case, noted then as "a constant of this routing" and not looked into. Reading (LOW, not measured): the reported latency (lead + block + 512) is a few ms larger than the real path from the stamped note to the plug-in's audio output on macOS, so after the host's delay compensation the audio lands early; the nativehost runs (hil_check) fit the grid to the onsets and would not show a constant offset. To do: measure in Logic on our Mac (the same notes from a Logic instrument and from TI Revive, both bounced through a bus; the distance in samples), at 48 kHz with blocks 128 and 512, low-latency option off and on; then the same on Linux/REAPER (absolute first onset, E1252 style).
+
+- **Date:** 2026-11-15
+- **Pointer:** issue #30 (christopherdoerr 2026-11-15 10:45 UTC, screenshot); reply issuecomment-6893311972 (reopened)
+- **Method:** user report; E518 (4) for our own reading
+- **Confidence:** open (the size and the cause); MED that it is the same effect as E518 (4)
+- **Hardware:** no (reporter's Snow, Logic); E518 yes (our TI2, Live)
+
+### E541
+
+E540 measured on our Mac (2026-11-15 12:05-12:20 local, MacBook Air M3, macOS 27.2.1, Logic Pro, TI Revive 0.8.42 test build CI 43696948011 (AU 786d9fcc), TI2 Desktop; project 48 kHz, Plug-in Latency Compensation All, 120 BPM; track 1 a Logic drum instrument, track 2 TI Revive with the Init patch, the same MIDI region (12 quarter notes); outputs to Bus 1 / Bus 2, recorded on two audio tracks, the reporter's routing; the 24-bit WAVs read with a short Python script, onset = first sample over 5 % of the peak walked back to 1 %). Buffer 128: the Virus' 12 onsets exactly on the grid (0.00 ms, to the sample), the Logic instrument's +0.38..+0.81 ms (its slower attack against the threshold). Buffer 512: the Virus 0.00 ms (12/12), Logic +0.35..+0.85. Buffer 128 with the low-latency option (diag.log: "lead 1792 frames ... low-latency option"): the Virus 0.00 ms (12/12), Logic +0.35..+1.31. Reporter's settings (2026-11-15 11:26 UTC: "predelay 15 ms", I/O buffer 32, low-latency on; rate not given) reproduced: buffer 32 with the low-latency option (diag.log: 15000 process calls per 10 s = 32-frame blocks at 48 kHz, "lead 1792 frames ... low-latency option"), take #08: the Virus 0.00 ms (12/12); the same at 44.1 kHz (13783 process calls per 10 s = 32-frame blocks), take #09: 0.00 ms (12/12). So on this setup TI Revive's audio is not early in Logic; the reporter's offset is not reproduced, and E518 (4)'s 7.2 ms (Live, resampled Post FX) is a different case. Open: the Snow (its audio path never measured), 44.1 kHz, the reporter's routing; asked in #30. Side finding: the Virus track had one stray sample shortly after the recording started where no note is (take 2 at 0.069 s, take 3 at 0.589 s, none in take 1): a single sample of exactly 0.015625 (2^-6, one bit set in 24 bits, about -36 dBFS), silence around it; a digital glitch, not a sound. Follow-up the same day (user ran a double-click script on our Mac, Logic closed; CI 43711710236 nativehost from TI-Revive-hil-mac, the installed 0.8.42 test build, 44.1 kHz, no notes, playback from 3 s, 6 s recorded per run, 16-bit WAV): 5 runs with the output delays sent at every Play (default) and 5 with outdelay-changes.on: all 10 recordings exactly zero (no sample above 1e-6); the sync marker was found in 9 of 10 (not in the first run), so the plug-in had the Virus' audio. So the stray sample is not reproduced in nativehost and the output delays at Play are not shown to cause it; open differences to the Logic takes: 48 kHz, recording (not only playback), Logic's bus routing. Left at low priority.
+
+- **Date:** 2026-11-15
+- **Pointer:** the Mac's ~/Music/TI-Revive-30-test.logicx (takes #01-#03); copies and onsets.py in the session scratchpad (not in git)
+- **Method:** Logic bus recording by the user, onset measurement over SSH
+- **Confidence:** HIGH (three variants, 12 notes each) / open (the reporter's case)
+- **Hardware:** yes (TI2 Desktop, macOS, Logic)
+
+### E542
+
+#30 (reporter 2026-11-15 11:42 UTC): turning the cutoff on the Virus while Logic writes automation records nothing. Our Mac (Logic, AU, TI2 Desktop, test build CI 43708448485, user): with the plug-in window closed the knob writes nothing; in Ableton Live (VST3) it works. Cause, from the code (HIGH): the plug-in hands a knob move to the host two ways - (1) as output parameter changes from process() (virusplugin.cpp, "device -> host"), (2) as beginEdit / performEdit / endEdit from HostGestures (hostgestures.h, E304), whose tick ran only in the editor's timer (viruseditor.cpp: plugin_->tick_gestures()), so only with the window open. Steinberg's AU wrapper (auwrapper.mm onTimer) turns (1) into SetParameter + AUParameterListenerNotify without a begin/end gesture, and only (2) into kAudioUnitEvent_Begin/EndParameterChangeGesture (AUWrapper::beginEdit/endEdit); Logic writes Latch/Touch automation from the gestures, Live records (1). Fix (0.8.42): the plug-in's own CVSTGUITimer (50 ms, created in initialize on the host's UI thread; VSTGUI is set up at module load by vstguieditor.cpp's ModuleInitializer, on Linux with the host context's run loop) runs the tick with the window closed too; the editor ticks only while that timer has not run. First fix build (CI 43710993144, 98f5dc3) on our Mac: still no values with the window closed (user): the knob moves entered the gesture queue only while an editor was open (virusplugin.cpp: editors_open_ > 0, else output parameter changes); the second fix queues them whenever the editor or the plug-in's own timer ticks. Second fix build (CI 43711710236, 8cf200b, pkg e037cae9) on our Mac: the cutoff turned on the Virus with the window closed is recorded in Logic (Latch) (user, 2026-11-15).
+
+- **Date:** 2026-11-15
+- **Pointer:** issue #30 (christopherdoerr 11:42 UTC); native/plugin/source/virusplugin.cpp (gesture_timer_), viruseditor.cpp; vst3sdk public.sdk/source/vst/auwrapper/auwrapper.mm (onTimer, beginEdit)
+- **Method:** user test on our Mac (Logic AU vs Live VST3) + code reading
+- **Confidence:** HIGH (the two paths and the AU wrapper's handling, from the code; the symptom seen on our Mac) / HIGH (the fix in Logic: works on our Mac, and the reporter confirms rc2 in #30 2026-11-15 13:47 UTC: "The Automation Recording is working")
+- **Hardware:** yes (TI2 Desktop, macOS, Logic and Live; the reporter's setup)
+
+### E543
+
+#37's report on the rc1 libusb package (packman83, 2026-11-15 13:12 UTC; Intel MacBook, macOS 10.15.7, Logic; TI-Revive-0.8.42-mac-libusb.zip): (1) Gatekeeper asked once at the first run of the installer. (2) "working well without any crackling", knobs both ways without latency; but the Virus is "slightly out of sync" after inserting the plug-in, reopening the project or restarting Logic, and in sync again after a buffer size change (the pattern of #33, E532). Attached log (TI-Revive-logs-2026-11-15-0454.txt, collected by a Control Center reporting 0.8.41): the broker log has `usbaudio: stopped after 30387522 frames (errors 0, stalled 0 ms)`, so the libusb path ran; the plug-in found the sync marker 636 to 5873 frames after the ping across its sessions (`sync marker at frame ... (ping at ..., N frames later)`), two `audio stream restarted -> 1` (slip restarts, E488). Not analysed further yet; "slightly" not quantified. (3) He asks for the "Virus TI MIDI" driver: no Virus MIDI ports seen in Logic with this package. Reading (MED, not checked): the libusb package's broker runs as a root LaunchDaemon, and CoreMIDI virtual sources belong to the session of the process that creates them, so the broker's "Virus TI Synth" / "Virus TI MIDI" (vtikeyport_mac.c) are not in the user's session; the last 1000 broker log lines have no `MIDI port` line. Side finding from the header: the native builds of round 0.8.42 (rc1, rc2) report 0.8.41 (native/CMakeLists.txt project VERSION was not raised; fixed to 0.8.42 after rc2), so rc2's What's New does not show its own 0.8.42 entry.
+
+- **Date:** 2026-11-15
+- **Pointer:** issue #37 (packman83 13:12 UTC, log attachment); copy in the session scratchpad (not in git)
+- **Method:** user report + log reading
+- **Confidence:** HIGH (as reported / as logged) / MED (the MIDI port reading) / open (the sync offset)
+- **Hardware:** yes (reporter's TI, Intel Mac, Catalina); not on our hardware
+
+### E544
+
+Fixes prepared for #37 (E543), not tested on any Mac yet (2026-11-15; the user away, our Mac asleep). (1) MIDI ports in the libusb package: its broker is a root LaunchDaemon (postinstall, `launchctl bootstrap system`), and a CoreMIDI virtual source is visible only in the session of the process that makes it (MED, from macOS' per-session MIDI server; not proven on a Mac). New: a root broker that serves a user (VTI_OWNER_UID / SUDO_UID) no longer makes the sources itself but starts `launchctl asuser UID vtibroker -midiports UID` with a pipe on its standard input (keyporthelper.h, vtikeyport_mac.c); the helper drops root for that user (initgroups/setgid/setuid, refuses to go on if root comes back), makes "Virus TI Synth" / "Virus TI MIDI" with the same unique IDs and reads the messages in midifeed.h frames (the Windows helper's format, port numbers mapped). Non-blocking writes from the USB reader thread; a helper that ended (logout, crash) is started again at the next message, at most every 10 s. The normal package's broker (the user's own) is unchanged. Unverified: that `launchctl asuser` from a LaunchDaemon on 10.15 reaches the user's MIDI server, and that it execs the helper with the pipe kept. (2) The sync offset after insert / project open / Logic restart that a buffer change cures: reading (LOW, a hypothesis): the plug-in's latency is lead + host block + margin (stamprule.h reported_frames), the log shows Logic's maxSamplesPerBlock 2048 with blocks of at most 256 or 2048, and a host that read the latency before its last setupProcessing keeps a value a block off; setActive's kLatencyChanged comes inside Logic's own Initialize and may be lost, a buffer change makes Logic read it again. New: the UI timer (50 ms) compares what getLatencySamples last returned with the current value and announces a difference once more (latencywatch.h, each value once), and logs every new value the host reads (`the host reads latency N samples (block B, R Hz)`), so the next log shows whether Logic compensates the right value. Also in this log (E543): three `audio arrives scrambled (byte slip, E488)` restarts on the libusb path, each followed by a new sync marker.
+
+- **Date:** 2026-11-15
+- **Pointer:** src/broker/keyporthelper.h, src/broker/vtikeyport_mac.c, src/broker/vtibroker_posix.c (-midiports), native/src/device/latencywatch.h, VirusPlugin::check_latency; tests test_keyporthelper, test_latencywatch
+- **Method:** code + unit tests (792, ctest 6/6 on Linux); Mac code compiled by CI only
+- **Confidence:** MED (the MIDI reading) / LOW (the latency hypothesis) / open (both fixes on hardware)
+- **Hardware:** no (Catalina, libusb package); our Mac (Apple Silicon, normal package rc3, Logic 44.1 kHz, low-latency option on, 2026-11-15 18:52-19:08): the user's own broker makes both sources directly as before (`MIDI port "Virus TI Synth" is there`, same for MIDI); three activations (project reopen, I/O buffer change) each logged `the host reads latency 2432 samples (block 512, 44100 Hz)` = lead 1408 + block 512 + margin 512, the current value, and no `announced again`: on our setup Logic reads the right latency and the watch stays quiet (Logic kept maxSamplesPerBlock 512 across the I/O buffer change). The #37 case (block 2048) is not reproduced here.
+
+### E545
+
+#30's Logic project (Chris, 2026-11-15 17:54 UTC, "Project Latency.zip": 120 BPM, 4/4, TI Revive "Inst 1" on channels 1-4, its MIDI region on Ch2 quantized to 1/4, TI Revive's output to Bus 1, "Audio 2" recording from Bus 1; his takes 48 kHz 24-bit mono) played on our Mac (MacBook Air M3, Logic, rc3 normal package, TI2 Desktop, I/O buffer 128, low-latency option on, 2026-11-15 18:57-19:11 local). Onsets read with a short Python script (first sample over 20 % of the peak walked back to 2 %), against the 1/16 grid from the file start. His take "Ohne Titel_2 #01": every beat note -5.60 ms (steady), the notes between at fixed +78.5/+156/+235 ms after the beat (the patch's pattern). Our take in his project, same routing ("Project Latency_2 #02"): every beat 0.00 ms, the same in-between pattern. With Logic's Recording Delay at -269 samples (= 5.6 ms at 48 kHz): our take ("#03") still 0.00 ms in the file, and in Logic's editor its attack starts exactly on the bar line: Logic's Recording Delay does not shift recordings from a bus (on this Logic). Zoomed at bar 1 in Logic: our take's attack on the line; his region (starting at bar 1) begins mid-sound, its attack before the region start, so his take plays early in Logic too, not an artifact of the file-start assumption. So the project, routing and MIDI give an exact result on our setup; his offset comes from his setup (the Snow's audio path, never measured, or his Mac); Recording Delay ruled out for bus recordings. Asked for an rc3 log of one take (issuecomment in #30, 2026-11-15).
+
+- **Date:** 2026-11-15
+- **Pointer:** issue #30 (project attachment Project.Latency.zip, copy in the session scratchpad and on our Mac in ~/Downloads, not in git)
+- **Method:** recordings on our Mac in his project + WAV onset measurement + Logic editor zoom (screenshots)
+- **Confidence:** HIGH (his take 5.6 ms early, ours exact in the same project; Recording Delay does not move bus recordings) / open (the cause on his side)
+- **Hardware:** yes (TI2 Desktop, Apple Silicon Mac, Logic); his Snow not
+
+### E546
+
+#41's rc3 log (the #30 reporter, Virus TI Snow, Logic on macOS, TI-Revive-logs-2026-11-15-2010.txt, Control Center 0.8.42, 48 kHz, block 512) shows the latency watch of E544 (2) at work: `the host reads latency 3085 samples`, then `latency now 2816 samples, the host last read 3085 - announced again`, then `the host reads latency 2816`. So Logic first held a value 269 samples above the current one and read the new value only after the plug-in announced it again. 269 samples = 5.60 ms at 48 kHz: the steady offset of his old take (E545, every beat -5.60 ms), and the Recording Delay we had to set on our Mac (-269) to match it. A host that compensates 269 samples too much puts the recording that much early, which is what E545 measured. His report with rc3: "recorded audio via Bus sits exactly on grid now"; his new take ("Project Latency_1 #02.wav", 20:09) is attached to #41 but not measured by us. This confirms the E544 (2) reading (a stale latency value in the host, cured by announcing it again) for #30. Where the 3085 came from is open: it does not match the current setup (2816 = lead + block 512 + margin 512 at 48 kHz, reported_frames in stamprule.h, the same value as E505 R2), so Logic read it under an earlier setup. Still open for #37 and #33 (no rc3 log from them yet). The same log also has `RAM backup failed (cannot write ~/Documents/Access Music/Virus TI/Patches/RAM Backup 2026-11-15.mid.tmp), nothing written to RAM` (the backup stopped before any write, as designed); the cause, perhaps Logic lacking macOS' Documents Folder permission, is not verified (asked in #41).
+
+- **Date:** 2026-11-15
+- **Pointer:** issue #41 (log attachment, not in git), issuecomment-6900513133; E544, E545; native/src/device/latencywatch.h, VirusPlugin::check_latency
+- **Method:** reporter's plug-in log read line by line + arithmetic against E545's onset measurement; his statement for the rc3 take
+- **Confidence:** HIGH (the log lines and 3085 - 2816 = 269 = the E545 offset) / MED (that the re-announce is what put his take on the grid: his report, his take not measured by us) / open (origin of 3085, #37/#33, the RAM backup cause)
+- **Hardware:** yes (the reporter's Snow + Mac + Logic); not reproduced on our TI2 (our Logic read the right value at once, E544)
+
+### E547
+
+High idle CPU load of vtibroker with a Virus TI Snow on macOS (issue #42) comes from the Snow's idle stream on bulk EP 0x85 (E387). Reporter's setup: Snow, MacBook Pro M4 Pro, macOS 15.8.2, TI Revive 0.8.40. (1) Activity Monitor: vtibroker 32.9 % CPU with only the Control Center open (Live closed), 7 threads, 3 idle wakeups. (2) Broker log: `vti: bulk endpoints 05 85 06 86 (Virus TI Snow)`, and per broker run `vti: N idle packets (FF FE 00 00) dropped on bulk EP 0x85`: 865030 in 4 min 20 s (07:28:20-07:32:41), 101067 and 100114 in about 31 s runs, 162499 in 64 s: about 3300 packets/s, the E387 rate seen on Linux. (3) `sample vtibroker 10` (0.8.40): the reader thread loops in a synchronous bulk transfer on EP 0x85 (reader -> do_sync_bulk_transfer -> libusb_handle_events -> poll); user-space top-of-stack frames are almost all waits, so the load is the per-transfer kernel/IOKit cost (one submit + completion per 4-byte idle packet), which the sample does not show. Our TI2 (interrupt endpoints, E021) on our Mac: vtibroker 0 % without a Virus, about 1.2 % with the TI2, Live 12 and the plug-in loaded (rc3, ps/top over 10 s). Current code (0.8.41+) reads EP 0x85 with asynchronous transfers but still one transfer per packet; not measured on a Snow. Fix not designed yet: how the Access driver polls the Snow's bulk endpoint is not looked up (REA), a throttled resubmit after idle-only reads would add latency to incoming knob messages
+
+- **Date:** 2026-11-17
+- **Pointer:** issue #42 (log TI-Revive-logs-2026-11-17-0737.txt, vtibroker-sample.txt, Activity Monitor screenshot; attachments, not in git); E387, E021; src/broker/vticore.c (xfer, drop_idle, rx_submit)
+- **Method:** reporter's broker log counts / timestamps (arithmetic), sample call tree, screenshot; our Mac: ps/top/sample with the TI2
+- **Confidence:** HIGH (rate, that the load comes with the Snow and without Live) / MED (that the per-transfer kernel cost is the load: inferred, kernel time not sampled) / open (0.8.41+ async path on a Snow, the fix)
+- **Hardware:** yes (reporter's Snow + Mac); TI2 comparison on our Mac
+
+### E548
+
+How the Access Windows MIDI driver vtimidi.sys (the user's own copy, originals/installed/vti/vtimidi.sys, sha256 18a95971..., x64) reads the Virus' MIDI IN endpoint, the one that carries the Snow's idle stream (E387, E547). Static analysis with REA/Ghidra 12.1.4, image base 0x10000. (1) One transfer context per direction (device object +0x7A0 and +0x7A8); 0x14A9C builds a URB_FUNCTION_BULK_OR_INTERRUPT_TRANSFER (function 9, so the same code serves the TI's interrupt and the Snow's bulk endpoints) with transfer flags 3 (IN, short transfer OK) or 0 (OUT), completion routine 0x14754 -> 0x148BC. For IN the buffer is cleared to its full length before each submit (0x13634). (2) On success 0x148BC hands the bytes to 0x13560 -> parser 0x1317C and resubmits AT ONCE (0x14A9C); no delay, timer or rate limit in that path. So the original also does one USB transfer per idle packet on a Snow, only in the kernel. (3) Parser 0x1317C walks 4-byte USB-MIDI packets, takes the byte count from a CIN-indexed table (0x17110) and delivers a packet only to an open port whose cable number equals the packet's high nibble; the idle packet FF FE 00 00 (cable 15, CIN 0xF, one byte 0xFE = Active Sensing) has no cable-15 port and is dropped there (our drop_idle does the same, E387). (4) The only KeDelayExecutionThread (0x13A30, at 0x13AA8) is a recovery thread: on an error event it waits 0.5 s, aborts and restarts both directions through the object's function table (+0x30) and re-arms a timer; read errors count up and signal it (0x148BC). Open: whether the IN read runs only while a MIDI input port is open (the start routine 0x13DC8 has no direct callers, reached through the function table); the buffer size of the IN context. (5) macOS (follow-up the same day; E521 already had the read loop and was missed at first): the kext AccessVirusTI.kext (7308f591...) does not read the MIDI endpoints itself: PGKernelDeviceVirus::registerMidiInterface 0x1E918 only publishes interface 3 (findMidiInterface) and interface 4 (assignVirusMidiInterface 0xF49E) as nubs for another driver; its generic USBMidiDevice::readComplete 0x2890A only frees the buffer. The reads are in the user-space CoreMIDI driver (MidiDriver_x64 52a173fd..., inside MIDIServer): USBMIDIDevice::Initialize 0xBFC0 creates 8 IN buffers per pipe and submits all 8, each completion resubmits at once (E521). Its CFRunLoop timer (created at 0xBFC0 with a fire date 1e11 s ahead, interval 0, callback 0xBF10) is rescheduled on demand, not a read rate limit (callback not traced). So on a Mac the original also completes one USB read per Snow idle packet, in user space like vtibroker
+
+- **Date:** 2026-11-17
+- **Pointer:** vtimidi.sys 0x14A9C (submit), 0x14754/0x148BC (completion + resubmit), 0x13560/0x1317C (parser, table 0x17110), 0x13634 (OUT fill / IN clear), 0x13A30 (recovery thread), 0x13DC8 (start, indirect); REA evidence ev_2eb33ebd..., ev_79364bde..., ev_cd4cb25a..., ev_8049e531...; kext 0x1E918, 0xF49E, 0x2890A (ev_e069d33f..., ev_3a965e11...), MidiDriver_x64 0xBFC0 (ev_3a11abaa...); E521, E387, E547, E079
+- **Method:** static analysis (REA/Ghidra pseudocode, imports, xrefs); no Access code in the repo, behaviour described in own words
+- **Confidence:** HIGH (immediate resubmit on both platforms, Windows one context per direction, Mac 8 queued, cable-based drop on Windows) / open (Windows: read only while a port is open; IN buffer sizes; the Mac timer callback)
+- **Hardware:** no (static)
+
+### E549
+
+RAM restore of a library stopped at a fixed slot with "the Virus has another patch after the restore" (#43: original TI, OS 5.1.7.00, macOS, 0.8.37 and 0.8.42-rc5; factory "Virus TI Rom A.mid" into RAM D always failed at slot 7 "BigPipe BC"; other libraries at slots 0/1; the read-back shows the right patch). Cause: byte 10 of a single dump (page A parameter 1, "Single Patchmanagement/Flags", E156). (1) Library files: in the factory Rom A, slots 0-6 have byte 10 = 0x00 and slot 7 has 0x76 (also slot 57: 0x03); many factory and third-party libraries carry 0x20 or other values there. (2) Our TI2 (plug-in cache folders of 2026-10/11): of 520 distinct patches stored in RAM, byte 10 is 0 in 519 and 1 in one; about 130 factory patches in RAM C/D (cache.old) are byte-identical to "Virus TI2 Rom C/D.mid" except byte 10, which is 0 on the Virus for library values 1, 8, 14, 32, 38, 56, 94, 106 and more. So a stored patch does not keep the library's byte 10, and tirevive-cc compared it (same_patch: bytes 9..264 and 266..521): every library patch with byte 10 != 0 failed the read-back, and the next run wrote it again. The E313 test passed because its libraries were built from our own cache (byte 10 already 0). (3) The original Virus Control (REA, Virus Control.dll 5.1.7 x64, sha256 a622f9a2...): every path that writes a dump into a bank slot (0x18008fe90, 0x180090920, 0x180090ca0, 0x1800910c0, 0x1800918e0, 0x180091ec0, setters 0x180096330/0x18009d240) changes only byte 5, the bank/program bytes and the checksums (0x180062cb0), never byte 10; only edit-buffer loads set it (0x180083ae0/0x1800a1920: 0 plus origin bank/index for a Virus-bank patch, 0x20 otherwise; 0x1800539f0 and setState 0x180079b50: 0x20). It has no read-back verification after a store (bounded search); its cache compare for an incoming dump (0x1800a1cd0) is a plain full compare that replaces the cached copy without an error. So the 0 comes from the Virus' firmware (inferred, not seen in firmware code). Change (round 0.8.42): native/src/cc/controlcenter.cpp patch_difference leaves byte 10 out of both the plan and the read-back, and a real mismatch names the first differing byte and both values; tests cc_restore_ram_ignores_the_patch_flags, cc_restore_ram_names_the_differing_byte (fake Virus that zeroes byte 10). Not run on hardware
+
+- **Date:** 2026-11-17
+- **Pointer:** issue #43; library byte scan (scratch script over the factory libraries); plug-in cache folders of our TI2 against "Virus TI2 Rom C/D.mid"; Virus Control.dll addresses above; E156, E313
+- **Method:** byte comparison of stored patches with their library originals; static analysis (REA/Ghidra); unit tests
+- **Confidence:** HIGH (the Virus does not keep byte 10 on a RAM store, on a TI2; the #43 slot pattern matches it exactly) / MED (the same on the original TI: only the reporter's slot pattern) / open (their other libraries, not seen)
+- **Hardware:** no (TI2 data from earlier sessions, no new run; the fix is not run on hardware)
+
+### E550
+
+Issue #42 (Snow, M4 Pro, macOS 15.8.2), the reporter's test of v0.8.42-rc5 (1 ms pace of idle-only reads, idlepace.h, E547): broker log (TI-Revive-logs-2026-11-17-1701.txt) idle packets dropped on bulk EP 0x85 per broker session: 0.8.40 865030 in 260.6 s (~3320/s) and 101067 in 31.3 s (~3230/s); rc5 25419 in 31.0 s (~820/s) and, with the plug-in in Live and notes played, 351382 in 409.9 s (~857/s). Activity Monitor (reporter's screenshots): vtibroker 19.2 % with 910 idle wake-ups/s while Live plays a chord (0.8.40: 32.9 % with the Control Center only, E547); about 15 % with the Control Center only (reporter's words); with nothing open the broker exits after 30 s. Knobs respond without delay (reporter). Plug-in log: 0 audio drops, process calls max 57 us, err 0..0; 33 Virus sync reports in about 6 min, 1-2 per Play (the timing path to the Virus, not changed by rc5; no 0.8.40 plug-in log to compare). So the 1 ms pace cuts the reads about 4x and the remaining load is the 1 kHz re-arm itself. Follow-up (user 2026-11-17): option "snow-idle-slow", OFF by default: after 1 s without real data the paced reads come every 4 ms (VTI_PACE_SLOW_NS), real data restores 1 ms at once; the broker reads snow-idle-slow.on from the user's TI Revive folder every 2 s (macOS ~/Library/Application Support/virus-ti-native, Linux ~/.local/share/virus-ti-native; a root broker without that HOME, the macOS libusb package, never sees it); Control Center Options page. Expected about 250 reads/s while idle (estimate, not measured); the first message after a pause can wait up to 4 ms instead of 1 ms
+
+- **Date:** 2026-11-17
+- **Pointer:** issue #42 (reporter comment 2026-11-17 17:13 UTC, log + 2 screenshots); src/broker/idlepace.h, src/broker/vticore.c (rx_pace, rx_done), native/src/cc/diag.cpp (option), tests test_idlepace.cpp (slow mode, option path), test_diag.cpp
+- **Method:** reporter's broker/plug-in log and Activity Monitor screenshots; unit tests for the option
+- **Confidence:** HIGH (rc5 rates from the broker's own counters) / LOW (the option's CPU effect: estimate)
+- **Hardware:** yes (reporter's Snow, rc5) / no (the option: not run on a Snow, we have none)
+
+### E551
+
+Why the Virus TI Snow streams FF FE 00 00 on bulk EP 0x85 (towards E387, E547, E550): sim finding S147 (virus-ti-sim c3ef06e), a static reading of the Snow's TUSB3200A code (vti_snow.bin at F060) against the TI2's, with Ghidra headless (REA does not take 8051 images). (1) The chip's main loop (0x00EC .. 0x0305) checks EP 0x85's count register 0xFF43 on every pass; when its NAK bit says the host took the last packet, it writes FF FE 00 00 into the IN buffer 0xFED8 (0x00F6-0x012C) and arms 4 bytes (0x0133). No timer or interval (not a 300 ms Active Sensing): real 4-byte packets, one per completed read. Real MIDI is copied from the ring later in the same pass (0x0320) and also waits for the NAK bit, so a message that arrives while an idle packet is armed goes out one read later. EP 0x86 has no filler; the TI2's code has the same ring copy (0x0430) and no filler at all (HIGH). (2) So the rate is per IN transaction: the slower of the host's read turnaround and the chip's loop time (loop time not measured; E387 ~3000/s and E547 ~3300/s with 8 pending suggest the loop is the ceiling - inferred, LOW). (3) The only gate is bit 0x1B, set and cleared from the USB interrupt dispatch (0x18A8 switch, vectors 0x16/0x15, read as suspend/resume by the sim); no vendor request or SysEx reaches it, so no command switches the stream off; only a suspended bus stops it (HIGH that 0x1B is the only gate, MED that it means suspend). Consequence for idlepace.h: with paced reads a real message can wait up to one extra pace interval (1 ms, 4 ms with snow-idle-slow) - inferred, matches the design. Would show this wrong: a usbmon capture of a Snow with EP 0x85 NAKed for long stretches on an active bus without MIDI, or a command that stops the idle packets without a suspend
+
+- **Date:** 2026-11-17
+- **Pointer:** virus-ti-sim S147 (commit c3ef06e), vti_snow_tusbcode.bin 0x00EC-0x0305, 0x0133, 0x0320, 0x18A8; vti_2_tusbcode.bin 0x0430, 0x0C0F; E387, E547, E548, E550
+- **Method:** static analysis of the firmware's USB chip code (sim session, Ghidra headless); no run
+- **Confidence:** HIGH (fill on every read, no switch-off command) / LOW (what limits the rate)
+- **Hardware:** no (static; the rates come from reporters' logs, E547, E550)
+
+### E552
+
+The Virus' single dump replies carry both checksums as TI Revive computes them (BankDrop::checksums: byte 265 = the
+sum of bytes 5..264 & 0x7F, byte 522 = the sum of bytes 5..521 & 0x7F), so a reply whose checksums do not match is
+damaged on the way, not a Virus that counts differently (towards audit 2026-11-17 #32). Checked over our own TI2
+Desktop's RAM bank cache (RAM A..D, 4 x 128 = 512 replies to single dump requests, read by the plug-in's bank sync on
+2026-11-15, ROM Z flashed, E500): 512/512 match, every one ends in F7. The 640 ROM dumps in the same cache (built by
+TI Revive from firmware.bin with the same formula) match too, which says nothing about the Virus. Would show this
+wrong: a reply from another model or OS (Snow, Polar, an older OS) that the Virus sends with other checksums.
+
+- **Date:** 2026-11-18
+- **Pointer:** ~/.local/share/virus-ti-native/cache/RAM A..D (our Linux machine, written 2026-11-15); native/src/model/bankdrop.h checksums
+- **Method:** script over the cache files (MIDI container, 524-byte records): recomputed both checksums per record
+- **Confidence:** HIGH for our TI2 Desktop; MED for other models (not checked)
+- **Hardware:** yes (replies of our TI2 Desktop, read earlier; no new run)
+
+### E553
+
+The original Virus Control (Windows x64, 5.1.7) is built for several Viruses on one computer, one plug-in instance per
+Virus (towards issue #45). Observed in the plug-in DLL: a process-wide device manager (class VirusDeviceManager, set
+up at 0x1800abc60) keeps a list of device records under one lock. Its poll (0x1800ac190) asks the driver for the
+device count, reads each device's info by index, and keeps one record per device, matched by the driver's per-device
+key (record +0x10); the model comes from the product string and bcdDevice as in the Mac build (E099: 0x100 TI or
+Snow, 0x300 TI2), and devices that are gone are dropped. Each record has an owner field (+0x140): an instance claims
+the best free, ready device (0x1800acea0: owner empty, state > 4, the wanted model type preferred) or the one with its
+remembered key (0x1800acfe0). The instance's device poll (0x18007ec30) remembers the key of the device it used and,
+when a different one is found, asks "This is not the Virus TI you were using before. Do you want to use this device
+instead?". So two instances in one DAW would take two different Viruses.
+Not known: whether the Access driver side (VirusUSB.sys, VirusUSB_X64.dll, the MIDI and ASIO drivers) served two at
+once, whether the remembered key is stored in the project, and whether it ever worked in practice (no capture, no
+report). TI Revive opens only the first Virus today (src/broker/vticore.c libusb_open_device_with_vid_pid,
+vticore_winusb.c interface index 0).
+
+- **Date:** 2026-11-18
+- **Pointer:** Virus Control.dll 5.1.7 x64 (the user's own, from the Access installer, not in the repo); REA snapshot work/rea/virus-control-5.1.7-x64.ghidra1214-20261109.snapshot
+- **Method:** REA (Ghidra 12.1.4) static analysis: strings ("not the Virus TI you were using before", "Unknown Device") -> xrefs -> device poll, claim and lookup functions
+- **Confidence:** HIGH that the plug-in side handles several devices with one owner each; LOW / open for the driver side and real-world use
+- **Hardware:** no (static only)
+
+### E554
+
+REAPER on Linux crashed when it opened a saved project with two TI Revive instances and at least one plug-in window
+open (user, round 0.8.42 test, CI build 44486371869 at 4045dbe; 2 of 2 by hand, 3 of 3 under gdb). gdb: SIGSEGV on
+REAPER's main thread at a heap address; the caller in REAPER loads an object from its timer list and calls slot 3 of
+its vtable (ITimerHandler::onTimer after the three FUnknown slots), so REAPER ticked a timer handler that had been
+freed. Narrowed with copies of the project: both windows, either window alone: crash; no window open: no crash; one
+instance (the other set offline) with its window: no crash; the 0.8.41 release plug-in with the same project: no
+crash. Cause: the gesture timer added for #30 (98f5dc3, E542) is a VSTGUI timer made in initialize(); on Linux it
+registers through the SDK's run-loop adapter (vstgui_linux_runloop_support.cpp), which owns the handler wrappers it
+hands to the host. The SDK installs a new adapter at every factory setHostContext and the editor sets one up at its
+first open; the old adapter is freed with its wrappers while REAPER still holds them as plain pointers (E183's
+mechanism; the editor's guard there covers only its own handlers). Fix (round-0.8.42): on Linux the gesture tick is
+our own ITimerHandler registered directly with the host's IRunLoop and unregistered in terminate(). REAPER offers
+IRunLoop only on the factory's host context, not on the component's (first try logged "gesture timer off (no run
+loop)"), so the plug-in keeps it from the factory's host-context callback as the SDK does. With the fix (local build,
+plug-in f4fb5683): no crash in all five project variants, 40 s each, every instance logs "gesture timer on the host's
+run loop"; ctest 7/7. Not checked yet: a normal close of REAPER (terminate unregisters the timer), that Virus knob
+moves with the window closed still reach REAPER as edits, Windows and macOS (unchanged: VSTGUI timers there are
+Win32/Cocoa timers, no adapter).
+
+- **Date:** 2026-11-19
+- **Pointer:** scripts/reaper-open.sh (the check), native/plugin/source/virusplugin.cpp (initialize, terminate, g_factory_runloop), gdb output in the session scratchpad
+- **Method:** gdb on REAPER 7 (Linux) with copies of the user's project; disassembly of REAPER's caller; reading the SDK's adapter code
+- **Confidence:** HIGH (the crash, the split, the fix in REAPER on Linux) / open (close path, knob edits with the window closed)
+- **Hardware:** yes (TI2 Desktop on Linux)
+
+### E555
+
+With one Virus and two plug-in instances (round 0.8.42 test, user's REAPER project on Linux, TI2 Desktop) the second
+instance never waited: the broker journal shows it connecting to tirevive-broker@3, @2, @3, @2 ... every ~6 s for as
+long as the project was open (each try 4 s, then 2 s pause), each connect starting that slot's broker again; audit
+2026-11-18 #3 had seen the cycling and only quietened its log. Cause: slot_choose skipped only the one slot just given
+up, and an instance waits only when no slot is free, which never happens with 4 slots and one Virus. Second fault: the
+project saved the slot being tried (getState took the claimed slot), so after a save during the cycling it reopened on
+Virus 3, where no Virus had ever answered. Fix (round-0.8.42): the instance keeps every slot it gave up in a mask and
+does not take those again; with none left it waits like a second instance in 0.8.41 and clears the mask after
+SLOT_RETRY_MS (30 s) to find a Virus plugged in later or one another program let go; a project keeps the slot where a
+Virus answered (found_slot), else the project's own. Tests first (test_slotpick: skips the slots given up, waits when
+all are tried, retry after 30 s), 838 vtitests, ctest 7/7. Local build (plug-in f6ee43c1) with the user's project in
+REAPER for 75 s: the second instance tried Virus 3, 2, 4 once (19:14:18-19:14:34), no connect for 34 s, then 3, 2, 4
+once more (the retry), REAPER closed cleanly, no crash. Two Viruses (19:18-19:21, the real TI2 on USB 1-8 and the
+simulator's virtual TI2 over USB/IP vhci on 3-1): broker 1 "2 Viruses connected, this broker has Virus 1 (USB
+001-008)", broker@2 "... Virus 2 (USB 003-001)" with MIDI ports "Virus TI 2 MIDI"/"Virus TI 2 Synth"; instance 1 on
+the real one (ready 1.1 s, sync marker, 0 ms stalled), instance 2 tried Virus 3 (the old build's saved record), then
+stayed on Virus 2 (ready 1.2 s, sync marker; one 53 ms stall in the model's stream, the simulator's known lag); the user
+heard both ("works"). Not shown: a reopen after a save with this build (straight to Virus 2), Windows and macOS.
+
+- **Date:** 2026-11-19
+- **Pointer:** native/src/device/slotpick.h (slot_choose, slot_retry_due, slot_to_save), native/plugin/source/virusplugin.cpp (claim_owner, the worker's wait and give-up), broker journal of the run
+- **Method:** broker journal (connects per systemd unit) during the user's test and the rerun with the fix; unit tests
+- **Confidence:** HIGH (the cycling and its cause, the fix with one Virus, two Viruses on Linux with one simulated) / open (two real Viruses, Windows, macOS)
+- **Hardware:** yes (TI2 Desktop on Linux; plus the simulator's virtual TI2 as Virus 2)

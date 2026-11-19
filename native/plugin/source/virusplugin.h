@@ -2,6 +2,9 @@
 // (automation.xml + 32 MIDI-mapping targets) and the same state format (docs/formats.md), talking to the Virus
 // through the TI Revive broker. Audio and editor follow in later steps.
 #pragma once
+#include "vstgui/lib/cvstguitimer.h"
+#include "pluginterfaces/base/funknownimpl.h"
+#include "pluginterfaces/gui/iplugview.h" // Linux::IRunLoop (gesture_tick_)
 #include "access/accessfiles.h"
 #include "access/library.h"
 #include "device/audioin.h"
@@ -28,6 +31,7 @@
 #include "device/audiogate.h"
 #include "device/hostmidi.h"
 #include "device/sendguard.h"
+#include "device/latencywatch.h"
 #include "device/stamprule.h"
 #include "device/offlinepace.h"
 #include "device/blockevents.h"
@@ -37,6 +41,7 @@
 #include "device/presencewatch.h"
 #include "device/stallwatch.h"
 #include "model/bankdrop.h"
+#include "model/editgestures.h"
 #include "model/hostgestures.h"
 #include "model/patchhistory.h"
 #include "model/syncalert.h"
@@ -134,6 +139,18 @@ public:
     void on_status(std::function<void(bool present, bool elsewhere)> h) { status_ = std::move(h); }
     // another instance has the Virus: in this process (claim_owner) or another program's plug-in (broker state 2)
     bool waiting() const { return wait_reported_.load() || broker_.in_use_elsewhere(); }
+    // the Virus this instance claimed when several are connected (#45): 1.., 0 = none yet
+    int slot() const { return slot_.load(); }
+    int preferred_slot() const { return slot_pref_.load(); }
+    // the slot where a Virus answered this instance (0 = none yet, or given up): what a project keeps
+    int found_slot() const { return found_slot_.load(); }
+    // the Virus the project was saved with (setState): taken when free, also by switching over from another one
+    void prefer_slot(int s)
+    {
+        slot_pref_ = s;
+        reslot_ = true;
+        cv_.notify_one();
+    }
     std::atomic<int> generation{0}; // +1 on every return of the Virus (process() re-anchors its timeline)
     std::atomic<int> clamp_reanchors{0}; // new timelines because every read was pulled back for a second (E472)
     std::atomic<int64_t> last_note_ms{0}; // steady clock of the last note-on sent (FreezeWatch: was a note due?)
@@ -176,6 +193,7 @@ public:
     std::atomic<bool> live_notes{false};
     std::atomic<bool> no_stamps{false}; // Live Mode / Plugin Latency Minimal: no F5 at all (stamprule.h timing_mode)
     std::atomic<double> live_ratio{1.0}; // Virus frames per host frame, for a live stamp
+    std::atomic<bool> pedals_up{false};  // a panic or release sent pedal up: process() forgets its pedal switches
     std::atomic<int> live_s{5000};       // the timeline's distance behind the newest frame (S), for a live stamp (E512)
     std::atomic<int> live_later{0};      // Control Center option live-later: frames added to a live stamp (E519)
     static constexpr int64_t floor_min = 1024;
@@ -238,9 +256,18 @@ private:
     // one stamp clock and every sync ping resets it, so a second instance (Ableton: duplicated track) shifted the
     // first one's time stamps for good. The Windows broker shares the Virus between all clients (the ASIO driver
     // runs in the same process), so the guard lives here; macOS/Linux brokers also give it to one client only.
+    // Several Viruses (#45): one claim per Virus, i.e. per broker slot (slotpick.h); with one Virus as before.
     bool claim_owner();
     void release_owner();
-    std::atomic<bool> owner_{false}; // this instance holds the process-wide claim (worker writes, leave_virus reads)
+    std::atomic<bool> owner_{false}; // this instance holds a claim (worker writes, leave_virus reads)
+    std::atomic<int> slot_{0};       // the claimed slot, 1 = the first Virus (0 = none)
+    std::atomic<int> slot_pref_{0};  // the slot the project was saved with (0 = none)
+    std::atomic<bool> reslot_{false}; // prefer_slot: the worker moves to that slot when it is free
+    std::chrono::steady_clock::time_point absent_since_{}; // worker: since when this slot's Virus is not ours
+    std::atomic<int> skip_slot_{0}; // worker: the slot just given up (slotpick.h), 0 once a Virus answered
+    std::atomic<unsigned> tried_{0}; // worker: every slot given up (slot_bit), 0 once a Virus answered or after a while
+    std::atomic<int> found_slot_{0}; // worker: the slot where a Virus answered (found_slot)
+    std::chrono::steady_clock::time_point tried_wait_since_{}; // worker: waiting since, with every free slot tried
     std::atomic<bool> wait_reported_{false}; // waiting for the other instance (set by the worker)
     int present_seen_ = -1; // worker: last device presence handled (-1 = unknown)
     vti::PresenceWatch presence_; // worker: gone / back / gone and back between two looks (E212)
@@ -366,6 +393,12 @@ public:
     const RemoteDevice &editor_device() const { return ed_; }
     int ui_value(const std::string &path, int part);              // device, controller or editor-state value
     void ui_set(const std::string &path, int part, int value);    // a change made in the editor
+    // a knob/slider/graph drag in the editor: one host gesture per drag (E304, audit #10); ui_drag_end at mouse up
+    void ui_drag_begin() { edit_gestures_.drag_begin(); }
+    void ui_drag_end()
+    {
+        edit_gestures_.drag_end([this](uint32_t id) { endEdit(id); });
+    }
     void hover(const std::string &path, int part); // the control under the mouse on the LCD ("" = none, E353)
     std::string patch_name(int part);
     std::string bank_patch(int bank, int program); // stored patch name from the bank cache (RAM A..D)
@@ -442,7 +475,9 @@ public:
     bool can_undo_drop();
     void editor_opened();  // the editor's open(): knob moves from the Virus become host edits
     void editor_closed();  // its close(): open edits end
-    void tick_gestures();  // the editor's timer (UI thread): beginEdit / performEdit / endEdit
+    void tick_gestures();  // the gesture timer (UI thread): beginEdit / performEdit / endEdit
+    // the editor ticks only while the plug-in's own gesture timer does not run (a Linux host without a run loop)
+    bool gesture_timer_running() const { return gesture_timer_ran_.load(std::memory_order_relaxed); }
     bool undo_drop(); // "Undo last operation": writes back what the last drop overwrote
     // the part's patch into a personal library (slot = position, == size: append) - writes the library file
     bool store_to_library(int part, int library, int slot);
@@ -619,6 +654,9 @@ private:
     // Virus' audio until a power cycle - changes are coalesced per parameter and sent at <= AUTOMATION_RATE/s
     static constexpr double AUTOMATION_RATE = 250; // 1000/s still hung together with 2750 notes/s
     AutomationQueue automation_{AUTOMATION_RATE};
+    MappedPending mapped_; // bend, aftertouch, controllers from the host: the same budget (audit 2026-11-17 #4)
+    PedalSwitch pedals_;   // CC 64..69 skip that budget: switches, sent on a flip only
+    uint64_t block_no_ = 0;
     RemoteDevice dev_, ed_;
     std::unique_ptr<AccessFiles> files_;
     const DeviceType type_; // TI or Snow plug-in (E361)
@@ -715,6 +753,7 @@ private:
     std::vector<std::string> lib_names_, lib_paths_, lib_roots_; // lib_roots_: the library's menu
     std::mutex banks_mu_;
     void load_banks();
+    std::string bank_cache_dir() const;
     std::unique_ptr<MemorySync> sync_;
     std::thread sync_thread_;
     // the Virus came back (switched off and on, replugged): the readiness probe and note hold of a first start again
@@ -821,6 +860,24 @@ private:
     // knob moves on the Virus as host edits while an editor is open (its timer is the UI-thread tick; E304, #10);
     // without an editor they go to the host as output parameter changes (pending_), as before
     HostGestures gestures_;
+    EditGestures edit_gestures_; // the editor's own drags (editor thread)
+    // knob moves on the Virus -> host edits also with the plug-in window closed (#30, 2026-11-15: in Logic, the AU
+    // wrapper turns only begin/endEdit into automation gestures, and the tick ran only in the editor's timer, so with
+    // the window closed nothing was recorded; Live records the output parameter changes). VSTGUI is set up when the
+    // module loads (vstguieditor.cpp's ModuleInitializer), so its timer runs on the host's UI thread without a window.
+    VSTGUI::SharedPointer<VSTGUI::CVSTGUITimer> gesture_timer_;
+#if SMTG_OS_LINUX
+    // Linux: the tick goes straight to the host's run loop, not through VSTGUI's adapter: the SDK replaces that adapter
+    // at a factory setHostContext and at the first editor and frees the wrappers it registered, which REAPER keeps as
+    // plain pointers - a freed onTimer crashed REAPER reopening a project with two instances (round 0.8.42, E183's kind)
+    struct GestureTick : Steinberg::U::Implements<Steinberg::U::Directly<Steinberg::Linux::ITimerHandler>> {
+        std::function<void()> fn;
+        void PLUGIN_API onTimer() override { fn(); }
+    };
+    Steinberg::IPtr<GestureTick> gesture_tick_;
+    Steinberg::FUnknownPtr<Steinberg::Linux::IRunLoop> gesture_loop_;
+#endif
+    std::atomic<bool> gesture_timer_ran_{false};
     std::atomic<int> editors_open_{0};
     bool send_ram_writes(const std::vector<BankDrop::Write> &w); // dumps into RAM slots + cache + cache files
     // the patches `w` would overwrite into the day's "RAM Backup" library (rambackup.h); false = not backed up, the
@@ -864,7 +921,10 @@ private:
     static int vidx(int virus_rate) { return virus_rate == 48000 ? 1 : 0; }
     Resampler resampler_[2];
     int vrate_seen_ = 0;           // audio thread: the Virus rate of the last block (a change resets the converters)
-    int64_t latency_reported_ = -1; // what getLatencySamples last told the host
+    std::atomic<int64_t> latency_reported_{-1}; // what getLatencySamples last told the host (any thread)
+    std::atomic<bool> active_{false};           // between setActive(true) and setActive(false)
+    vti::LatencyWatch latency_watch_;           // UI timer: the host's latency right? (#37, E544)
+    void check_latency();
     std::vector<float> rs_src_[6]; // USB 1 L/R, USB 2 L/R, USB 3 L/R
     // the Virus' USB IO configuration ("Global USB/Virus Control USB IO Configuration": 0 = 2 Outs / No Input,
     // 1 = 3 Outs / No Input, 2 = 3 Outs / 1 Input), kept per computer like the original's "IO Configuration"

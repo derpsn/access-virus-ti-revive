@@ -5,6 +5,15 @@ set -u
 echo "Removing TI Revive (your administrator password is needed) ..."
 launchctl bootout "gui/$(id -u)/io.github.derpsn.tirevive.vtibroker" 2>/dev/null   # agent of a 0.5.0 test build
 sudo rm -f /Library/LaunchAgents/io.github.derpsn.tirevive.vtibroker.plist
+# the libusb package's root service (#37): stopping it gives the Virus back to Apple's audio driver
+USBAUDIO=/Library/LaunchDaemons/io.github.derpsn.tirevive.usbaudio.plist
+if [ -f "$USBAUDIO" ]; then
+    sudo launchctl bootout system/io.github.derpsn.tirevive.usbaudio 2>/dev/null
+    sudo rm -f "$USBAUDIO" "/tmp/vtibroker-$(id -u).sock" /tmp/tirevive-vtibroker.log
+    sudo rm -rf "/Library/Logs/TI Revive"
+    rm -f "$HOME/Library/Application Support/virus-ti-native/mac-usb-audio.on"
+    LIBUSB_NOTE=1
+fi
 sudo pkill -x vtibroker 2>/dev/null
 sudo pkill -x vtihelper 2>/dev/null
 sudo rm -rf "/Library/Audio/Plug-Ins/VST3/TI Revive Virus Control.vst3" "/Library/Audio/Plug-Ins/Components/TI Revive Virus Control.component" \
@@ -17,3 +26,4 @@ sudo rm -rf "/Library/Audio/Plug-Ins/VST3/Virus TI (TI Revive).vst3" \
 sudo rm -f "/Library/Application Support/Access Music/Virus TI/Common/libVirusUSB.dylib"
 sudo pkgutil --forget io.github.derpsn.tirevive >/dev/null 2>&1
 echo "TI Revive removed."
+[ -z "${LIBUSB_NOTE:-}" ] || echo "Unplug the Virus' USB cable and plug it in again: then macOS' own driver has it again."

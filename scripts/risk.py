@@ -89,11 +89,13 @@ def spec(sel, rmap, core, rnd):
     return {"round": rnd, "core": "core.json", "core_items": ids, "lead": lead, "rules": [], "sections": sections}
 
 
-def changed(base):
-    """files changed since the merge base with base, committed or not, plus untracked files"""
-    git = ["git", "-C", os.path.join(HERE, "..")]
+def changed(base, repo=os.path.join(HERE, "..")):
+    """files changed since the merge base with base, committed or not, plus untracked files; a moved file counts with
+    its old and its new path (--no-renames), so moving it out of a class C folder still asks for that folder's items"""
+    git = ["git", "-C", repo]
     mb = subprocess.run(git + ["merge-base", base, "HEAD"], capture_output=True, text=True, check=True).stdout.strip()
-    out = subprocess.run(git + ["diff", "--name-only", mb], capture_output=True, text=True, check=True).stdout
+    out = subprocess.run(git + ["diff", "--name-only", "--no-renames", mb], capture_output=True, text=True,
+                         check=True).stdout
     new = subprocess.run(git + ["ls-files", "--others", "--exclude-standard"], capture_output=True, text=True,
                          check=True).stdout
     return [f for f in (out + new).splitlines() if f]

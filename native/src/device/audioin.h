@@ -3,6 +3,7 @@
 // behind the newest frame and corrects drift by dropping/repeating single frames (read()); the plug-in reads
 // stamp-aligned positions (read_at()) and resamples itself at host rates other than 44.1 kHz.
 #pragma once
+#include <string>
 #include <cstdint>
 
 namespace vti {
@@ -15,6 +16,14 @@ public:
     // Windows: the broker's mapping; macOS: Core Audio input, the device set to `rate` (44100/48000) when it differs
     bool open(const char *linux_name = nullptr, int rate = 44100);
     void close();
+    // macOS (libusb-audio test, E511): read the broker's ring as on Linux instead of Core Audio; set before open()
+    void use_broker_ring(bool on) { broker_ring_ = on; }
+    bool broker_ring() const { return broker_ring_; }
+    // which Virus when several are connected (devslot.h, #45): the ring of broker N ("-N"); before open()
+    void set_slot(int slot) { slot_ = slot; }
+    // macOS with several Viruses: the USB serial string of this broker's Virus, to find its Core Audio device
+    // (slotpick.h core_audio_pick); kept in memory only, never logged (rule 5)
+    void set_usb_serial(const std::string &s) { usb_serial_ = s; }
     bool streaming() const;
     // n frames into usb1 (L, R) and usb2 (L, R); missing data -> silence. `latency` = target distance in frames.
     // usb3l/usb3r (optional): raw channels 0/1, the third USB output while the Virus' USB IO configuration has 3
@@ -57,6 +66,9 @@ public:
 private:
     void *map_ = nullptr; // vti_audio_shm (vtiaudioshm.h)
     void *mac_ = nullptr; // macOS: the Core Audio reader that fills map_
+    bool broker_ring_ = false; // macOS: map the broker's ring instead (use_broker_ring)
+    int slot_ = 1;
+    std::string usb_serial_;
     int64_t pos_ = -1, drops_ = 0;
     int64_t rate_gen_seen_ = -1; // -1: not looked at since open
 };

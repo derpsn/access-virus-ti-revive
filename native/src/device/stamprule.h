@@ -76,9 +76,9 @@ inline int64_t live_stamp(int64_t newest, int64_t marker, double ratio)
 // played rhythm came out up to +-128 frames uneven. The Control Center option live-later moves played notes this much
 // later (about 2.7 ms at 48 kHz). E534 (the same keystamp test with it on): 11 of 40 on the stamp, 29 one 64-frame
 // step late, none two - half the spread, not exact; which step follows the send phase, not the margin, so the stamp
-// sits on an edge of the Virus' 64-frame grid and 128 (a multiple of 64) cannot move it off (a 32-frame shift is
-// the next thing to try, 0.8.42). Off by default: then the stamp is the original's or up to
-// one block later (the original drops the note's place in the block, E524 (4)).
+// sits on an edge of the Virus' 64-frame grid (LOW); 160 frames, tried in 0.8.42, spread the same over 5 runs (E539),
+// so the reading does not hold and 128 stays (user 2026-11-15: the smaller delay). Off by default: then the stamp is
+// the original's or up to one block later (the original drops the note's place in the block, E524 (4)).
 constexpr int LIVE_LATER_FRAMES = 128;
 
 inline int64_t live_stamp_tl(int64_t tl_at, int s, int64_t marker, double ratio, int later = 0)

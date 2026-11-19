@@ -10,6 +10,7 @@ extern "C" {
 #include "device/memsync.h"
 #include "device/usbmidi.h"
 #include "access/library.h"
+#include "model/bankdrop.h"
 #include "model/remotedevice.h"
 #include <cstdlib>
 #include <functional>
@@ -412,6 +413,7 @@ Bytes fake_single(int bank, int program, int seed)
     for (int i = 0; i < 10; i++)
         d[249 + i] = (uint8_t)("Fake Patch"[i]);
     d[523] = 0xF7;
+    BankDrop::checksums(d); // the Virus sends both checksums right (E552)
     return d;
 }
 
@@ -597,6 +599,18 @@ struct FakeRam {
     std::mutex mu;
     std::map<std::pair<int, int>, Bytes> mem;
     int writes = 0;
+    bool flags_to_zero = false; // like the real Virus (#43, E549): a stored patch has 0 in byte 10 (patch flags)
+    int corrupt = 0;            // a byte the fake stores wrong (0 = none): a real failed write
+    bool mute_after_store = false; // no answer to dump requests once something was stored
+    Bytes store(Bytes m) const
+    {
+        if (flags_to_zero)
+            m[10] = 0;
+        if (corrupt)
+            m[(size_t)corrupt] ^= 0x01;
+        BankDrop::checksums(m); // what it sends back carries the checksums of what it keeps (E552)
+        return m;
+    }
     Bytes get(int bank, int p)
     {
         auto it = mem.find({bank, p});
@@ -608,7 +622,7 @@ struct FakeRam {
             return;
         std::lock_guard<std::mutex> lk(mu);
         if (m[6] == 0x10 && m.size() == 524 && m[7] >= 1 && m[7] <= 4) {
-            mem[{m[7], m[8]}] = m;
+            mem[{m[7], m[8]}] = store(m);
             writes++;
         } else if (m[6] == 0x39) {
             Bytes r = {0xF0, 0x00, 0x20, 0x33, 0x01, 0x10, 0x14, m[7], 0x00};
@@ -620,7 +634,7 @@ struct FakeRam {
             r.push_back(0x00);
             r.push_back(0xF7);
             fb.reply_sysex(r);
-        } else if (m[6] == 0x30 && m.size() >= 10)
+        } else if (m[6] == 0x30 && m.size() >= 10 && !(mute_after_store && writes))
             fb.reply_sysex(get(m[7], m[8]));
     }
 };
@@ -667,6 +681,87 @@ TEST(cc_restore_ram)
     CHECK(!cc::restore_ram(b, 7, backup, nullptr, written, err) && !err.empty()); // RAM 1..4 only
     b.close();
 }
+
+// #43 (E549): library patches carry patch management flags in byte 10 (page A parameter 1, E156), often 0x20; the
+// Virus stores 0 there. The restore must not call that a failed write, and must not write the slot again next run.
+TEST(cc_restore_ram_ignores_the_patch_flags)
+{
+    TempHome home;
+    FakeBroker fb;
+    FakeRam ram;
+    ram.flags_to_zero = true;
+    fb.on_sysex = [&](FakeBroker &f, const Bytes &m) { ram.on(f, m); };
+    Broker b;
+    b.set_endpoint(fb.path);
+    std::string err;
+    CHECK(b.open(err));
+    std::vector<Dump> backup(128);
+    for (int p = 0; p < 128; p++)
+        backup[p] = fake_single(1, p, p);
+    backup[7] = fake_single(1, 7, 1000);
+    backup[7][10] = 0x76; // "BigPipe BC" in the factory Rom A
+    backup[57][10] = 0x03; // only the flags differ from what the Virus has: nothing to write
+    int written = 0;
+    bool done = cc::restore_ram(b, 4, backup, nullptr, written, err);
+    if (!done)
+        fprintf(stderr, "  restore: %s\n", err.c_str());
+    CHECK(done && written == 1 && ram.writes == 1);
+    CHECK(cc::restore_ram(b, 4, backup, nullptr, written, err) && written == 0 && ram.writes == 1);
+    b.close();
+}
+
+// a write that really went wrong still stops the restore, and the message names the first byte that differs
+TEST(cc_restore_ram_names_the_differing_byte)
+{
+    TempHome home;
+    FakeBroker fb;
+    FakeRam ram;
+    ram.corrupt = 143;
+    fb.on_sysex = [&](FakeBroker &f, const Bytes &m) { ram.on(f, m); };
+    Broker b;
+    b.set_endpoint(fb.path);
+    std::string err;
+    CHECK(b.open(err));
+    std::vector<Dump> backup(128);
+    for (int p = 0; p < 128; p++)
+        backup[p] = fake_single(1, p, p);
+    backup[7] = fake_single(1, 7, 1000);
+    int written = -1;
+    CHECK(!cc::restore_ram(b, 4, backup, nullptr, written, err) && written == 0);
+    CHECK(err.find("RAM D 7") != std::string::npos && err.find("byte 143") != std::string::npos);
+    {
+        std::lock_guard<std::mutex> lk(ram.mu);
+        ram.corrupt = 0;
+        ram.writes = 0; // the sync before the write still gets its answers
+        ram.mute_after_store = true;
+    } // no read-back at all: not a wrong byte, but still no success
+    CHECK(!cc::restore_ram(b, 4, backup, nullptr, written, err) && written == 0);
+    CHECK(err.find("no complete dump read back") != std::string::npos);
+    b.close();
+}
+// audit 2026-11-17 #8: on_rx(nullptr) while the reader thread is inside the handler returned at once, so the
+// MemorySync destructor (Control Center backup/restore on a live broker) freed what the running handler used. After
+// on_rx returns, no call of the old handler may still run.
+TEST(broker_replacing_the_rx_handler_waits_for_a_running_call)
+{
+    FakeBroker fb;
+    Broker b;
+    b.set_endpoint(fb.path);
+    std::atomic<bool> inside{false}, done{false};
+    b.on_rx([&](uint8_t, const uint8_t *, size_t) {
+        inside = true;
+        std::this_thread::sleep_for(std::chrono::milliseconds(100));
+        done = true;
+    });
+    std::string err;
+    CHECK(b.open(err));
+    fb.reply(VTIMSG_RX, Bytes{0x86, 0x29, 0x90, 0x3C, 0x64});
+    CHECK(eventually([&] { return inside.load(); }));
+    b.on_rx(nullptr);
+    CHECK(done.load()); // the running call finished before on_rx returned
+    b.close();
+}
+
 #else
 TEST(broker_fake_server)
 {

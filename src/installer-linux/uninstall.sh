@@ -5,10 +5,13 @@ set -u
 PREFIX="${WINEPREFIX:-$HOME/.wine}"
 UNITS="${XDG_CONFIG_HOME:-$HOME/.config}/systemd/user"
 if command -v systemctl >/dev/null 2>&1; then
-    systemctl --user disable --now tirevive-broker.socket 2>/dev/null
-    systemctl --user stop tirevive-broker.service 2>/dev/null
+    SOCKETS=tirevive-broker.socket # Virus 2-4 (#45): instances of the template unit
+    for n in 2 3 4; do SOCKETS="$SOCKETS tirevive-broker@$n.socket"; done
+    systemctl --user disable --now $SOCKETS 2>/dev/null
+    systemctl --user stop tirevive-broker.service 'tirevive-broker@*.service' 2>/dev/null
 fi
-rm -f "$UNITS/tirevive-broker.socket" "$UNITS/tirevive-broker.service"
+rm -f "$UNITS/tirevive-broker.socket" "$UNITS/tirevive-broker.service" "$UNITS/tirevive-broker@.socket" \
+    "$UNITS/tirevive-broker@.service"
 rm -f "$HOME/.local/bin/tirevive-cc" "$HOME/.local/bin/tirevive-control-center"
 rm -f "${XDG_DATA_HOME:-$HOME/.local/share}/applications/tirevive-control-center.desktop"
 command -v systemctl >/dev/null 2>&1 && systemctl --user daemon-reload 2>/dev/null

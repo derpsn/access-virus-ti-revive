@@ -1,6 +1,7 @@
 // memsync.cpp - see memsync.h.
 #include "memsync.h"
 #include "model/utf8.h"
+#include "../model/bankdrop.h"
 #include "../model/remotedevice.h"
 #include "usbmidi.h"
 #include <algorithm>
@@ -86,9 +87,17 @@ void MemorySync::feed(const std::vector<uint8_t> &m)
 {
     if (m.size() > 8 && m[0] == 0xF0 && m[1] == 0x00 && m[2] == 0x20 && m[3] == 0x33) {
         std::lock_guard<std::mutex> lk(mu_);
+        if (!waiting_) // the plug-in sees every Access SysEx of a session: keep only what a request waits for
+            return;
         inbox_.push_back(m);
         cv_.notify_all();
     }
+}
+
+size_t MemorySync::queued()
+{
+    std::lock_guard<std::mutex> lk(mu_);
+    return inbox_.size();
 }
 
 Dump MemorySync::transact(const Dump &request, const std::vector<uint8_t> &match, int timeout_ms, int tries)
@@ -96,12 +105,22 @@ Dump MemorySync::transact(const Dump &request, const std::vector<uint8_t> &match
     // one request at a time, also across threads: the readiness probe after a reconnect met a bank sync still
     // running, the Virus answered only the newer request (E145) and the probe waited 10 s (review 2026-10-19)
     std::lock_guard<std::mutex> one(tx_mu_);
+    struct Done { // on every return, after the reply was copied out: stop keeping SysEx, free what is left
+        MemorySync *s;
+        ~Done()
+        {
+            std::lock_guard<std::mutex> lk(s->mu_);
+            s->waiting_ = false;
+            s->inbox_.clear();
+        }
+    } done{this};
     for (int t = 0; t < tries; t++) {
         {
             std::lock_guard<std::mutex> lk(mu_);
             if (cancelled_)
                 return {};
             inbox_.clear();
+            waiting_ = true; // before the send: a fast reply must not be lost
         }
         if (!send_(request))
             return {};
@@ -170,12 +189,29 @@ std::vector<int> MemorySync::bank_info(int bank)
 
 Dump MemorySync::single(int bank, int program)
 {
+    Dump bad; // the last reply with checksums other than ours
     for (int t = 0; t < 3; t++) {
         Dump r = transact({0xF0, 0x00, 0x20, 0x33, 0x01, (uint8_t)dev_, 0x30, (uint8_t)bank, (uint8_t)program, 0xF7},
                           {0x10, (uint8_t)bank, (uint8_t)program});
         note_reply("single", bank, program, r.size(), SINGLE_SIZE, t);
-        if (r.size() == SINGLE_SIZE)
-            return r;
+        if (r.size() == SINGLE_SIZE) {
+            // the Virus sends both checksums as BankDrop computes them (E552): a mismatch is a reply damaged on the
+            // way, asked again like a wrong size - it must not go into the bank cache on disk (audit #32)
+            Dump c = r;
+            BankDrop::checksums(c);
+            if (c == r)
+                return r;
+            const std::string where = "single " + std::to_string(bank) + " " + std::to_string(program);
+            if (r == bad) { // a damaged packet differs from try to try; a model that counts otherwise does not (E552)
+                if (log)
+                    log(where + ": the same reply twice with other checksums: taken as the Virus sends it");
+                return r;
+            }
+            bad = r;
+            if (log)
+                log(where + ": reply with a wrong checksum (try " + std::to_string(t + 1) + " of 3)");
+            continue;
+        }
         if (r.empty())
             break;
     }

@@ -74,7 +74,8 @@ public:
         if (!lk.owns_lock())
             return false;
         auto e = echo_.find(id);
-        return e != echo_.end() && std::fabs(e->second.value - value) < 1e-9 &&
+        // the same 7-bit step: the AU wrapper hands back a Float32, off by up to ~4e-8 (audit 2026-11-17 #5)
+        return e != echo_.end() && std::fabs(e->second.value - value) < 0.5 / 127 &&
                (e->second.active || now - e->second.ended <= ECHO_MS);
     }
     bool active(uint32_t id)

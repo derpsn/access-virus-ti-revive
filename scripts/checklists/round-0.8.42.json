@@ -1,0 +1,158 @@
+{
+  "round": "0.8.42",
+  "core": "core.json",
+  "core_items": [
+    "LC4",
+    "WC4",
+    "MC4",
+    "MC5"
+  ],
+  "lead": "Test of 0.8.42 with the CI test build 44486371869 of the round head (4045dbe): several Viruses (#45, one broker per Virus; we have one Virus, so this round checks that nothing changes with one), the restore fix (#43), the Snow idle option (#42, no effect on a TI2), the audit fixes (project recall, bank sync, ASIO, Windows broker), the update check on Windows, the libusb Mac package. risk.py: class C on all three systems; automated: Linux hil.sh (cold, reopen, export, sleep), the VM hil-win (cold, reopen, export); by hand: Virus off/on everywhere, sleep on the Mac. Linux and the Windows VM now, the Mac when it is charged (its section is added to this page then). Mark each item and add a note where something looks different; Claude reads the marks from this page.",
+  "rules": [
+    "Order: Linux first (the Virus is there), then the Windows VM, later the Mac. Close the DAW before the Virus moves.",
+    "Never power-cycle the Virus while it is attached to the VM without telling Claude first (Claude re-attaches it afterwards).",
+    "Use a disposable project. Only L4 writes to the Virus: it restores the backup it has just made (RAM banks).",
+    "No game or other heavy program running during the timing items."
+  ],
+  "sections": [
+    {
+      "id": "linux",
+      "title": "Linux",
+      "where": "This PC, REAPER, the 0.8.42 CI build (installed by Claude)",
+      "prep": [
+        "Nothing to install. The Virus is on Linux. Claude runs hil.sh first and posts the result here."
+      ],
+      "items": [
+        {
+          "id": "L1",
+          "title": "Automated core run (Claude runs it)",
+          "steps": [
+            "Claude runs <code>scripts/hil.sh</code> with the installed CI build; the sleep item (<code>--sleep</code>) asks for your password once."
+          ],
+          "expect": "ALL PASS (cold start, two reopens after the idle exit, export, broker killed while playing, sleep). The broker journal has <code>link off</code> after each session and no <code>vti: read ep</code> errors."
+        },
+        {
+          "id": "L2",
+          "title": "Two plug-in instances with one Virus (#45)",
+          "steps": [
+            "REAPER, a new project: add TI Revive Virus Control on track 1, play a few notes.",
+            "Add a second instance on track 2, open its window, play on track 1 again.",
+            "Save, close REAPER, open the project again, play on track 1."
+          ],
+          "expect": "Track 1 plays the Virus the whole time; the second instance does not take it away (it waits as a second instance always did). After the reopen track 1 plays again. Claude checks the logs for the slot lines."
+        },
+        {
+          "id": "L3",
+          "title": "Project recall (audit #21-#24)",
+          "steps": [
+            "In the project of L2 (track 1): load another patch, turn Cutoff on the plug-in, save.",
+            "Close REAPER, open the project, open the plug-in window. Then open a second, different project with the plug-in and go back to the first one."
+          ],
+          "expect": "The saved patch and its Cutoff come back each time; no part resets to Init, nothing stays from the other project."
+        },
+        {
+          "id": "L4",
+          "title": "Backup and restore of the RAM banks (#43)",
+          "steps": [
+            "Control Center, BACKUP & RESTORE: make a backup of the RAM banks.",
+            "Restore that backup to the Virus (the same content it has now)."
+          ],
+          "expect": "The restore runs through all slots and ends with a success message; no stop with \"the Virus has another patch after the restore\". It writes only the content just backed up."
+        },
+        {
+          "id": "L5",
+          "title": "Bank browser and Options (audit #32, #42)",
+          "steps": [
+            "In the plug-in, open the patch browser without filters and look at the RAM banks.",
+            "Control Center, Options: check that <b>Snow: less CPU while idle</b> is listed; switch it on, play 30 s, switch it off."
+          ],
+          "expect": "The RAM banks list their patch names. The new option is listed with its text; on the TI2 it changes nothing (no Snow idle stream), playing stays clean."
+        }
+      ]
+    },
+    {
+      "id": "vm",
+      "title": "Windows 11 VM",
+      "where": "win11 VM, Ableton Live, the 0.8.42 CI build (installed by Claude, setup.exe /quiet)",
+      "prep": [
+        "Claude passes the Virus through to the VM and runs <code>hil-win</code> for the automated core items."
+      ],
+      "notes": [
+        "WC4 (Virus off and on): tell Claude before; Claude reads the broker log and re-attaches the Virus to the VM afterwards."
+      ],
+      "items": [
+        {
+          "id": "W1",
+          "title": "Automated core run (Claude runs it)",
+          "steps": [
+            "Claude runs <code>hil-win</code> in the VM (scheduled task in your console session; close Live and the Control Center first)."
+          ],
+          "expect": "H1, H2 x2, H3, H6 pass. Drift slightly over 100 ppm in the VM counts as the VM clock (as in earlier rounds)."
+        },
+        {
+          "id": "W2",
+          "title": "Plays in Live, two instances, ASIO (#45, audit #25, #33)",
+          "steps": [
+            "Live with the ASIO driver TI Revive Virus Audio: plug-in on track 1, play a clip 30 s.",
+            "Add a second instance on track 2, play track 1 again.",
+            "In Live's audio settings try the largest buffer size offered, then go back to the usual one."
+          ],
+          "expect": "Track 1 plays cleanly; the second instance does not take the Virus away. ASIO offers no buffer above 2048, and the input is not muted at the largest one. VM USB timing is not exact: crackle here proves little, missing notes do."
+        },
+        {
+          "id": "W3",
+          "title": "Project recall in Live (audit #21-#24)",
+          "steps": [
+            "Load another patch, turn Cutoff, save; close Live, open the project again, open the plug-in window."
+          ],
+          "expect": "The saved patch and its Cutoff come back; no part resets to Init."
+        },
+        {
+          "id": "W4",
+          "title": "Update check on Windows",
+          "steps": [
+            "Control Center, Options: switch <b>Check for updates</b> on, wait a few seconds, then switch it off again."
+          ],
+          "expect": "The Control Center shows that 0.8.41 is the latest release (first run of the check on Windows, curl.exe). Claude reads update.txt and the log."
+        }
+      ]
+    },
+    {
+      "id": "mac",
+      "title": "macOS",
+      "where": "MacBook Air M3 (macOS 27), Ableton Live 12 and Logic, the 0.8.42 CI build 44588173936",
+      "prep": [
+        "Plug the Mac into power (battery at 50 %). Move the Virus' USB cable to the Mac.",
+        "Quit every DAW, then double-click <b>Install test build.command</b> in <code>~/Downloads/TI-Revive-0.8.42-test-42f0a12</code> (asks for your password). Claude checks the installed files afterwards."
+      ],
+      "items": [
+        {
+          "id": "M1",
+          "title": "Automated core run (you start it, Claude grades it)",
+          "steps": [
+            "Double-click <code>hil/hil-mac.command</code> in the same folder (from the desktop: an SSH session gets no audio input). Close Live and Logic first."
+          ],
+          "expect": "H1, H2 x2, H3, H6 pass. Claude reads the results folder."
+        },
+        {
+          "id": "M2",
+          "title": "Two instances in Live (#45)",
+          "steps": [
+            "Live: plug-in on track 1, play a clip; add a second instance on track 2 and open its window; play track 1 again.",
+            "Save, quit Live, open the set again, play track 1."
+          ],
+          "expect": "Track 1 plays the Virus the whole time; the second instance waits (tries Virus 2 once, then quiet). No crash at the reopen. Claude checks the log."
+        },
+        {
+          "id": "M3",
+          "title": "Knob moves recorded with the window closed (#30) and recall",
+          "steps": [
+            "Logic: plug-in track in Automation Latch, plug-in window CLOSED, play and turn Cutoff on the Virus for a few seconds, stop.",
+            "Save, close the project, open it again, open the plug-in window."
+          ],
+          "expect": "Logic has recorded the Cutoff moves as automation; after the reopen the patch and its values come back."
+        }
+      ]
+    }
+  ]
+}

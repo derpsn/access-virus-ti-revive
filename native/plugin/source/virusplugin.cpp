@@ -14,9 +14,15 @@
 #include "base/source/fstreamer.h"
 #include "device/closeseq.h"
 #include "device/usbmidi.h"
+#include "device/slotpick.h"
+extern "C" {
+#include "devslot.h"
+}
 #include "model/state.h"
 #include "ratesw.h"
 #include "pluginterfaces/base/ibstream.h"
+#include "public.sdk/source/main/moduleinit.h"
+#include "public.sdk/source/main/pluginfactory.h"
 #include "pluginterfaces/base/ustring.h"
 #include "pluginterfaces/vst/ivstevents.h"
 #include "pluginterfaces/vst/ivstparameterchanges.h"
@@ -158,23 +164,33 @@ void DeviceOut::leave_virus()
     sent(200);
 }
 
+static const char *const VIRUS_SLOT_RECORD = "TIRevive/Virus"; // the project's Virus of several (#45)
 static std::mutex g_owner_mu;
-static const DeviceOut *g_owner; // the instance of this process that talks to the Virus
+static const DeviceOut *g_owner[VTI_SLOTS_MAX]; // per Virus: the instance of this process that talks to it (#45)
 
 bool DeviceOut::claim_owner()
 {
     std::lock_guard<std::mutex> g(g_owner_mu);
-    if (!g_owner)
-        g_owner = this;
-    owner_ = g_owner == this;
+    bool taken[VTI_SLOTS_MAX];
+    for (int i = 0; i < VTI_SLOTS_MAX; i++)
+        taken[i] = g_owner[i] != nullptr;
+    const int s = vti::slot_choose(taken, VTI_SLOTS_MAX, slot_pref_, tried_);
+    if (s) {
+        g_owner[s - 1] = this;
+        broker_.set_slot(s);
+    }
+    slot_ = s;
+    owner_ = s != 0;
     return owner_;
 }
 
 void DeviceOut::release_owner()
 {
     std::lock_guard<std::mutex> g(g_owner_mu);
-    if (g_owner == this)
-        g_owner = nullptr;
+    const int s = slot_;
+    if (s && g_owner[s - 1] == this)
+        g_owner[s - 1] = nullptr;
+    slot_ = 0;
     owner_ = false;
 }
 
@@ -253,13 +269,33 @@ void DeviceOut::close_audio()
 // worker: start the Virus audio stream at the asked rate and take the rate it runs at - the first start and the retries
 // alike (the retry path skipped the rate: a Virus switched on after the DAW streamed at 48 kHz while the plug-in
 // counted 44.1, the timeline re-anchored twice a second, sync errors at every Play; user, REAPER, 2026-10-25, E352)
+// macOS libusb-audio test (E511): the option mac-usb-audio reads the broker's ring (the broker, run as root with
+// VTI_LIBUSB_AUDIO=1, streams the Virus itself) instead of Core Audio; elsewhere the broker's ring is the only path
+#ifdef __APPLE__
+static bool mac_broker_audio() { return vti::cc::mac_usb_audio(); } // set by the libusb package only
+#endif
+
 int DeviceOut::start_audio()
 {
 #ifdef __APPLE__
-    const int r = 1; // macOS: the plug-in reads the Virus' Core Audio input itself (the broker carries MIDI)
+    audio_.use_broker_ring(mac_broker_audio());
+    if (!audio_.broker_ring()) { // several Viruses (#45): its USB serial string finds its Core Audio device
+        uint8_t dd[18] = {0}, sd[255] = {0};
+        std::string serial;
+        const int n = broker_.control(0x80, 6, 0x0100, 0, dd, sizeof dd) == (int)sizeof dd && dd[16]
+                          ? broker_.control(0x80, 6, (uint16_t)(0x0300 | dd[16]), 0x0409, sd, sizeof sd)
+                          : -1;
+        for (int i = 2; i + 1 < n && i + 1 < sd[0]; i += 2)
+            if (sd[i + 1] == 0 && sd[i] >= 32 && sd[i] < 127)
+                serial += (char)sd[i];
+        audio_.set_usb_serial(serial); // memory only, never logged (rule 5)
+    }
+    // macOS: the plug-in reads the Virus' Core Audio input itself (the broker carries MIDI), or the broker's ring
+    const int r = audio_.broker_ring() ? broker_.audio(true, 3000, (uint32_t)want_rate.load()) : 1;
 #else
     const int r = broker_.audio(true, 3000, (uint32_t)want_rate.load()); // the broker sets it (rate following)
 #endif
+    audio_.set_slot(slot_ ? slot_.load() : 1); // the ring of this instance's Virus (#45)
     if (r == 1 && audio_.open(nullptr, want_rate.load())) { // macOS: the Core Audio rate
         rate = audio_.rate(); // the Virus' current rate (E323; 44100 from an older broker)
         audio_gate_.open();
@@ -429,8 +465,9 @@ void DeviceOut::check_presence()
     // another program's plug-in has the Virus (broker state 2) / gave it up: the same page as a second instance
     if (bool elsewhere = broker_.in_use_elsewhere(); elsewhere != elsewhere_seen_) {
         elsewhere_seen_ = elsewhere;
-        log(elsewhere ? "Virus TI native: another program's plug-in uses the Virus - waiting\n"
-                      : "Virus TI native: the other program gave up the Virus\n");
+        if (!skip_slot_) // not again at every try of a wait that goes through the slots (audit 2026-11-18 #3)
+            log(elsewhere ? "Virus TI native: another program's plug-in uses the Virus - waiting\n"
+                          : "Virus TI native: the other program gave up the Virus\n");
         if (on_waiting_ && !wait_reported_)
             on_waiting_(elsewhere);
     }
@@ -524,6 +561,21 @@ void DeviceOut::run()
     if (const char *e = getenv("VTI_NATIVE_MIDI_RATE")) // bytes/s of stamped traffic, 0 = unlimited (tests only)
         budget_.rate = atof(e);
     while (!stop_) {
+        if (reslot_.exchange(false) && owner_ && slot_pref_ >= 1 && slot_pref_ <= VTI_SLOTS_MAX &&
+            slot_ != slot_pref_) { // the project's Virus (#45): move over when no other instance has it
+            bool is_free;
+            {
+                std::lock_guard<std::mutex> g(g_owner_mu);
+                is_free = !g_owner[slot_pref_ - 1];
+            }
+            if (is_free) {
+                log("Virus TI native: the project used Virus %d - switching over from Virus %d\n", slot_pref_.load(),
+                    slot_.load());
+                lose_broker();
+                release_owner();
+                continue;
+            }
+        }
         if (abandon_dump_.exchange(false))
             drop_dump();
         if (!open_) {
@@ -547,6 +599,15 @@ void DeviceOut::run()
                 rx_set_ = true;
             }
             if (!owner_ && !claim_owner()) {
+                // every free slot given up (one Virus, this a second instance): wait, try them again after a while
+                const auto now = std::chrono::steady_clock::now();
+                if (tried_wait_since_ == std::chrono::steady_clock::time_point{})
+                    tried_wait_since_ = now;
+                if (vti::slot_retry_due(tried_, (int)std::chrono::duration_cast<std::chrono::milliseconds>(
+                                                    now - tried_wait_since_).count())) {
+                    tried_ = 0;
+                    tried_wait_since_ = std::chrono::steady_clock::time_point{};
+                }
                 if (!wait_reported_) {
                     wait_reported_ = true;
                     log("Virus TI native: another instance of the plug-in uses the Virus - waiting\n");
@@ -565,12 +626,20 @@ void DeviceOut::run()
                 }
                 continue;
             }
-            if (wait_reported_) {
+            tried_wait_since_ = std::chrono::steady_clock::time_point{}; // a slot claimed: the wait clock restarts
+            if (wait_reported_ && slot_ == 1 && !skip_slot_) {
                 wait_reported_ = false;
                 log("Virus TI native: the other instance is gone - this one takes over the Virus\n");
                 if (on_waiting_)
                     on_waiting_(false);
+            } else if (slot_ > 1 && !wait_reported_) { // Virus 2+: the waiting page until that Virus answers (#45)
+                wait_reported_ = true;
+                log("Virus TI native: another instance uses Virus 1 - trying Virus %d\n", slot_.load());
+                if (on_waiting_)
+                    on_waiting_(true);
+                report_status();
             }
+            absent_since_ = std::chrono::steady_clock::time_point{};
             broker_.set_name("TI Revive Virus Control");
             open_ = broker_.open(err);
             if (open_ && !audio_ok()) { // the owner starts the Virus audio stream (Linux: shm ring)
@@ -605,10 +674,60 @@ void DeviceOut::run()
             if (idle_)
                 idle_();
             check_presence();
+            // Virus 2+ is not there, or another program's plug-in has this one (#45, audit 2026-11-18 #4): after 3 s
+            // try another slot (slotpick.h); the one given up is skipped once, the log says it once per wait
+            const bool elsewhere = broker_.in_use_elsewhere();
+            if (slot_ > 1 || elsewhere) {
+                const auto now = std::chrono::steady_clock::now();
+                if (absent_since_ == std::chrono::steady_clock::time_point{})
+                    absent_since_ = now;
+                const int ms = (int)std::chrono::duration_cast<std::chrono::milliseconds>(now - absent_since_).count();
+                if (vti::slot_give_up(slot_, false, elsewhere, ms)) {
+                    if (!skip_slot_)
+                        log("Virus TI native: %s Virus %d - trying the others, waiting\n",
+                            elsewhere ? "another program uses" : "no", slot_.load());
+                    skip_slot_ = slot_.load();
+                    tried_ |= vti::slot_bit(slot_.load());
+                    found_slot_ = 0;
+                    absent_since_ = std::chrono::steady_clock::time_point{};
+                    lose_broker();
+                    release_owner();
+                    for (int i = 0; i < 200 && !stop_; i++) { // as a second instance: try again in 2 s
+                        rt_r_.store(rt_w_.load(std::memory_order_acquire), std::memory_order_release);
+                        if (idle_)
+                            idle_();
+                        std::unique_lock<std::mutex> lk(mu_);
+                        cv_.wait_for(lk, std::chrono::milliseconds(10), [this] { return stop_.load(); });
+                    }
+                    continue;
+                }
+            } else if (wait_reported_ && skip_slot_ && absent_since_ == std::chrono::steady_clock::time_point{})
+                absent_since_ = std::chrono::steady_clock::now();
+            else if (wait_reported_ && skip_slot_ &&
+                     std::chrono::steady_clock::now() - absent_since_ >= std::chrono::milliseconds(vti::SLOT_GIVE_UP_MS)) {
+                // back on Virus 1 after a wait, nobody else has it but it is not there: the "No Virus TI" page
+                wait_reported_ = false;
+                skip_slot_ = 0;
+                if (on_waiting_)
+                    on_waiting_(false);
+                report_status();
+            }
             std::unique_lock<std::mutex> lk(mu_);
             cv_.wait_for(lk, std::chrono::milliseconds(10), [this] { return stop_.load(); });
             continue;
         }
+        if (wait_reported_ && (slot_ > 1 || skip_slot_)) { // the Virus of this slot answered after a wait (#45)
+            wait_reported_ = false;
+            log("Virus TI native: this instance uses Virus %d\n", slot_.load());
+            if (on_waiting_)
+                on_waiting_(false);
+            report_status();
+        }
+        skip_slot_ = 0;
+        tried_ = 0;
+        tried_wait_since_ = std::chrono::steady_clock::time_point{};
+        found_slot_ = slot_.load();
+        absent_since_ = std::chrono::steady_clock::time_point{};
         std::vector<uint8_t> msg, piece; // piece: the next part of a dump in pieces (dumppacer.h)
         bool piece_last = false;
         int64_t piece_wait_ns = 0;
@@ -706,6 +825,9 @@ void DeviceOut::run()
                     "the stream (%d)\n", slip_.last_ratio(), slip_gate_.count());
                 close_audio();
 #ifdef __APPLE__
+                if (audio_.broker_ring()) // the libusb-audio test: the broker restarts it as on Linux (E511)
+                    broker_.audio(false);
+                else
                 // macOS (#37, E510): Apple's driver owns the Virus' audio; stopping our Core Audio input lets the HAL
                 // stop the Virus' USB stream when no other program reads it, and starting it again starts a new
                 // stream, as alt 0/1 does on Linux. If the DAW uses the Virus as its own device the stream runs on:
@@ -743,7 +865,8 @@ void DeviceOut::run()
 #ifdef __APPLE__
             // E472: macOS may keep the Virus' stream gapped after a sleep until it re-enumerates the device (a replug
             // cured it every time); ask the broker for that software replug, at most once a minute (ReplugGate)
-            if (replug_gate_.allow(std::chrono::duration_cast<std::chrono::milliseconds>(
+            if (!audio_.broker_ring() && // the libusb-audio test: the broker holds the device, no replug (E511)
+                replug_gate_.allow(std::chrono::duration_cast<std::chrono::milliseconds>(
                                        std::chrono::steady_clock::now().time_since_epoch()).count()) &&
                 broker_.reenumerate())
                 log("Virus TI native: asked the broker to re-enumerate the Virus after the sleep (E472)\n");
@@ -772,8 +895,13 @@ void DeviceOut::run()
         if (int req = rate_req_.exchange(0); req) {
             if (audio_ok()) {
 #ifdef __APPLE__
-                const int now = audio_.request_rate(req);
-                log("Virus TI native: %d Hz asked on the Core Audio device -> %d Hz\n", req, now);
+                if (!audio_.broker_ring()) {
+                    const int now = audio_.request_rate(req);
+                    log("Virus TI native: %d Hz asked on the Core Audio device -> %d Hz\n", req, now);
+                } else { // the libusb-audio test: the broker sets the rate, as on Linux (E511)
+                    const int r = broker_.audio(true, 3000, (uint32_t)req);
+                    log("Virus TI native: %d Hz asked from the broker -> %d, ring %d Hz\n", req, r, audio_.rate());
+                }
 #else
                 const int r = broker_.audio(true, 3000, (uint32_t)req);
                 log("Virus TI native: %d Hz asked from the broker -> %d, ring %d Hz\n", req, r, audio_.rate());
@@ -800,14 +928,14 @@ void DeviceOut::run()
             int64_t newest = audio_ok() ? audio_.newest_frame() : -1, pos = audio_ok() ? audio_.position() : -1;
             log("stats: audio %d drops %lld filled %lld distance %lld queued %d | marker %lld aligned blocks %lld, read "
                 "margin min %lld, timeline steps %lld, last sound %lld frames ago | host frames %lld / virus frames "
-                "%lld, anchors %lld, err %lld..%lld\n",
+                "%lld, anchors %lld, err %lld..%lld | Virus %d\n", // which instance: its Virus (#45, 0 = none yet)
                 (int)audio_ok(), (long long)(audio_ok() ? audio_.drops() : -1),
                 (long long)(audio_ok() ? audio_.filled() : -1),
                 (long long)(newest >= 0 && pos >= 0 ? newest - pos : -1), queued_.load(), (long long)marker.load(),
                 (long long)aligned_blocks.exchange(0), (long long)read_margin_min.exchange(INT64_MAX),
                 (long long)tl_steps.exchange(0), (long long)(newest - last_sound.load()), (long long)host_frames.exchange(0),
                 (long long)(stats_newest_ >= 0 ? newest - stats_newest_ : -1), (long long)anchors.exchange(0),
-                (long long)err_min.exchange(INT64_MAX), (long long)err_max.exchange(INT64_MIN));
+                (long long)err_min.exchange(INT64_MAX), (long long)err_max.exchange(INT64_MIN), slot_.load());
             stats_newest_ = newest;
             int64_t pull_blocks = 0, pull_max = 0;
             pulls.take(pull_blocks, pull_max);
@@ -852,6 +980,7 @@ void DeviceOut::run()
             uint8_t m[32][3];
             for (int i = 0, n = HeldNotes::panic(m); i < n; i++)
                 send({m[i][0], m[i][1], m[i][2]});
+            pedals_up.store(true, std::memory_order_relaxed);
         }
         if (!piece.empty()) { // a piece of a dump (dumppacer.h)
             bool wok = broker_.write(EP_PLUGIN_OUT, piece.data(), piece.size());
@@ -981,11 +1110,49 @@ void DeviceOut::run()
 
 // ---- VirusPlugin ----------------------------------------------------------------------------------------------------
 
+#if SMTG_OS_LINUX
+// the host's run loop for the gesture timer: REAPER offers it on the factory's host context only, not on the
+// component's ("gesture timer off" without this); taken from the factory as the SDK does for VSTGUI (vstguieditor.cpp)
+static FUnknownPtr<Linux::IRunLoop> g_factory_runloop;
+static ModuleInitializer g_factory_runloop_init([] {
+    static auto factory = owned(GetPluginFactory());
+    if (auto pf = U::cast<IPluginFactoryInternal>(factory))
+        pf->addHostContextCallback([](FUnknown *ctx) {
+            if (FUnknownPtr<Linux::IRunLoop> rl(ctx); rl)
+                g_factory_runloop = rl;
+        });
+});
+static ModuleTerminator g_factory_runloop_exit([] { g_factory_runloop = nullptr; });
+#endif
+
 tresult PLUGIN_API VirusPlugin::initialize(FUnknown *context)
 {
     tresult r = SingleComponentEffect::initialize(context);
     if (r != kResultOk)
         return r;
+    // the host's UI thread (initialize runs there): knob moves -> host edits, window open or not (gesture_timer_)
+    auto tick = [this] {
+        gesture_timer_ran_.store(true, std::memory_order_relaxed);
+        tick_gestures();
+        check_latency();
+    };
+#if SMTG_OS_LINUX
+    // no run loop on the host context: no timer, the editor's timer ticks as in 0.8.41 (editor_closed flushes then)
+    gesture_loop_ = FUnknownPtr<Linux::IRunLoop>(context);
+    if (!gesture_loop_)
+        gesture_loop_ = g_factory_runloop;
+    if (gesture_loop_) {
+        gesture_tick_ = owned(new GestureTick);
+        gesture_tick_->fn = tick;
+        if (gesture_loop_->registerTimer(gesture_tick_, 50) != kResultTrue) {
+            gesture_tick_ = nullptr;
+            gesture_loop_ = nullptr;
+        }
+    }
+    fprintf(stderr, "Virus TI native: gesture timer %s\n", gesture_tick_ ? "on the host's run loop" : "off (no run loop)");
+#else
+    gesture_timer_ = VSTGUI::makeOwned<VSTGUI::CVSTGUITimer>([tick](VSTGUI::CVSTGUITimer *) { tick(); }, 50, true);
+#endif
     if (FUnknownPtr<IHostApplication> app(context); app) { // the DAW's name, for the setup page
         String128 name{};
         if (app->getName(name) == kResultOk)
@@ -1055,13 +1222,7 @@ tresult PLUGIN_API VirusPlugin::initialize(FUnknown *context)
         for (int p = 0; p < 16; p++) {
             auto d = init;
             d[7] = 0, d[8] = (uint8_t)p;
-            unsigned a = 0;
-            for (int i = 5; i < 265; i++)
-                a += d[i];
-            d[265] = a & 0x7F;
-            for (int i = 265; i < 522; i++)
-                a += d[i];
-            d[522] = a & 0x7F;
+            BankDrop::checksums(d);
             default_.push_back(d);
         }
         for (int i = 0; i < 2; i++)
@@ -1128,9 +1289,13 @@ tresult PLUGIN_API VirusPlugin::initialize(FUnknown *context)
         vti::cc::rotate_log(own_cache_dir() + "/../diag.log", vti::cc::kPluginLogLimit); // on for everyone: kept small
         out_->set_diag_path(own_cache_dir() + "/../diag.log");
     }
-    if (live_notes_) // after set_diag_path, or the line never reaches diag.log
+    if (live_notes_) { // after set_diag_path, or the line never reaches diag.log
+        char later[64] = "";
+        if (out_->live_later.load())
+            snprintf(later, sizeof later, ", stamped %d frames later (live-later.on)", out_->live_later.load());
         out_->log("Virus TI native: live notes on (default; live-notes.off switches it off): notes flagged as played go without the lead%s\n",
-                  out_->live_later.load() ? ", stamped 128 frames later (live-later.on)" : "");
+                  later);
+    }
     out_->log("Virus TI native: timing: lead %d frames, safety net %s%s\n", timing_a_, timing_classic_ ? "off" : "on",
               timing_classic_ ? " (timing-classic.on)" : "");
     if (od_changes_only_)
@@ -1242,6 +1407,18 @@ std::vector<std::vector<uint8_t>> VirusPlugin::startup_messages() const
 
 tresult PLUGIN_API VirusPlugin::terminate()
 {
+    if (gesture_timer_) { // before anything it calls goes away
+        gesture_timer_->stop();
+        gesture_timer_ = nullptr;
+    }
+#if SMTG_OS_LINUX
+    if (gesture_tick_) {
+        gesture_loop_->unregisterTimer(gesture_tick_);
+        gesture_tick_ = nullptr;
+        gesture_loop_ = nullptr;
+    }
+#endif
+    gestures_.flush([this](uint32_t id) { endEdit(id); });
     note_probe_flush();
     stop_warm_ = true;
     if (sync_)
@@ -1279,6 +1456,7 @@ bool VirusPlugin::panic()
     held_notes_.forget();
     for (int i = 0; i < n; i++)
         out_->send({m[i][0], m[i][1], m[i][2]});
+    out_->pedals_up.store(true, std::memory_order_relaxed);
     out_->log("Virus TI native: panic, sustain off + all notes off on 16 channels\n");
     return true;
 }
@@ -1295,6 +1473,7 @@ tresult PLUGIN_API VirusPlugin::setActive(TBool state)
         const int n = held_notes_.release(rel);
         for (int i = 0; i < n; i++)
             out_->send({rel[i][0], rel[i][1], rel[i][2]});
+        out_->pedals_up.store(true, std::memory_order_relaxed);
         for (int i = 0; n > 0 && i < 50 && out_->busy(); i++) // at most 32 messages, a few ms; at most 250 ms
             std::this_thread::sleep_for(std::chrono::milliseconds(5));
     }
@@ -1313,6 +1492,7 @@ tresult PLUGIN_API VirusPlugin::setActive(TBool state)
         {
             std::lock_guard<std::mutex> lk(state_mu_);
             state_ = default_;
+            state_index_data_ = nullptr; // a new list can reuse the old address with the same size (audit #21)
         }
         state_loaded_ = true;
         apply_state_to_params();
@@ -1328,12 +1508,31 @@ tresult PLUGIN_API VirusPlugin::setActive(TBool state)
                   ok ? "" : " (not switched: the broker kept its rate)");
     }
     const tresult res = SingleComponentEffect::setActive(state);
+    active_ = state != 0;
     // the host read a latency before that is no longer right (the resampler's look-ahead and the rate's share of the
     // frame constants change with the Virus' rate): it asks again
     if (state && latency_before >= 0 &&
         latency_before != (int64_t)std::lround(latency_frames() * rate_ / virus_rate()) && componentHandler)
         componentHandler->restartComponent(kLatencyChanged);
     return res;
+}
+
+// the UI timer (50 ms): the host's last read latency against the current one (latencywatch.h). A host that read it
+// before its last set-up (Logic, #37) gets the change announced once more, now outside that set-up; every new value
+// the host reads goes to the log, so a report shows what the host compensates
+void VirusPlugin::check_latency()
+{
+    const int64_t read = latency_reported_.load();
+    const int64_t now = std::lround(latency_frames() * rate_ / virus_rate());
+    if (latency_watch_.read_changed(read) && out_)
+        out_->log("Virus TI native: the host reads latency %lld samples (block %d, %.0f Hz)\n", (long long)read, block_,
+                  rate_);
+    if (latency_watch_.announce(active_.load(), read, now) && componentHandler) {
+        if (out_)
+            out_->log("Virus TI native: latency now %lld samples, the host last read %lld - announced again\n",
+                      (long long)now, (long long)read);
+        componentHandler->restartComponent(kLatencyChanged);
+    }
 }
 
 tresult PLUGIN_API VirusPlugin::activateBus(MediaType type, BusDirection dir, int32 index, TBool state)
@@ -1507,7 +1706,8 @@ void VirusPlugin::set_part_value(int part, const std::string &path, int value)
     auto msg = dev_.encode(path, value, part < 0 ? 0 : part);
     if (msg.empty() || is_system_clock_global(msg)) // the Virus' report of its rate is not the project's (E445)
         return;
-    // index (path, part) -> record, rebuilt when the record list was replaced or grew (patch / project load); a
+    // index (path, part) -> record, rebuilt when the record list was replaced or grew (patch / project load: those
+    // reset state_index_data_, as a new list of the same size can sit at the old address); a
     // linear decode of all ~240 records per change cost ~45 us - with automation thousands of times per second
     if (state_index_data_ != state_.data() || state_index_size_ != state_.size()) {
         state_index_.clear();
@@ -1785,6 +1985,9 @@ tresult PLUGIN_API VirusPlugin::process(ProcessData &data)
     // not fit is counted and logged (blockevents.h)
     BlockEvents evs;
     auto add = [&](int64_t stamp, const uint8_t *m, size_t n) { evs.add(stamp, m, n); };
+    block_no_++; // a waiting mapped controller keeps its offset only within its own block
+    if (out_ && out_->pedals_up.exchange(false, std::memory_order_relaxed))
+        pedals_ = PedalSwitch{}; // pedal up went out: the host's next pedal value goes again
     // Virus frames of this block: exact on average (a fractional rest carries over), so other host rates do not drift
     tl_acc_ += data.numSamples * ratio;
     int64_t block_frames = (int64_t)std::floor(tl_acc_ + 1e-9);
@@ -1862,8 +2065,16 @@ tresult PLUGIN_API VirusPlugin::process(ProcessData &data)
             ParamID id = q->getParameterId();
             if (id >= MIDI_MAP_BASE) { // a controller, aftertouch or pitch bend of channel (id - base) / 0x1000
                 uint8_t m[3];
-                if (size_t n = mapped_message((int)((id - MIDI_MAP_BASE) >> 12) & 15, (int)(id & 0xFFF), v, m)) {
-                    add(at(offset), m, n); // data bytes always < 0x80 (hostmidi.h)
+                const int ch = (int)((id - MIDI_MAP_BASE) >> 12) & 15, ctl = (int)(id & 0xFFF);
+                if (size_t n = mapped_message(ch, ctl, v, m)) { // data bytes always < 0x80 (hostmidi.h)
+                    // through the automation budget below, the latest value only (audit 2026-11-17 #4, rule 2)
+                    MappedPending::Slot gone;
+                    if (PedalSwitch::pedal(ctl)) { // a switch: at once, on a flip only (hostmidi.h)
+                        if (pedals_.flips(ch, ctl, m[2]))
+                            add(at(offset), m, n);
+                    } else if (mapped_.set(ch, ctl, m, n, offset, block_no_) && !automation_.push(id)) {
+                        mapped_.take(ch, ctl, gone); // queue full: not waiting, or it would never go out
+                    }
                     if ((m[0] & 0xF0) == 0xB0 && m[1] == 64)
                         held_notes_.sustain(m[0] & 15, m[2]);
                     size_t w = pu_w_.load(std::memory_order_relaxed); // a controller's value for the state: below
@@ -1896,6 +2107,13 @@ tresult PLUGIN_API VirusPlugin::process(ProcessData &data)
     automation_.refill(data.numSamples, rate_);
     if (out_)
         automation_.drain(96 - evs.n, [&](uint32_t id) {
+            if (id >= MIDI_MAP_BASE) { // a mapped controller: at its own offset if it came in this block
+                MappedPending::Slot sl;
+                if (!mapped_.take((int)((id - MIDI_MAP_BASE) >> 12) & 15, (int)(id & 0xFFF), sl))
+                    return false;
+                add(sl.block == block_no_ ? at(sl.offset) : at(0), sl.m, sl.n);
+                return true;
+            }
             auto it = params_.find(id);
             if (it == params_.end() || it->second.pending < 0)
                 return false;
@@ -2719,11 +2937,10 @@ void VirusPlugin::ui_set(const std::string &path, int part, int value)
         }
     auto id = ids_.find({path, part});
     if (id != ids_.end()) { // automatable: through the host, which hands it to process()
-        ParamValue n = value / 127.0;
-        beginEdit(id->second);
-        setParamNormalized(id->second, n);
-        performEdit(id->second, n);
-        endEdit(id->second);
+        setParamNormalized(id->second, value / 127.0);
+        edit_gestures_.edit( // one gesture per drag, else begin + perform + end (editgestures.h)
+            id->second, value / 127.0, [this](uint32_t i) { beginEdit(i); },
+            [this](uint32_t i, double v) { performEdit(i, v); }, [this](uint32_t i) { endEdit(i); });
     } else if (out_) { // not automatable (menus, globals): straight to the Virus
         auto msg = dev_.encode(path, value, part < 0 ? 0 : part);
         if (!msg.empty())
@@ -3084,6 +3301,15 @@ std::vector<KnobTemplate> VirusPlugin::knob_templates()
 
 // The Virus' RAM banks: our cache (tools/virussync, later the plug-in's own sync), else the original's Access cache
 // (read only) - Windows/Wine: ProgramData/Access Music/Virus TI/Cache/<device>, Mac: /Library/Application Support/...
+// the RAM bank cache of this instance's Virus: Virus 1 (and an instance not connected yet) the folder of today, Virus N
+// of several "virus-N" in it (#45), so two Viruses never write over each other's banks
+std::string VirusPlugin::bank_cache_dir() const
+{
+    const std::string d = own_cache_dir();
+    const int s = out_ ? out_->slot() : 0;
+    return s > 1 && !d.empty() ? d + "/virus-" + std::to_string(s) : d;
+}
+
 void VirusPlugin::load_banks()
 {
     // the original's three places (E307): on the Mac the factory libraries are in "Public Libraries"
@@ -3107,7 +3333,7 @@ void VirusPlugin::load_banks()
             lib_roots_.push_back(root.menu);
         }
     // like the original: only the plug-in's own cache; without one the first start syncs the whole RAM
-    std::string d = own_cache_dir();
+    std::string d = bank_cache_dir();
     if (d.empty())
         return;
     for (int b = 0; b < 4; b++) {
@@ -3373,7 +3599,7 @@ void VirusPlugin::sync_banks()
         set_start_pages(127, 127);
         return;
     }
-    std::string dir = own_cache_dir();
+    std::string dir = bank_cache_dir();
     if (!dir.empty()) {
         std::error_code ec;
         std::filesystem::create_directories(vti::u8path(dir), ec);
@@ -3695,13 +3921,7 @@ bool VirusPlugin::load_dump(std::vector<uint8_t> d, int part)
     // patch sent at version 9 was converted by the Virus itself, which dropped the location in bytes 11..12
     d[7] = 0, d[8] = (uint8_t)part;
     RemoteDevice::upgrade_single(d);
-    unsigned a = 0;
-    for (int i = 5; i < 265; i++)
-        a += d[i];
-    d[265] = a & 0x7F;
-    for (int i = 265; i < 522; i++)
-        a += d[i];
-    d[522] = a & 0x7F;
+    BankDrop::checksums(d);
     // locked sections keep the part's current values, like the original (E378): merged into this one dump
     if (t_keep_reference == 0)
         end_compare(part); // a load while comparing: the edit stays an undo step
@@ -3746,18 +3966,9 @@ bool VirusPlugin::rename_part(int part, const std::string &name)
             state_ = default_;
         for (auto &r : state_)
             if (is_part_dump(r, part)) {
-                for (int i = 0; i < 10; i++) { // printable ASCII, padded with spaces
-                    char ch = i < (int)name.size() ? name[i] : ' ';
-                    r[249 + i] = (uint8_t)(ch >= 32 && ch < 127 ? ch : ' ');
-                }
-                unsigned a = 0;
-                for (int i = 5; i < 265; i++)
-                    a += r[i];
-                r[265] = a & 0x7F;
-                for (int i = 265; i < 522; i++)
-                    a += r[i];
-                r[522] = a & 0x7F;
-                d = r;
+                auto renamed = BankDrop::renamed(r, name); // empty for a damaged record: that one stays as it is
+                if (!renamed.empty())
+                    d = r = std::move(renamed);
             }
     }
     if (d.empty())
@@ -3783,14 +3994,7 @@ bool VirusPlugin::store_patch(int part, int bank, int program)
     }
     if (d.empty())
         return false;
-    d[7] = (uint8_t)(bank + 1), d[8] = (uint8_t)program; // a dump into RAM bank 1..4 = store
-    unsigned a = 0;
-    for (int i = 5; i < 265; i++)
-        a += d[i];
-    d[265] = a & 0x7F;
-    for (int i = 265; i < 522; i++)
-        a += d[i];
-    d[522] = a & 0x7F;
+    BankDrop::address(d, bank, program); // a dump into RAM bank 1..4 = store
     if (!backup_ram({{bank, program, d}}))
         return false;
     if (out_)
@@ -3805,7 +4009,7 @@ bool VirusPlugin::store_patch(int part, int bank, int program)
             cache[p] = b[p];
         drop_.forget(); // an undo of an earlier drop must not write over this store
     }
-    std::string dir = own_cache_dir();
+    std::string dir = bank_cache_dir();
     if (!dir.empty()) {
         std::error_code ec;
         std::filesystem::create_directories(vti::u8path(dir), ec);
@@ -4045,7 +4249,7 @@ bool VirusPlugin::download_bank(int bank)
                 else
                     old[p] = cache[p];
         }
-        std::string dir = own_cache_dir();
+        std::string dir = bank_cache_dir();
         if (!dir.empty())
             save_bank_file(dir + "/RAM " + (char)('A' + bank), old);
         if (out_)
@@ -4063,9 +4267,13 @@ void VirusPlugin::editor_opened()
 
 void VirusPlugin::editor_closed()
 {
+    ui_drag_end(); // closed in the middle of a drag: its gesture ends
     if (--editors_open_ <= 0) {
         editors_open_ = 0;
-        gestures_.flush([this](uint32_t id) { endEdit(id); });
+        // our own gesture timer keeps ticking without an editor: it still hands the last Virus knob move to the host
+        // and ends the edit; a flush here dropped that value (Latch ended early, audit #23)
+        if (!gesture_timer_running())
+            gestures_.flush([this](uint32_t id) { endEdit(id); });
     }
 }
 
@@ -4221,7 +4429,7 @@ bool VirusPlugin::send_ram_writes(const std::vector<BankDrop::Write> &w)
             for (int p = 0; p < 128; p++)
                 caches[bank][p] = banks_[bank][p];
     }
-    std::string dir = own_cache_dir();
+    std::string dir = bank_cache_dir();
     if (!dir.empty()) {
         std::error_code ec;
         std::filesystem::create_directories(vti::u8path(dir), ec);
@@ -4690,7 +4898,10 @@ void VirusPlugin::panel_message(const std::vector<uint8_t> &msg)
             meta_source(c.path, c.part, c.value, false); // e.g. the FX switches follow the send knobs on the Virus
         }
         auto it = ids_.find({c.path, c.part});
-        if (it != ids_.end() && editors_open_.load() > 0 && !PanelFollow::is_preset_path(c.path)) {
+        // whenever a tick can hand it to the host: the editor's or the plug-in's own gesture timer (#30, E542: with the
+        // window closed this went only out as an output parameter change, which Logic does not record)
+        const bool gestures_ticking = editors_open_.load() > 0 || gesture_timer_running();
+        if (it != ids_.end() && gestures_ticking && !PanelFollow::is_preset_path(c.path)) {
             // like the original: a knob moved on the Virus becomes a host edit (begin/perform/end, E304), which
             // Ableton Live's Configure mode picks up (#10); patch selections do not (the original's loads do not)
             gestures_.device_change(it->second, c.value / 127.0, now_ms());
@@ -4836,6 +5047,7 @@ void VirusPlugin::apply_state_to_params(int stored)
     }
     {
         std::lock_guard<std::mutex> lk(values_mu_);
+        keep_unset_values(parts, part_values_);
         part_values_ = parts;
         if (stored == STORED_ALL)
             stored_values_ = parts;
@@ -4911,6 +5123,9 @@ tresult PLUGIN_API VirusPlugin::setState(IBStream *state)
         std::lock_guard<std::mutex> lk(undo_mu_);
         undo_.clear(); // another project: the steps belong to the one before
     }
+    // a truncated project: without a part's dump every edit and patch load of that part was dropped silently
+    if (int add = add_missing_part_dumps(recs, default_); add && out_)
+        out_->log("Virus TI native: the project has no patch for %d part(s): those start from the default\n", add);
     {
         std::lock_guard<std::mutex> lk(compare_mu_);
         compare_.clear(); // the project's patches are the parts' references
@@ -4923,9 +5138,16 @@ tresult PLUGIN_API VirusPlugin::setState(IBStream *state)
     // later edits of the newer fields (Input Mode, unison, envelopes 3/4 ...) reach it (E174)
     if (int up = upgrade_state_dumps(recs); up && out_)
         out_->log("Virus TI native: %d part dump(s) of the project upgraded to the current format\n", up);
+    for (auto &r : recs) { // the Virus this project used when several are connected (#45, getState)
+        std::string path;
+        int part, value;
+        if (parse_editor_record(r, path, part, value) && path == VIRUS_SLOT_RECORD && out_)
+            out_->prefer_slot(value);
+    }
     {
         std::lock_guard<std::mutex> lk(state_mu_);
         state_ = std::move(recs);
+        state_index_data_ = nullptr; // a new list can reuse the old address with the same size (audit #21)
     }
     state_loaded_ = true;
     unlock_all_parts(); // a project brings no locks: the original clears them at every project load (E378)
@@ -4951,6 +5173,16 @@ tresult PLUGIN_API VirusPlugin::getState(IBStream *state)
             for (auto &e : edited)
                 if (is_part_dump(r, e.first))
                     r = e.second;
+        // which Virus this instance uses (#45): kept like an editor setting, never sent to the Virus
+        recs.erase(std::remove_if(recs.begin(), recs.end(),
+                                  [](const std::vector<uint8_t> &r) {
+                                      std::string path;
+                                      int part, value;
+                                      return parse_editor_record(r, path, part, value) && path == VIRUS_SLOT_RECORD;
+                                  }),
+                   recs.end());
+        if (const int s = out_ ? vti::slot_to_save(out_->found_slot(), out_->preferred_slot()) : 0) // audit 2026-11-18 #2
+            recs.push_back(editor_record(VIRUS_SLOT_RECORD, 0, s));
         d = build_container(recs);
     }
     int32 done = 0;

@@ -1,5 +1,7 @@
 // library.cpp - see library.h.
 #include "library.h"
+#include "model/bankdrop.h"
+#include "device/sendguard.h"
 #include "model/remotedevice.h"
 #include "model/utf8.h"
 #include <algorithm>
@@ -56,6 +58,11 @@ bool load_library_file(const std::string &path, PatchLibrary &lib, const std::ve
             break;
         std::vector<uint8_t> m = {0xF0};
         m.insert(m.end(), d.begin() + i, end + 1);
+        if (!one_message(m.data(), m.size())) { // a status byte inside (damaged or foreign file): never on the wire
+            skip("a byte above 0x7F");
+            i = end - d.begin();
+            continue;
+        }
         // other sizes are skipped like the original's decoder does (E356); a version upgrade_single does not know
         // (e.g. 127) stays out too: the original would list it, but what such a dump does on the Virus is unknown
         if (m.size() == 524) {
@@ -270,13 +277,7 @@ bool save_library(const PatchLibrary &lib, std::string &error)
         if (m.size() != 524) // a gap: no patch at this position (the original leaves it out, E298)
             continue;
         m[7] = 1, m[8] = (uint8_t)i;
-        unsigned a = 0;
-        for (int k = 5; k < 265; k++)
-            a += m[k];
-        m[265] = a & 0x7F;
-        for (int k = 265; k < 522; k++)
-            a += m[k];
-        m[522] = a & 0x7F;
+        vti::BankDrop::checksums(m);
         varlen(120);
         trk.push_back(0xF0);
         varlen((uint32_t)m.size() - 1);

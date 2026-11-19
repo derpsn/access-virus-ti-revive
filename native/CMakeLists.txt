@@ -1,6 +1,6 @@
 # virus-ti-native - native rewrite of the Access Virus TI plug-in (docs/plan.md)
 cmake_minimum_required(VERSION 3.25)
-project(virus-ti-native VERSION 0.8.41 LANGUAGES C CXX) # = the TI Revive release it ships with
+project(virus-ti-native VERSION 0.8.42 LANGUAGES C CXX) # = the TI Revive release it ships with
 set(CMAKE_CXX_STANDARD 17)
 set(CMAKE_CXX_STANDARD_REQUIRED ON)
 # Windows: static C/C++ runtime, so the plug-in and the ASIO driver run without the VC++ redistributable
@@ -41,7 +41,7 @@ FetchContent_Declare(pugixml GIT_REPOSITORY https://github.com/zeux/pugixml.git 
 FetchContent_MakeAvailable(pugixml)
 
 # core library: Access files + device model (no Access material in this repo; loaded at runtime)
-add_library(vticore STATIC src/access/accessfiles.cpp src/model/remotedevice.cpp src/model/state.cpp src/device/broker.cpp src/device/memsync.cpp src/device/audioin.cpp src/device/sidechain.cpp src/editor/editormodel.cpp src/editor/editorrender.cpp src/access/firmware.cpp src/access/library.cpp src/cc/controlcenter.cpp src/cc/diag.cpp src/cc/decode.cpp src/cc/capture.cpp src/cc/ccskin.cpp src/model/panelfollow.cpp src/editor/upscale.cpp src/editor/helptext.cpp src/model/sysinfo.cpp src/model/remotetemplates.cpp src/editor/popupmenu.cpp src/model/utf8.cpp)
+add_library(vticore STATIC src/access/accessfiles.cpp src/model/remotedevice.cpp src/model/state.cpp src/device/broker.cpp src/device/memsync.cpp src/device/audioin.cpp src/device/sidechain.cpp src/editor/editormodel.cpp src/editor/editorrender.cpp src/access/firmware.cpp src/access/library.cpp src/cc/controlcenter.cpp src/cc/diag.cpp src/cc/updatecheck.cpp src/cc/decode.cpp src/cc/capture.cpp src/cc/ccskin.cpp src/model/panelfollow.cpp src/editor/upscale.cpp src/editor/helptext.cpp src/model/sysinfo.cpp src/model/remotetemplates.cpp src/editor/popupmenu.cpp src/model/utf8.cpp)
 # TI Revive's broker headers (vtiproto.h, vtiaudioshm.h) from the repository's src/broker
 target_include_directories(vticore PUBLIC src ${CMAKE_CURRENT_SOURCE_DIR}/../src/broker)
 find_package(Threads REQUIRED)
@@ -73,6 +73,13 @@ target_compile_definitions(TIReviveControlCenter PRIVATE TIREVIVE_VERSION="${PRO
 set_target_properties(TIReviveControlCenter PROPERTIES RUNTIME_OUTPUT_DIRECTORY "${CMAKE_BINARY_DIR}/ccapp/$<0:>")
 if(APPLE)
     set(TIREVIVE_APP_VERSION ${PROJECT_VERSION})
+    # the app's minimum macOS follows the build target: 11.0 for the release, 10.15 for the Catalina build (#37: a
+    # fixed 11.0 made Catalina refuse an app whose binary was built for 10.15)
+    if(CMAKE_OSX_DEPLOYMENT_TARGET)
+        set(TIREVIVE_APP_MIN_MACOS ${CMAKE_OSX_DEPLOYMENT_TARGET})
+    else()
+        set(TIREVIVE_APP_MIN_MACOS 11.0)
+    endif()
     configure_file(ccapp/Info.plist ${CMAKE_CURRENT_BINARY_DIR}/ccapp-Info.plist @ONLY)
     set_target_properties(TIReviveControlCenter PROPERTIES OUTPUT_NAME "TI Revive Control Center"
         MACOSX_BUNDLE_INFO_PLIST ${CMAKE_CURRENT_BINARY_DIR}/ccapp-Info.plist)
@@ -153,6 +160,24 @@ if(WIN32)
     target_link_libraries(asiohost PRIVATE ole32)
 endif()
 
+# Windows MIDI ports (user 2026-11-15): tirevive-midiports.exe, the broker's helper for Windows MIDI Services
+# (src/midiports-win). C++/WinRT: the projection of Windows.Devices.Midi2 is made from its .winmd (the API-lock
+# package of microsoft/MIDI, used only to compile against: its DLL is never shipped, Windows' own copy is used).
+# CI passes both paths (build.yml); without them the target is left out.
+if(MSVC AND VTI_MIDI2_WINMD AND VTI_CPPWINRT_EXE)
+    set(VTI_MIDI2_GEN ${CMAKE_BINARY_DIR}/midi2-projection)
+    add_custom_command(OUTPUT ${VTI_MIDI2_GEN}/winrt/Windows.Devices.Midi2.h
+                       COMMAND ${VTI_CPPWINRT_EXE} -input sdk -input ${VTI_MIDI2_WINMD} -output ${VTI_MIDI2_GEN}
+                       DEPENDS ${VTI_MIDI2_WINMD} COMMENT "C++/WinRT projection of Windows MIDI Services")
+    add_custom_target(midi2-projection DEPENDS ${VTI_MIDI2_GEN}/winrt/Windows.Devices.Midi2.h)
+    add_executable(tirevive-midiports ../src/midiports-win/tirevive-midiports.cpp)
+    add_dependencies(tirevive-midiports midi2-projection)
+    target_include_directories(tirevive-midiports PRIVATE ${VTI_MIDI2_GEN} ../src/midiports-win ../src/broker)
+    target_compile_features(tirevive-midiports PRIVATE cxx_std_17)
+    target_compile_options(tirevive-midiports PRIVATE /EHsc /bigobj /permissive-)
+    target_link_libraries(tirevive-midiports PRIVATE WindowsApp advapi32)
+endif()
+
 # unit tests (no Virus needed; tests on the Access files skip without them): ctest --test-dir build
 enable_testing()
 add_executable(vtitests tests/main.cpp tests/test_usbmidi.cpp tests/test_state.cpp tests/test_model.cpp
@@ -165,13 +190,26 @@ add_executable(vtitests tests/main.cpp tests/test_usbmidi.cpp tests/test_state.c
                tests/test_presencewatch.cpp tests/test_keepalive.cpp tests/test_sendbudget.cpp tests/test_writeretry.cpp
                tests/test_stamprule.cpp tests/test_hostclock.cpp tests/test_midiin.cpp tests/test_sendguard.cpp tests/test_cablerule.cpp tests/test_dumppacer.cpp tests/test_startprogress.cpp tests/test_userrom.cpp tests/test_transport.cpp
                tests/test_gapfill.cpp tests/test_audiogate.cpp tests/test_dragsend.cpp tests/test_hostmidi.cpp tests/test_textfield.cpp
-               tests/test_bankdrop.cpp tests/test_hostgestures.cpp tests/test_ratesw.cpp tests/test_timelinefollow.cpp
+               tests/test_bankdrop.cpp tests/test_hostgestures.cpp tests/test_editgestures.cpp tests/test_ratesw.cpp tests/test_timelinefollow.cpp
                tests/test_blockevents.cpp tests/test_outputdelay.cpp tests/test_lcdhover.cpp
                tests/test_heldnotes.cpp tests/test_factoryorder.cpp tests/test_ratemeter.cpp tests/test_sectionlock.cpp tests/test_resync.cpp tests/test_slipwatch.cpp tests/test_freezewatch.cpp
                tests/test_editormenus.cpp tests/test_infopage.cpp tests/test_rambackup.cpp tests/test_undohistory.cpp
-               tests/test_comparestate.cpp tests/test_randomizer.cpp tests/test_trafficring.cpp tests/test_capture.cpp tests/test_keyport.cpp tests/test_closeseq.cpp tests/test_utf8.cpp tests/test_winusb_errors.cpp tests/test_markerscan.cpp tests/test_rxqueue.cpp tests/test_linkrule.cpp tests/test_optionslayout.cpp)
+               tests/test_comparestate.cpp tests/test_randomizer.cpp tests/test_trafficring.cpp tests/test_capture.cpp tests/test_keyport.cpp tests/test_closeseq.cpp tests/test_utf8.cpp tests/test_winusb_errors.cpp tests/test_markerscan.cpp tests/test_rxqueue.cpp tests/test_linkrule.cpp tests/test_optionslayout.cpp tests/test_owneruid.cpp tests/test_macgiveback.cpp tests/test_seqevent.cpp tests/test_updatecheck.cpp tests/test_midiports.cpp tests/test_nerdview.cpp tests/test_keyporthelper.cpp tests/test_latencywatch.cpp tests/test_idlepace.cpp tests/test_devslot.cpp tests/test_slotpick.cpp $<$<NOT:$<PLATFORM_ID:Windows>>:tests/test_sendtimeout.cpp>)
 target_link_libraries(vtitests PRIVATE vticore)
 add_test(NAME vtitests COMMAND vtitests)
+# the libusb audio stream (src/broker/vtiusbaudio_libusb.c) against stub libusb functions: its own binary, built with
+# vtitests wherever libusb.h is there (Linux, macOS with libusb); nothing in it links the real library
+if(NOT WIN32)
+    find_path(VTI_LIBUSB_INC libusb.h PATH_SUFFIXES libusb-1.0)
+    if(VTI_LIBUSB_INC)
+        add_executable(vlatests tests/main.cpp tests/test_vla.cpp ../src/broker/vtiusbaudio_libusb.c)
+        target_include_directories(vlatests PRIVATE ${VTI_LIBUSB_INC} ../src/broker)
+        find_package(Threads REQUIRED)
+        target_link_libraries(vlatests PRIVATE Threads::Threads)
+        add_dependencies(vtitests vlatests)
+        add_test(NAME vlatests COMMAND vlatests)
+    endif()
+endif()
 
 # test host for the native plug-in (R3 checks)
 if(NOT TARGET sdk_hosting)
@@ -234,7 +272,7 @@ find_program(PWSH_EXECUTABLE pwsh)
 if(PWSH_EXECUTABLE)
     add_test(NAME installer_scripts
              COMMAND ${PWSH_EXECUTABLE} -NoProfile -NonInteractive -Command
-                     "if (-not (Get-Module -ListAvailable Pester | Where-Object Version -ge ([version]'5.0'))) { exit 77 }; Import-Module Pester -MinimumVersion 5.0; $r = Invoke-Pester '${CMAKE_CURRENT_SOURCE_DIR}/../src/installer/tests' -Output Detailed -PassThru; exit [int]($r.FailedCount + $r.FailedBlocksCount + $r.FailedContainersCount -gt 0)")
+                     "if (-not (Get-Module -ListAvailable Pester | Where-Object { $_.Version.Major -eq 5 })) { exit 77 }; Import-Module Pester -MinimumVersion 5.0 -MaximumVersion 5.99; $r = Invoke-Pester '${CMAKE_CURRENT_SOURCE_DIR}/../src/installer/tests' -Output Detailed -PassThru; exit [int]($r.FailedCount + $r.FailedBlocksCount + $r.FailedContainersCount -gt 0)")
     set_tests_properties(installer_scripts PROPERTIES SKIP_RETURN_CODE 77 TIMEOUT 120)
 endif()
 

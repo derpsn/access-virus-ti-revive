@@ -28,4 +28,59 @@ rm -f /Library/LaunchAgents/io.github.derpsn.tirevive.vtibroker.plist
 rm -rf "/Library/Audio/Plug-Ins/VST3/Virus TI (TI Revive).vst3" "/Library/Audio/Plug-Ins/Components/Virus TI (TI Revive).component"
 rm -f "/Library/Application Support/TI Revive/vtihelper" "/Library/Application Support/TI Revive/Install Access Virus TI software.command"
 killall -9 AudioComponentRegistrar 2>/dev/null || true # make macOS rescan Audio Units (the new component)
+
+# The libusb package (#37, E511; built with LIBUSB_AUDIO=1, a "libusb-audio" file next to this script): TI Revive's
+# service runs as root from launchd and takes the Virus' audio itself instead of Apple's USB audio driver, for Macs
+# where Apple's driver crackles (Catalina). The normal package has no such file and removes a service left from a
+# libusb install, so installing it over one gives the Mac its normal Core Audio setup again.
+SVC=io.github.derpsn.tirevive.usbaudio
+SVC_PLIST="/Library/LaunchDaemons/$SVC.plist"
+if [ -f "$(dirname "$0")/libusb-audio" ] && [ -z "${USER_ID:-}" ]; then
+    # nobody at the Mac's screen (login window, ssh, MDM): the service is made for one user; without one it used to
+    # fall into the branch below and remove the service (audit 2026-11-17 #9). Leave it as it is and say so.
+    echo "TI Revive (libusb): no user is logged in at the Mac's screen. Log in and run this installer again." >&2
+    exit 1
+elif [ -f "$(dirname "$0")/libusb-audio" ]; then
+    launchctl bootout "system/$SVC" 2>/dev/null || true
+    pkill -x vtibroker 2>/dev/null || true # the user's own service holds the socket path; quit the DAW first (README)
+    sleep 1
+    rm -f "/tmp/vtibroker-$USER_ID.sock"
+    # launchd owns the socket and starts the service at the first connect; it stays (-stay) and keeps the Virus while
+    # the Mac runs, so Apple's driver is not asked to take it back after every DAW session. The socket is open to
+    # all users (0666): the service itself lets in only $USER_ID and root (owneruid.h vti_client_allowed).
+    cat > "$SVC_PLIST" <<PLIST
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
+<plist version="1.0">
+<dict>
+    <key>Label</key><string>$SVC</string>
+    <key>ProgramArguments</key>
+    <array><string>/Library/Application Support/TI Revive/vtibroker</string><string>-v</string><string>-stay</string></array>
+    <key>EnvironmentVariables</key>
+    <dict><key>VTI_LIBUSB_AUDIO</key><string>1</string><key>VTI_OWNER_UID</key><string>$USER_ID</string></dict>
+    <key>Sockets</key>
+    <dict><key>Listeners</key><dict>
+        <key>SockPathName</key><string>/tmp/vtibroker-$USER_ID.sock</string>
+        <key>SockPathMode</key><integer>438</integer>
+    </dict></dict>
+    <key>StandardErrorPath</key><string>/Library/Logs/TI Revive/vtibroker.log</string>
+</dict>
+</plist>
+PLIST
+    chown root:wheel "$SVC_PLIST" && chmod 644 "$SVC_PLIST"
+    # root's log in a folder only root writes (a fixed file in /tmp, made first by the user's broker, let a symlink
+    # point root's writes at any file: audit 2026-11-17 #6); a root log left in /tmp by an earlier install goes
+    rm -rf "/Library/Logs/TI Revive" && install -d -o root -g wheel -m 755 "/Library/Logs/TI Revive"
+    rm -f /tmp/tirevive-vtibroker.log
+    OPT="/Users/$USER_NAME/Library/Application Support/virus-ti-native"
+    mkdir -p "$OPT" && touch "$OPT/mac-usb-audio.on" && chown -R "$USER_NAME" "$OPT"
+    launchctl bootstrap system "$SVC_PLIST"
+elif [ -f "$SVC_PLIST" ]; then
+    launchctl bootout "system/$SVC" 2>/dev/null || true # gives the Virus back to Apple's driver (or: replug it)
+    rm -f "$SVC_PLIST"
+    [ -z "${USER_NAME:-}" ] || rm -f "/Users/$USER_NAME/Library/Application Support/virus-ti-native/mac-usb-audio.on"
+    [ -z "${USER_ID:-}" ] || rm -f "/tmp/vtibroker-$USER_ID.sock"
+    rm -rf "/Library/Logs/TI Revive" # root's, from the service
+    rm -f /tmp/tirevive-vtibroker.log  # root's from a service before 0.8.42; the user's own broker writes a new one
+fi
 exit 0

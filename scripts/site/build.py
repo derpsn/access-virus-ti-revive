@@ -86,6 +86,11 @@ def load_releases(path):
     return json.loads(out)
 
 
+def published(releases):
+    """the releases the site shows, newest first: no drafts (their published_at is null, the sort crashed on it)"""
+    return sorted((r for r in releases if not r.get("draft")), key=lambda r: r["published_at"], reverse=True)
+
+
 def summary(rel):
     """the part of a release text that is new in that version"""
     tag, body = rel["tag_name"], rel.get("body") or ""
@@ -149,7 +154,7 @@ def asset(rel, suffix):
 
 
 # the installers whose downloads the counter adds up (not the usbinfo script or the libusb source)
-INSTALLERS = ("-setup.exe", ".msi", "-mac.zip", "-linux.tar.gz")
+INSTALLERS = ("-setup.exe", ".msi", "-mac.zip", "-mac-libusb.zip", "-linux.tar.gz")
 
 
 def downloads(releases):
@@ -417,7 +422,7 @@ def page_landing(latest, releases, sums):
     </table>
     <ul class="limits">
       <li>The installers are not signed, so Windows and macOS ask once before they run them.</li>
-      <li>On Windows and Linux the keys of a Keyboard or Polar cannot be recorded in a DAW yet. On macOS they can, through the MIDI input &ldquo;Virus TI Synth&rdquo; (since 0.8.38; by user reports, our Desktop has no keys). The plug-in switches Local off, as the
+      <li>On Windows 10 and Windows 11 before 25H2 the keys of a Keyboard or Polar cannot be recorded in a DAW. On macOS (since 0.8.38), Linux and Windows 11 25H2 or later (since 0.8.42) they can, through the MIDI input &ldquo;Virus TI Synth&rdquo; (on macOS by user reports; on Linux and Windows not yet tested with keys, our Desktop has none). The plug-in switches Local off, as the
       original does; without that input the keys and wheels are silent until you set Local to On in CONFIG on the Virus.</li>
       <li>On macOS the Virus' audio can have dropouts after the Mac wakes from sleep: macOS's USB audio can leave it with gaps until the Virus is plugged in again. Since 0.8.39 the plug-in then reconnects the Virus by itself, at most once a minute. If dropouts remain after waking, unplug and replug the Virus.</li>
       <li>On Linux a Keyboard or Polar can stay silent on its own keys after the DAW closes: the Linux kernel's USB audio driver links the Virus to the computer each time it takes the device (when it is plugged in, after a reset, and when TI Revive gives it back), so the keys keep going to USB. TI Revive unlinks it at the close like the original driver; the kernel links it again. Unplugging the USB cable brings the keys back. Seen with a simulated Virus through the real Linux kernel (E527); not checked on a real Keyboard.</li>
@@ -577,6 +582,7 @@ def features_section():
       <h4>What it covers</h4>
       <ul>
         <li>All 16 parts, every parameter, the preset browser, RAM and ROM banks, patch libraries.</li>
+        <li>Several Viruses at once (since 0.8.42, <a href="{GH}/issues/45">issue #45</a>: each Virus gets its own TI Revive service, numbered by the USB port it is plugged into (Virus 1, Virus 2, ...), and each plug-in instance takes a free Virus: the one its project was saved with when that one is free, as the original did. Their MIDI inputs carry the number (&quot;Virus TI 2 Synth&quot;). On Windows the ASIO driver plays Virus 1 only. With one Virus nothing changes: a second instance waits as before. Tested on Linux with our TI2 and a simulated TI2 as the second; not yet with two real Viruses, nor with two on Windows or macOS.).</li>
         <li>VST3 on Windows, macOS and Linux; Audio Unit for Logic and GarageBand. Native on Apple Silicon and Intel Macs (Intel since 0.8.39, not tested on an Intel Mac yet).</li>
       </ul>
       <h4>Projects and export</h4>
@@ -637,6 +643,8 @@ def features_section():
         <li>A Keyboard or Polar plays its own keys again after the DAW closes (since 0.8.41): TI Revive lets the Virus go when the last plug-in or the Control Center closes, as the original's driver does, and links it again for the next one. Checked on a simulated Keyboard. On Linux the kernel's USB audio driver can link it again (see the limits).</li>
         <li>The keys of a Keyboard or Polar on macOS (since 0.8.38): TI Revive offers a MIDI input &ldquo;Virus TI Synth&rdquo; while the plug-in or the Control Center is open. Choose it as the MIDI input of the track and arm it. Not tested by us: our TI2 Desktop has no keys. By user reports: notes, pitch bend and mod wheel recorded on a TI1 Keyboard (Ableton Live 12.3.7) and a TI2 Polar.</li>
         <li>The Virus&rsquo; MIDI In on macOS (since 0.8.41): a second MIDI input &ldquo;Virus TI MIDI&rdquo;, as the Access driver had. While the Virus works with a plug-in it sends what arrives at its MIDI In socket only to the computer, so a keyboard plugged in there reaches the DAW only through this input: choose it as the MIDI input of the track with the plug-in and arm it. It shows up on our Mac (0.8.41 test round); we had no keyboard at the Virus' MIDI In to play through it.</li>
+        <li>Windows MIDI ports (since 0.8.42): on Windows 11 25H2 or later, once Windows has Windows MIDI Services built in (it comes with the Windows update from the end of November 2026), TI Revive offers the MIDI inputs &ldquo;Virus TI Synth&rdquo; (the keys, wheels and pedals of a Keyboard or Polar) and &ldquo;Virus TI MIDI&rdquo; (what arrives at the Virus&rsquo; MIDI In), as the Access driver did. Virus to DAW only. The installer adds them only on a Windows that supports them: on Windows 10 and older Windows 11 there are none, as before. Tested in a Windows 11 VM with Microsoft&rsquo;s preview package and messages fed in by hand; not yet with Windows&rsquo; own copy or with a Virus that has keys.</li>
+        <li>The keys of a Keyboard or Polar and the Virus&rsquo; MIDI In on Linux (since 0.8.42): the MIDI inputs &ldquo;Virus TI Synth&rdquo; and &ldquo;Virus TI MIDI&rdquo; in the ALSA sequencer, with the names the Linux kernel&rsquo;s own driver gave them. Choose them as the MIDI input of the track with the plug-in and arm it, as on macOS. They exist while the plug-in or the Control Center is open. Virus to DAW only. They show up on our TI2 Desktop; no note has been played through them yet (it has no keys).</li>
         <li>Setup Tips for Your DAW in the ? menu (since 0.8.38): opens by itself the first time for a DAW and for a point not read before. Seen on Linux (REAPER), macOS (Ableton Live, Logic) and Windows 11 (Ableton Live).</li>
         <li>In Logic, Plug-in Latency Compensation must be on. With it off, TI Revive and a Logic instrument played about 100 ms apart; with it on they were in sync by ear, and an export measured at most 0.42 ms apart. Logic warns when you turn it off.</li>
         <li>The Virus leaves remote mode when the plug-in closes, as with the original (since 0.8.38). Tested on Linux with a TI2 Desktop; the effect on a Virus with keys is not tested.</li>
@@ -654,7 +662,7 @@ def features_section():
       <ul>
         <li>The LCD shows the control under the mouse (since 0.8.34), as in the original: its name, its value, the value stored in the patch in brackets, and the part.</li>
         <li>A help mode: the ? menu's Explain the Controls explains every control, and why a greyed-out one is inactive.</li>
-        <li><strong>The ? menu.</strong> Since 0.8.36 the ? at the bottom right opens a menu: Explain the Controls (the help mode above), Setup Tips for Your DAW (since 0.8.38), the Access manuals (since 0.8.39: Reference, Quickstart, Atomizer and the tutorials, opened from your own Access installation, as the original's menu lists them; a Snow gets its own manuals), the Welcome page and What's New in TI Revive (since 0.8.39), the TI Revive website, Report a Problem (the GitHub issues), Save Logs for a Bug Report (one text file with the system, the versions and the ends of the plug-in and broker logs, home folder and user name replaced), the detailed log for the next start, and Panic, which sends sustain off and all notes off on all 16 channels.</li>
+        <li><strong>The ? menu.</strong> Since 0.8.36 the ? at the bottom right opens a menu: Explain the Controls (the help mode above), Setup Tips for Your DAW (since 0.8.38), the Access manuals (since 0.8.39: Reference, Quickstart, Atomizer and the tutorials, opened from your own Access installation, as the original's menu lists them; a Snow gets its own manuals), the Welcome page and What's New in TI Revive (since 0.8.39), the TI Revive website, Report a Problem (the GitHub issues), Prepare a Bug Report (since 0.8.42; before: Save Logs for a Bug Report): one text file with the system, the versions and the ends of the plug-in and broker logs, home folder and user name replaced, then GitHub's bug form opens with the version filled in and you attach the file there; nothing is sent by TI Revive. Since 0.8.42 also Download TI Revive (version), when the opt-in update check found a newer release (see Options). Then the detailed log for the next start, and Panic, which sends sustain off and all notes off on all 16 channels.</li>
         <li>The original's start-up page, &ldquo;Starting up&rdquo; with its filling ring, while a project opens; &ldquo;Syncing memory with Virus&rdquo; only when the plug-in really reads banks from the Virus (since 0.8.27). Since 0.8.39 &ldquo;Starting up&rdquo; goes straight to &ldquo;Syncing memory with Virus&rdquo; when banks have to be read, without the editor in between, as in the original. Then a Welcome page after a new install, or What's New after an update, in the original's style (since 0.8.39, also in the ? menu).</li>
         <li>Editor sizes from 100 to 200 %. On larger sizes and Retina screens each image is enlarged once with a
         sharp filter, in memory only.</li>
@@ -728,7 +736,7 @@ def features_section():
 
     <div class="feature">
       <div><h3>Timing</h3>
-      <p>The plug-in finds the clock of the Virus on USB, stamps every note against it and reports its latency, so the DAW lines recordings up with the grid. Since 0.8.39 that delay follows your buffer down to 32 samples, as the original's does (3584 samples plus the buffer: 76 ms at 64 samples and 48 kHz, before 82.7 ms), and notes you play live skip it in DAWs that mark them (Ableton Live), about 22 ms. Since 0.8.41 "Lower latency (experimental)" on the Control Center's Options page shortens that delay to 36 to 48 ms at buffers up to 256 (55 to 59 ms at 512); it leaves your DAW only about 20 ms, so switch it off if notes come late. If you record a part you play into Ableton Live, switch the plug-in's Live Mode on while you record: otherwise Live puts the take about 50 ms later than you heard it (measured on macOS with Live 12). Played notes can come 1 to 3 ms late now and then (the original stamps them the same way); "Even rhythm for played notes" on the Control Center's Options page (since 0.8.41) plays them about 3 ms later, so they come at most about 1.3 ms late (measured on a Mac). The Virus follows the host at 44.1 or 48 kHz like with the original (since
+      <p>The plug-in finds the clock of the Virus on USB, stamps every note against it and reports its latency, so the DAW lines recordings up with the grid. Since 0.8.39 that delay follows your buffer down to 32 samples, as the original's does (3584 samples plus the buffer: 76 ms at 64 samples and 48 kHz, before 82.7 ms), and notes you play live skip it in DAWs that mark them (Ableton Live), about 22 ms. Since 0.8.41 "Lower latency (experimental)" on the Control Center's Options page shortens that delay to 36 to 48 ms at buffers up to 256 (55 to 59 ms at 512); it leaves your DAW only about 20 ms, so switch it off if notes come late. If you record a part you play into Ableton Live, switch the plug-in's Live Mode on while you record: otherwise Live puts the take about 50 ms later than you heard it (measured on macOS with Live 12; the original's VST3 can also tell Live only one latency). Played notes can come 1 to 3 ms late now and then (the original stamps them the same way); "Even rhythm for played notes" on the Control Center's Options page (since 0.8.41) plays them about 3 ms later, so they come at most about 1.3 ms late (measured on a Mac). The Virus follows the host at 44.1 or 48 kHz like with the original (since
       0.8.32); at other host rates a resampler converts with -90 dB error.</p></div>
       <div><table class="data">
         <thead><tr><th>16th notes at 120 BPM</th><th>On the grid</th><th>Jitter</th><th>Drift</th></tr></thead>
@@ -816,10 +824,10 @@ def features_section():
       <div><h3>Nerd mode</h3>
       <p>Shows live what goes between TI Revive and the Virus, decoded: notes, parameter changes by name, dumps, the
       bank sync. It lists which programs use the Virus, shows the plug-in's and the broker's logs, and saves them all
-      for a bug report in one file. It only watches; it never sends anything to the Virus. Its Options page (since 0.8.41; also View &gt; Options) switches the plug-in's options: lower latency (experimental), the restart of scrambled audio, notes played live skipping the delay (on by default since 0.8.39), even rhythm for played notes, the plug-in log (on by default since 0.8.41), and two switches for comparisons with the original (the output delays only on change instead of at every Play/Stop, the timing as before 0.8.35). A change applies from the next start of the plug-in.</p></div>
-      <figure class="shot"><img loading="lazy" src="control-center-nerd-mode.png" width="860" height="620"
-      alt="Nerd mode: the plug-in plays notes and checks its bank cache, decoded live">
-      <figcaption>The plug-in plays notes and checks its bank cache, decoded live.</figcaption></figure>
+      for a bug report in one file. Since 0.8.42 Nerd mode, the Options page and the RAM banks (on BACKUP & RESTORE) are pages of the Access look, with a scrolling table and the plug-in log's switch on the Options page; the plain window is only used when the Access files are missing. It only watches; it never sends anything to the Virus. Its Options page (since 0.8.41; also View &gt; Options) switches the plug-in's options: lower latency (experimental), the restart of scrambled audio, notes played live skipping the delay (on by default since 0.8.39), even rhythm for played notes, the plug-in log (on by default since 0.8.41), the update check (since 0.8.42, off by default: once a day, when the Control Center opens, it asks GitHub for the newest release, with nothing about you or your setup; the plug-in itself never goes online, it shows a note once and a Download entry in its ? menu), a Virus TI Snow setting (since 0.8.42, off by default, macOS and Linux: after a quiet second TI Revive's service asks an idle Snow every 4 ms instead of every 1 ms, for less CPU; the first MIDI message after a pause can then come up to 3 ms later), and two switches for comparisons with the original (the output delays only on change instead of at every Play/Stop, the timing as before 0.8.35). A change applies from the next start of the plug-in; the update check runs at once and the Snow setting within a few seconds.</p></div>
+      <figure class="shot"><img loading="lazy" src="control-center-nerd-mode.png" width="860" height="612"
+      alt="Nerd mode in the Access look: the notes the plug-in sends to the Virus, decoded live">
+      <figcaption>Nerd mode in the Access look (0.8.42): the notes the plug-in sends to the Virus, decoded live. TI Revive ships no Access files; it draws this look at runtime from the skin in your own Access installer. Not affiliated with Access Music or Kemper.</figcaption></figure>
     </div>
 
     <div class="feature">
@@ -868,7 +876,7 @@ def page_changelog_landing(releases):
 SHARED_IMAGES = ["control-center.png", "control-center-nerd-mode.png", "plugin-help-mode.png", "plugin-help-inactive.png",
                  "plugin-menus.png", "plugin-library-drop.png",
                  "plugin-section-lock.png", "plugin-edit-menu.png", "plugin-help-menu.png"]
-TESTS = 753 # unit tests in native/tests (vtitests), as of 2026-11-14 (0.8.41)
+TESTS = 838 # unit tests in native/tests (vtitests), as of 2026-11-19 (0.8.42)
 
 # Important information shown at the top of the page, newest first (empty list = no box). The README starts with the
 # same text ("Important" block), keep both identical. Remove an entry when it no longer matters to users.
@@ -886,7 +894,7 @@ def notice_section():
   </div></div>
 </section>"""
 # line coverage of vticore, measured like CI (no Access files, empty home): gcov over the test run
-COVERAGE, COVERAGE_DATE = "96.4 %", "12 Nov 2026"
+COVERAGE, COVERAGE_DATE = "95.5 %", "19 Nov 2026"
 
 # the site: one page plus the changelog archive (file name, title and description for search results and link
 # previews, content)
@@ -953,7 +961,7 @@ def main():
     ap.add_argument("--cache", default=os.path.join(ROOT, "site", ".cache"))
     ap.add_argument("--out", default=os.path.join(ROOT, "site", "dist"))
     a = ap.parse_args()
-    releases = sorted(load_releases(a.releases), key=lambda r: r["published_at"], reverse=True)
+    releases = published(load_releases(a.releases))
     latest = next(r for r in releases if not r.get("prerelease") and not r.get("draft"))
     sums = sha256_of_assets(latest, a.cache) if a.checksums else {}
     render(a.out, releases, sums)

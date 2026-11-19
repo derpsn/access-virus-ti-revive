@@ -1,0 +1,11 @@
+# TI Revive broker for Virus N of several (#45): like tirevive-broker.socket, the broker of the N-th Virus
+# (vtibroker -slot N) on its own socket; started on the first connect of a plug-in instance that uses that Virus.
+[Unit]
+Description=TI Revive broker socket (Access Virus TI %i)
+
+[Socket]
+ListenStream=/tmp/vtibroker-%U-%i.sock
+SocketMode=0600
+
+[Install]
+WantedBy=sockets.target

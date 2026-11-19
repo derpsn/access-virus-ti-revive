@@ -10,6 +10,7 @@
 #include "model/utf8.h"
 #include "access/library.h"
 #include "cc/controlcenter.h"
+#include "cc/updatecheck.h"
 #include "nerdmode.h"
 #include "optionspage.h"
 #include "skinpage.h"
@@ -135,6 +136,7 @@ public:
         show_page(skin_ ? kSkinPage : kPlainPage); // also sets the window size (GTK does not apply config.size)
         window_->show();
         timer_ = makeOwned<CVSTGUITimer>([this](CVSTGUITimer *) { tick(); }, 100, true);
+        vti::cc::start_update_check_if_due(); // opt-in (Options page), at most once a day, on its own thread
     }
     // "View > Nerd mode" in the menu (macOS menu bar, the window's menu on Windows)
     bool canHandleCommand(const Command &c) override
@@ -153,6 +155,14 @@ public:
             }
         if (c != kNerdCommand && c != kOptionsCommand)
             return false;
+        if (skin_ && look_ == kSkinPage) { // the Access look has nerd mode and Options as pages of its own
+            show_page(kSkinPage);
+            if (c == kNerdCommand)
+                tirevive::show_skin_nerd(skin_);
+            else
+                tirevive::show_skin_options(skin_);
+            return true;
+        }
         show_page(c == kNerdCommand ? kNerdPage : kOptionsPage);
         return true;
     }

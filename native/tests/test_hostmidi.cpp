@@ -3,6 +3,7 @@
 // byte (0xF4: its DSP's private command parser, rule 2); a tempo of 0 or below made the MIDI clock loop endless on
 // the audio thread.
 #include "check.h"
+#include "device/automation.h"
 #include "device/hostmidi.h"
 #include <cmath>
 #include <limits>
@@ -54,4 +55,64 @@ TEST(hostmidi_mapped_controllers)
     CHECK(mapped_message(0, 129, 0.5, m) == 3 && m[0] == 0xE0 && m[1] == 0 && m[2] == 64);  // pitch bend centre
     CHECK(mapped_message(0, 121, 1.0, m) == 0);                                            // reset: never
     CHECK(mapped_message(0, 7, 2.0, m) == 3 && m[2] == 127);                               // data byte < 0x80
+}
+
+// audit 2026-11-17 #4: pitch bend, aftertouch and controllers the host hands over as parameters went to the Virus
+// once per block, past the automation budget (a bend ramp at 32 samples / 48 kHz: 1500/s, rule 2). Now only the
+// latest value per channel and controller waits, and it shares the AutomationQueue's budget with the parameters.
+TEST(hostmidi_mapped_controllers_share_the_automation_budget)
+{
+    AutomationQueue q(250);
+    MappedPending p;
+    const uint32_t bend = 0x100000 + 3 * 0x1000 + 129; // channel 4 pitch bend
+    int sent = 0;
+    for (int block = 0; block < 1500; block++) { // one second
+        uint8_t m[3];
+        size_t n = mapped_message(3, 129, (block % 100) / 100.0, m);
+        if (p.set(3, 129, m, n, 7, block))
+            CHECK(q.push(bend));
+        q.refill(32, 48000);
+        q.drain(96, [&](uint32_t id) {
+            MappedPending::Slot s;
+            if (id != bend || !p.take(3, 129, s))
+                return false;
+            CHECK(s.n == 3 && (s.m[0] & 0xF0) == 0xE0);
+            sent++;
+            return true;
+        });
+    }
+    CHECK(sent >= 240 && sent <= 250 + 64); // the budget, not 1500
+}
+
+TEST(hostmidi_mapped_pending_keeps_the_latest_value_and_its_time)
+{
+    MappedPending p;
+    const uint8_t on[3] = {0xB0, 64, 127}, off[3] = {0xB0, 64, 0};
+    CHECK(p.set(0, 64, on, 3, 10, 5));   // not waiting yet: the caller queues it
+    CHECK(!p.set(0, 64, off, 3, 20, 5)); // already waiting: only the value changes
+    MappedPending::Slot s;
+    CHECK(p.take(0, 64, s));
+    CHECK(s.m[2] == 0 && s.offset == 20 && s.block == 5); // the latest, at its own offset in its block
+    CHECK(!p.take(0, 64, s));                              // taken: nothing waits
+    CHECK(!p.set(16, 64, on, 3, 0, 0) && !p.set(0, 130, on, 3, 0, 0)); // out of range: ignored
+    CHECK(!p.take(16, 64, s) && !p.take(0, -1, s));
+}
+
+// review of #4: pedals (CC 64..69) are switches (down from 64 on, like the Virus): they skip the automation queue
+// (a sustain-off would wait behind every automated lane) and go out at their own offset, but only when the switch
+// flips, so a drawn pedal ramp cannot flood the Virus either
+TEST(hostmidi_pedals_go_at_once_but_only_on_a_flip)
+{
+    PedalSwitch p;
+    CHECK(PedalSwitch::pedal(64) && PedalSwitch::pedal(69) && !PedalSwitch::pedal(63) && !PedalSwitch::pedal(70));
+    CHECK(p.flips(0, 64, 127));  // the first value always goes (the Virus' state is unknown)
+    CHECK(!p.flips(0, 64, 100)); // still down
+    CHECK(p.flips(0, 64, 10));   // up
+    CHECK(!p.flips(0, 64, 0));
+    CHECK(p.flips(1, 64, 0));    // another channel: its own state
+    CHECK(p.flips(0, 66, 64));   // another pedal: its own state, 64 = down
+    int sent = 0;
+    for (int i = 0; i < 1500; i++) // a 0..127 saw, 12 cycles in a second: two flips each, not 1500 messages
+        sent += p.flips(2, 64, (i * 127 / 125) % 128);
+    CHECK(sent >= 20 && sent <= 25);
 }

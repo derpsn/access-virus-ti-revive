@@ -14,11 +14,11 @@ BUILD="$OUT/build-linux"
 rm -rf "$BUILD" && mkdir -p "$BUILD"
 
 echo "== libusb (static, without udev: the broker finds the Virus through sysfs)"
-LIBUSB_VER=1.0.30
+. "$REPO/scripts/libusb.sh" # LIBUSB_VER, the pinned SHA-256, libusb_fetch (audit #7)
 LIBUSB="$OUT/libusb-$LIBUSB_VER-linux-static"
 if [ ! -f "$LIBUSB/lib/libusb-1.0.a" ]; then
     T=$(mktemp -d)
-    curl -fsSL "https://github.com/libusb/libusb/releases/download/v$LIBUSB_VER/libusb-$LIBUSB_VER.tar.bz2" -o "$T/libusb.tar.bz2"
+    libusb_fetch "$T/libusb.tar.bz2"
     tar -xjf "$T/libusb.tar.bz2" -C "$T"
     (cd "$T/libusb-$LIBUSB_VER" && ./configure -q --disable-shared --enable-static --disable-udev --prefix="$LIBUSB" \
         CFLAGS="-O2 -fPIC" >/dev/null && make -s -j4 install >/dev/null)
@@ -27,7 +27,7 @@ fi
 echo "== broker"
 B="$REPO/src/broker"
 gcc -O2 -Wall -Wextra -DTIREVIVE_VERSION="\"$VERSION\"" -I"$LIBUSB/include/libusb-1.0" -o "$BUILD/vtibroker" "$B/vtibroker_posix.c" "$B/vticore.c" \
-    "$B/vtiusbaudio_libusb.c" "$B/vticore_midi.c" "$LIBUSB/lib/libusb-1.0.a" -lpthread
+    "$B/vtiusbaudio_libusb.c" "$B/vtikeyport_linux.c" "$B/vticore_midi.c" "$LIBUSB/lib/libusb-1.0.a" -lpthread
 ! ldd "$BUILD/vtibroker" | grep -q libusb || { echo "broker still links libusb dynamically"; exit 1; }
 NATIVE=""
 CC_BIN="" # tirevive-cc, the Control Center command line (native/tools)
@@ -58,7 +58,7 @@ install -m 0755 "$BUILD/vtibroker" "$P/bin/"
 install -m 0755 -s "$CC_BIN" "$P/bin/tirevive-cc"
 [ -f "$CCAPP_BIN" ] || { echo "TIReviveControlCenter missing (NATIVE_CCAPP with NATIVE_PREBUILT)"; exit 1; }
 install -m 0755 -s "$CCAPP_BIN" "$P/bin/tirevive-control-center"
-install -m 0644 "$I/tirevive-broker.socket" "$I/tirevive-broker.service" "$P/systemd/"
+install -m 0644 "$I/tirevive-broker.socket" "$I/tirevive-broker.service" "$I/tirevive-broker@.socket" "$I/tirevive-broker@.service" "$P/systemd/"
 install -m 0644 "$I/70-tirevive-virus-ti.rules" "$P/udev/"
 install -m 0755 "$I/install.sh" "$I/uninstall.sh" "$P/"
 mkdir -p "$P/native" && cp -R "$NATIVE" "$P/native/"

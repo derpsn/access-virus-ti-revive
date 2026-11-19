@@ -11,6 +11,7 @@ static void log_stderr(const char *fmt, ...)
     va_end(ap);
 }
 void (*vti_log)(const char *fmt, ...) = log_stderr;
+int vti_slot = 1;
 
 int vti_pack_sysex(uint8_t cable, const uint8_t *msg, int len, uint8_t *out, int outsz)
 {

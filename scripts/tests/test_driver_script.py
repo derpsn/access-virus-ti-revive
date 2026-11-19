@@ -37,6 +37,37 @@ class DriverScript(unittest.TestCase):
         self.assertIn("Show-UserMessage", self.text)
         self.assertLess(self.text.index("Get-AccessBoundVirus"), self.text.index("pnputil /delete-driver $pkg"))
 
+    def test_a_failed_driver_add_fails_the_setup(self):
+        # audit #15: the MSI action checks the exit code (Return="check"); exit 0 after a failure looked like success.
+        # Not on the signature status alone: M6 logged "UnknownError" with a working driver
+        add = self.text.index("$out = pnputil /add-driver")
+        self.assertRegex(self.text[add:], r"if \(-not \$pkg\) \{ Fail-Install ")
+        fail = self.text[self.text.index("function Fail-Install"):]
+        fail = fail[: fail.index("\n}\n")]
+        self.assertIn("Trust-Store", fail)  # no uninstall follows a failed setup: take the trust back here
+        self.assertIn("exit 1", fail)
+
+
+
+class SystemLogs(unittest.TestCase):
+    def test_system_actions_log_into_the_install_folder(self):
+        # audit #28: a standard user can create %ProgramData%\TI Revive first (a junction, a planted driver.log hard
+        # link) and SYSTEM then appends wherever it points; the install folder under Program Files is not theirs
+        for name in ("tirevive-driver.ps1", "tirevive-bundles.ps1"):
+            with open(os.path.join(HERE, "..", "..", "src", "installer", name), encoding="utf-8") as f:
+                text = f.read()
+            self.assertNotIn("$logDir = Join-Path $env:ProgramData", text, name)
+            self.assertIn("$logDir = $PSScriptRoot", text, name)
+
+
+
+class AccessScript(unittest.TestCase):
+    def test_only_the_64_bit_access_msi_is_picked(self):
+        # audit #30: the newest "*Virus TI*.msi" could be the 32-bit one, whose Virus Control.dll is refused (E345)
+        with open(os.path.join(HERE, "..", "..", "src", "installer", "tirevive-access.ps1"), encoding="utf-8") as f:
+            text = f.read()
+        self.assertIn("-Filter '*Virus TI*64-bit*.msi'", text)
+        self.assertNotIn("-Filter '*Virus TI*.msi'", text)
 
 if __name__ == "__main__":
     unittest.main()

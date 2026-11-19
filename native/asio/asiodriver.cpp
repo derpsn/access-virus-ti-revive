@@ -117,6 +117,9 @@ const double RATE = 44100; // before the ring is open
 const char *IN_NAMES[IN_CH] = {"Analog In L", "Analog In R", "USB 1 L", "USB 1 R", "USB 2 L", "USB 2 R"};
 const char *OUT_NAMES[OUT_CH] = {"Virus Out L", "Virus Out R"};
 const int OUT_PREFILL = 512; // the broker starts playing with this much queued (vtibroker.c)
+// the largest buffer the driver offers and takes: the read loop re-syncs when it falls 8192 frames behind, so 8192
+// blocks re-synced (muted) almost every time (audit #25)
+const long MAX_BUF = 2048;
 const int64_t START_MUTE = 4410; // frames of silence after a (re)start: the first USB block can carry a full-scale spike
 
 void split64(uint64_t v, unsigned long &hi, unsigned long &lo)
@@ -222,11 +225,12 @@ public:
             return 0;
         }
         // no wish (0): the rate that is set stays - the host's setSampleRate decides right after (review step 4)
-        if (broker_.audio(true, 3000, 0) != 1 || !audio_.open()) {
+        // the flag as soon as the broker streams: a failed open() below must still get its audio off (audit #33)
+        audio_on_ = broker_.audio(true, 3000, 0) == 1;
+        if (!audio_on_ || !audio_.open()) {
             error_ = "the Virus' USB audio is not available (TI Revive WinUSB driver installed?)";
             return 0;
         }
-        audio_on_ = true;
         int seen;
         audio_.rate_changed(seen); // the rate the ring was opened with is no change
         char nm[64]; // Broker::audio registered this per-process event; the broker signals it for every input block
@@ -281,7 +285,7 @@ public:
     }
     ASIOError getBufferSize(long *mn, long *mx, long *pref, long *gran) override
     {
-        *mn = 64, *mx = 2048, *pref = 256, *gran = -1; // powers of two; 256 like the original
+        *mn = 64, *mx = MAX_BUF, *pref = 256, *gran = -1; // powers of two; 256 like the original
         return ASE_OK;
     }
     ASIOError canSampleRate(double r) override { return r == 44100 || r == 48000 ? ASE_OK : ASE_NoClock; }
@@ -349,7 +353,7 @@ public:
     {
         if (!inited_)
             return ASE_NotPresent;
-        if (!infos || !cb || num <= 0 || size < 16 || size > 8192)
+        if (!infos || !cb || num <= 0 || size < 16 || size > MAX_BUF)
             return ASE_InvalidParameter;
         disposeBuffers();
         for (long i = 0; i < num; i++) {
