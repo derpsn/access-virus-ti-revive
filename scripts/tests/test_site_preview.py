@@ -13,7 +13,7 @@ spec.loader.exec_module(sitebuild)
 
 def rel(tag, when, pre=False, draft=False):
     return {"tag_name": tag, "published_at": when + "T12:00:00Z", "prerelease": pre, "draft": draft,
-            "html_url": "https://github.com/derpsn/access-virus-ti-revive/releases/tag/" + tag}
+            "html_url": "https://github.com/derpsn/ti-revive/releases/tag/" + tag}
 
 
 LATEST = rel("v0.9.0", "2026-12-01")

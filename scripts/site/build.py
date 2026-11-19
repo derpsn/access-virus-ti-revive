@@ -6,7 +6,7 @@
 #
 #   python3 scripts/site/build.py [--releases FILE] [--checksums] [--out DIR]
 #
-# --releases: a saved `gh api repos/derpsn/access-virus-ti-revive/releases?per_page=100` (else gh is called)
+# --releases: a saved `gh api repos/derpsn/ti-revive/releases?per_page=100` (else gh is called)
 # --checksums: download the newest release's files once (cached in --cache) and show their SHA-256
 import argparse
 import hashlib
@@ -18,9 +18,9 @@ import shutil
 import subprocess
 import sys
 
-REPO = "derpsn/access-virus-ti-revive"
+REPO = "derpsn/ti-revive"
 GH = "https://github.com/" + REPO
-SITE = "https://derpsn.github.io/access-virus-ti-revive/" # the published address (canonical URLs, sitemap, previews)
+SITE = "https://derpsn.github.io/ti-revive/" # the published address (canonical URLs, sitemap, previews)
 ROOT = os.path.dirname(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 
 # versions whose release text has no "New in" / "What's new in" part: a short summary written by hand

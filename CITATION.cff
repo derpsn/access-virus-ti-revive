@@ -5,7 +5,7 @@ abstract: "Access Virus TI on Windows 11, macOS and Linux without the old Access
 type: software
 authors:
   - alias: derpsn
-repository-code: "https://github.com/derpsn/access-virus-ti-revive"
+repository-code: "https://github.com/derpsn/ti-revive"
 license: MIT
 keywords:
   - Access Virus TI

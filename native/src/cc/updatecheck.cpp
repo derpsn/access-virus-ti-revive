@@ -27,7 +27,7 @@ extern char **environ;
 namespace vti::cc {
 
 namespace {
-const char *kApiUrl = "https://api.github.com/repos/derpsn/access-virus-ti-revive/releases/latest";
+const char *kApiUrl = "https://api.github.com/repos/derpsn/ti-revive/releases/latest";
 
 // "x.y.z" or "x.y.z-rcN": the three numbers and the rc number (0 = final). False for anything else.
 bool parse_version(const std::string &v, long n[3], long &rc)
@@ -195,7 +195,7 @@ bool show_update_note(const std::string &current, const UpdateState &s)
 
 std::string bug_report_url(const std::string &version, const std::string &os)
 {
-    return "https://github.com/derpsn/access-virus-ti-revive/issues/new?template=bug_report.yml&versions=" +
+    return "https://github.com/derpsn/ti-revive/issues/new?template=bug_report.yml&versions=" +
            url_encode("TI Revive " + version + ", " + os);
 }
 

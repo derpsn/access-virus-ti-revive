@@ -139,6 +139,8 @@ talk with the user (Linux may start); hil-win on the tuned VM: yes; update check
 7. Branding cleanup IN WORK (user 2026-11-19; list in work/HANDOFF-private.md): plug-in name "TI Revive", audio
    "TI Revive Audio", MIDI "TI Revive MIDI" etc.; Burn/OS Updater out of the Control Center; screenshots DONE (idea A,
    user 2026-11-19): scripts/site/mask_screenshots.py covers Access' logos, "TI Revive" (Lato Black, orange TI) in the
-   top logo spot, only the published PNGs (the plug-in shows the user's skin as before); repo -> ti-revive (user OK,
-   with a derpsn.github.io redirect for the old site path; update check follows the 301: curl -L / wget); Info page footer
+   top logo spot, only the published PNGs (the plug-in shows the user's skin as before); repo RENAMED to
+   derpsn/ti-revive 2026-11-19, old site path forwarded by the new repo derpsn/derpsn.github.io, links changed on the
+   round (log/2026-11.md); open: old /issues/45 link answered 404 (recheck), live site keeps the old canonical URL
+   until rebuilt from main, Google Search Console: new address (user); Info page footer
    "Not affiliated ..." (kInfoFooter, test infopage_footer_notice, 839 pass) uncommitted, screenshot needs the Virus on;

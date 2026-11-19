@@ -10,7 +10,7 @@ static std::string or_dash(const std::string &s, const char *prefix = "")
 std::string system_info_text(const std::string &param, const SystemInfo &info)
 {
     if (param == "VirusControl/Access Website") // without the scheme: fits the field
-        return "derpsn.github.io/access-virus-ti-revive";
+        return "derpsn.github.io/ti-revive";
     static const std::string base = "Internal System Info/";
     if (param.compare(0, base.size(), base) != 0)
         return {};

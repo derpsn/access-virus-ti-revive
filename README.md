@@ -4,7 +4,7 @@
 
 **Total Integration for the Access Virus TI on Windows 11, macOS and Linux — without the old drivers.**
 
-Website with downloads, features and help: **[derpsn.github.io/access-virus-ti-revive](https://derpsn.github.io/access-virus-ti-revive/)**
+Website with downloads, features and help: **[derpsn.github.io/ti-revive](https://derpsn.github.io/ti-revive/)**
 
 > ☕ **Free, and it will stay free.** Changes that touch the Virus are tested on the real synth, on the systems the release notes name, often
 > back and forth between the three, and that takes a lot of evenings. If TI Revive gives your Virus a second life and
@@ -33,7 +33,7 @@ contains no Access material. No kernel code of its own is installed.
 > **Polar and Keyboard** models, other DAWs (Cubase, Bitwig, FL Studio, Studio One), **Intel Macs**,
 > other **Linux** distributions and **Windows 10**. No coding needed: follow the
 > [testing guide](.claude/skills/tirevive-test/SKILL.md) and post a
-> [test report](https://github.com/derpsn/access-virus-ti-revive/issues/new?template=test_report.yml) - partial
+> [test report](https://github.com/derpsn/ti-revive/issues/new?template=test_report.yml) - partial
 > results help too.
 >
 > **With an AI coding agent** (Claude Code, Codex, Cursor, ...): this repository brings its own instructions
@@ -49,7 +49,7 @@ contains no Access material. No kernel code of its own is installed.
 
 | | Windows 11 | macOS | Linux |
 |---|---|---|---|
-| **Download** ([Releases](https://github.com/derpsn/access-virus-ti-revive/releases)) | `TI-Revive-<version>-setup.exe` (or the same as `.msi`) | `TI-Revive-<version>-mac.zip` | `TI-Revive-<version>-linux.tar.gz` |
+| **Download** ([Releases](https://github.com/derpsn/ti-revive/releases)) | `TI-Revive-<version>-setup.exe` (or the same as `.msi`) | `TI-Revive-<version>-mac.zip` | `TI-Revive-<version>-linux.tar.gz` |
 | **System** | Windows 11 x64 (also Windows 10) | macOS 14.4 or newer, Apple Silicon and Intel (Intel since 0.8.39, not tested on an Intel Mac yet) | x86_64, Ubuntu 22.04 / Debian 12 or newer, systemd |
 | **You need** | your own Access "Virus TI Software Suite" 64-bit `.msi` (only unpacked, not installed) | your own Access "Virus TI Software Suite" `.pkg` (only unpacked, not installed) | your own Access 64-bit `.msi` (only unpacked: msitools or Wine) |
 | **In your DAW** | VST3 **"TI Revive Virus Control"**; ASIO device **"TI Revive Virus Audio"** (the Virus as sound card) | **"TI Revive Virus Control"** as VST3 and Audio Unit (Logic, GarageBand) | VST3 **"TI Revive Virus Control"** |
@@ -63,18 +63,18 @@ contains no Access material. No kernel code of its own is installed.
 - **Coming from 0.7.x:** the classic plug-in "Virus TI (TI Revive)" (the original Access plug-in in a wrapper) is
   replaced. Projects saved with it open with "TI Revive Virus Control" (same plug-in ID). The Access software that
   earlier versions installed is offered for removal; the files the plug-in needs stay.
-- **Virus TI Snow:** on Linux since 0.8.38 ([issue #26](https://github.com/derpsn/access-virus-ti-revive/issues/26), pull request #27), one owner's Snow connects, plays notes and syncs parameters, on a release candidate; they also report sync messages with clicks, one session with no sync marker and notes that sound on after Stop. Otherwise it works with the native plug-in according to user reports (macOS, 0.8.3 and later:
+- **Virus TI Snow:** on Linux since 0.8.38 ([issue #26](https://github.com/derpsn/ti-revive/issues/26), pull request #27), one owner's Snow connects, plays notes and syncs parameters, on a release candidate; they also report sync messages with clicks, one session with no sync marker and notes that sound on after Stop. Otherwise it works with the native plug-in according to user reports (macOS, 0.8.3 and later:
   sound, both USB outputs, parameters; with 0.8.20 also USB 3 and the soft knobs); not tested by us - we have no
   Snow. Since 0.8.35 there is also a Snow plug-in, "TI Revive Virus Control (Snow)": like the original's own Snow
   plug-in it shows the Snow's editor with its 4 parts and uses the Snow's files from your Access installer, as VST3
   and on macOS also as Audio Unit for Logic Pro and GarageBand (the Audio Unit checked in Logic Pro on a TI2). A first
   user report on a Snow (VST3, macOS): parameters and sound work; like the original's Snow editor it has no level
   meter. The regular plug-in keeps working with the Snow as before, and existing projects stay on it. Please tell us in a
-  [GitHub issue](https://github.com/derpsn/access-virus-ti-revive/issues) what works and what not.
-  [TI Revive 0.7.4](https://github.com/derpsn/access-virus-ti-revive/releases/tag/v0.7.4) with its classic plug-in
+  [GitHub issue](https://github.com/derpsn/ti-revive/issues) what works and what not.
+  [TI Revive 0.7.4](https://github.com/derpsn/ti-revive/releases/tag/v0.7.4) with its classic plug-in
   "Virus TI Snow (TI Revive)" stays available for Windows. If TI Revive does not find your Snow, run
   [`tirevive-usbinfo.ps1`](scripts/tirevive-usbinfo.ps1) with the Snow connected and attach the
-  `TI-Revive-usbinfo.txt` it saves on your Desktop to a [GitHub issue](https://github.com/derpsn/access-virus-ti-revive/issues).
+  `TI-Revive-usbinfo.txt` it saves on your Desktop to a [GitHub issue](https://github.com/derpsn/ti-revive/issues).
 - **Virus Control Center**: Access' app does not work without its old driver. TI Revive brings its own, step by
   step: **TI Revive Control Center** (device info, backup and restore of the RAM banks, library export; also as the
   command line tool `tirevive-cc`; see "Backups" below). Firmware/OS updates and flash functions are not supported, on purpose.
@@ -307,7 +307,7 @@ same with Access' own driver.
   alphabetically"), and patches keep their positions with gaps like in the original. A RAM bank's right-click menu
   has "Download entire bank from Virus TI" (reads all 128 again, about 2 minutes, progress on the LCD) and "Sort alphabetically" (writes
   only the slots that change; like the original, it cannot be undone).
-- **Your own ROM banks** (since 0.8.37, [issue #22](https://github.com/derpsn/access-virus-ti-revive/issues/22)):
+- **Your own ROM banks** (since 0.8.37, [issue #22](https://github.com/derpsn/ti-revive/issues/22)):
   if you burned your own banks into the Virus' ROM slots with the original Control Center, TI Revive reads those
   banks from the Virus instead of taking the factory banks from your Access installer, like the original. The Virus
   marks these banks itself. TI Revive reads each of them once, patch by patch (about 2 minutes per bank, progress on
@@ -317,7 +317,7 @@ same with Access' own driver.
   Live 11) and macOS (Ableton Live 12); on Linux the patches read from the Virus were byte for byte those of the
   Access installer. Works for a user with a TI2 Polar whose ROM A-Z hold their own banks and a TI2 Desktop with their
   own banks in ROM A-L (macOS, Logic Pro): their names in the browser, their sounds on the Virus.
-- **Arrow keys in the browser** (since 0.8.37, [issue #23](https://github.com/derpsn/access-virus-ti-revive/issues/23), our own addition): click a patch in a browser list, then Up and Down step to the next or
+- **Arrow keys in the browser** (since 0.8.37, [issue #23](https://github.com/derpsn/ti-revive/issues/23), our own addition): click a patch in a browser list, then Up and Down step to the next or
   previous patch, Left and Right to the next or previous column, and load it into the selected part. Holding a key
   runs through the list, and the patch it stops on is loaded. Up and Down tested on Linux (REAPER), Windows 11 (VM,
   Ableton Live 11) and macOS (Ableton Live 12), and by a user on macOS (Logic Pro); Left and Right on Linux (REAPER) and by a user on macOS.
@@ -327,10 +327,10 @@ same with Access' own driver.
 
 #### On the Virus and in the DAW
 
-- **Several Viruses at once** (since 0.8.42, [issue #45](https://github.com/derpsn/access-virus-ti-revive/issues/45): each Virus gets its own TI Revive service, numbered by the USB port it is plugged into (Virus 1, Virus 2, ...), and each plug-in instance takes a free Virus: the one its project was saved with when that one is free, as the original did. Their MIDI inputs carry the number ("Virus TI 2 Synth"). On Windows the ASIO driver plays Virus 1 only. With one Virus nothing changes: a second instance waits as before. Tested on Linux with our TI2 and a simulated TI2 as the second; not yet with two real Viruses, nor with two on Windows or macOS.)
+- **Several Viruses at once** (since 0.8.42, [issue #45](https://github.com/derpsn/ti-revive/issues/45): each Virus gets its own TI Revive service, numbered by the USB port it is plugged into (Virus 1, Virus 2, ...), and each plug-in instance takes a free Virus: the one its project was saved with when that one is free, as the original did. Their MIDI inputs carry the number ("Virus TI 2 Synth"). On Windows the ASIO driver plays Virus 1 only. With one Virus nothing changes: a second instance waits as before. Tested on Linux with our TI2 and a simulated TI2 as the second; not yet with two real Viruses, nor with two on Windows or macOS.)
 - **Presets, soft knobs and the part selected on the Virus itself** are followed, as in the original (the part since
   0.8.33).
-- **Knobs on the Virus reach your DAW:** knobs you turn on the Virus reach your DAW like the plug-in's own knobs while the plug-in window is open (since 0.8.29, [issue #10](https://github.com/derpsn/access-virus-ti-revive/issues/10)): Ableton Live's Configure mode adds them and automation records them. Tested in Ableton Live 11 (Windows 11, VM), Ableton Live 12 (macOS) and REAPER (Linux).
+- **Knobs on the Virus reach your DAW:** knobs you turn on the Virus reach your DAW like the plug-in's own knobs while the plug-in window is open (since 0.8.29, [issue #10](https://github.com/derpsn/ti-revive/issues/10)): Ableton Live's Configure mode adds them and automation records them. Tested in Ableton Live 11 (Windows 11, VM), Ableton Live 12 (macOS) and REAPER (Linux).
 - **Three stereo outputs over USB, plus the analog outputs of the Virus.** Parts on the analog outputs stay in time
   with the USB parts: like the original, the Virus holds them back by the USB latency (since 0.8.33).
 - **Hearing the Virus**: with a part output set to *USB*, the audio comes through the plug-in track.
@@ -509,8 +509,8 @@ Hanging notes, sync errors, crashes, projects that did not open, the preset brow
 remember it roughly, say so. One we could not test: Cubase on Windows opening a project while the Virus is switched
 on, where the original crashed
 ([Steinberg forum](https://forums.steinberg.net/t/virus-ti-plugin-crashes-cubase/159521)).
-[Report a problem in the original plug-in](https://github.com/derpsn/access-virus-ti-revive/issues/new?template=original_problem.yml)
-or see the [reports so far](https://github.com/derpsn/access-virus-ti-revive/issues?q=label%3Aoriginal). The
+[Report a problem in the original plug-in](https://github.com/derpsn/ti-revive/issues/new?template=original_problem.yml)
+or see the [reports so far](https://github.com/derpsn/ti-revive/issues?q=label%3Aoriginal). The
 community reports and how we checked them are in [findings/claims.md](findings/claims.md) (C11-C18).
 
 ## Performance and improvements (0.8.0)
@@ -819,7 +819,7 @@ with an AI coding assistant, it finds its instructions in [AGENTS.md](AGENTS.md)
 ## Using our findings
 
 The protocol knowledge in [findings/](findings/) is free to use. If it helps your project, we would be happy about a
-mention, for example: "Protocol knowledge from TI Revive (https://github.com/derpsn/access-virus-ti-revive)".
+mention, for example: "Protocol knowledge from TI Revive (https://github.com/derpsn/ti-revive)".
 Corrections and new observations are welcome as issues, so everyone benefits. GitHub's "Cite this repository" button
 gives the same as a citation.
 

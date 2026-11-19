@@ -41,4 +41,4 @@ your patch libraries stay.
 Logs (for bug reports): the Control Center's Nerd mode > "Save logs...", or diag.log in ~/Library/Application
 Support/virus-ti-native (on by default since 0.8.41) and /tmp/tirevive-vtibroker.log.
 
-Not affiliated with Access Music or Kemper. https://github.com/derpsn/access-virus-ti-revive
+Not affiliated with Access Music or Kemper. https://github.com/derpsn/ti-revive

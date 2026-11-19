@@ -24,12 +24,12 @@ welcome. Many people use AI assistants for this, and that is fine: the rules bel
 Tests on setups we do not have are the most useful contribution: the **Virus TI Snow** (works per user reports, not tested by us),
 Polar and Keyboard models, Logic Pro and other DAWs, Intel Macs, other Linux distributions, Windows 10. Follow the
 [testing guide](.claude/skills/tirevive-test/SKILL.md) (plain text, also used by AI coding agents) and post a
-[test report](https://github.com/derpsn/access-virus-ti-revive/issues/new?template=test_report.yml). Report each
+[test report](https://github.com/derpsn/ti-revive/issues/new?template=test_report.yml). Report each
 stage as pass, fail or not tested - partial results help.
 
 ## Reporting a bug
 
-Open an [issue](https://github.com/derpsn/access-virus-ti-revive/issues/new/choose) and attach the logs for your
+Open an [issue](https://github.com/derpsn/ti-revive/issues/new/choose) and attach the logs for your
 platform. They are what makes a quick answer possible:
 
 | Platform | Logs |

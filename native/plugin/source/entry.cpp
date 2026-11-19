@@ -57,7 +57,7 @@ SMTG_EXPORT_SYMBOL IPluginFactory *PLUGIN_API GetPluginFactory()
         gPluginFactory->addRef();
         return gPluginFactory;
     }
-    static PFactoryInfo factoryInfo("TI Revive", "https://github.com/derpsn/access-virus-ti-revive", "",
+    static PFactoryInfo factoryInfo("TI Revive", "https://github.com/derpsn/ti-revive", "",
                                     Vst::kDefaultFactoryFlags);
     gPluginFactory = new CPluginFactory(factoryInfo);
     TUID ti = INLINE_UID_FROM_FUID(vti::kVirusTIClassId);

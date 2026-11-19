@@ -13,7 +13,7 @@
 namespace vti {
 
 // where bug reports go (the "?" menu's "Report a Problem")
-inline const char *issues_url() { return "https://github.com/derpsn/access-virus-ti-revive/issues"; }
+inline const char *issues_url() { return "https://github.com/derpsn/ti-revive/issues"; }
 
 enum class MenuAction { None, HelpMode, SetupTips, Welcome, WhatsNew, Manual, Website, Report, SaveLogs, Update, DiagLog, Panic, Undo, Redo, Compare, Randomize, Size };
 

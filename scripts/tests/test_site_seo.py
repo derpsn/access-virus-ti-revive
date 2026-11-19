@@ -10,7 +10,7 @@ import unittest
 sys.path.insert(0, os.path.join(os.path.dirname(os.path.abspath(__file__)), "..", "site"))
 import build  # noqa: E402
 
-SITE = "https://derpsn.github.io/access-virus-ti-revive/"
+SITE = "https://derpsn.github.io/ti-revive/"
 
 
 def release(tag, when):

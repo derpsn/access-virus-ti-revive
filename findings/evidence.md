@@ -1,6 +1,6 @@
 # Evidence log
 
-If these findings help your project, we would be happy about a mention, for example: "Protocol knowledge from TI Revive (https://github.com/derpsn/access-virus-ti-revive)". Corrections and new observations are welcome as issues, so everyone benefits.
+If these findings help your project, we would be happy about a mention, for example: "Protocol knowledge from TI Revive (https://github.com/derpsn/ti-revive)". Corrections and new observations are welcome as issues, so everyone benefits.
 
 Every conclusion gets an entry, one `### Ennn` section each, numbered in order. The topic index is
 [evidence-index.md](evidence-index.md) (generated). Before a commit, `python3 -I scripts/evidence.py check` must pass

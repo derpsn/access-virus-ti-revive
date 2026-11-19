@@ -393,7 +393,7 @@ jobs:
           - **Control Center: restoring a library into a RAM bank no longer stops at a fixed patch with "the Virus has another patch after the restore" (#43).** Many library files carry a patch flag byte the Virus does not store, so the check after each write failed although the patch was written; that byte is now left out, and a real mismatch names the byte that differs. A backup and restore of the RAM banks runs through on our TI2; the reporter's library not tested by us.
 
           Earlier versions: their own release pages, and every version's changes on one page in the
-          [changelog](https://derpsn.github.io/access-virus-ti-revive/changelog.html).
+          [changelog](https://derpsn.github.io/ti-revive/changelog.html).
 
           Not affiliated with Access Music or Kemper. Contains no Access software. See the
           [README](https://github.com/$GITHUB_REPOSITORY#readme) for how it works, limitations and uninstall.

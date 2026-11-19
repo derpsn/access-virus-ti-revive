@@ -9,7 +9,7 @@
 
 namespace vti::cc {
 
-constexpr const char *kReleasesUrl = "https://github.com/derpsn/access-virus-ti-revive/releases/latest";
+constexpr const char *kReleasesUrl = "https://github.com/derpsn/ti-revive/releases/latest";
 
 // GitHub's answer for /releases/latest: true and "0.8.43" for a plain final release tag "v0.8.43"; false for a
 // pre-release, a draft, an rc tag or anything that is not such an answer (error, rate limit, garbage)

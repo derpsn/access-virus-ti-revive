@@ -51,4 +51,4 @@ Good to know
 
 Logs: broker "journalctl --user -u tirevive-broker"; plug-in: create ~/.local/share/virus-ti-native/diag.on, then
 see diag.log in the same folder.
-TI Revive is not affiliated with Access Music or Kemper. MIT license, https://github.com/derpsn/access-virus-ti-revive
+TI Revive is not affiliated with Access Music or Kemper. MIT license, https://github.com/derpsn/ti-revive

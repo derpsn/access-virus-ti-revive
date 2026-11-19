@@ -20,7 +20,7 @@ winpthreads (mingw-w64)   with mingw-w64  MIT, BSD-3     broker vtibroker.exe (W
 libusb and the LGPL: the broker links libusb statically. The complete source of that libusb version is at
 https://github.com/libusb/libusb/releases/tag/v1.0.30 and, from TI Revive 0.8.19 on, attached to every TI Revive
 release on GitHub (libusb-1.0.30.tar.bz2). The complete source of the broker is in the TI Revive repository
-(https://github.com/derpsn/access-virus-ti-revive, src/broker/), so you can rebuild and relink it with a modified
+(https://github.com/derpsn/ti-revive, src/broker/), so you can rebuild and relink it with a modified
 libusb: scripts/linux-build-release.sh and scripts/mac-build-release.sh show the exact build. The libusb copyright
 holders are listed in its AUTHORS file.
 
