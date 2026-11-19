@@ -19,7 +19,7 @@ Website with downloads, features and help: **[derpsn.github.io/access-virus-ti-r
   <img src="docs/images/control-center.png" alt="TI Revive Control Center in the look of Access' Virus Control Center" width="520"><br>
   <em>TI Revive Control Center: device, backups, Nerd mode</em>
 </p>
-<p align="center"><sub>The look is Access' own: TI Revive draws it at runtime from the skin in your own Access installer. TI Revive ships no Access files: no skin graphics, no logos, no Access code, no patch banks. Not affiliated with Access Music or Kemper.</sub></p>
+<p align="center"><sub>The look is Access' own: TI Revive draws it at runtime from the skin in your own Access installer. TI Revive ships no Access files: no skin graphics, no logos, no Access code, no patch banks; in these pictures the TI Revive name replaces Access' logos. Not affiliated with Access Music or Kemper.</sub></p>
 
 TI Revive brings the Access Virus TI (Desktop, Polar, Keyboard) back to current computers. Since 0.8.0 it comes
 with **"TI Revive Virus Control"**: a plug-in written from scratch that looks and works like the original Virus

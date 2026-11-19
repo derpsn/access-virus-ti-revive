@@ -292,7 +292,7 @@ def page_landing(latest, releases, sums):
     <figure class="shot">
       <img src="plugin-filter.png" width="1280" height="724"
       alt="TI Revive Virus Control, the plug-in's filter page, drawn from the user's own Access files">
-      <figcaption>The look is Access' own: TI Revive draws it at runtime from the skin in your own Access installer. TI Revive ships no Access files: no skin graphics, no logos, no Access code, no patch banks. Not affiliated with Access Music or Kemper.</figcaption>
+      <figcaption>The look is Access' own: TI Revive draws it at runtime from the skin in your own Access installer. TI Revive ships no Access files: no skin graphics, no logos, no Access code, no patch banks; in these pictures the TI Revive name replaces Access' logos. Not affiliated with Access Music or Kemper.</figcaption>
     </figure>
     </div>
     <p class="thanks">&#9749; <strong>Free, and it will stay free.</strong> Changes that touch the Virus are tested on the real synth,
