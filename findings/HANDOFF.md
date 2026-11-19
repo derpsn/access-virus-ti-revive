@@ -124,6 +124,6 @@ unplug step on the Access driver, Mac "Virus TI MIDI" played through, Keyboard/P
    (MSI VCBUNDLE + major upgrade, Mac postinstall, Linux install.sh). OPEN before release: user looks at the Control
    Center: user OK ("cc looks clean"); new CC screenshots (both still show the buttons); project test: REAPER on
    Linux PASSED (E556), Logic on the Mac PASSED (E557: loads, named TI Revive; MIDI input must be chosen again, Logic
-   keeps it by name), Live on the Mac worked (user), Live on Windows (win11 VM) still to do; Mac has the 0.8.43 test package (pkg 22ae6de3); What's New 0.8.43 + release text WRITTEN (only REAPER named as tested; add Live/Logic when done).
+   keeps it by name), Live on the Mac worked (user), Live on Windows PASSED (E558; win11 VM has the 0.8.43 test build); Mac has the 0.8.43 test package (pkg 22ae6de3); What's New 0.8.43 + release text WRITTEN (only REAPER named as tested; add Live/Logic when done).
    CI 44613895602 (3ff1a00, 0.8.43): mac + mac-libusb green (Mac test uses it); native-windows/-linux red (scripts_py:
    no Pillow on CI, risk.json lacked scripts/reaper-projcompat) - fixed, new run for Windows. Linux has the local 0.8.43 dev build (0bd56d8).

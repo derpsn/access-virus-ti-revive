@@ -5171,3 +5171,18 @@ evening; no details beyond "worked").
 - **Method:** hardware test on our Mac (MacBook Air M3, macOS 27.2.1, TI2 Desktop) by the user in Logic Pro; installed files checked over SSH
 - **Confidence:** HIGH (Logic on macOS 27) / MED (Ableton Live on macOS: the user's short report)
 - **Hardware:** yes (TI2 Desktop, Mac)
+
+### E558
+
+Windows after the rename of 0.8.43 (see E556, E557): win11 VM (Windows 11, no Virus attached), a project saved in
+Ableton Live by the user with "TI Revive Virus Control" (the 0.8.42 code of CI 44588173936 installed), then the
+round-0.8.43 setup.exe (CI 44615094701, f3d612e, d45048c3) installed with /quiet: exit 0, product version 0.8.43;
+Common Files\VST3 held only "TI Revive.vst3" (file version 0.8.43), the old "TI Revive Virus Control.vst3" was gone;
+HKLM\SOFTWARE\ASIO listed "TI Revive Audio" and no longer "TI Revive Virus Audio". In Live (user, 2026-11-19): the
+plug-in was there in the saved project, and the ASIO driver showed with the new name.
+
+- **Date:** 2026-11-19
+- **Pointer:** native/packaging/windows/native.wxs (VCBUNDLE removal, ASIO registry key), native/asio/asiodriver.cpp (OLD_DRIVER_NAMES)
+- **Method:** silent install in the win11 VM checked over SSH (PowerShell); project reopened in Ableton Live by the user
+- **Confidence:** HIGH (Windows 11, Ableton Live, without a Virus attached) / open (with the Virus: sound through TI Revive Audio after the rename)
+- **Hardware:** no (VM without the Virus)
