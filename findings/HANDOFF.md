@@ -28,8 +28,8 @@ Last update: 2026-11-19: joint issue check (#47 new, reply posted; #34 closed); 
   mac-libusb (its package checks: plain pkg, marker, no UTI, CC min 10.15). Not run on any Mac yet.
 - Test round of 0.8.41: all passed (details in log/2026-11.md, checklist spec scripts/checklists/round-0.8.41.json).
 - Our TI2 Desktop: on **Linux** USB (2026-11-14 evening). User flashed ROM Z on it in early November (E500).
-- Linux: 0.8.41 release installed (plug-in 184badb2, broker 728db830, Control Center 0.8.41).
-- win11 VM: CI test build 44255563905 (0.8.42, 632d5df) installed 2026-11-18 (/quiet exit 0), shut down. hil-win on the tuned VM 2026-11-15 (E537): run 1
+- Linux: CI test build 44486371869 (0.8.42, 4045dbe) installed 2026-11-19 (install.sh exit 0, plug-in ca2949e0, broker c280b8e6 = package; slot sockets 1-4 active).
+- win11 VM: CI test build 44486371869 (0.8.42, 4045dbe) installed 2026-11-19 (VST3 597a7b25) (/quiet exit 0), shut down. hil-win on the tuned VM 2026-11-15 (E537): run 1
   4/5 (H1 silent, first session after Virus power-on + attach, audio read hung), run 2 4/5 (H2-1 drift +112 ppm
   only); probe answered every time, notes <= 0.70 ms. TUNED 2026-11-14 (E533): vCPUs pinned to P-cores
   4-7, emulator 2-3, topology 1/2/2, no emulated sound / SPICE USB redirect / balloon, evmcs+avic off, ISOs off;
@@ -143,7 +143,7 @@ talk with the user (Linux may start); hil-win on the tuned VM: yes; update check
    no re-announce (E544); diag.off had been set on the Mac, removed. libusb install on our Mac only with the user;
    rc3 released for #37 (user 2026-11-15: post it for him to test, Catalina not testable here).
 5b. AUDIT 2026-11-17 DONE: all 34 items of [`audit-2026-11-17.md`](audit-2026-11-17.md) fixed and reviewed (fff1a52..632d5df; CI 44255563905 all green). win11 VM 2026-11-18 (log): #28 PASSED (logs in Program Files by SYSTEM, a standard user reads but cannot write or add files, uninstall removes them), #15 success path PASSED (exit 0, oem13.inf recorded; failure path not provoked). Still not run: #13 #25 #26 #33 (Windows broker/ASIO with a Virus), #14 #27 (libusb audio, idle exit), #21-#24 (plug-in in a DAW), #32 (bank sync, E552).
-6. Linux: DEV build installed (multi-device, 2026-11-18; before it in ~/.vst3-backup/0.8.42-dev-before-multidevice); Mac: test
+6. Linux: CI test build 44486371869 installed (multi-device incl.; old 0.8.41 in ~/.vst3-backup/0.8.42-dev-before-multidevice); Mac: test
    build CI 43696948011 installed; TI2 on the Mac's USB.
 7. Waiting on reporters (table above); check issues only together with the user.
 8. PARKED (owner 2026-11-17, come back later): branding cleanup (logos in screenshots, plug-in/ASIO names, repo/site
