@@ -5152,3 +5152,20 @@ hosts; a project saved with the renamed build on 0.8.42.
 - **Method:** hardware test in REAPER on Linux, scripted (TrackFX_GetFXName, TrackFX_GetOffline, TrackFX_GetNumParams, TrackFX_GetParamNormalized before and after)
 - **Confidence:** HIGH (REAPER on Linux) / open (other hosts and platforms)
 - **Hardware:** yes (TI2 Desktop on Linux)
+
+### E557
+
+Logic Pro on macOS after the rename of 0.8.43 (see E556): the user saved a Logic project with the Audio Unit "TI
+Revive Virus Control" (0.8.41 CI build installed) and a track whose MIDI input was "Virus TI Synth", then installed the
+round-0.8.43 package (CI 44613895602, 3ff1a00, pkg 22ae6de3) with its double-click installer. Checked over SSH: the
+postinstall removed the old bundles; /Library/Audio/Plug-Ins held only "TI Revive.vst3", "TI Revive.component" and
+"TI Revive (Snow).component" (component 0.8.43, Audio Unit aumu/VTIr/TIRv as before, name "TI Revive: TI Revive").
+In Logic (user, 2026-11-19): the plug-in loads fine, its slot is named "TI Revive"; the track's MIDI input became a
+generic input. So Logic finds the Audio Unit by its codes, but remembers a MIDI input by its name, not by the port's
+CoreMIDI unique ID (kept as "VTI1"): after the rename the input has to be chosen once more, as the release notes say.
+
+- **Date:** 2026-11-19
+- **Pointer:** native/CMakeLists.txt (vti_add_au: names changed, codes and bundle ids kept), src/installer-mac/scripts/postinstall (old bundles removed), src/broker/devslot.h (vti_slot_port_name, vti_slot_port_id)
+- **Method:** hardware test on our Mac (MacBook Air M3, macOS 27.2.1, TI2 Desktop) by the user in Logic Pro; installed files checked over SSH
+- **Confidence:** HIGH (Logic on macOS 27)
+- **Hardware:** yes (TI2 Desktop, Mac)

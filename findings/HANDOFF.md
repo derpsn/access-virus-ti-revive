@@ -144,7 +144,7 @@ talk with the user (Linux may start); hil-win on the tuned VM: yes; update check
    class ids, AU codes + bundle ids, CoreMIDI unique ids, Windows MIDI instance ids); installers remove the old bundles
    (MSI VCBUNDLE + major upgrade, Mac postinstall, Linux install.sh). OPEN before release: user looks at the Control
    Center: user OK ("cc looks clean"); new CC screenshots (both still show the buttons); project test: REAPER on
-   Linux PASSED (E556, scripts/reaper-projcompat), Live (win11 VM) and Logic (AU) still to do; Mac: MIDI input kept
-   by unique ID?; What's New 0.8.43 + release text WRITTEN (only REAPER named as tested; add Live/Logic when done).
+   Linux PASSED (E556), Logic on the Mac PASSED (E557: loads, named TI Revive; MIDI input must be chosen again, Logic
+   keeps it by name), Live (win11 VM) still to do; Mac has the 0.8.43 test package (pkg 22ae6de3); What's New 0.8.43 + release text WRITTEN (only REAPER named as tested; add Live/Logic when done).
    CI 44613895602 (3ff1a00, 0.8.43): mac + mac-libusb green (Mac test uses it); native-windows/-linux red (scripts_py:
    no Pillow on CI, risk.json lacked scripts/reaper-projcompat) - fixed, new run for Windows. Linux has the local 0.8.43 dev build (0bd56d8).
