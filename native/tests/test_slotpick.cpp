@@ -49,15 +49,29 @@ TEST(slotpick_core_audio_device_by_usb_serial)
     CHECK(vti::core_audio_pick({}, "SERA", 1) == -1);
 }
 
-TEST(slotpick_skips_the_slot_just_given_up) // audit 2026-11-18 #1, #5
+TEST(slotpick_skips_the_slots_given_up) // audit 2026-11-18 #1, #5; round 0.8.42 test: no cycling
 {
+    using vti::slot_bit;
     bool taken[4] = {false, false, false, false};
     // a project saved with Virus 2 on a computer with one Virus: slot 2 was tried and given up - Virus 1 next
-    CHECK(vti::slot_choose(taken, 4, 2, 2) == 1);
-    // the next round (slot 1 given up, e.g. another program has it): the project's slot again
-    CHECK(vti::slot_choose(taken, 4, 2, 1) == 2);
-    taken[0] = taken[2] = taken[3] = true;
-    CHECK(vti::slot_choose(taken, 4, 0, 2) == 2); // the only free one: tried again rather than none
+    CHECK(vti::slot_choose(taken, 4, 2, slot_bit(2)) == 1);
+    // slot 1 given up (another program has it): the project's slot
+    CHECK(vti::slot_choose(taken, 4, 2, slot_bit(1)) == 2);
+    // one Virus, two instances: the second one has tried Virus 2 - Virus 3 next, never Virus 2 again in this round
+    taken[0] = true;
+    CHECK(vti::slot_choose(taken, 4, 0, slot_bit(2)) == 3);
+    CHECK(vti::slot_choose(taken, 4, 0, slot_bit(2) | slot_bit(3)) == 4);
+    // every free slot tried: wait like a second instance (0.8.41) instead of going round 2 -> 3 -> 2
+    CHECK(vti::slot_choose(taken, 4, 0, slot_bit(2) | slot_bit(3) | slot_bit(4)) == 0);
+    CHECK(vti::slot_choose(taken, 4, 3, slot_bit(2) | slot_bit(3) | slot_bit(4)) == 0); // also the project's
+}
+
+TEST(slotpick_tries_again_after_a_long_wait) // a Virus plugged in later, a program that let go
+{
+    CHECK(!vti::slot_retry_due(0, 600000));                      // nothing given up: nothing to retry
+    CHECK(!vti::slot_retry_due(vti::slot_bit(2), vti::SLOT_RETRY_MS - 1));
+    CHECK(vti::slot_retry_due(vti::slot_bit(2), vti::SLOT_RETRY_MS));
+    CHECK(vti::SLOT_RETRY_MS >= 10 * vti::SLOT_GIVE_UP_MS); // rare against the give-up time
 }
 
 TEST(slotpick_gives_up_a_slot_another_program_has) // audit 2026-11-18 #4: Bitwig sandbox, two DAWs
@@ -69,7 +83,9 @@ TEST(slotpick_gives_up_a_slot_another_program_has) // audit 2026-11-18 #4: Bitwi
 
 TEST(slotpick_saves_the_preferred_slot_between_tries) // audit 2026-11-18 #2
 {
-    CHECK(vti::slot_to_save(2, 1) == 2); // the slot in use
-    CHECK(vti::slot_to_save(0, 2) == 2); // between two tries, or not connected yet: the project's own
+    // the first argument is the slot where a Virus answered (round 0.8.42 test: a project saved while the second
+    // instance tried the empty Virus 3 reopened on Virus 3)
+    CHECK(vti::slot_to_save(2, 1) == 2); // the Virus in use
+    CHECK(vti::slot_to_save(0, 2) == 2); // between two tries, or no Virus found yet: the project's own
     CHECK(vti::slot_to_save(0, 0) == 0); // nothing known: no record
 }

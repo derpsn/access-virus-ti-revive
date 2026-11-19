@@ -142,6 +142,8 @@ public:
     // the Virus this instance claimed when several are connected (#45): 1.., 0 = none yet
     int slot() const { return slot_.load(); }
     int preferred_slot() const { return slot_pref_.load(); }
+    // the slot where a Virus answered this instance (0 = none yet, or given up): what a project keeps
+    int found_slot() const { return found_slot_.load(); }
     // the Virus the project was saved with (setState): taken when free, also by switching over from another one
     void prefer_slot(int s)
     {
@@ -263,6 +265,9 @@ private:
     std::atomic<bool> reslot_{false}; // prefer_slot: the worker moves to that slot when it is free
     std::chrono::steady_clock::time_point absent_since_{}; // worker: since when this slot's Virus is not ours
     std::atomic<int> skip_slot_{0}; // worker: the slot just given up (slotpick.h), 0 once a Virus answered
+    std::atomic<unsigned> tried_{0}; // worker: every slot given up (slot_bit), 0 once a Virus answered or after a while
+    std::atomic<int> found_slot_{0}; // worker: the slot where a Virus answered (found_slot)
+    std::chrono::steady_clock::time_point tried_wait_since_{}; // worker: waiting since, with every free slot tried
     std::atomic<bool> wait_reported_{false}; // waiting for the other instance (set by the worker)
     int present_seen_ = -1; // worker: last device presence handled (-1 = unknown)
     vti::PresenceWatch presence_; // worker: gone / back / gone and back between two looks (E212)

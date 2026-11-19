@@ -5105,3 +5105,26 @@ Win32/Cocoa timers, no adapter).
 - **Method:** gdb on REAPER 7 (Linux) with copies of the user's project; disassembly of REAPER's caller; reading the SDK's adapter code
 - **Confidence:** HIGH (the crash, the split, the fix in REAPER on Linux) / open (close path, knob edits with the window closed)
 - **Hardware:** yes (TI2 Desktop on Linux)
+
+### E555
+
+With one Virus and two plug-in instances (round 0.8.42 test, user's REAPER project on Linux, TI2 Desktop) the second
+instance never waited: the broker journal shows it connecting to tirevive-broker@3, @2, @3, @2 ... every ~6 s for as
+long as the project was open (each try 4 s, then 2 s pause), each connect starting that slot's broker again; audit
+2026-11-18 #3 had seen the cycling and only quietened its log. Cause: slot_choose skipped only the one slot just given
+up, and an instance waits only when no slot is free, which never happens with 4 slots and one Virus. Second fault: the
+project saved the slot being tried (getState took the claimed slot), so after a save during the cycling it reopened on
+Virus 3, where no Virus had ever answered. Fix (round-0.8.42): the instance keeps every slot it gave up in a mask and
+does not take those again; with none left it waits like a second instance in 0.8.41 and clears the mask after
+SLOT_RETRY_MS (30 s) to find a Virus plugged in later or one another program let go; a project keeps the slot where a
+Virus answered (found_slot), else the project's own. Tests first (test_slotpick: skips the slots given up, waits when
+all are tried, retry after 30 s), 838 vtitests, ctest 7/7. Local build (plug-in f6ee43c1) with the user's project in
+REAPER for 75 s: the second instance tried Virus 3, 2, 4 once (19:14:18-19:14:34), no connect for 34 s, then 3, 2, 4
+once more (the retry), REAPER closed cleanly, no crash. Not run yet: two real or simulated Viruses (the second
+instance should then stay on Virus 2), Windows and macOS.
+
+- **Date:** 2026-11-19
+- **Pointer:** native/src/device/slotpick.h (slot_choose, slot_retry_due, slot_to_save), native/plugin/source/virusplugin.cpp (claim_owner, the worker's wait and give-up), broker journal of the run
+- **Method:** broker journal (connects per systemd unit) during the user's test and the rerun with the fix; unit tests
+- **Confidence:** HIGH (the cycling and its cause, the fix with one Virus) / open (two Viruses)
+- **Hardware:** yes (TI2 Desktop on Linux, one Virus)
