@@ -5,7 +5,7 @@ NEXT. At most 150 lines; the Stop hook (`.claude/hooks/handoff-check.sh`) refuse
 how goes into the dated log [`log/2026-11.md`](log/2026-11.md) (newest first); older logs are in [`log/`](log/).
 Device/protocol knowledge goes into [`evidence.md`](evidence.md). Update this file in the same commit as the work._
 
-Last update: 2026-11-19: **0.8.42 RELEASED** (user "Ship it", no rc7); test round complete (details log/2026-11.md); replies posted on #45 #42 #44; Mac release push pending (Mac asleep). Quiet-issue closings due from 2026-11-21.
+Last update: 2026-11-19: round-0.8.43 started (VERSION 0.8.43; #46 in README/site). **0.8.42 RELEASED** (user "Ship it", no rc7); test round complete (details log/2026-11.md); replies posted on #45 #42 #44; Mac release push pending (Mac asleep). Quiet-issue closings due from 2026-11-21.
 
 ## Where things stand
 
@@ -25,7 +25,8 @@ Last update: 2026-11-19: **0.8.42 RELEASED** (user "Ship it", no rc7); test roun
 - Release installed: Linux (install.sh, plug-in 94257c93, broker c280b8e6), win11 VM (setup.exe /quiet exit 0, VST3
   b5cd51c9, VM shut down). Mac: work/rel-0.8.42/out/macx/TI-Revive-0.8.42-release (pkg 1f8f888c + INSTALL-COMMAND
   + Install test build.command) to push with scripts/mac.sh push when the Mac answers; the user installs.
-- Next round 0.8.43: branch from origin/main (push with an explicit refspec), raise native VERSION first.
+- Round 0.8.43: branch round-0.8.43 from origin/main 5db2486, native VERSION 0.8.43. Plan agreed with the user
+  2026-11-19: Mac push only when needed; #46 in README "Tested with" + site matrix (done).
 - Our TI2 Desktop: on **Linux** USB (2026-11-14 evening). User flashed ROM Z on it in early November (E500).
 - Linux: CI build 44588173936 (0.8.42, 42f0a12: E554 + E555 + stats label) installed 2026-11-19 (plug-in 4b9563c5, broker c280b8e6). Virus back on Linux after the VM test (node plugdev, socket active).
 - win11 VM: CI build 44588173936 (42f0a12) installed 2026-11-19 (VST3 7eafc6fc; tirevive-hil task now runs C:\vti\0842\hil) (/quiet exit 0), shut down; hil-win 2026-11-19: all pass except H2-2 drift +126 ppm (VM clock, as before). hil-win on the tuned VM 2026-11-15 (E537): run 1
@@ -65,7 +66,7 @@ Last update: 2026-11-19: **0.8.42 RELEASED** (user "Ship it", no rc7); test roun
 | #44 | NEW: M1, Sequoia, Ableton, TI2 Keyboard, 0.8.41: distorted sound after reopening a saved project (gone after several reopens or a plug-in reload; like #33, E532), patches sometimes gone after a reload (audit #21-#24 area, not in rc6). AURA editor installed (E134 conflict?). No log | reporter: diag.log, AURA driver parked + restart, buffer-change test, rc6 test (issuecomment-6975482074); 0.8.42 with the recall fixes posted (issuecomment-7020103207) | 2026-11-19 |
 | #45 | NEW: two Viruses (TI Keyboard + TI2 Desktop) at once, one plug-in instance each, in Live. TI Revive: one Virus only (first found). Original 5.1.7 plug-in: device list, one owner instance per Virus (E553, static; driver side unknown). Replies posted (not yet, later round, asked OS + can they test: issuecomment-6980767270; follow-up with E553, asked if they used two with the original: issuecomment-6981406654) 2026-11-18 reporter (French): two editors in Ableton were always buggy with the original; will beta test; asked OS again in French (issuecomment-6984586414). DECIDED: maintainer posted 2026-11-18 it is on the list, first test build to them by Fri/Sat (2026-11-20/21) IN WORK (round-0.8.42, user 2026-11-18: one broker per Virus, assignment like the original, all 3 OS, numbered MIDI ports, ASIO stays Virus 1): devslot.h/winslot.h (-slot N, -N names, key = USB port), slotpick.h (owner per Virus, empty slot 2+ given up after 3 s, project record TIRevive/Virus), RAM cache virus-N, Mac Core Audio by USB serial in UID (UNVERIFIED), systemd tirevive-broker@N. Review findings 1-7 fixed (findings/audit-2026-11-18-multidevice.md); dev build installed on Linux with tirevive-broker@2-4 (systemd starts broker 2: checked), hil.sh ALL PASS (H1, H2x2, H3, H6). Never run with two Viruses; mismatch question not done | reporter: test 0.8.42 with both Viruses (released 2026-11-19, issuecomment-7020102331) | 2026-11-19 |
 
-#30 follow-up (Logic arrange meters of multi-timbral tracks): reproduced on our Mac = Logic's display (E538), answered 2026-11-15 (issuecomment-6892430267), stays closed. #39 closed by the reporter (doubled notes = Local On + Monitor In, E530/E531). #46 (2026-11-18): user report, all works on 0.8.41 with a TI2 Polar, Mac mini M2 Pro, macOS 26.4.1, Logic Pro 13, 44.1k/128; thanked + closed (issuecomment-6987596263); add to README/site "Tested with" at the next site check. #30 closed by us 2026-11-14 with the user: all works, Snow meters visible in the plug-in (E536). 2026-11-15 check: no new replies; a fork
+#30 follow-up (Logic arrange meters of multi-timbral tracks): reproduced on our Mac = Logic's display (E538), answered 2026-11-15 (issuecomment-6892430267), stays closed. #39 closed by the reporter (doubled notes = Local On + Monitor In, E530/E531). #46 (2026-11-18): user report, all works on 0.8.41 with a TI2 Polar, Mac mini M2 Pro, macOS 26.4.1, Logic Pro 13, 44.1k/128; thanked + closed (issuecomment-6987596263); in README "Tested with" and the site matrix (round-0.8.43). #30 closed by us 2026-11-14 with the user: all works, Snow meters visible in the plug-in (E536). 2026-11-15 check: no new replies; a fork
 (insolentconstruct) syncing our commits shows as "added a commit that references" events, nothing to do. Quiet-issue rule: 7 days after our
 last request, close with the AGENTS.md message, only in a joint check with the user: #28 closed 2026-11-16 (issuecomment-6924172903), the
 others from 2026-11-21 (#40 is ours: no closing; #32: look up its date first).
@@ -120,13 +121,13 @@ talk with the user (Linux may start); hil-win on the tuned VM: yes; update check
 
 ## NEXT
 
-1. Mac: push the 0.8.42 release (work/rel-0.8.42/out/macx/TI-Revive-0.8.42-release, pkg 1f8f888c) with
+1. Mac (only when needed, user 2026-11-19): push the 0.8.42 release (work/rel-0.8.42/out/macx/TI-Revive-0.8.42-release, pkg 1f8f888c) with
    scripts/mac.sh push when the Mac answers; the user installs; check the installed files. Until then it has the
    tested CI build 44588173936 (same code, older texts).
 2. Joint issue check from 2026-11-21: quiet-issue closings (#26 #31 #33 #36; #41 from 11-22; #32 #40 are ours);
    replies from #45 (two real Viruses: first real-world test), #42 (snow-idle-slow CPU), #44 (recall), #47, #43, #37.
-3. Round 0.8.43: branch from origin/main with an explicit refspec, raise native VERSION first; the fixed release job
-   (9049eec) runs for the first time at its tag - check it.
+3. Round 0.8.43 (started): the fixed release job (9049eec) runs for the first time at its tag - check it; rest of
+   the round to discuss with the user (Windows MIDI ports, test automation, Linux MIDI with the sim's Keyboard).
 4. Open from the round: the 53 ms stall on the sim's Virus 2 (sim wants a rerun with VTISIM_WARMUP=1); two real
    Viruses, and two on Windows/macOS, untested (Mac Core Audio pick by USB serial unverified); Live on macOS may host
    waiting instances in another process ("another program's plug-in" lines, not checked); W2's largest ASIO buffer not
@@ -134,5 +135,5 @@ talk with the user (Linux may start); hil-win on the tuned VM: yes; update check
 5. Proposals accepted 2026-11-19 (test automation): hil-mac started over SSH with `open` (try once), MIDI port checks
    in hil.sh / hil-mac, one install script for test builds, REAPER runs via scripts/reaper-open.sh (started), smart
    plug for H4 (hil.sh --power exists; user decides on the hardware).
-6. Our Mac: Logic Recording Delay was set to -269 for a test; the user sets it back to 0 (not confirmed).
+6. Our Mac: Logic Recording Delay back to 0 (user 2026-11-19).
 7. PARKED (owner 2026-11-17): branding cleanup; audit, file list and order in work/HANDOFF-private.md.

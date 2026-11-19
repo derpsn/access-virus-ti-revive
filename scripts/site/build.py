@@ -414,7 +414,7 @@ def page_landing(latest, releases, sums):
         <tr><th>TI2 Desktop</th><td class="st ok">tested</td><td class="st ok">tested</td><td class="st ok">tested</td></tr>
         <tr><th>TI Snow</th><td class="st no">no report yet</td><td class="st rep">works for users</td>
           <td class="st rep">one report, with problems</td></tr>
-        <tr><th>Polar</th><td class="st no">no report yet</td><td class="st rep">works for users</td>
+        <tr><th>Polar</th><td class="st no">no report yet</td><td class="st rep">works for users (e.g. Logic Pro 13, macOS 26.4.1)</td>
           <td class="st no">no report yet</td></tr>
         <tr><th>Desktop (TI1), Keyboard</th><td class="st no">no report yet</td><td class="st rep">works for users</td>
           <td class="st no">no report yet</td></tr>
