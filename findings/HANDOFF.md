@@ -143,6 +143,6 @@ talk with the user (Linux may start); hil-win on the tuned VM: yes; update check
    MIDI "TI Revive Synth"/"TI Revive MIDI" (N: "TI Revive 2 Synth"); internal ids KEPT (broker client names owner.h,
    class ids, AU codes + bundle ids, CoreMIDI unique ids, Windows MIDI instance ids); installers remove the old bundles
    (MSI VCBUNDLE + major upgrade, Mac postinstall, Linux install.sh). OPEN before release: user looks at the Control
-   Center without Burn/OS (dev build was opened on the desktop); new CC screenshots (both still show the buttons);
-   project test (user: "Rename files, test first"): 0.8.42 projects in REAPER (Linux) and Live (win11 VM) + Logic (AU)
-   reopen with the renamed build; Mac: MIDI input kept by unique ID?; What's New entry for 0.8.43; release text.
+   Center: user OK ("cc looks clean"); new CC screenshots (both still show the buttons); project test: REAPER on
+   Linux PASSED (E556, scripts/reaper-projcompat), Live (win11 VM) and Logic (AU) still to do; Mac: MIDI input kept
+   by unique ID?; What's New entry for 0.8.43; release text. Linux has the local 0.8.43 dev build (0bd56d8) installed.

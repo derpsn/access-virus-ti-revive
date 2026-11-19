@@ -5132,3 +5132,23 @@ heard both ("works"). Not shown: a reopen after a save with this build (straight
 - **Method:** broker journal (connects per systemd unit) during the user's test and the rerun with the fix; unit tests
 - **Confidence:** HIGH (the cycling and its cause, the fix with one Virus, two Viruses on Linux with one simulated) / open (two real Viruses, Windows, macOS)
 - **Hardware:** yes (TI2 Desktop on Linux; plus the simulator's virtual TI2 as Virus 2)
+
+### E556
+
+The rename of 0.8.43 ("TI Revive Virus Control" -> "TI Revive", bundle "TI Revive Virus Control.vst3" -> "TI
+Revive.vst3", class ids unchanged) keeps REAPER projects working on Linux. Test (2026-11-19, REAPER portable install,
+Xvfb, scripted with two ReaScripts; TI2 Desktop on USB): with 0.8.42 installed, REAPER made a project with one track
+and the plug-in and saved it; its FX line names the old file: `<VST "VST3i: TI Revive Virus Control (TI Revive)" "TI
+Revive Virus Control.vst3" 0 "" 135376116{B49F90D9735F4305AC5397BE8958CD6B} "">`. Then the round-0.8.43 Linux
+package (local build, 0bd56d8) was installed with its install.sh, which removed the old bundle (~/.vst3 then held
+only "TI Revive.vst3"). REAPER opened the project: one FX, not offline, 4626 parameters, the first 40 parameter
+values identical to those read before the save. So REAPER finds a VST3 whose file is gone by its class id in the
+newly scanned bundle. The slot keeps the name stored in the project ("VST3i: TI Revive Virus Control (TI Revive)");
+a newly added instance is "TI Revive". Not tested: Ableton Live, Logic (Audio Unit codes unchanged), Cubase, other
+hosts; a project saved with the renamed build on 0.8.42.
+
+- **Date:** 2026-11-19
+- **Pointer:** native/plugin/CMakeLists.txt (PACKAGE_NAME), src/installer-linux/install.sh (old bundle removed); scripts/reaper-projcompat/make.lua and check.lua
+- **Method:** hardware test in REAPER on Linux, scripted (TrackFX_GetFXName, TrackFX_GetOffline, TrackFX_GetNumParams, TrackFX_GetParamNormalized before and after)
+- **Confidence:** HIGH (REAPER on Linux) / open (other hosts and platforms)
+- **Hardware:** yes (TI2 Desktop on Linux)
