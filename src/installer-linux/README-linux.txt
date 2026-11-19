@@ -1,9 +1,9 @@
 TI Revive @VERSION@ for Linux
 =========================
 
-Brings back the Access Virus TI's "Total Integration" on Linux, without the old Access drivers: the plug-in
-"TI Revive Virus Control" (a native Linux VST3, no Wine, no yabridge) looks and works like the original Virus
-Control, and the TI Revive broker (a small native Linux program) talks to the Virus over USB - MIDI, patch sync and
+Brings the Access Virus TI to Linux, without the old Access drivers: the plug-in "TI Revive" (a native
+Linux VST3, no Wine, no yabridge) works like the original Virus Control and takes its look from your own Access
+installer, and the TI Revive broker (a small native Linux program) talks to the Virus over USB - MIDI, patch sync and
 the Virus' USB audio.
 
 You need
@@ -20,13 +20,13 @@ Install
 2. ./install.sh "/path/to/Virus TI Software Suite 5.1.7.00 64-bit.msi"
    (it asks for your password once to allow USB access to the Virus; the Access files go to
    ~/.local/share/tirevive/access, the factory patch libraries to ~/Documents/Access Music/Virus TI/Patches, or the localized documents folder, e.g. ~/Dokumente)
-3. In your DAW, rescan plug-ins and load the VST3 "TI Revive Virus Control" (vendor TI Revive).
+3. In your DAW, rescan plug-ins and load the VST3 "TI Revive" (vendor TI Revive).
    The first start reads the Virus' RAM banks, which takes a few minutes; you can play meanwhile (the sync pauses
    while notes arrive). Later starts use the cache and are ready after a few seconds.
 
 Coming from TI Revive 0.7
 - install.sh removes the classic plug-in "Virus TI (TI Revive)" (Wine + yabridge). Projects saved with it open with
-  "TI Revive Virus Control" (same plug-in ID); the Access files are taken from your Wine prefix.
+  "TI Revive" (same plug-in ID); the Access files are taken from your Wine prefix.
 
 Good to know
 - Any sample rate works (the Virus runs at 44.1 kHz; the plug-in converts). JACK through PipeWire works well

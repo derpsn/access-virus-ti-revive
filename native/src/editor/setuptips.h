@@ -46,7 +46,7 @@ struct TipsFacts {
     double virus_rate = 44100;
     int largest_block = 256; // what the host announced; in an Audio Unit MaximumFramesPerSlice, not the I/O buffer (E401)
     double delay_ms = 0;     // the plug-in latency it reports now
-    bool mac = false;        // the MIDI input "Virus TI Synth" exists only there
+    bool mac = false;        // the MIDI input "TI Revive Synth" exists only there
     bool on_linux = false;   // REAPER's buffer may be PipeWire's there (E427)
 };
 
@@ -111,7 +111,7 @@ inline TipsPage setup_tips(const TipsFacts &f)
         add("compensation", "Keep Live's Delay Compensation on (it is on by default), or the Virus sounds " + delay + " late against other tracks.");
         add("live-parts", "Several parts: one instance plays them all. Point other MIDI tracks at its track with MIDI To, one channel each, and arm them to play.");
         if (f.mac)
-            add("live-keys", "A Virus with keys: choose the MIDI input Virus TI Synth under MIDI From on an armed track.");
+            add("live-keys", "A Virus with keys: choose the MIDI input TI Revive Synth under MIDI From on an armed track.");
         break;
     case TipsHost::Reaper:
         add("compensation", "Keep plug-in delay compensation on, or the Virus sounds " + delay + " late against other tracks.");

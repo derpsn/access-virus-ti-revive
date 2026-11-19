@@ -42,8 +42,9 @@ static inline void vti_slot_suffix(char out[4], int slot)
     }
 }
 
-// a MIDI port or client name: "Virus TI <what>" for Virus 1 (the Access driver's names, which DAWs remember), "Virus TI
-// N <what>" for Virus N; `what` "" gives "Virus TI" / "Virus TI N"
+// a MIDI port or client name: "TI Revive <what>" for Virus 1, "TI Revive N <what>" for Virus N; `what` "" gives
+// "TI Revive" / "TI Revive N". Until 0.8.42 "Virus TI ..." like the Access driver (renamed 2026-11-19, branding); on
+// macOS DAWs keep finding the ports by their unique IDs (vti_slot_port_id, unchanged)
 #include <stdio.h>
 static inline void vti_slot_port_name(char *out, size_t cap, const char *what, int slot)
 {
@@ -53,7 +54,7 @@ static inline void vti_slot_port_name(char *out, size_t cap, const char *what, i
         num[1] = (char)('0' + slot);
         num[2] = 0;
     }
-    snprintf(out, cap, "Virus TI%s%s%s", num, *what ? " " : "", what);
+    snprintf(out, cap, "TI Revive%s%s%s", num, *what ? " " : "", what);
 }
 
 // the CoreMIDI unique ID DAWs remember a port by: "VTI<cable>" for Virus 1 (unchanged), "VT<N><cable>" for Virus N

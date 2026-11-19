@@ -1,5 +1,5 @@
-// vtikeyport.h - the Virus as MIDI sources for the DAW, as the Access driver had them (keyport.h): "Virus TI Synth" for
-// the Virus keys (cable 1, #29) and "Virus TI MIDI" for what comes in at its DIN MIDI In (cable 0, E517, E521). macOS:
+// vtikeyport.h - the Virus as MIDI sources for the DAW, as the Access driver had them (keyport.h): "TI Revive Synth" for
+// the Virus keys (cable 1, #29) and "TI Revive MIDI" for what comes in at its DIN MIDI In (cable 0, E517, E521). macOS:
 // CoreMIDI virtual sources (vtikeyport_mac.c); Linux: ALSA sequencer ports (vtikeyport_linux.c). No driver, there while
 // the broker runs. Virus to DAW only: no destination, so this opens no way for another program to send anything to the
 // Virus (rule 2).

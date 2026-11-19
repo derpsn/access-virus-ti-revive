@@ -146,9 +146,10 @@ if(APPLE AND VTI_NATIVE_AU)
                 COMMAND ${CMAKE_COMMAND} -E touch "${res}/plugin.vst3/Contents/Resources/snow-first" VERBATIM)
         endif()
     endfunction()
-    vti_add_au(VirusTINative_AU "TI Revive Virus Control" VTIr io.github.derpsn.tirevive.virus-control.au
+    vti_add_au(VirusTINative_AU "TI Revive" VTIr # names until 0.8.42: "TI Revive Virus Control (...)"; ids and codes kept
+               io.github.derpsn.tirevive.virus-control.au
                TIReviveVirusControlAUCocoaView OFF)
-    vti_add_au(VirusTINative_AU_Snow "TI Revive Virus Control (Snow)" VTIs io.github.derpsn.tirevive.virus-control-snow.au
+    vti_add_au(VirusTINative_AU_Snow "TI Revive (Snow)" VTIs io.github.derpsn.tirevive.virus-control-snow.au
                TIReviveVirusControlSnowAUCocoaView ON)
 endif()
 

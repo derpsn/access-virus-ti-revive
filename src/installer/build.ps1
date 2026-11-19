@@ -7,7 +7,7 @@
 # .NET and WiX live in C:\build\dotnet and C:\build\wix).
 param([string]$Root = 'C:\build\tirevive', [string]$Bin, [string]$Src, [string]$Out, [string]$Version = '0.1.1',
       [switch]$Bundle,
-      [string]$NativeBin) # -NativeBin: folder with "TI Revive Virus Control.vst3\" + VirusTINative_ASIO.dll + tirevive-cc.exe + TIReviveControlCenter.exe (native plug-in) # -Bundle: also TI Revive setup.exe around the MSI (TIReviveSetup.wxs, needs WixToolset.BootstrapperApplications.wixext)
+      [string]$NativeBin) # -NativeBin: folder with "TI Revive.vst3\" + VirusTINative_ASIO.dll + tirevive-cc.exe + TIReviveControlCenter.exe (native plug-in) # -Bundle: also TI Revive setup.exe around the MSI (TIReviveSetup.wxs, needs WixToolset.BootstrapperApplications.wixext)
 $ErrorActionPreference = 'Stop'
 if (-not $Bin) { $Bin = Join-Path $Root 'bin' }
 if (-not $Src) { $Src = Join-Path $Root 'src' }

@@ -7,7 +7,7 @@
 #   scripts/latency-native.sh [--blocks "32 64 128 256 512"] [--seconds 30] [--a N] [--rate 44100|48000] [--tag TEXT] [--out DIR]
 set -uo pipefail
 repo=$(cd "$(dirname "$0")/.." && pwd)
-plugin="$HOME/.vst3/TI Revive Virus Control.vst3"
+plugin="$HOME/.vst3/TI Revive.vst3"
 host="$repo/build-native/bin/Release/nativehost"
 blocks="32 64 128 256 512"; seconds=30; a=3072; tag=""; override=0; rate=44100
 out="$repo/work/latency/native-$(date +%Y%m%d-%H%M%S)"

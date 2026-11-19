@@ -32,10 +32,10 @@ extern char **environ;
 // client): it must stay the same. "VTI1" for the keys, "VTI0" for MIDI In (the cable numbers); Virus N of several
 // "VTN1" / "VTN0" (devslot.h, #45)
 
-// [0] "Virus TI Synth" (cable 1), [1] "Virus TI MIDI" (cable 0)
+// [0] "TI Revive Synth" (cable 1), [1] "TI Revive MIDI" (cable 0)
 static _Atomic(MIDIEndpointRef) g_source[2];
 static atomic_uint g_sent[2], g_failed[2]; // for the log: did the messages get as far as macOS (#29)
-static char g_name[2][32] = {"Virus TI Synth", "Virus TI MIDI"}; // Virus N: "Virus TI N Synth" (names_init)
+static char g_name[2][32] = {"TI Revive Synth", "TI Revive MIDI"}; // Virus N: "TI Revive N Synth" (names_init)
 
 static void names_init(void)
 {

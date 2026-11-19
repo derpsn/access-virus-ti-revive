@@ -10,7 +10,7 @@ is not affiliated with Access Music Electronics GmbH or Kemper GmbH. VST is a re
 Technologies GmbH. Audio Unit is a trademark of Apple Inc.
 
 Component                 Version         License        Where
-VST3 SDK (Steinberg)      3.8.1           MIT            plug-in "TI Revive Virus Control" (all systems)
+VST3 SDK (Steinberg)      3.8.1           MIT            plug-in "TI Revive" (all systems)
 VSTGUI (Steinberg)        4 (VST3 SDK)    BSD-3-Clause   plug-in editor (all systems)
 pugixml                   1.15            MIT            plug-in, Control Center (all systems)
 AudioUnitSDK (Apple)      1.4.0           Apache-2.0     Audio Unit (macOS)

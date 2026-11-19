@@ -101,7 +101,7 @@ TEST(setuptips_the_midi_input_is_only_named_where_it_exists)
     f.mac = false;
     CHECK(!has_key(setup_tips(f), "live-keys"));
     f.mac = true;
-    CHECK(contains(tip(setup_tips(f), "live-keys")->text, "Virus TI Synth"));
+    CHECK(contains(tip(setup_tips(f), "live-keys")->text, "TI Revive Synth"));
 }
 
 TEST(setuptips_reaper_says_where_the_buffer_is)

@@ -178,7 +178,7 @@ bool SkinView::draw_own(CDrawContext *ctx, const SkinNode &n)
 
 void SkinView::draw_control(CDrawContext *ctx, const SkinNode &n)
 {
-    if (n.type == "menu" || n.type == "patchbrowser") // Burn Flash only: not offered
+    if (n.type == "menu" || n.type == "patchbrowser" || !vti::cc::skin_node_offered(n)) // Burn Flash / OS update
         return;
     if (!n.expression.empty() && n.type != "animbutton" && !state_.visible(n.expression))
         return;
@@ -273,6 +273,8 @@ const SkinNode *SkinView::hit(const std::vector<SkinNode> &nodes, int x, int y)
     for (auto it = nodes.rbegin(); it != nodes.rend(); ++it) { // topmost first
         auto &n = *it;
         if (!n.expression.empty() && (n.container || n.type != "animbutton") && !state_.visible(n.expression))
+            continue;
+        if (!vti::cc::skin_node_offered(n))
             continue;
         bool inside = x >= n.x && x < n.x + n.w && y >= n.y && y < n.y + n.h;
         if (n.container) {

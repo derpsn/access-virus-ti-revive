@@ -256,7 +256,7 @@ def page_landing(latest, releases, sums):
                          "Run it. It is not code-signed: <em>More info <span class='sep'>&rsaquo;</span> Run anyway</em>. Your Access installer "
                          "is only unpacked, not installed. Since 0.8.38 the installer really removes the Access driver packages, so the original Access software no longer works on that PC until you reinstall it. Unplug and replug the Virus after installing.",
                          "Connect the Virus, rescan plug-ins in your DAW and load <strong>TI Revive Virus "
-                         "Control</strong>. The ASIO device <strong>TI Revive Virus Audio</strong> makes the Virus a "
+                         "Control</strong>. The ASIO device <strong>TI Revive Audio</strong> makes the Virus a "
                          "sound card."])
     mac = os_card("macOS", "macOS 14.4 or newer, Apple Silicon and Intel (Intel since 0.8.39, not tested on an Intel Mac yet)", asset(latest, "-mac.zip"), None, sums,
                   ["Unpack the zip and open <code>TI Revive.pkg</code> (not signed: right-click <span class='sep'>&rsaquo;</span> "
@@ -282,16 +282,16 @@ def page_landing(latest, releases, sums):
     <div class="hero-text">
     <h1>TI Revive</h1>
     <p class="tagline">Like meeting an old best friend again.</p>
-    <p class="lead"><strong>Total Integration for the Access Virus TI on Windows 11, macOS and Linux, without
-    the old drivers.</strong> Its plug-in looks and works like the original Virus Control: every parameter, the preset
-    browser, automation, and the synth's audio over the same USB cable.</p>
+    <p class="lead"><strong>The Access Virus TI on Windows 11, macOS and Linux, without the old
+    drivers.</strong> Its plug-in works like the original Virus Control: every parameter, the preset browser,
+    automation, and the synth's audio over the same USB cable. Its look comes from your own Access installer.</p>
     <p class="actions"><a class="button" href="#download">Download {v}</a>
     <a class="second" href="#news">What's new</a></p>
     <p class="facts-line">Free &middot; open source &middot; VST3 and Audio Unit &middot; released {when}</p>
     </div>
     <figure class="shot">
       <img src="plugin-filter.png" width="1280" height="724"
-      alt="TI Revive Virus Control, the plug-in's filter page, drawn from the user's own Access files">
+      alt="TI Revive, the plug-in's filter page, drawn from the user's own Access files">
       <figcaption>The look is Access' own: TI Revive draws it at runtime from the skin in your own Access installer. TI Revive ships no Access files: no skin graphics, no logos, no Access code, no patch banks; in these pictures the TI Revive name replaces Access' logos. Not affiliated with Access Music or Kemper.</figcaption>
     </figure>
     </div>
@@ -394,9 +394,9 @@ def page_landing(latest, releases, sums):
       your DAW looks for it.</p></div>
       <div><h3>Point it at your Access installer</h3><p>The setup unpacks the skin, the parameter descriptions and the
       ROM banks from the installer you own. No Access files come with TI Revive.</p></div>
-      <div><h3>Load the plug-in</h3><p><strong>TI Revive Virus Control</strong> on a MIDI track. Projects made with the
+      <div><h3>Load the plug-in</h3><p><strong>TI Revive</strong> on a MIDI track. Projects made with the
       original plug-in (VST3) open with it. The first start reads RAM A&ndash;D from the Virus once, which takes a few
-      minutes; you can play meanwhile.</p></div>
+      minutes; you can play meanwhile. New names since 0.8.43: the plug-in is &ldquo;TI Revive&rdquo; (before &ldquo;TI Revive Virus Control&rdquo;), the ASIO driver &ldquo;TI Revive Audio&rdquo; and the MIDI inputs &ldquo;TI Revive Synth&rdquo; and &ldquo;TI Revive MIDI&rdquo; (before &ldquo;Virus TI Synth&rdquo; and &ldquo;Virus TI MIDI&rdquo;). Projects saved with the old name open with it (same plug-in ID). If a track used one of the MIDI inputs, choose it there once more.</p></div>
     </div>
   </div>
 </section>
@@ -422,7 +422,7 @@ def page_landing(latest, releases, sums):
     </table>
     <ul class="limits">
       <li>The installers are not signed, so Windows and macOS ask once before they run them.</li>
-      <li>On Windows 10 and Windows 11 before 25H2 the keys of a Keyboard or Polar cannot be recorded in a DAW. On macOS (since 0.8.38), Linux and Windows 11 25H2 or later (since 0.8.42) they can, through the MIDI input &ldquo;Virus TI Synth&rdquo; (on macOS by user reports; on Linux and Windows not yet tested with keys, our Desktop has none). The plug-in switches Local off, as the
+      <li>On Windows 10 and Windows 11 before 25H2 the keys of a Keyboard or Polar cannot be recorded in a DAW. On macOS (since 0.8.38), Linux and Windows 11 25H2 or later (since 0.8.42) they can, through the MIDI input &ldquo;TI Revive Synth&rdquo; (on macOS by user reports; on Linux and Windows not yet tested with keys, our Desktop has none). The plug-in switches Local off, as the
       original does; without that input the keys and wheels are silent until you set Local to On in CONFIG on the Virus.</li>
       <li>On macOS the Virus' audio can have dropouts after the Mac wakes from sleep: macOS's USB audio can leave it with gaps until the Virus is plugged in again. Since 0.8.39 the plug-in then reconnects the Virus by itself, at most once a minute. If dropouts remain after waking, unplug and replug the Virus.</li>
       <li>On Linux a Keyboard or Polar can stay silent on its own keys after the DAW closes: the Linux kernel's USB audio driver links the Virus to the computer each time it takes the device (when it is plugged in, after a reset, and when TI Revive gives it back), so the keys keep going to USB. TI Revive unlinks it at the close like the original driver; the kernel links it again. Unplugging the USB cable brings the keys back. Seen with a simulated Virus through the real Linux kernel (E527); not checked on a real Keyboard.</li>
@@ -577,18 +577,18 @@ def features_section():
 
     <div class="feature">
       <div class="stick"><h3>The plug-in</h3>
-      <p><strong>TI Revive Virus Control</strong> is written from scratch and looks and works like the original Access plug-in, Virus Control. It draws its look from your own Access installer at runtime.</p></div>
+      <p><strong>TI Revive</strong> is written from scratch and works like the original Access plug-in, Virus Control. It takes its look from your own Access installer at runtime.</p></div>
       <div>
       <h4>What it covers</h4>
       <ul>
         <li>All 16 parts, every parameter, the preset browser, RAM and ROM banks, patch libraries.</li>
-        <li>Several Viruses at once (since 0.8.42, <a href="{GH}/issues/45">issue #45</a>: each Virus gets its own TI Revive service, numbered by the USB port it is plugged into (Virus 1, Virus 2, ...), and each plug-in instance takes a free Virus: the one its project was saved with when that one is free, as the original did. Their MIDI inputs carry the number (&quot;Virus TI 2 Synth&quot;). On Windows the ASIO driver plays Virus 1 only. With one Virus nothing changes: a second instance waits as before. Tested on Linux with our TI2 and a simulated TI2 as the second; not yet with two real Viruses, nor with two on Windows or macOS.).</li>
+        <li>Several Viruses at once (since 0.8.42, <a href="{GH}/issues/45">issue #45</a>: each Virus gets its own TI Revive service, numbered by the USB port it is plugged into (Virus 1, Virus 2, ...), and each plug-in instance takes a free Virus: the one its project was saved with when that one is free, as the original did. Their MIDI inputs carry the number (&quot;TI Revive 2 Synth&quot;). On Windows the ASIO driver plays Virus 1 only. With one Virus nothing changes: a second instance waits as before. Tested on Linux with our TI2 and a simulated TI2 as the second; not yet with two real Viruses, nor with two on Windows or macOS.).</li>
         <li>VST3 on Windows, macOS and Linux; Audio Unit for Logic and GarageBand. Native on Apple Silicon and Intel Macs (Intel since 0.8.39, not tested on an Intel Mac yet).</li>
       </ul>
       <h4>Projects and export</h4>
       <ul>
         <li>Projects made with the original plug-in's VST3 version open with it (since 0.8.25: the plug-in list also
-        shows it as "TI Revive Virus Control (original projects)", which has the original's plug-in ID; tested in Ableton
+        shows it as "TI Revive (original projects)", which has the original's plug-in ID; tested in Ableton
         Live 11 and 12, also a Windows project on the Mac); the saved state is byte for byte the same. Projects with the
         original's VST2 version do not open: TI Revive is VST3 only.</li>
         <li>Projects bring back every patch setting of all 16 parts.</li>
@@ -641,10 +641,10 @@ def features_section():
         <li>When the Virus stops sending audio (since 0.8.41): the plug-in tells you to switch the Virus off and on; in our tests only that helped.</li>
         <li>The arpeggiator follows a count-in (since 0.8.41, issue #30): like with the original, the Virus' arpeggiator and clock-synced LFOs run in time with the bar when your DAW counts in before recording.</li>
         <li>A Keyboard or Polar plays its own keys again after the DAW closes (since 0.8.41): TI Revive lets the Virus go when the last plug-in or the Control Center closes, as the original's driver does, and links it again for the next one. Checked on a simulated Keyboard. On Linux the kernel's USB audio driver can link it again (see the limits).</li>
-        <li>The keys of a Keyboard or Polar on macOS (since 0.8.38): TI Revive offers a MIDI input &ldquo;Virus TI Synth&rdquo; while the plug-in or the Control Center is open. Choose it as the MIDI input of the track and arm it. Not tested by us: our TI2 Desktop has no keys. By user reports: notes, pitch bend and mod wheel recorded on a TI1 Keyboard (Ableton Live 12.3.7) and a TI2 Polar.</li>
-        <li>The Virus&rsquo; MIDI In on macOS (since 0.8.41): a second MIDI input &ldquo;Virus TI MIDI&rdquo;, as the Access driver had. While the Virus works with a plug-in it sends what arrives at its MIDI In socket only to the computer, so a keyboard plugged in there reaches the DAW only through this input: choose it as the MIDI input of the track with the plug-in and arm it. It shows up on our Mac (0.8.41 test round); we had no keyboard at the Virus' MIDI In to play through it.</li>
-        <li>Windows MIDI ports (since 0.8.42): on Windows 11 25H2 or later, once Windows has Windows MIDI Services built in (it comes with the Windows update from the end of November 2026), TI Revive offers the MIDI inputs &ldquo;Virus TI Synth&rdquo; (the keys, wheels and pedals of a Keyboard or Polar) and &ldquo;Virus TI MIDI&rdquo; (what arrives at the Virus&rsquo; MIDI In), as the Access driver did. Virus to DAW only. The installer adds them only on a Windows that supports them: on Windows 10 and older Windows 11 there are none, as before. Tested in a Windows 11 VM with Microsoft&rsquo;s preview package and messages fed in by hand; not yet with Windows&rsquo; own copy or with a Virus that has keys.</li>
-        <li>The keys of a Keyboard or Polar and the Virus&rsquo; MIDI In on Linux (since 0.8.42): the MIDI inputs &ldquo;Virus TI Synth&rdquo; and &ldquo;Virus TI MIDI&rdquo; in the ALSA sequencer, with the names the Linux kernel&rsquo;s own driver gave them. Choose them as the MIDI input of the track with the plug-in and arm it, as on macOS. They exist while the plug-in or the Control Center is open. Virus to DAW only. They show up on our TI2 Desktop; no note has been played through them yet (it has no keys).</li>
+        <li>The keys of a Keyboard or Polar on macOS (since 0.8.38): TI Revive offers a MIDI input &ldquo;TI Revive Synth&rdquo; while the plug-in or the Control Center is open. Choose it as the MIDI input of the track and arm it. Not tested by us: our TI2 Desktop has no keys. By user reports: notes, pitch bend and mod wheel recorded on a TI1 Keyboard (Ableton Live 12.3.7) and a TI2 Polar.</li>
+        <li>The Virus&rsquo; MIDI In on macOS (since 0.8.41): a second MIDI input &ldquo;TI Revive MIDI&rdquo;, as the Access driver had. While the Virus works with a plug-in it sends what arrives at its MIDI In socket only to the computer, so a keyboard plugged in there reaches the DAW only through this input: choose it as the MIDI input of the track with the plug-in and arm it. It shows up on our Mac (0.8.41 test round); we had no keyboard at the Virus' MIDI In to play through it.</li>
+        <li>Windows MIDI ports (since 0.8.42): on Windows 11 25H2 or later, once Windows has Windows MIDI Services built in (it comes with the Windows update from the end of November 2026), TI Revive offers the MIDI inputs &ldquo;TI Revive Synth&rdquo; (the keys, wheels and pedals of a Keyboard or Polar) and &ldquo;TI Revive MIDI&rdquo; (what arrives at the Virus&rsquo; MIDI In), as the Access driver did. Virus to DAW only. The installer adds them only on a Windows that supports them: on Windows 10 and older Windows 11 there are none, as before. Tested in a Windows 11 VM with Microsoft&rsquo;s preview package and messages fed in by hand; not yet with Windows&rsquo; own copy or with a Virus that has keys.</li>
+        <li>The keys of a Keyboard or Polar and the Virus&rsquo; MIDI In on Linux (since 0.8.42): the MIDI inputs &ldquo;TI Revive Synth&rdquo; and &ldquo;TI Revive MIDI&rdquo; in the ALSA sequencer, numbered as the Linux kernel&rsquo;s own driver had them. Choose them as the MIDI input of the track with the plug-in and arm it, as on macOS. They exist while the plug-in or the Control Center is open. Virus to DAW only. They show up on our TI2 Desktop; no note has been played through them yet (it has no keys).</li>
         <li>Setup Tips for Your DAW in the ? menu (since 0.8.38): opens by itself the first time for a DAW and for a point not read before. Seen on Linux (REAPER), macOS (Ableton Live, Logic) and Windows 11 (Ableton Live).</li>
         <li>In Logic, Plug-in Latency Compensation must be on. With it off, TI Revive and a Logic instrument played about 100 ms apart; with it on they were in sync by ear, and an export measured at most 0.42 ms apart. Logic warns when you turn it off.</li>
         <li>The Virus leaves remote mode when the plug-in closes, as with the original (since 0.8.38). Tested on Linux with a TI2 Desktop; the effect on a Virus with keys is not tested.</li>
@@ -816,8 +816,8 @@ def features_section():
       programs that differ, into the Virus' RAM, and reads each one back; unlike Access' Control Center it never writes
       the Virus' flash.</p></div>
       <figure class="shot"><img loading="lazy" src="control-center.png" width="687" height="463"
-      alt="TI Revive Control Center in the look of Access' Virus Control Center">
-      <figcaption>The Control Center in the Access look. The Burn To Flash ROM and OS Updater pages are only kept for the look: they say that TI Revive does not offer these functions. TI Revive ships no Access files; it draws this look at runtime from the skin in your own Access installer. Not affiliated with Access Music or Kemper.</figcaption></figure>
+      alt="TI Revive Control Center: the device, backups and Nerd mode">
+      <figcaption>The Control Center in the Access look. TI Revive does not offer Burn To Flash ROM and OS updates; since 0.8.43 their buttons are gone. TI Revive ships no Access files; it draws this look at runtime from the skin in your own Access installer. Not affiliated with Access Music or Kemper.</figcaption></figure>
     </div>
 
     <div class="feature cc">
@@ -900,7 +900,7 @@ COVERAGE, COVERAGE_DATE = "95.5 %", "19 Nov 2026"
 # previews, content)
 PAGES = [("index", "TI Revive: the Access Virus TI on Windows 11, macOS and Linux",
           "The Access Virus TI on Windows 11, macOS (Apple Silicon and Intel) and Linux without the old drivers: "
-          "a free, open-source plug-in that looks and works like Virus Control.",
+          "a free, open-source plug-in that works like Virus Control.",
           lambda latest, releases, sums: page_landing(latest, releases, sums)),
          ("changelog", "TI Revive changelog: every version",
           "Every version of TI Revive, the free driver and plug-in for the Access Virus TI on Windows 11, macOS and "

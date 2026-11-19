@@ -62,9 +62,9 @@ def dialog():
     small = ImageFont.truetype(FONT_REG, 10)
     d.text((18, 36), "TI", font=big, fill=WHITE)
     d.text((20, 112), "Revive", font=word, fill=ACCENT)
-    d.text((20, 254), "Total Integration", font=small, fill=(170, 182, 200))
-    d.text((20, 268), "for the Virus TI", font=small, fill=(170, 182, 200))
-    d.text((20, 282), "on Windows 11", font=small, fill=(170, 182, 200))
+    d.text((20, 254), "The Access Virus TI", font=small, fill=(170, 182, 200))
+    d.text((20, 268), "on Windows 11, without", font=small, fill=(170, 182, 200))
+    d.text((20, 282), "the old drivers", font=small, fill=(170, 182, 200))
     img.paste(art.convert("RGB"), (0, 0))
     # thin accent edge between art panel and text area
     ImageDraw.Draw(img).line([(panel - 1, 0), (panel - 1, h)], fill=ACCENT, width=2)

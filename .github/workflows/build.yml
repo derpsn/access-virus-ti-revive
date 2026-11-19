@@ -1,4 +1,4 @@
-# Build TI Revive: the plug-in "TI Revive Virus Control" (native/) on Windows (MSVC, + ASIO driver), macOS (VST3 + AU,
+# Build TI Revive: the plug-in "TI Revive" (native/) on Windows (MSVC, + ASIO driver), macOS (VST3 + AU,
 # universal) and Linux (Ubuntu 22.04); the Windows broker cross-compiled with mingw-w64 and the MSI with WiX 5; the
 # macOS zip (scripts/mac-build-release.sh) and the Linux tarball (scripts/linux-build-release.sh).
 # Runs when a version tag v<major>.<minor>.<build> (e.g. v0.2.3) is pushed: builds everything and creates a GitHub
@@ -45,7 +45,7 @@ jobs:
           path: work/build/vtibroker.exe
           if-no-files-found: error
 
-  native-windows: # the native plug-in "TI Revive Virus Control" + ASIO driver "TI Revive Virus Audio" (native/, MSVC)
+  native-windows: # the native plug-in "TI Revive" + ASIO driver "TI Revive Audio" (native/, MSVC)
     runs-on: windows-2022
     timeout-minutes: 25 # a hanging step (e.g. a stuck package mirror) fails fast instead of blocking
     steps:
@@ -91,8 +91,8 @@ jobs:
         shell: pwsh
         run: |
           New-Item -ItemType Directory nativebin | Out-Null
-          Copy-Item -Recurse "native-build\VST3\Release\TI Revive Virus Control.vst3" nativebin\
-          Remove-Item "nativebin\TI Revive Virus Control.vst3\Contents\x86_64-win\*.map" -ErrorAction SilentlyContinue
+          Copy-Item -Recurse "native-build\VST3\Release\TI Revive.vst3" nativebin\
+          Remove-Item "nativebin\TI Revive.vst3\Contents\x86_64-win\*.map" -ErrorAction SilentlyContinue
           Copy-Item native-build\bin\Release\VirusTINative_ASIO.dll nativebin\
           Copy-Item native-build\bin\Release\tirevive-cc.exe nativebin\
           Copy-Item native-build\ccapp\TIReviveControlCenter.exe nativebin\
@@ -223,7 +223,7 @@ jobs:
           set -x
           B=out/build
           lipo -info "$B/mac/vtibroker"
-          P="$B/native/VST3/Release/TI Revive Virus Control.vst3/Contents/MacOS/TI Revive Virus Control"
+          P="$B/native/VST3/Release/TI Revive.vst3/Contents/MacOS/TI Revive"
           otool -l "$P" | grep -A4 -E "LC_BUILD_VERSION|LC_VERSION_MIN_MACOSX" | head -12
           # Catalina has no UniformTypeIdentifiers (#37): it must not be linked
           if otool -L "$P" | grep -q UniformTypeIdentifiers; then echo "still links UniformTypeIdentifiers"; exit 1; fi
@@ -277,8 +277,8 @@ jobs:
             -DCMAKE_C_COMPILER_LAUNCHER=ccache -DCMAKE_CXX_COMPILER_LAUNCHER=ccache # a new warning in our code fails here (E13)
           cmake --build native-build --target VirusTINative tirevive-cc TIReviveControlCenter vtitests nativehost xclose
           ccache --show-stats --verbose
-          strip "native-build/VST3/Release/TI Revive Virus Control.vst3/Contents/x86_64-linux/TI Revive Virus Control.so"
-          mkdir native-linux && cp -R "native-build/VST3/Release/TI Revive Virus Control.vst3" native-linux/
+          strip "native-build/VST3/Release/TI Revive.vst3/Contents/x86_64-linux/TI Revive.so"
+          mkdir native-linux && cp -R "native-build/VST3/Release/TI Revive.vst3" native-linux/
           install -m 0755 -s native-build/bin/Release/tirevive-cc native-linux/
           install -m 0755 -s native-build/ccapp/TIReviveControlCenter native-linux/
       - name: Unit tests
@@ -326,7 +326,7 @@ jobs:
       - name: Build
         run: |
           v="${VERSION:-${GITHUB_REF_NAME#v}}"
-          NATIVE_PREBUILT="$PWD/native-linux/TI Revive Virus Control.vst3" NATIVE_CC="$PWD/native-linux/tirevive-cc" NATIVE_CCAPP="$PWD/native-linux/TIReviveControlCenter" bash scripts/linux-build-release.sh "$PWD" "${v%%-rc*}" "$PWD/out"
+          NATIVE_PREBUILT="$PWD/native-linux/TI Revive.vst3" NATIVE_CC="$PWD/native-linux/tirevive-cc" NATIVE_CCAPP="$PWD/native-linux/TIReviveControlCenter" bash scripts/linux-build-release.sh "$PWD" "${v%%-rc*}" "$PWD/out"
       - uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
         with:
           name: TI-Revive-linux
@@ -371,8 +371,8 @@ jobs:
           v="${GITHUB_REF_NAME#v}"
           # only this version's "New in" part: earlier releases keep their own text, the site's changelog lists them all
           cat > notes.md <<EOF_NOTES
-          **TI Revive $v** - Total Integration for the Access Virus TI without the old Access drivers, now with the
-          native plug-in **"TI Revive Virus Control"**: looks and works like the original Virus Control and runs
+          **TI Revive $v** - the Access Virus TI without the old Access drivers, with the
+          native plug-in **"TI Revive"**: works like the original Virus Control and runs
           natively on Windows, macOS (Apple Silicon and Intel) and Linux - no Rosetta, Wine or yabridge.
 
           **New in 0.8.42: several Viruses at once, Virus knobs as Logic automation with the window closed, the Control Center's pages in the Access look, an opt-in update check, MIDI inputs on Linux and Windows.**

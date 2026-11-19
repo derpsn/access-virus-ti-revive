@@ -34,7 +34,7 @@ body:
         5. Knobs and patch browser:
         6. Project save / reopen:
         7. Timing (16th notes on the grid), optional:
-        8. Windows: ASIO "TI Revive Virus Audio", optional:
+        8. Windows: ASIO "TI Revive Audio", optional:
     validations:
       required: true
   - type: textarea

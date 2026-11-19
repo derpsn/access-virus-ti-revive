@@ -37,13 +37,13 @@ Revive version, sample rate and buffer size, USB connection (direct / hub).
    Options page shows "Plug-in log"). With 0.8.40 or older create an empty file `diag.on` in the plug-in folder
    (Windows `%LOCALAPPDATA%\virus-ti-native`, macOS `~/Library/Application Support/virus-ti-native`, Linux
    `~/.local/share/virus-ti-native`).
-4. **Plug-in loads and connects:** the DAW lists "TI Revive Virus Control", the editor opens, the LCD shows no
+4. **Plug-in loads and connects:** the DAW lists "TI Revive", the editor opens, the LCD shows no
    "Virus disconnected", the first bank sync finishes (progress page).
 5. **Sound:** notes from a MIDI track play, the Virus' sound comes back through the plug-in track (part output USB).
 6. **Editing and browser:** turning knobs changes the sound, loading a patch from the browser works.
 7. **Project recall:** save, close and reopen the project - the same sounds are on the Virus.
 8. **Timing (optional):** record a clip of short 16th notes into an audio track; do they sit on the grid?
-9. **Windows only - sound card:** ASIO device "TI Revive Virus Audio": playback through the Virus outputs.
+9. **Windows only - sound card:** ASIO device "TI Revive Audio": playback through the Virus outputs.
 
 ## 3. Report
 

@@ -136,12 +136,13 @@ talk with the user (Linux may start); hil-win on the tuned VM: yes; update check
    in hil.sh / hil-mac, one install script for test builds, REAPER runs via scripts/reaper-open.sh (started), smart
    plug for H4 (hil.sh --power exists; user decides on the hardware).
 6. Our Mac: Logic Recording Delay back to 0 (user 2026-11-19).
-7. Branding cleanup IN WORK (user 2026-11-19; list in work/HANDOFF-private.md): plug-in name "TI Revive", audio
-   "TI Revive Audio", MIDI "TI Revive MIDI" etc.; Burn/OS Updater out of the Control Center; screenshots DONE (idea A,
-   user 2026-11-19): scripts/site/mask_screenshots.py covers Access' logos, "TI Revive" (Lato Black, orange TI) in the
-   top logo spot, only the published PNGs (the plug-in shows the user's skin as before); repo RENAMED to
-   derpsn/ti-revive 2026-11-19, old site path forwarded by the new repo derpsn/derpsn.github.io, links changed on the
-   round (log/2026-11.md); old issue links forward (user checked, logged in); main 42528a1 (site address only, user
-   OK) + site.yml 44608733253 green: canonical/sitemap on /ti-revive/; Search Console: new property verified by the user (HTML file; sitemap to submit); Info page footer
-   "Not affiliated ..." (kInfoFooter, own 11 pt font, test infopage_footer_notice) DONE, user OK on screenshots of What's New and
-   Welcome (nativehost on Xvfb, ? menu, xclick, PIL ImageGrab);
+7. Branding cleanup (user 2026-11-19; list in work/HANDOFF-private.md). DONE on round-0.8.43: screenshots (masked,
+   "TI Revive" in Lato Black), repo -> derpsn/ti-revive (+ derpsn.github.io redirect; main 42528a1 site address),
+   Info page footer, wording (no "Total Integration"/"looks and works like"), Burn/OS buttons gone from the Control
+   Center (skin_node_offered), RENAME: plug-in "TI Revive" (bundle TI Revive.vst3/.component), ASIO "TI Revive Audio",
+   MIDI "TI Revive Synth"/"TI Revive MIDI" (N: "TI Revive 2 Synth"); internal ids KEPT (broker client names owner.h,
+   class ids, AU codes + bundle ids, CoreMIDI unique ids, Windows MIDI instance ids); installers remove the old bundles
+   (MSI VCBUNDLE + major upgrade, Mac postinstall, Linux install.sh). OPEN before release: user looks at the Control
+   Center without Burn/OS (dev build was opened on the desktop); new CC screenshots (both still show the buttons);
+   project test (user: "Rename files, test first"): 0.8.42 projects in REAPER (Linux) and Live (win11 VM) + Logic (AU)
+   reopen with the renamed build; Mac: MIDI input kept by unique ID?; What's New entry for 0.8.43; release text.

@@ -20,7 +20,7 @@ jobs:
       - name: Check the Audio Unit
         run: |
           mkdir -p ~/Library/Audio/Plug-Ins/Components
-          for n in "TI Revive Virus Control" "TI Revive Virus Control (Snow)"; do # the TI and the Snow unit (E374)
+          for n in "TI Revive" "TI Revive (Snow)"; do # the TI and the Snow unit (E374)
             C="build-native/AU/Release/$n.component"
             ls -R "$C" | head -30
             lipo -info "$C/Contents/MacOS/$n"
@@ -28,7 +28,7 @@ jobs:
             codesign --force --deep --sign - "$C"
             cp -R "$C" ~/Library/Audio/Plug-Ins/Components/
           done
-          test -f "build-native/AU/Release/TI Revive Virus Control (Snow).component/Contents/Resources/plugin.vst3/Contents/Resources/snow-first"
+          test -f "build-native/AU/Release/TI Revive (Snow).component/Contents/Resources/plugin.vst3/Contents/Resources/snow-first"
           killall -9 AudioComponentRegistrar 2>/dev/null || true
           auval -a | grep -i "TIRv" || true
           auval -v aumu VTIr TIRv || echo "auval failed (the runner has no Access files and no Virus)"
@@ -39,11 +39,11 @@ jobs:
           bash scripts/mac-build-release.sh "$PWD" "$V-dev" "$PWD/out"
       - name: Collect
         run: |
-          mkdir dev && cp -R "build-native/AU/Release/TI Revive Virus Control.component" \
-              "build-native/AU/Release/TI Revive Virus Control (Snow).component" dev/
-          cp -R "build-native/VST3/Release/TI Revive Virus Control.vst3" dev/
-          codesign --force --deep --sign - "dev/TI Revive Virus Control.component" \
-              "dev/TI Revive Virus Control (Snow).component" "dev/TI Revive Virus Control.vst3"
+          mkdir dev && cp -R "build-native/AU/Release/TI Revive.component" \
+              "build-native/AU/Release/TI Revive (Snow).component" dev/
+          cp -R "build-native/VST3/Release/TI Revive.vst3" dev/
+          codesign --force --deep --sign - "dev/TI Revive.component" \
+              "dev/TI Revive (Snow).component" "dev/TI Revive.vst3"
           cp out/TI-Revive-*-mac.zip dev/
       - uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
         with:

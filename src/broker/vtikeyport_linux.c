@@ -1,6 +1,6 @@
-// vtikeyport_linux.c - see vtikeyport.h. Linux: two ports of an ALSA sequencer client "Virus TI", numbered and named as
-// the kernel's own driver had them when it owned the Virus (E016: port 0 "Virus TI MIDI", port 1 "Virus TI Synth"),
-// so a DAW finds them under the same names. The broker owns the Virus' interfaces through libusb, and with them gone
+// vtikeyport_linux.c - see vtikeyport.h. Linux: two ports of an ALSA sequencer client "TI Revive", numbered as the
+// kernel's own driver had them when it owned the Virus (E016: port 0 "Virus TI MIDI", port 1 "Virus TI Synth"); named
+// "TI Revive MIDI" / "TI Revive Synth" since 0.8.43 (branding cleanup). The broker owns the Virus' interfaces through libusb, and with them gone
 // from snd-usb-audio the kernel's ports are gone too. Straight on /dev/snd/seq with the kernel's ioctls (seqevent.h):
 // no alsa-lib in the broker. PipeWire and JACK bridges pick sequencer ports up like any other.
 #include "vtikeyport.h"
@@ -21,7 +21,7 @@
 static atomic_int g_fd = -1;
 static atomic_uint g_sent[2], g_failed[2]; // for the log: did the messages get as far as the sequencer
 static atomic_int g_made[2];
-static char g_name[2][32] = {"Virus TI MIDI", "Virus TI Synth"}; // Virus N of several: "Virus TI N MIDI" (#45)
+static char g_name[2][32] = {"TI Revive MIDI", "TI Revive Synth"}; // Virus N of several: "TI Revive N MIDI" (#45)
 
 static int make_port(int fd, int client, int port)
 {

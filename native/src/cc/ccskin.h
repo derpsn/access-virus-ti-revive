@@ -32,6 +32,13 @@ struct SkinLayout {
 
 bool parse_skin(const std::vector<uint8_t> &editor_xml, SkinLayout &out, std::string &error);
 
+// false for the original's elements TI Revive leaves out entirely: the Burn To Flash ROM and OS Updater tabs (they
+// write the Virus' flash, AGENTS.md rule 2; not drawn since 2026-11-19, before only not clickable)
+inline bool skin_node_offered(const SkinNode &n)
+{
+    return !(n.parameter == "ControlCenter/Tabs/ActiveTab" && (n.value == 1 || n.value == 2));
+}
+
 // "PNG/BG_Header.png" -> "BG_Header.png"
 std::string skin_bitmap_name(const std::string &ref);
 

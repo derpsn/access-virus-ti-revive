@@ -640,7 +640,7 @@ void DeviceOut::run()
                 report_status();
             }
             absent_since_ = std::chrono::steady_clock::time_point{};
-            broker_.set_name("TI Revive Virus Control");
+            broker_.set_name("TI Revive Virus Control"); // the broker's internal name for the plug-in (owner.h): unchanged
             open_ = broker_.open(err);
             if (open_ && !audio_ok()) { // the owner starts the Virus audio stream (Linux: shm ring)
                 const int r = start_audio();

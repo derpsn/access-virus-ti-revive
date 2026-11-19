@@ -228,7 +228,7 @@ if (Test-Path $backup) {
 }
 if ($extracted) { Remove-Item -Recurse -Force $extracted -ErrorAction SilentlyContinue }
 if (HaveFiles) {
-    $msg = 'The Access Virus TI files are set up. Use the plug-in "TI Revive Virus Control" in your DAW'
+    $msg = 'The Access Virus TI files are set up. Use the plug-in "TI Revive" in your DAW'
     if ($remove -and -not (AccessProduct)) { $msg += '; the old Access software was removed' }
     Say "$msg."
     exit 0

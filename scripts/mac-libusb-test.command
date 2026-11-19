@@ -4,7 +4,7 @@
 # It needs root (macOS lets only root take the Virus from Apple's driver), so it asks for your password.
 #
 # 1. Quit your DAW and the TI Revive Control Center. 2. Double-click this file. 3. Start your DAW (its audio device:
-# NOT the Virus TI, e.g. the Mac's built-in output) and load TI Revive Virus Control. 4. When done: quit the DAW, then
+# NOT the Virus TI, e.g. the Mac's built-in output) and load TI Revive. 4. When done: quit the DAW, then
 # Ctrl-C in this window. The Virus goes back to Apple's driver and the plug-in uses Core Audio again from its next start.
 BROKER="/Library/Application Support/TI Revive/vtibroker"
 OPT="$HOME/Library/Application Support/virus-ti-native"

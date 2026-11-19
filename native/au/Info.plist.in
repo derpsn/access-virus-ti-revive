@@ -36,7 +36,7 @@
 			<key>name</key>
 			<string>TI Revive: @VTI_AU_NAME@</string>
 			<key>description</key>
-			<string>Access Virus TI Total Integration without the old drivers</string>
+			<string>The Access Virus TI without the old drivers</string>
 			<key>version</key>
 			<integer>@VTI_AU_VERSION@</integer>
 			<key>factoryFunction</key>

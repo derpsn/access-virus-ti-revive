@@ -8,7 +8,7 @@
 #   2. TI Revive broker in ~/.local/lib/tirevive + systemd user socket (starts on demand, exits when idle)
 #   3. the files of your own Access "Virus TI Software Suite" .msi that the plug-in reads (skin + device description,
 #      ROM banks, manuals, factory patch libraries) - unpacked with msiextract (msitools) or Wine, NOT installed
-#   4. the plug-in "TI Revive Virus Control" (Linux VST3, no Wine/yabridge) into ~/.vst3; the classic plug-in of
+#   4. the plug-in "TI Revive" (Linux VST3, no Wine/yabridge) into ~/.vst3; the classic plug-in of
 #      TI Revive 0.7 ("Virus TI (TI Revive)" through yabridge) is removed - the new one opens its projects
 # Wine is only needed to unpack the .msi when msiextract is missing.
 set -eu
@@ -197,13 +197,15 @@ mkdir -p "$CONF"
 printf '%s\n' "$ACCESS/Common" > "$CONF/access-dir"
 
 # --- 4. the plug-in --------------------------------------------------------------------------------------------------
-say "plug-in TI Revive Virus Control"
+say "plug-in TI Revive"
 mkdir -p "$HOME/.vst3"
 # the classic plug-in of TI Revive 0.7 (through yabridge) and the test builds: the new plug-in opens their projects
 rm -f "$VST3_DIR/Virus TI (TI Revive).vst3"
-rm -rf "$HOME/.vst3/yabridge/Virus TI (TI Revive).vst3" "$HOME/.vst3/VirusTINative.vst3" "$HOME/.vst3/TI Revive Virus Control.vst3"
-cp -R "$HERE/native/TI Revive Virus Control.vst3" "$HOME/.vst3/"
-MISSING=$(ldd "$HOME/.vst3/TI Revive Virus Control.vst3/Contents/x86_64-linux/TI Revive Virus Control.so" 2>/dev/null |
+# the plug-in's earlier bundle names (same class id: a DAW would see two copies); "TI Revive Virus Control" until 0.8.42
+rm -rf "$HOME/.vst3/yabridge/Virus TI (TI Revive).vst3" "$HOME/.vst3/VirusTINative.vst3" "$HOME/.vst3/TI Revive.vst3" \
+    "$HOME/.vst3/TI Revive Virus Control.vst3"
+cp -R "$HERE/native/TI Revive.vst3" "$HOME/.vst3/"
+MISSING=$(ldd "$HOME/.vst3/TI Revive.vst3/Contents/x86_64-linux/TI Revive.so" 2>/dev/null |
     awk '/not found/ {print $1}' | tr '\n' ' ')
 if [ -n "$MISSING" ]; then
     cat <<EOT
@@ -215,4 +217,4 @@ plug-ins.
 EOT
 fi
 
-say "done. Rescan plug-ins in your DAW and load the VST3 \"TI Revive Virus Control\"."
+say "done. Rescan plug-ins in your DAW and load the VST3 \"TI Revive\"."

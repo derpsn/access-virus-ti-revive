@@ -1,6 +1,6 @@
 #!/bin/bash
 # mac-build-release.sh - build the macOS release of TI Revive on a Mac (Xcode; the release workflow's macOS runner):
-#   TI-Revive-<version>-mac.zip = TI Revive.pkg (plug-in "TI Revive Virus Control" as VST3 + Audio Unit, universal;
+#   TI-Revive-<version>-mac.zip = TI Revive.pkg (plug-in "TI Revive" as VST3 + Audio Unit, universal;
 #     the broker) + "Set up Access Virus TI files.command" + "Uninstall TI Revive.command" + README-mac.txt
 # usage: mac-build-release.sh <repo dir> <version> [out dir]
 # needs: Xcode (the plug-in: native/, VST3 SDK submodule; the AudioUnitSDK is fetched by CMake), curl (libusb).
@@ -56,16 +56,16 @@ done
 echo "broker: $ARCHS"
 codesign --force --sign - "$BUILD/mac/vtibroker"
 
-echo "== plug-in TI Revive Virus Control: VST3 + Audio Unit ($MAC_ARCHS)"
+echo "== plug-in TI Revive: VST3 + Audio Unit ($MAC_ARCHS)"
 # the VST3 SDK's SMTG_BUILD_UNIVERSAL_BINARY (default ON) sets ARCHS = standard (arm64 + x86_64) on its targets and
 # overrides CMAKE_OSX_ARCHITECTURES: a one-arch build (Catalina, x86_64) then links arm64 against an x86_64 vticore
 UNIV=$([ "$(echo $MAC_ARCHS | wc -w)" -gt 1 ] && echo ON || echo OFF)
 cmake -S "$REPO/native" -B "$BUILD/native" -G Xcode -DCMAKE_OSX_ARCHITECTURES="${MAC_ARCHS// /;}" -DSMTG_BUILD_UNIVERSAL_BINARY=$UNIV \
     -DCMAKE_OSX_DEPLOYMENT_TARGET="$PLUGIN_MIN" ${SDKROOT:+-DCMAKE_OSX_SYSROOT="$SDKROOT"} >/dev/null
 cmake --build "$BUILD/native" --config Release --target VirusTINative VirusTINative_AU VirusTINative_AU_Snow tirevive-cc TIReviveControlCenter -- -quiet
-VST3="$BUILD/native/VST3/Release/TI Revive Virus Control.vst3"
-AU="$BUILD/native/AU/Release/TI Revive Virus Control.component"
-AU_SNOW="$BUILD/native/AU/Release/TI Revive Virus Control (Snow).component" # the Snow unit (E374)
+VST3="$BUILD/native/VST3/Release/TI Revive.vst3"
+AU="$BUILD/native/AU/Release/TI Revive.component"
+AU_SNOW="$BUILD/native/AU/Release/TI Revive (Snow).component" # the Snow unit (E374)
 codesign --force --deep --sign - "$VST3"
 codesign --force --deep --sign - "$AU"
 codesign --force --deep --sign - "$AU_SNOW"

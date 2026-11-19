@@ -54,7 +54,7 @@ if ($access) {
 # BusReportedDeviceDesc above. The model (TI / TI2 / Snow) is decided from these two.
 Add ''
 Add 'TI Revive logs (newest):'
-# 0.8+: the plug-in "TI Revive Virus Control" writes diag.log when diag.on exists in its folder; the broker its own log
+# 0.8+: the plug-in "TI Revive" writes diag.log when diag.on exists in its folder; the broker its own log
 $diag = Join-Path $env:LOCALAPPDATA 'virus-ti-native\diag.log'
 if (Test-Path $diag) {
     Add "   $diag"

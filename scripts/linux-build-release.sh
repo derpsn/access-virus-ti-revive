@@ -1,7 +1,7 @@
 #!/bin/bash
 # linux-build-release.sh - build the Linux release of TI Revive (findings/design-linux.md):
 #   TI-Revive-<version>-linux.tar.gz = install.sh, uninstall.sh, README-linux.txt,
-#     bin/vtibroker (native, libusb linked statically), native/TI Revive Virus Control.vst3 (the plug-in),
+#     bin/vtibroker (native, libusb linked statically), native/TI Revive.vst3 (the plug-in),
 #     systemd/ (user socket + service), udev/70-tirevive-virus-ti.rules
 # (0.8.0: no Wine-side files - the classic plug-in under yabridge is replaced by the native plug-in)
 # usage: linux-build-release.sh <repo dir> <version> [out dir]
@@ -34,17 +34,17 @@ CC_BIN="" # tirevive-cc, the Control Center command line (native/tools)
 CCAPP_BIN="" # the Control Center app (native/ccapp)
 if [ -n "${NATIVE_PREBUILT:-}" ]; then # built elsewhere (the release workflow builds it on an older Ubuntu, glibc)
     NATIVE="$NATIVE_PREBUILT"
-    [ -f "$NATIVE/Contents/x86_64-linux/TI Revive Virus Control.so" ] || { echo "no native plug-in in $NATIVE"; exit 1; }
+    [ -f "$NATIVE/Contents/x86_64-linux/TI Revive.so" ] || { echo "no native plug-in in $NATIVE"; exit 1; }
     CC_BIN="${NATIVE_CC:-}"
     CCAPP_BIN="${NATIVE_CCAPP:-}"
-elif [ -f "$REPO/native/CMakeLists.txt" ]; then # the native plug-in "TI Revive Virus Control" (native/, Linux VST3)
+elif [ -f "$REPO/native/CMakeLists.txt" ]; then # the native plug-in "TI Revive" (native/, Linux VST3)
     echo "== native plug-in"
     cmake -S "$REPO/native" -B "$BUILD/native" -DCMAKE_BUILD_TYPE=Release >/dev/null
     cmake --build "$BUILD/native" --target VirusTINative tirevive-cc TIReviveControlCenter -j4 >/dev/null
-    NATIVE="$BUILD/native/VST3/Release/TI Revive Virus Control.vst3"
+    NATIVE="$BUILD/native/VST3/Release/TI Revive.vst3"
     CC_BIN="$BUILD/native/bin/Release/tirevive-cc"
     CCAPP_BIN="$BUILD/native/ccapp/TIReviveControlCenter"
-    strip "$NATIVE/Contents/x86_64-linux/TI Revive Virus Control.so"
+    strip "$NATIVE/Contents/x86_64-linux/TI Revive.so"
 fi
 
 echo "== package"

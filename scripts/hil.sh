@@ -13,7 +13,7 @@
 # Exit 0 when every item passes.
 set -uo pipefail
 repo=$(cd "$(dirname "$0")/.." && pwd)
-plugin="$HOME/.vst3/TI Revive Virus Control.vst3"
+plugin="$HOME/.vst3/TI Revive.vst3"
 host="$repo/build-native/bin/Release/nativehost"
 out="$repo/work/hil/$(date +%Y%m%d-%H%M%S)"
 sleep_test=0

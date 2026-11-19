@@ -1,6 +1,6 @@
 // keyporthelper.h - macOS, the libusb package (#37, E544): its broker runs as root from launchd (a LaunchDaemon), outside
 // the user's login session, and CoreMIDI shows a virtual source only in the session of the process that made it: the
-// ports "Virus TI Synth" / "Virus TI MIDI" never reached Logic. So a root broker that serves a user starts a helper in
+// ports "TI Revive Synth" / "TI Revive MIDI" never reached Logic. So a root broker that serves a user starts a helper in
 // that user's session (launchctl asuser UID vtibroker -midiports UID); the helper gives up root, makes the sources and
 // gets the messages on its standard input in midifeed.h frames, as the Windows helper. A broker of the user itself (the
 // normal package) makes the sources as before. Read-only as before: the helper has no destination (rule 2).
@@ -52,5 +52,5 @@ static inline unsigned vti_keyport_helper_uid(const char *s)
     return *end || v <= 0 || v > 0x7fffffffLL ? 0 : (unsigned)v;
 }
 
-// midifeed.h's port (0 "Virus TI MIDI", 1 "Virus TI Synth") to vtikeyport_mac.c's source index ([0] Synth, [1] MIDI)
+// midifeed.h's port (0 "TI Revive MIDI", 1 "TI Revive Synth") to vtikeyport_mac.c's source index ([0] Synth, [1] MIDI)
 static inline int vti_keyport_mac_source(int feed_port) { return feed_port == 1 ? 0 : feed_port == 0 ? 1 : -1; }

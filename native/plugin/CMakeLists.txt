@@ -16,8 +16,9 @@ list(JOIN VTI_CID_OLD "\", \"" VTI_CID_OLD_JSON)
 file(WRITE ${CMAKE_CURRENT_BINARY_DIR}/compatibility.json "[{\"New\": \"${VTI_CID_NEW}\", \"Old\": [\"${VTI_CID_OLD_JSON}\"]}]\n")
 file(RELATIVE_PATH VTI_COMPAT_JSON ${CMAKE_CURRENT_SOURCE_DIR} ${CMAKE_CURRENT_BINARY_DIR}/compatibility.json) # the SDK wants it relative
 
-# bundle "TI Revive Virus Control.vst3" (the product name; the build target stays VirusTINative)
-smtg_add_vst3plugin(VirusTINative PACKAGE_NAME "TI Revive Virus Control"
+# bundle "TI Revive.vst3" (the product name, "TI Revive Virus Control.vst3" until 0.8.42: the installers remove that
+# one; the build target stays VirusTINative)
+smtg_add_vst3plugin(VirusTINative PACKAGE_NAME "TI Revive"
     MODULEINFO_COMPATIBILITY ${VTI_COMPAT_JSON} SOURCES_LIST
     source/entry.cpp
     source/virusplugin.cpp
