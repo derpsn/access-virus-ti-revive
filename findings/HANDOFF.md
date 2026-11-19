@@ -101,9 +101,7 @@ unplug step on the Access driver, Mac "Virus TI MIDI" played through, Keyboard/P
 
 ## NEXT
 
-1. Mac (only when needed, user 2026-11-19): push the 0.8.42 release (work/rel-0.8.42/out/macx/TI-Revive-0.8.42-release, pkg 1f8f888c) with
-   scripts/mac.sh push when the Mac answers; the user installs; check the installed files. Until then it has the
-   tested CI build 44588173936 (same code, older texts).
+1. Mac: the 0.8.42 release push is obsolete (the Mac has the 0.8.43 test package, pkg 22ae6de3).
 2. Joint issue check from 2026-11-21: quiet-issue closings (#26 #31 #33 #36; #41 from 11-22; #32 #40 are ours);
    replies from #45 (two real Viruses: first real-world test), #42 (snow-idle-slow CPU), #44 (recall), #47, #43, #37.
 3. Round 0.8.43 (started): the fixed release job (9049eec) runs for the first time at its tag - check it; rest of
@@ -115,16 +113,12 @@ unplug step on the Access driver, Mac "Virus TI MIDI" played through, Keyboard/P
 5. Proposals accepted 2026-11-19 (test automation): hil-mac started over SSH with `open` (try once), MIDI port checks
    in hil.sh / hil-mac, one install script for test builds, REAPER runs via scripts/reaper-open.sh (started), smart
    plug for H4 (hil.sh --power exists; user decides on the hardware).
-6. Our Mac: Logic Recording Delay back to 0 (user 2026-11-19).
-7. Branding cleanup (user 2026-11-19; list in work/HANDOFF-private.md). DONE on round-0.8.43: screenshots (masked,
-   "TI Revive" in Lato Black), repo -> derpsn/ti-revive (+ derpsn.github.io redirect; main 42528a1 site address),
-   Info page footer, wording (no "Total Integration"/"looks and works like"), Burn/OS buttons gone from the Control
-   Center (skin_node_offered), RENAME: plug-in "TI Revive" (bundle TI Revive.vst3/.component), ASIO "TI Revive Audio",
-   MIDI "TI Revive Synth"/"TI Revive MIDI" (N: "TI Revive 2 Synth"); internal ids KEPT (broker client names owner.h,
-   class ids, AU codes + bundle ids, CoreMIDI unique ids, Windows MIDI instance ids); installers remove the old bundles
-   (MSI VCBUNDLE + major upgrade, Mac postinstall, Linux install.sh). OPEN before release: user looks at the Control
-   Center: user OK ("cc looks clean"); new CC screenshots (both still show the buttons); project test: REAPER on
-   Linux PASSED (E556), Logic on the Mac PASSED (E557: loads, named TI Revive; MIDI input must be chosen again, Logic
-   keeps it by name), Live on the Mac worked (user), Live on Windows PASSED (E558; win11 VM has the 0.8.43 test build); Mac has the 0.8.43 test package (pkg 22ae6de3); What's New 0.8.43 + release text WRITTEN (only REAPER named as tested; add Live/Logic when done).
-   CI 44613895602 (3ff1a00, 0.8.43): mac + mac-libusb green (Mac test uses it); native-windows/-linux red (scripts_py:
-   no Pillow on CI, risk.json lacked scripts/reaper-projcompat) - fixed, new run for Windows. Linux has the local 0.8.43 dev build (0bd56d8).
+6. Branding cleanup DONE and TESTED on round-0.8.43 (user 2026-11-19; list in work/HANDOFF-private.md; details
+   log/2026-11.md): screenshots masked ("TI Revive", Lato Black), repo derpsn/ti-revive (+ derpsn.github.io redirect,
+   main 42528a1), Info page footer, wording, Burn/OS gone (user: "cc looks clean"), RENAME plug-in "TI Revive", ASIO
+   "TI Revive Audio", MIDI "TI Revive Synth"/"MIDI"; internal ids kept (owner.h names, class ids, AU codes/bundle ids,
+   CoreMIDI/Windows MIDI ids). Old projects reopen: REAPER Linux E556, Logic + Live Mac E557 (MIDI input to choose
+   again), Live Windows E558 incl. sound through TI Revive Audio. What's New + release text name these tests.
+   CI 44615094701 (f3d612e) all green: Mac has its package (22ae6de3), win11 VM its setup.exe (d45048c3), Linux the
+   local dev build. Not needed now (user): new Control Center screenshots without Burn/OS.
+7. Our TI2 is in the win11 VM (see Where things stand); the VM's new sound card appears at the next VM start.
