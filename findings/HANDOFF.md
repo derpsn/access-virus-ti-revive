@@ -119,8 +119,9 @@ unplug step on the Access driver, Mac "Virus TI MIDI" played through, Keyboard/P
    ping, then "sync marker at frame"); covered by the round's hil run once the TI2 is back from the VM.
    3b. Wish (#39, timemachine70 2026-11-20, answered issuecomment-7039532288): resize the plug-in window by dragging
    (today only right-click > Size 100-200 %, viruseditor.h canResize false); a later round, not 0.8.43.
-   3c. #50 (E562), small, proposed to the user: AudioIn's Core Audio pick/open reasons into diag.log (once per
-   change), the instance's Virus number in the editor; then fix core_audio_pick from the reporter's answer.
+   3c. #50 (E562): DONE in code: Core Audio pick/open outcome into diag.log ("audio input: ..."), " - Virus N" after
+   the model with several Viruses. Mac compile only in CI (not built locally); fix core_audio_pick itself from the
+   reporter's answer / the next log.
 4. Open from the round: the 53 ms stall on the sim's Virus 2 (sim wants a rerun with VTISIM_WARMUP=1); two real
    Viruses, and two on Windows/macOS, untested (Mac Core Audio pick by USB serial unverified); Live on macOS may host
    waiting instances in another process ("another program's plug-in" lines, not checked); W2's largest ASIO buffer not

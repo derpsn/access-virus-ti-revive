@@ -1678,7 +1678,7 @@ Entries: 559. Marks after an entry: its lowest confidence level when below HIGH,
 - [E561](evidence.md#e561) #37 round of 2026-11-19 (packman83, TI Desktop, Intel MacBook, macOS 10.15.7 Catalina, Logic, the libusb ... (MED; open; not on hardware)
 - [E562](evidence.md#e562) #50 (sbostock76, the #22 reporter; macOS 15.7.7, Apple Silicon, Logic 12.3.1, TI Revive 0.8.42, 48 kHz, block ... (open; not on hardware)
 
-## Linux (222)
+## Linux (223)
 
 - [E015](evidence.md#e015) Passthrough was not live during the p0 knob test: host kernel had all 5 interfaces (1-9:1.0..1.4) bound to ...
 - [E016](evidence.md#e016) Linux snd-usb-audio (host kernel 7.0.0-38) claims all 5 interfaces, including vendor-class MI_03/MI_04 (class ...
@@ -1902,6 +1902,7 @@ Entries: 559. Marks after an entry: its lowest confidence level when below HIGH,
 - [E555](evidence.md#e555) With one Virus and two plug-in instances (round 0.8.42 test, user's REAPER project on Linux, TI2 Desktop) the ... (open)
 - [E556](evidence.md#e556) The rename of 0.8.43 ("TI Revive Virus Control" -> "TI Revive", bundle "TI Revive Virus Control.vst3" -> "TI ... (open)
 - [E561](evidence.md#e561) #37 round of 2026-11-19 (packman83, TI Desktop, Intel MacBook, macOS 10.15.7 Catalina, Logic, the libusb ... (MED; open; not on hardware)
+- [E562](evidence.md#e562) #50 (sbostock76, the #22 reporter; macOS 15.7.7, Apple Silicon, Logic 12.3.1, TI Revive 0.8.42, 48 kHz, block ... (open; not on hardware)
 
 ## Models: Snow, Polar, Keyboard, TI2 (259)
 

@@ -168,6 +168,15 @@ static const char *const VIRUS_SLOT_RECORD = "TIRevive/Virus"; // the project's 
 static std::mutex g_owner_mu;
 static const DeviceOut *g_owner[VTI_SLOTS_MAX]; // per Virus: the instance of this process that talks to it (#45)
 
+bool DeviceOut::other_owner() const
+{
+    std::lock_guard<std::mutex> g(g_owner_mu);
+    for (const DeviceOut *o : g_owner)
+        if (o && o != this)
+            return true;
+    return false;
+}
+
 bool DeviceOut::claim_owner()
 {
     std::lock_guard<std::mutex> g(g_owner_mu);
@@ -299,6 +308,12 @@ int DeviceOut::start_audio()
     if (r == 1 && audio_.open(nullptr, want_rate.load())) { // macOS: the Core Audio rate
         rate = audio_.rate(); // the Virus' current rate (E323; 44100 from an older broker)
         audio_gate_.open();
+    }
+    // macOS: which Core Audio device, or why none opened (#50, E562); the retry runs every 500 ms, so once per change
+    if (audio_.open_note() != audio_note_) {
+        audio_note_ = audio_.open_note();
+        if (!audio_note_.empty())
+            log("Virus TI native: audio input: %s\n", audio_note_.c_str());
     }
     return r;
 }

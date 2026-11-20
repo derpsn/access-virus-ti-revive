@@ -68,4 +68,24 @@ inline int core_audio_pick(const std::vector<std::string> &uids, const std::stri
     return slot >= 1 && slot <= n ? order[slot - 1] : -1;
 }
 
+// macOS (#50, E562): the pick's outcome as one line for the plug-in log (it went to stderr only): how the device was
+// matched, never the serial (rule 5)
+inline std::string core_audio_note(int devices, int slot, int pick, bool by_serial)
+{
+    const std::string v = "Virus " + std::to_string(slot);
+    if (devices <= 0)
+        return "no Virus audio device in Core Audio (" + v + ")";
+    if (devices == 1)
+        return pick == 0 ? "1 Virus audio device, taken for " + v : "1 Virus audio device, " + v + " not among them";
+    return std::to_string(devices) + " Virus audio devices, " + v + " " +
+           (pick < 0 ? "not among them" : by_serial ? "found by its USB serial" : "taken by order (no serial match)");
+}
+
+// #50: which Virus an instance plays, after the model name in the browser and the menus - only with several Viruses
+// (this instance on Virus 2+, or another instance of this process on another one), so one Virus looks as before
+inline std::string slot_label(int slot, bool other_instance)
+{
+    return slot >= 2 || (slot == 1 && other_instance) ? " - Virus " + std::to_string(slot) : "";
+}
+
 } // namespace vti

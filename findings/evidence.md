@@ -5283,6 +5283,14 @@ device for both or none, or the second open fails. Also reported: the editor doe
 uses, and both browsers name the model "Virus TI2 Desktop" (the Polar is not told apart from the Desktop over USB so
 far; not checked against the Polar's USB strings).
 
+**Round 0.8.43 (same day):** the pick's outcome now reaches diag.log ("Virus TI native: audio input: 2 Virus audio
+devices, Virus 1 found by its USB serial" / "taken by order (no serial match)" / "not among them" / "no Virus audio
+device in Core Audio", plus "; start failed (OSStatus)" or "; IOProc not created (...)"), once per change, not per
+500 ms retry (slotpick.h core_audio_note, audioin.cpp find_virus/open, virusplugin.cpp start_audio); and with several
+Viruses the model name in the browser and the menus ends in " - Virus N" (slot_label: this instance on Virus 2+, or
+another instance of this process holding another Virus). Unit tests on Linux (846 pass); the macOS part is compiled by
+CI only, not yet run with two Viruses.
+
 - **Date:** 2026-11-20
 - **Pointer:** issue #50 (issuecomment-7039814819); log in the session scratchpad only; native/src/device/slotpick.h, audioin.cpp find_virus
 - **Method:** the plug-in log's per-Virus stats and events, the broker log, code reading
