@@ -5,7 +5,7 @@ NEXT. At most 150 lines; the Stop hook (`.claude/hooks/handoff-check.sh`) refuse
 how goes into the dated log [`log/2026-11.md`](log/2026-11.md) (newest first); older logs are in [`log/`](log/).
 Device/protocol knowledge goes into [`evidence.md`](evidence.md). Update this file in the same commit as the work._
 
-Last update: 2026-11-20: issues checked with the user: #48 diagnosed (E559, #44 closed as its duplicate), #49 Polar/FL Studio report (E560), #37 Catalina round analysed (E561), replies posted on #48 #49 #34 #37; #37 start-up slip taken into round 0.8.43. 0.8.42 RELEASED 2026-11-19.
+Last update: 2026-11-20: **v0.8.43-rc1 tagged** on 606c265 (CI 44738967197 running) for the #50 reporter (two Viruses on a Mac); round fixes today: start-up slip in silence (#37, E561), Core Audio pick in diag.log + "- Virus N" (#50, E562); issues checked with the user (#48 E559, #49 E560, #37, #39, #50). 0.8.42 RELEASED 2026-11-19.
 
 ## Where things stand
 
@@ -102,6 +102,9 @@ unplug step on the Access driver, Mac "Virus TI MIDI" played through, Keyboard/P
 
 ## NEXT
 
+00. NOW: CI 44738967197 (v0.8.43-rc1): when green, check the pre-release has the Mac zip, then post the test request
+   on #50 (draft in the session scratchpad, user OK pending on the text); failed job -> gh run rerun --failed. rc1
+   is untested on our hardware (slip fix check open, macOS Core Audio code first compiled in this CI run).
 0. TOMORROW (user 2026-11-19: "we finalize it tomorrow"): release 0.8.43. Order: Virus back to Linux (VM=win11
    scripts/vm.sh detach; systemctl --user start tirevive-broker.socket) + restart the VM for its sound card; risk.py
    --round 0.8.43 -> hil.sh (cold, reopen, export) + Mac sleep/wake and power by hand + checklist page
