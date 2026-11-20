@@ -5210,3 +5210,19 @@ change instead of reopen, time of the distortion.
 - **Method:** the plug-in log's stats lines (raw peaks, host/virus frames, drops, read margin) and the broker log per session
 - **Confidence:** HIGH (no driver conflict, no slip, no rate mismatch, no dropouts in the log) / open (the cause, the full-scale window)
 - **Hardware:** no (the reporter's unit)
+
+### E560
+
+#49 test report (2026-11-20): Virus TI2 Polar, Virus OS 5.0.8.00, MacBook Pro M1, macOS Sequoia 15, FL Studio
+26.1.7, TI Revive 0.8.41, Access installer 5.1.7.00, connected through a USB-C hub (AXAGON HMC-5). Setup: audio input
+"Virus TI", audio output the Mac's headphones (a second device, so the Virus and the output run on separate clocks),
+48 kHz, buffer 128, MIDI input "Virus TI Synth" on, "Virus TI MIDI" off, plug-in main out USB 1 L+R. Reported working:
+load and connect, RAM and ROM banks, MIDI keyboard input, USB audio, factory presets, automation, project save and
+reopen, audio export; timing "no noticeable delay" (the grid check was not done). First report for FL Studio and for
+the Polar.
+
+- **Date:** 2026-11-20
+- **Pointer:** issue #49
+- **Method:** the reporter's test report (form and text), no log
+- **Confidence:** MED (user report without a log)
+- **Hardware:** no (the reporter's unit)
