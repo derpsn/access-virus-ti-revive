@@ -5264,3 +5264,27 @@ shape).
 - **Method:** the plug-in log's event and stats lines, the broker's usbaudio summary, code reading (hostgestures.h, macgiveback.h, the libusb postinstall)
 - **Confidence:** HIGH (1) the restarts at the stream start and their timing, (4)(6) by design / MED (2) the cause / open (3) the gaps
 - **Hardware:** no (the reporter's unit)
+
+### E562
+
+#50 (sbostock76, the #22 reporter; macOS 15.7.7, Apple Silicon, Logic 12.3.1, TI Revive 0.8.42, 48 kHz, block 1024;
+TI2 Polar + TI2 Desktop, two TI Revive instances in one project): the first real two-Virus test on macOS. Log
+TI-Revive-logs-2026-11-20-1217.txt: slot choice works ("the project used Virus 2 - switching over from Virus 1",
+"another instance uses Virus 1 - trying Virus 2", "this instance uses Virus 2"; the broker of Virus 1 logs "2 Viruses
+connected, this broker has Virus 1"); each instance syncs its own banks (Virus 2: user ROM banks A-Z = the Polar,
+Virus 1: A-L = the Desktop, as in #22). The Virus 2 instance streams normally (audio 1, host/virus frames per 10 s
+complete); the Virus 1 instance (the Desktop) never opens its Core Audio input: 340 of its 349 stats lines read
+`audio 0 drops -1 filled -1 distance -1 ... host frames 0 / virus frames -1`. The plug-in retries start_audio every
+500 ms (virusplugin.cpp), and the reasons from AudioIn::open / find_virus ("audioin: N Virus audio devices, Virus 1
+... found by its USB serial / taken by order / not among them") go to stderr, not to diag.log, so the log cannot show
+which step fails. Reporter: only the Polar is heard; with the Polar's instance removed the Desktop plays. Suspects
+(open): core_audio_pick (slotpick.h; its own note: Apple's UID format with two Viruses unverified) picks the same
+device for both or none, or the second open fails. Also reported: the editor does not show which Virus an instance
+uses, and both browsers name the model "Virus TI2 Desktop" (the Polar is not told apart from the Desktop over USB so
+far; not checked against the Polar's USB strings).
+
+- **Date:** 2026-11-20
+- **Pointer:** issue #50 (issuecomment-7039814819); log in the session scratchpad only; native/src/device/slotpick.h, audioin.cpp find_virus
+- **Method:** the plug-in log's per-Virus stats and events, the broker log, code reading
+- **Confidence:** HIGH (the Desktop's instance has no audio input open; slot choice correct) / open (why the Core Audio open fails)
+- **Hardware:** no (the reporter's units)
