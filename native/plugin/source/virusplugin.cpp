@@ -811,18 +811,24 @@ void DeviceOut::run()
             slip_fired_ = false;
             const int64_t now = std::chrono::duration_cast<std::chrono::milliseconds>(
                                     std::chrono::steady_clock::now().time_since_epoch()).count();
+            // the slipped sync marker found it in silence (E561), else two slipped windows (ratio)
+            char how[48];
+            if (slip_.marker_seen())
+                snprintf(how, sizeof how, "marker");
+            else
+                snprintf(how, sizeof how, "ratio %.3f", slip_.last_ratio());
             if (!vti::cc::plugin_option("slip-restart"))
-                log("Virus TI native: the Virus' audio arrives scrambled (byte slip, E488, ratio %.3f) - slip-restart is "
-                    "off, not restarted\n", slip_.last_ratio());
+                log("Virus TI native: the Virus' audio arrives scrambled (byte slip, E488, %s) - slip-restart is "
+                    "off, not restarted\n", how);
             else if (!slip_gate_.allow(now))
-                log("Virus TI native: the Virus' audio arrives scrambled (byte slip, E488, ratio %.3f) - %s\n",
-                    slip_.last_ratio(), slip_gate_.count() >= 5 ? "restarted 5 times already, giving up"
+                log("Virus TI native: the Virus' audio arrives scrambled (byte slip, E488, %s) - %s\n",
+                    how, slip_gate_.count() >= 5 ? "restarted 5 times already, giving up"
                                                                  : "restarted less than 10 s ago, waiting");
             else {
                 // the broker's normal stop and start (alt 0/1 + SET_CUR, as at every session start), then a new
                 // timeline and sync ping on the new stream, as after a rate change
-                log("Virus TI native: the Virus' audio arrives scrambled (byte slip, E488, ratio %.3f) - restarting "
-                    "the stream (%d)\n", slip_.last_ratio(), slip_gate_.count());
+                log("Virus TI native: the Virus' audio arrives scrambled (byte slip, E488, %s) - restarting "
+                    "the stream (%d)\n", how, slip_gate_.count());
                 close_audio();
 #ifdef __APPLE__
                 if (audio_.broker_ring()) // the libusb-audio test: the broker restarts it as on Linux (E511)

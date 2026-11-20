@@ -112,9 +112,10 @@ unplug step on the Access driver, Mac "Virus TI MIDI" played through, Keyboard/P
    replies from #45 (two real Viruses: first real-world test), #42 (snow-idle-slow CPU), #44 (recall), #47, #43, #37.
 3. Round 0.8.43 (started): the fixed release job (9049eec) runs for the first time at its tag - check it; rest of
    the round to discuss with the user (Windows MIDI ports, test automation, Linux MIDI with the sim's Keyboard).
-   3a. Taken into the round (user 2026-11-20): on the libusb path the stream starts byte-slipped and the first
-   restart comes only up to ~70 s later (#37, E561, E488): check for the slip at the stream start, before the first
-   audio reaches the DAW (TDD; find the detector in native/ first).
+   3a. Start-up slip in silence (#37, E561): DONE in code (slipwatch.h fires on the marker in the slipped layout;
+   checked on real slipped/normal captures; 844 unit tests pass). Still to do: hardware check on our TI2 on Linux
+   with VTI_NATIVE_FAKE_SLIP=1 (expect "byte slip, E488, marker - restarting the stream (1)" within ~2 s of the
+   ping, then "sync marker at frame"); covered by the round's hil run once the TI2 is back from the VM.
 4. Open from the round: the 53 ms stall on the sim's Virus 2 (sim wants a rerun with VTISIM_WARMUP=1); two real
    Viruses, and two on Windows/macOS, untested (Mac Core Audio pick by USB serial unverified); Live on macOS may host
    waiting instances in another process ("another program's plug-in" lines, not checked); W2's largest ASIO buffer not

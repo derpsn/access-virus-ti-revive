@@ -1675,7 +1675,7 @@ Entries: 558. Marks after an entry: its lowest confidence level when below HIGH,
 - [E560](evidence.md#e560) #49 test report (2026-11-20): Virus TI2 Polar, Virus OS 5.0.8.00, MacBook Pro M1, macOS Sequoia 15, FL Studio ... (MED; not on hardware)
 - [E561](evidence.md#e561) #37 round of 2026-11-19 (packman83, TI Desktop, Intel MacBook, macOS 10.15.7 Catalina, Logic, the libusb ... (MED; open; not on hardware)
 
-## Linux (221)
+## Linux (222)
 
 - [E015](evidence.md#e015) Passthrough was not live during the p0 knob test: host kernel had all 5 interfaces (1-9:1.0..1.4) bound to ...
 - [E016](evidence.md#e016) Linux snd-usb-audio (host kernel 7.0.0-38) claims all 5 interfaces, including vendor-class MI_03/MI_04 (class ...
@@ -1898,8 +1898,9 @@ Entries: 558. Marks after an entry: its lowest confidence level when below HIGH,
 - [E554](evidence.md#e554) REAPER on Linux crashed when it opened a saved project with two TI Revive instances and at least one plug-in ... (open)
 - [E555](evidence.md#e555) With one Virus and two plug-in instances (round 0.8.42 test, user's REAPER project on Linux, TI2 Desktop) the ... (open)
 - [E556](evidence.md#e556) The rename of 0.8.43 ("TI Revive Virus Control" -> "TI Revive", bundle "TI Revive Virus Control.vst3" -> "TI ... (open)
+- [E561](evidence.md#e561) #37 round of 2026-11-19 (packman83, TI Desktop, Intel MacBook, macOS 10.15.7 Catalina, Logic, the libusb ... (MED; open; not on hardware)
 
-## Models: Snow, Polar, Keyboard, TI2 (257)
+## Models: Snow, Polar, Keyboard, TI2 (258)
 
 - [E013](evidence.md#e013) Remotedevice XML (3 blobs) embedded in Virus Control.dll at file offsets 0xc248a4, 0xcbee00 (TI ...
 - [E091](evidence.md#e091) macOS installer recon (originals/Virus TI Software Suite 5.1.7.00.pkg, xar from 2017, payloads unpacked to ...
@@ -2158,6 +2159,7 @@ Entries: 558. Marks after an entry: its lowest confidence level when below HIGH,
 - [E558](evidence.md#e558) Windows after the rename of 0.8.43 (see E556, E557): win11 VM (Windows 11, no Virus attached), a project ...
 - [E559](evidence.md#e559) #48 / #44 "distorted after reopening a saved project" (Mac mini M1, macOS Sequoia, Ableton Live, TI2 ... (open; not on hardware)
 - [E560](evidence.md#e560) #49 test report (2026-11-20): Virus TI2 Polar, Virus OS 5.0.8.00, MacBook Pro M1, macOS Sequoia 15, FL Studio ... (MED; not on hardware)
+- [E561](evidence.md#e561) #37 round of 2026-11-19 (packman83, TI Desktop, Intel MacBook, macOS 10.15.7 Catalina, Logic, the libusb ... (MED; open; not on hardware)
 
 ## DAWs (241)
 

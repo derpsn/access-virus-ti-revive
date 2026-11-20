@@ -29,11 +29,27 @@ public:
         frames_ = changed_ = 0;
         s_lo_ = s_hi_ = 0;
         run_ = 0;
+        mark_half_ = marker_seen_ = false;
     }
 
-    // one ring frame (6 channels); true once when the second slipped window in a row ends
+    // one ring frame (6 channels); true once when the second slipped window in a row ends, or at once when the sync
+    // marker arrives in the slipped layout
     bool feed(const int16_t fr[6])
     {
+        // E561 (#37): silence decides no window, so a slipped stream went unnoticed until the first notes. The sync
+        // marker (USB 2: 0/511, then 511/0) comes right after every start; read back through the slip (word k = low
+        // byte of k as its high byte, high byte of k - 2 as its low byte) it is that exact shape. Real captures: in
+        // both slipped streams, in none of 9.1 million normal frames.
+        const auto unslip = [&](int k) {
+            return (int16_t)(uint16_t)((((uint16_t)fr[k] & 0xFF) << 8) | ((uint16_t)fr[k - 2] >> 8));
+        };
+        const int16_t u4 = unslip(4), u5 = unslip(5);
+        const bool marker = mark_half_ && u4 == 511 && u5 == 0;
+        mark_half_ = u4 == 0 && u5 == 511;
+        if (marker) {
+            marker_seen_ = true;
+            run_ = 0;
+        }
         if (have_prev_) {
             bool any = false;
             for (int k = 0; k < 6; k++) {
@@ -50,7 +66,7 @@ public:
             prev_[k] = fr[k];
         have_prev_ = true;
         if (++frames_ < window_)
-            return false;
+            return marker;
         bool fired = false;
         // decided only with changes in at least 1 % of the frames: one step into or out of silence decides nothing
         if (changed_ * 100 >= window_ && s_lo_ + s_hi_ > 0) {
@@ -65,11 +81,12 @@ public:
             state_ = -1;
         frames_ = changed_ = 0;
         s_lo_ = s_hi_ = 0;
-        return fired;
+        return fired || marker;
     }
 
     int last_state() const { return state_; }    // the last window: 1 slipped, 0 normal, -1 undecided
     double last_ratio() const { return ratio_; } // of the last decided window
+    bool marker_seen() const { return marker_seen_; } // the slipped marker fired in this stream
 
 private:
     int window_ = 22050;
@@ -78,6 +95,8 @@ private:
     int frames_ = 0, changed_ = 0;
     int64_t s_lo_ = 0, s_hi_ = 0;
     int run_ = 0, state_ = -1;
+    bool mark_half_ = false;   // the last frame was the marker's first half in the slipped layout
+    bool marker_seen_ = false;
     double ratio_ = 0;
 };
 

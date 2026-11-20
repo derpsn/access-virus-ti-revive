@@ -5246,6 +5246,18 @@ mode, editor open not known; recording itself was fixed in 0.8.42, E542). (4) "V
 in Logic and (6) the Virus does not go back to Apple's driver after a replug: by design of the libusb package (the
 root service runs with -stay and keeps the Virus while the Mac runs, src/installer-mac/README-mac-libusb.txt). (5) No
 crackle at small and large buffers.
+**Fix (round 0.8.43, same day):** why the restart came 71 s late: the first stats window after the start had
+`raw peaks 255 0 | 0 0 | 1024 1024` (the slipped marker) and then digital silence (`0 0 | 0 0 | 0 0`, the TI Desktop's
+analog inputs read zero), where SlipWatch decides no window; it fired with the first notes. The sync marker comes
+right after every start (USB 2: 0/511, then 511/0, E451/S119); read back through the slip (word k = low byte of word
+k as high byte, high byte of word k-2 as low byte, all within one frame for USB 2) it is that exact shape. Checked on
+the simulator's exports of our real captures (virus-ti-sim/local/slipraw): the unslipped view finds it in both
+slipped streams (s070-59 at frame 576933, s070-60 at 558607; the raw view finds no marker there) and in none of the
+normal ones (a768-1, s070-58, frozen/live r48000, zero-orig-patchchange-1: 9.1 million frames, 0 hits). SlipWatch now
+fires at once on that shape (native/src/device/slipwatch.h, tests in test_slipwatch.cpp), the restart path is
+unchanged, and the log line names "marker" instead of the ratio. Built on Linux, 844 unit tests pass; not yet run on
+hardware (VTI_NATIVE_FAKE_SLIP on our TI2 exercises it: the fake slip turns the first stream's marker into the slipped
+shape).
 
 - **Date:** 2026-11-20
 - **Pointer:** issue #37 (2026-11-19 22:48 UTC, issuecomment-7038371621); logs in the session scratchpad only
