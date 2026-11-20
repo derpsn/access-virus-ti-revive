@@ -5226,3 +5226,29 @@ the Polar.
 - **Method:** the reporter's test report (form and text), no log
 - **Confidence:** MED (user report without a log)
 - **Hardware:** no (the reporter's unit)
+
+### E561
+
+#37 round of 2026-11-19 (packman83, TI Desktop, Intel MacBook, macOS 10.15.7 Catalina, Logic, the libusb package;
+logs TI-Revive-logs-2026-11-19-2204.txt and -2026-11-20-0154.txt, collected by the 0.8.42 Control Center). (1) "About
+three audio dropouts during the first run": the plug-in log has byte-slip restarts (E488) at the start of the stream on
+the libusb path too: session 11-19 17:54:20 UTC, "no sync marker" four times, then 17:55:31 "the Virus' audio arrives
+scrambled (byte slip, E488, ratio 0.993) - restarting the stream (1)", clean afterwards (host/virus frames 441000 per
+10 s, drops unchanged); session 11-15 01:41:12, restarts at 01:41:38 and 01:41:50 with "restarted less than 10 s ago,
+waiting" in between (ratio 0.992-0.993). The broker's usbaudio lines show no errors and no stalls (`errors 0, stalled 0
+ms`), so the slip is in the stream from its start, not a transfer error. (2) "Out of sync after dragging the playhead
+while playing": session 11-19 21:31-22:24 UTC: "sync error shown (4 late events since Play, 10 in total)" at 22:03:58,
+"pulled back 4-27 blocks, largest 3584 frames" (E472 read clamp) several times between 22:04 and 22:16, "timing safety
+net moved 32 stamp(s) forward (36 in total)" at 22:13:42, err between -5703 and +2484; Logic block 2048. Not analysed
+further. (3) Automation recorded from the Virus' knob is coarse (screenshot: Filter1 Cutoff points 0.13, 0.18, 0.28,
+0.38, 0.42): the 128 steps are expected (7-bit parameters, value/127); the gaps are open (version, Logic automation
+mode, editor open not known; recording itself was fixed in 0.8.42, E542). (4) "Virus TI MIDI" / "Virus TI Synth" stay
+in Logic and (6) the Virus does not go back to Apple's driver after a replug: by design of the libusb package (the
+root service runs with -stay and keeps the Virus while the Mac runs, src/installer-mac/README-mac-libusb.txt). (5) No
+crackle at small and large buffers.
+
+- **Date:** 2026-11-20
+- **Pointer:** issue #37 (2026-11-19 22:48 UTC, issuecomment-7038371621); logs in the session scratchpad only
+- **Method:** the plug-in log's event and stats lines, the broker's usbaudio summary, code reading (hostgestures.h, macgiveback.h, the libusb postinstall)
+- **Confidence:** HIGH (1) the restarts at the stream start and their timing, (4)(6) by design / MED (2) the cause / open (3) the gaps
+- **Hardware:** no (the reporter's unit)

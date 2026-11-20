@@ -5,7 +5,7 @@ NEXT. At most 150 lines; the Stop hook (`.claude/hooks/handoff-check.sh`) refuse
 how goes into the dated log [`log/2026-11.md`](log/2026-11.md) (newest first); older logs are in [`log/`](log/).
 Device/protocol knowledge goes into [`evidence.md`](evidence.md). Update this file in the same commit as the work._
 
-Last update: 2026-11-19: round-0.8.43 started (VERSION 0.8.43; #46 in README/site). **0.8.42 RELEASED** (user "Ship it", no rc7); test round complete (details log/2026-11.md); replies posted on #45 #42 #44; Mac release push pending (Mac asleep). Quiet-issue closings due from 2026-11-21.
+Last update: 2026-11-20: issues checked with the user: #48 diagnosed (E559, #44 closed as its duplicate), #49 Polar/FL Studio report (E560), #37 Catalina round analysed (E561), replies posted on #48 #49 #34 #37; #37 start-up slip taken into round 0.8.43. 0.8.42 RELEASED 2026-11-19.
 
 ## Where things stand
 
@@ -60,7 +60,7 @@ Last update: 2026-11-19: round-0.8.43 started (VERSION 0.8.43; #46 in README/sit
 | #33 | Intel Mac 0.8.39: Logic distorted until a buffer change; log clean on the way in, not a slip (E532) | reporter: Logic output device, distortion on the unit's outputs?, 0.8.41 log | 2026-11-14 |
 | #47 | NEW 2026-11-18: Snow "connected but not found" in Ableton; form says Windows 11 / TI Desktop, text macOS 27.0.1 / Snow; no logs, no version (E134 or E115 pattern?) | reporter: platform, model, version, Access/AURA, diag.log, broker log, ioreg, MIDI Drivers ls (issuecomment-7003657269) | 2026-11-19 |
 | #36 | Windows Cubase bank sync 0/128 | reporter: BC2001.syx, new log with 0.8.41 | 2026-11-14 |
-| #37 | rc3 libusb TESTED by the reporter 2026-11-18: notes in sync from the first start, no crackle; knobs as MIDI controller work in Remote mode (as the original); MIDI ports appear after loading the plug-in (by design only while the broker runs), but sometimes only after a Mac restart or Virus power cycle (cause unknown; their log had the broker start scrolled out). Log: 7 "audio arrives scrambled" restarts, 3 sync errors (asked if audible). Offset hypothesis: confirmed for #30, still open for #33 | reporter: grep "MIDI port" broker log when ports are missing, DIN MIDI In test, dropout heard? (issuecomment-6984585900); user 2026-11-18: decide on ports staying up while a Virus is connected (CPU cost, #42) only after that log; maintainer nudged 2026-11-18 19:43 | 2026-11-18 |
+| #37 | libusb pkg on Catalina, round 2026-11-19 (E561): (1) dropouts at the first run = byte-slip restarts at the stream start on the libusb path too (fix in round 0.8.43, NEXT 3a); (2) out of sync after dragging the playhead: sync error + read pull-backs + safety net in the log, cause open; (3) automation: 128 steps expected, gaps open; (4)(6) MIDI ports stay / Virus stays off Apple's driver = by design of the libusb service; (5) no crackle | reporter: does sync recover alone after a playhead drag; version, Logic automation mode, window open, knob in the window smooth? (issuecomment-7038371621) | 2026-11-20 |
 | #38 | macOS 27 Live: AU/editor crash = SOLVED by the reporter (Access .pkg was missing; plug-in opens; Virus not connected yet) | reporter: note after connecting the Virus, then close (issuecomment-6948868845) | 2026-11-17 |
 | #40 | (ours) macOS libusb audio as an option? | #39 reporter; #37 = first real data point (works) | 2026-11-13 |
 | #41 | (the #30 reporter, Snow, Logic) rc3: bus recording on the grid; log + project attached (new take not measured by us). Log also: RAM backup failed, cannot write ~/Documents/... .tmp (nothing written, safe) | reporter: Logic's Documents Folder permission in Privacy & Security (issuecomment-6900513133); 3085 -> 2816 log = E546 | 2026-11-15 |
@@ -112,6 +112,9 @@ unplug step on the Access driver, Mac "Virus TI MIDI" played through, Keyboard/P
    replies from #45 (two real Viruses: first real-world test), #42 (snow-idle-slow CPU), #44 (recall), #47, #43, #37.
 3. Round 0.8.43 (started): the fixed release job (9049eec) runs for the first time at its tag - check it; rest of
    the round to discuss with the user (Windows MIDI ports, test automation, Linux MIDI with the sim's Keyboard).
+   3a. Taken into the round (user 2026-11-20): on the libusb path the stream starts byte-slipped and the first
+   restart comes only up to ~70 s later (#37, E561, E488): check for the slip at the stream start, before the first
+   audio reaches the DAW (TDD; find the detector in native/ first).
 4. Open from the round: the 53 ms stall on the sim's Virus 2 (sim wants a rerun with VTISIM_WARMUP=1); two real
    Viruses, and two on Windows/macOS, untested (Mac Core Audio pick by USB serial unverified); Live on macOS may host
    waiting instances in another process ("another program's plug-in" lines, not checked); W2's largest ASIO buffer not
