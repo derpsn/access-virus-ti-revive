@@ -65,7 +65,11 @@ inline const std::vector<ChangeNote> &changelog()
           "track used one of the MIDI inputs, choose it there once more.",
           "Control Center: the Burn To Flash ROM and OS Updater buttons are gone (TI Revive never offered them).",
           "These Info pages say at the bottom that TI Revive is not affiliated with Access Music or Kemper.",
-          "TI Revive moved to github.com/derpsn/ti-revive and derpsn.github.io/ti-revive; the old links forward."}},
+          "TI Revive moved to github.com/derpsn/ti-revive and derpsn.github.io/ti-revive; the old links forward.",
+          "When the Virus' audio arrives scrambled at the start, TI Revive notices it within a few seconds, also in "
+          "silence, and restarts it before your first note (#37; before, only once you played).",
+          "Several Viruses on a Mac (#50): the browser and the menus show which Virus an instance plays (\"- Virus "
+          "2\"), and the log says which audio device each instance picked."}},
         {"0.8.42",
          {"Several Viruses at once (#45): each plug-in instance takes a free Virus, the one its project was saved "
           "with when that one is free. With one Virus nothing changes.",
