@@ -5325,3 +5325,29 @@ Linux. Not run with two Viruses (we have one); the reporter tests rc2.
 - **Method:** the plug-in log of rc1, code reading
 - **Confidence:** HIGH (RAM cache cause, start failure follows the start order) / LOW (hub bandwidth)
 - **Hardware:** no (the reporter's units)
+
+### E564
+
+#51 (edy013; Windows 11 Pro 25H2, TI Desktop, TI Revive 0.8.41, Fender Studio Pro 8.2 VST3 on a Universal Audio
+Apollo Twin USB, ASIO 48 kHz / 256, "3 Outs / No Input"): a small click every ~2 min (sometimes 10 s apart, sometimes
+5-18 min). Only excerpts of the diag.log reached us (no attachment in the issue): 33 lines "stats: pulled back 1-3
+blocks, largest 20-32 frames" in ~1.5 h, each with "read margin min 0" and err ranges like -543..85, -544..97,
+-542..-30; drops 0, filled 0; the reporter measured ~90 ppm between the Apollo and the Virus. Reading (code,
+HIGH for the mechanism): the stamp-aligned read sits timing_m() = 512 frames behind the newest frame
+(virusplugin.h:818); TimelineFollow steps the timeline only once the mean error is past STEP = 256 and holds at 128
+(timelinefollow.h:19-20); with two clocks the mean drifts to that band and the Windows delivery jitter (a few hundred
+frames) adds on top, so err reaches -543 = 31 frames past the margin and the read is pulled back to avail - n
+(virusplugin.cpp:2240): the reported jump sizes match err + 512 (31, 32, 30, 20). One clock (TI Revive Audio as the
+DAW's device) does not drift. Test asked: setx VTI_NATIVE_MARGIN 1024 (issuecomment-7044953063). Checked in the win11
+VM (0.8.42, Ableton Live 11, no Virus): setx in the console session is stored (HKCU\Environment), a program started by
+Explorer afterwards sees it, Live reads latency 4352 = A 3072 + block 256 + margin 1024 (default 3840,
+stamprule.h reported_frames), reg delete removes it. Not tested: whether 1024 removes the clicks (no second interface
+here). Fix options (open): keep the drift centred/away from the margin in TimelineFollow; a wider margin when the err
+range is wide; follow the drift with the resampler (reporter's suggestion).
+
+- **Date:** 2026-11-20
+- **Pointer:** issue #51 (issuecomment-7044953063); native/src/device/timelinefollow.h, native/plugin/source/virusplugin.cpp read clamp
+- **Method:** the reporter's log excerpts, code reading, win11 VM check of the switch
+- **Confidence:** HIGH (pull-back = err past the 512 margin) / open (fix, whether 1024 removes the clicks)
+- **Hardware:** no (the reporter's setup); the switch checked in the win11 VM without a Virus
+
