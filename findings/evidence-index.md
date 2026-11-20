@@ -2175,7 +2175,7 @@ Entries: 561. Marks after an entry: its lowest confidence level when below HIGH,
 - [E562](evidence.md#e562) #50 (sbostock76, the #22 reporter; macOS 15.7.7, Apple Silicon, Logic 12.3.1, TI Revive 0.8.42, 48 kHz, block ... (open; not on hardware)
 - [E563](evidence.md#e563) #50, rc1 test (same reporter and setup, v0.8.43-rc1, log TI-Revive-logs-2026-11-20-1459.txt) (LOW; not on hardware)
 
-## DAWs (243)
+## DAWs (244)
 
 - [E031](evidence.md#e031) Ableton Live 11 + plugin, after clean re-attach (E030 procedure; Waveform buffer-size warning "use ... (MED)
 - [E033](evidence.md#e033) Preset switching after sync (Ableton, 180 s, user switched in plugin, on hardware, and ping-pong) (MED)
@@ -2419,6 +2419,7 @@ Entries: 561. Marks after an entry: its lowest confidence level when below HIGH,
 - [E559](evidence.md#e559) #48 / #44 "distorted after reopening a saved project" (Mac mini M1, macOS Sequoia, Ableton Live, TI2 ... (open; not on hardware)
 - [E560](evidence.md#e560) #49 test report (2026-11-20): Virus TI2 Polar, Virus OS 5.0.8.00, MacBook Pro M1, macOS Sequoia 15, FL Studio ... (MED; not on hardware)
 - [E562](evidence.md#e562) #50 (sbostock76, the #22 reporter; macOS 15.7.7, Apple Silicon, Logic 12.3.1, TI Revive 0.8.42, 48 kHz, block ... (open; not on hardware)
+- [E563](evidence.md#e563) #50, rc1 test (same reporter and setup, v0.8.43-rc1, log TI-Revive-logs-2026-11-20-1459.txt) (LOW; not on hardware)
 - [E564](evidence.md#e564) #51 (edy013; Windows 11 Pro 25H2, TI Desktop, TI Revive 0.8.41, Fender Studio Pro 8.2 VST3 on a Universal ... (open; not on hardware)
 
 ## User reports (GitHub issues, forums) (138)

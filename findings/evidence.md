@@ -5320,6 +5320,17 @@ Virus once it is known (bank_cache_dir differs from the folder load_banks used: 
 dropped) and only then decides whether a read is certain. Unit test memsync_ram_cache_per_virus; 847 tests pass on
 Linux. Not run with two Viruses (we have one); the reporter tests rc2.
 
+**rc2 on the reporter's Mac (log 17:04, Logic, AU):** the hub was the cause of the silent second Virus: with both
+TI2s in the Mac mini's own ports both instances open Core Audio ("Virus 1 / Virus 2 taken by order", no start
+failure) and stream (host = virus frames, err 0..0). But in both rc2 starts the Virus 2 instance again fetched 128 x 4
+(512-513 s). **Linux check of rc2 (2026-11-20 19:05-19:10, REAPER VST3 728916c9, real TI2 + the sim's virtual TI2 over
+USB/IP, battery local/m4/multi):** the two units' RAM is identical (copy), so a normal start cannot tell the caches
+apart; with cache/virus-2/RAM D deleted, the Virus 2 instance fetched exactly RAM D ("RAM D sync: 128 fetched",
+131.8 s; A-C 0) and wrote the file again - the fix works here (the old code would have compared with Virus 1's
+identical RAM D and fetched 0). Nothing in the plug-in deletes cache files and the save result is not checked, so on
+the Mac either the save fails silently or the files do not persist (open); reporter asked for a listing of cache and
+cache/virus-2 (issuecomment-7047279049). The AU is Steinberg's wrapper around the same code (native/au).
+
 - **Date:** 2026-11-20
 - **Pointer:** issue #50 (issuecomment-7043408030); log in the session scratchpad only; native/plugin/source/virusplugin.cpp load_banks/sync_banks, native/src/device/memsync.cpp
 - **Method:** the plug-in log of rc1, code reading
