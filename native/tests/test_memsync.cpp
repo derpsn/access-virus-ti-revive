@@ -808,3 +808,11 @@ TEST(memsync_ram_cache_per_virus)
     CHECK(v2.count(1) && v2[1][0] == two[0]);
     CHECK(load_ram_cache("").empty());
 }
+
+// #50 (E563): the log names the RAM cache an instance loaded - whose folder, how many banks - without the path
+TEST(memsync_ram_cache_note_names_the_folder)
+{
+    CHECK(ram_cache_note(0, 4) == "RAM cache: Virus 1's folder, 4 of 4 banks");
+    CHECK(ram_cache_note(1, 0) == "RAM cache: Virus 1's folder, 0 of 4 banks");
+    CHECK(ram_cache_note(2, 3) == "RAM cache: Virus 2's own folder, 3 of 4 banks");
+}

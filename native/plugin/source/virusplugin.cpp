@@ -1310,6 +1310,7 @@ tresult PLUGIN_API VirusPlugin::initialize(FUnknown *context)
         vti::cc::rotate_log(own_cache_dir() + "/../diag.log", vti::cc::kPluginLogLimit); // on for everyone: kept small
         out_->set_diag_path(own_cache_dir() + "/../diag.log");
     }
+    out_->log("Virus TI native: TI Revive %s (%s)\n", TIREVIVE_VERSION, VTI_GIT_REV); // which build (E563)
     if (live_notes_) { // after set_diag_path, or the line never reaches diag.log
         char later[64] = "";
         if (out_->live_later.load())
@@ -3620,6 +3621,18 @@ void VirusPlugin::sync_banks()
         drop_.forget(); // an undo would write Virus 1's patches
         ui_dirty_ = true;
     }
+    {
+        int loaded = 0; // E563: which cache this sync starts from (the reporter's Mac re-read Virus 2 at every start)
+        std::lock_guard<std::mutex> lk(banks_mu_);
+        for (int b = 0; b < 4; b++)
+            loaded += banks_.count(b) ? 1 : 0;
+        out_->log("Virus TI native: %s\n", vti::ram_cache_note(out_->slot(), loaded).c_str());
+    }
+    // a failed save was silent: the next start then reads the whole bank again (E563)
+    const auto save_ram = [&](int b, const Bank &bank) {
+        if (!dir.empty() && !save_bank_file(dir + "/RAM " + (char)('A' + b), bank))
+            out_->log("Virus TI native: RAM %c: saving the bank cache failed (Virus %d)\n", 'A' + b, out_->slot());
+    };
     bool sync_expected = false;
     {
         std::lock_guard<std::mutex> lk(banks_mu_);
@@ -3696,8 +3709,8 @@ void VirusPlugin::sync_banks()
                 lcd_dirty_ = true; // only the progress on the LCD (a full repaint costs ~77 ms in REAPER)
         }, &stop_warm_);
         out_->log("Virus TI native: RAM %c sync: %d fetched\n", 'A' + b, n); // also diag.log: the sync's duration
-        if (n == -2 && !dir.empty()) // closed while syncing: keep what was fetched, the next start continues
-            save_bank_file(dir + "/RAM " + (char)('A' + b), bank);
+        if (n == -2) // closed while syncing: keep what was fetched, the next start continues
+            save_ram(b, bank);
         result = n;
         if (n < 0)
             break;
@@ -3707,8 +3720,7 @@ void VirusPlugin::sync_banks()
             if (n > 0)
                 drop_.forget(); // the Virus' RAM changed elsewhere: an undo could write over it
         }
-        if (!dir.empty())
-            save_bank_file(dir + "/RAM " + (char)('A' + b), bank);
+        save_ram(b, bank);
         ui_dirty_ = true;
     }
     // user ROM banks (E381/E382): their programs not cached yet, read like the original - no bank info, each request

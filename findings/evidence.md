@@ -5331,6 +5331,12 @@ identical RAM D and fetched 0). Nothing in the plug-in deletes cache files and t
 the Mac either the save fails silently or the files do not persist (open); reporter asked for a listing of cache and
 cache/virus-2 (issuecomment-7047279049). The AU is Steinberg's wrapper around the same code (native/au).
 
+**rc3 (diagnostics, same day):** diag.log now names the build at start ("TI Revive 0.8.43 (<commit>)", CMake reads
+the commit at configure time), the RAM cache each sync starts from ("RAM cache: Virus 2's own folder, 4 of 4 banks",
+memsync ram_cache_note, no path) and a failed bank save ("RAM X: saving the bank cache failed (Virus N)"; before,
+save_bank_file's result was ignored). Unit test memsync_ram_cache_note_names_the_folder; 848 tests pass; nativehost
+smoke test on our TI2 (Linux): the build and cache lines appear, 0 fetched. The failure line was not triggered.
+
 - **Date:** 2026-11-20
 - **Pointer:** issue #50 (issuecomment-7043408030); log in the session scratchpad only; native/plugin/source/virusplugin.cpp load_banks/sync_banks, native/src/device/memsync.cpp
 - **Method:** the plug-in log of rc1, code reading

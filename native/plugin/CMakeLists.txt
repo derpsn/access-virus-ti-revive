@@ -28,6 +28,14 @@ smtg_add_vst3plugin(VirusTINative PACKAGE_NAME "TI Revive"
 )
 target_link_libraries(VirusTINative PRIVATE sdk vstgui_support vticore)
 target_compile_definitions(VirusTINative PRIVATE TIREVIVE_VERSION="${PROJECT_VERSION}") # welcome / What's New
+# the commit in diag.log, so test builds of one version can be told apart (#50, E563)
+# shortcut: read at configure time only; a local build reconfigured later keeps the old commit (CI configures fresh)
+execute_process(COMMAND git rev-parse --short=8 HEAD WORKING_DIRECTORY ${CMAKE_CURRENT_SOURCE_DIR}
+                OUTPUT_VARIABLE VTI_GIT_REV OUTPUT_STRIP_TRAILING_WHITESPACE ERROR_QUIET)
+if(NOT VTI_GIT_REV)
+    set(VTI_GIT_REV "unknown")
+endif()
+target_compile_definitions(VirusTINative PRIVATE VTI_GIT_REV="${VTI_GIT_REV}")
 # the popup menus' own top-level windows (source/popupwindow.h)
 if(WIN32)
     target_sources(VirusTINative PRIVATE source/popupwindow_win.cpp)

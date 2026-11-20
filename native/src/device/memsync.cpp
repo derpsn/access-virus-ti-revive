@@ -57,6 +57,12 @@ std::map<int, std::vector<Dump>> load_ram_cache(const std::string &dir)
     return out;
 }
 
+std::string ram_cache_note(int slot, int banks)
+{
+    const std::string whose = slot > 1 ? "Virus " + std::to_string(slot) + "'s own" : "Virus 1's";
+    return "RAM cache: " + whose + " folder, " + std::to_string(banks) + " of 4 banks";
+}
+
 bool save_bank_file(const std::string &path, const Bank &bank)
 {
     std::string tmp = path + ".tmp";
