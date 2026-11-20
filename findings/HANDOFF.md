@@ -106,7 +106,7 @@ unplug step on the Access driver, Mac "Virus TI MIDI" played through, Keyboard/P
 
 00. #50: rc2 cache fix WORKS on Linux (sim repro, E563) but not on the reporter's Mac (Logic AU). Asked for an ls of
    cache + cache/virus-2 (issuecomment-7047279049). v0.8.43-rc3 out (CI 44792570714 green, 7 assets; diagnostics:
-   build, RAM cache used, failed saves), offered on #50; waiting on the reporter's ls + rc3 log. Repro cleaned up (vhci detached, server stopped). rc1/rc2 untested on our TI2 for the slip fix.
+   build, RAM cache used, failed saves), offered on #50; waiting on the reporter's ls + rc3 log. v0.8.43-rc4 (d06c250, adds mac-ventura for #52) tagged, CI 44815783941 running: check 8 assets + plug-in min 13.0 (PLUGIN_MIN default 11.0), then draft the #52 note. Repro cleaned up (vhci detached, server stopped). rc1/rc2 untested on our TI2 for the slip fix.
 0. TOMORROW (user 2026-11-19: "we finalize it tomorrow"): release 0.8.43. Order: Virus back to Linux (VM=win11
    scripts/vm.sh detach; systemctl --user start tirevive-broker.socket) + restart the VM for its sound card; risk.py
    --round 0.8.43 -> hil.sh (cold, reopen, export) + Mac sleep/wake and power by hand + checklist page
