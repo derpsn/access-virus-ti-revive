@@ -5187,3 +5187,26 @@ through to the VM (Windows: "Virus TI" devices OK) and the user played it in Liv
 - **Method:** silent install in the win11 VM checked over SSH (PowerShell); project reopened in Ableton Live by the user
 - **Confidence:** HIGH (Windows 11 VM, Ableton Live: project reopen, ASIO name, sound through TI Revive Audio)
 - **Hardware:** yes (TI2 Desktop passed through to the win11 VM for the sound check)
+
+### E559
+
+#48 / #44 "distorted after reopening a saved project" (Mac mini M1, macOS Sequoia, Ableton Live, TI2 Keyboard, Virus
+OS 5.1.7.00, AURA Virus Editor installed): the log collected 2026-11-20 by the 0.8.42 Control Center (plug-in diag.log
+2026-11-18 to 2026-11-20, broker log) shows the same picture as #33 (E532), the Virus' audio reaches the plug-in clean.
+Broker: the plug-in owns the Virus in every session, no LIBUSB_ERROR_ACCESS (so no E134 driver conflict in this log);
+the `read ep 85/86: LIBUSB_ERROR_IO` ... `giving up on the device` bursts come 6-9 s after the last client
+disconnected (the Virus switched off after work, not a fault). Plug-in: 44.1 kHz, block 512, Mode SINGLE; Virus
+frames against host frames per 10 s within 1 % in all 516 full windows; drops 0 in 531 of 536 windows (1-2 in the
+rest), no stream restarts, process time at most 45 us, over block time 0; raw peaks noise floor 4-5 and third pair
+0 throughout (no E488 slip). One window, 11-19 03:12:03 UTC, has the sound pair at full scale (32767 32767, the
+windows before it 4000-7000, the next 13373), and the plug-in is reloaded 2 s later (setActive(0), close sequence,
+setState "e.synth 08"): the Virus' own output was at full scale before USB, cause unknown (a loud patch or knob, or a
+patch recalled wrongly). The sessions of 11-20 (three reopens in a row) peak at most 7095 with 0 drops; whether they
+sounded distorted is not known. Asked: distortion on the unit's own outputs too, Ableton's output device, buffer
+change instead of reopen, time of the distortion.
+
+- **Date:** 2026-11-20
+- **Pointer:** issue #48 (TI-Revive-logs-2026-11-20-0734.txt, in the session scratchpad only), #44
+- **Method:** the plug-in log's stats lines (raw peaks, host/virus frames, drops, read margin) and the broker log per session
+- **Confidence:** HIGH (no driver conflict, no slip, no rate mismatch, no dropouts in the log) / open (the cause, the full-scale window)
+- **Hardware:** no (the reporter's unit)
