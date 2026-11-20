@@ -9,12 +9,13 @@ set -euo pipefail
 REPO="$(cd "${1:?repo dir}" && pwd)"
 VERSION="${2:?version}"
 OUT="$(mkdir -p "${3:-$REPO/../release}" && cd "${3:-$REPO/../release}" && pwd)"
-# the defaults are the release; a Catalina test build (#37) sets MAC_MIN=10.15 MAC_ARCHS=x86_64 PLUGIN_MIN=10.15
+# the defaults are the release; a Catalina test build (#37) sets MAC_MIN=10.15 MAC_ARCHS=x86_64 PLUGIN_MIN=10.15,
+# the Ventura build (#52) MAC_MIN=13.0 MAC_ARCHS=x86_64 PKG_SUFFIX=mac-ventura
 MAC_MIN="${MAC_MIN:-14.4}"; MAC_ARCHS="${MAC_ARCHS:-arm64 x86_64}"; PLUGIN_MIN="${PLUGIN_MIN:-11.0}"
 # LIBUSB_AUDIO=1: the libusb package (#37, E511) - TI Revive's root service takes the Virus' audio instead of Apple's
 # driver (postinstall installs it when the package carries a "libusb-audio" file); its own zip name and README
 LIBUSB_AUDIO="${LIBUSB_AUDIO:-0}"
-PKG_SUFFIX=$([ "$LIBUSB_AUDIO" = 1 ] && echo mac-libusb || echo mac)
+PKG_SUFFIX="${PKG_SUFFIX:-$([ "$LIBUSB_AUDIO" = 1 ] && echo mac-libusb || echo mac)}"
 export VERSION MACOSX_DEPLOYMENT_TARGET="$MAC_MIN"
 # a stale MacOSX27.0.sdk in some Command Line Tools installs breaks ld (E098): use a working SDK
 if [ -z "${SDKROOT:-}" ]; then
@@ -110,10 +111,10 @@ pkgbuild --root "$ROOT" --component-plist "$BUILD/components.plist" --identifier
 # a build for an older macOS (Catalina test build, #37) ships the plain component package: Catalina's Installer cannot
 # open the product archive below ("can't instantiate package", pagecontroller error -1, #37 log 2026-11-10), while the
 # plain package of 0.8.40 installed there
-if [ "$MAC_MIN" != 14.4 ]; then
+if [ "${MAC_MIN%%.*}" = 10 ]; then
 cp "$BUILD/tirevive-component.pkg" "$STAGE/TI Revive.pkg"
 else
-# a product archive around it that refuses macOS older than 14.4 with Installer's own message: on Catalina the old
+# a product archive around it that refuses macOS older than MAC_MIN (14.4 for the release) with Installer's own message: on Catalina the old
 # package installed and the plug-in then failed to load (#37: UniformTypeIdentifiers missing); the broker and libusb
 # are built for 14.4 (MACOSX_DEPLOYMENT_TARGET above). TI Revive is for systems where the original no longer runs.
 productbuild --synthesize --package "$BUILD/tirevive-component.pkg" "$BUILD/distribution.xml"
@@ -133,6 +134,8 @@ README="$REPO/src/installer-mac/README-mac.txt"
 [ "$LIBUSB_AUDIO" != 1 ] || README="$REPO/src/installer-mac/README-mac-libusb.txt"
 cp "$REPO/src/installer-mac/Set up Access Virus TI files.command" "$REPO/src/installer-mac/Uninstall TI Revive.command" \
     "$README" "$REPO/LICENSE" "$REPO/THIRD-PARTY-NOTICES.txt" "$STAGE/"
+# the README names the release's minimum; a build for an older macOS names its own
+[ "$MAC_MIN" = 14.4 ] || [ "$LIBUSB_AUDIO" = 1 ] || sed -i '' "s/^- macOS 14.4 or newer, Apple Silicon or Intel\./- macOS $MAC_MIN or newer, Intel (test build)./" "$STAGE/README-mac.txt"
 chmod +x "$STAGE"/*.command
 if [ "$PKG_SUFFIX" != mac ]; then rm -rf "$BUILD/TI-Revive-$VERSION-$PKG_SUFFIX"; mv "$STAGE" "$BUILD/TI-Revive-$VERSION-$PKG_SUFFIX"; fi
 (cd "$BUILD" && ditto -c -k --keepParent "TI-Revive-$VERSION-$PKG_SUFFIX" "$OUT/TI-Revive-$VERSION-$PKG_SUFFIX.zip")

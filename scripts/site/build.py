@@ -154,7 +154,7 @@ def asset(rel, suffix):
 
 
 # the installers whose downloads the counter adds up (not the usbinfo script or the libusb source)
-INSTALLERS = ("-setup.exe", ".msi", "-mac.zip", "-mac-libusb.zip", "-linux.tar.gz")
+INSTALLERS = ("-setup.exe", ".msi", "-mac.zip", "-mac-libusb.zip", "-mac-ventura.zip", "-linux.tar.gz")
 
 
 def downloads(releases):

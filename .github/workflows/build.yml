@@ -244,6 +244,41 @@ jobs:
           path: out/TI-Revive-*-mac-libusb.zip
           if-no-files-found: error
 
+  # the Ventura package (#52): the normal Core Audio package for Intel Macs that stop at macOS 13 (iMac 2017 and older).
+  # Not tested by us (no Ventura Mac): its reporter tests.
+  mac-ventura:
+    runs-on: macos-15-intel # x86_64 build; Macs that stop at Ventura are Intel
+    timeout-minutes: 25
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          path: repo
+          submodules: recursive # native/external/vst3sdk
+      - name: Build
+        env:
+          MAC_MIN: "13.0"
+          MAC_ARCHS: x86_64
+          PKG_SUFFIX: mac-ventura
+        run: |
+          v="${VERSION:-${GITHUB_REF_NAME#v}}"
+          bash repo/scripts/mac-build-release.sh repo "${v%%-rc*}" "$PWD/out"
+      - name: Check the targets and the package
+        run: |
+          set -x
+          B=out/build
+          P="$B/native/VST3/Release/TI Revive.vst3/Contents/MacOS/TI Revive"
+          otool -l "$P" | grep -A4 -E "LC_BUILD_VERSION|LC_VERSION_MIN_MACOSX" | head -12
+          K=$(mktemp -d) && ditto -x -k out/TI-Revive-*-mac-ventura.zip "$K"
+          PKG=$(ls "$K"/*/"TI Revive.pkg")
+          # a product archive that refuses macOS older than 13.0, without the libusb service
+          X=$(mktemp -d) && (cd "$X" && xar -xf "$PKG" Distribution && grep -q 'os-version min="13.0"' Distribution)
+          grep -q "macOS 13.0 or newer" "$K"/*/README-mac.txt
+      - uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
+        with:
+          name: TI-Revive-mac-ventura
+          path: out/TI-Revive-*-mac-ventura.zip
+          if-no-files-found: error
+
   native-linux: # the native plug-in for Linux, on Ubuntu 22.04 (glibc 2.35: runs on Ubuntu 22.04 / Debian 12 and newer)
     runs-on: ubuntu-22.04
     timeout-minutes: 25 # a hanging step (e.g. a stuck package mirror) fails fast instead of blocking
@@ -335,7 +370,7 @@ jobs:
 
   release:
     if: startsWith(github.ref, 'refs/tags/v')
-    needs: [msi, mac, mac-libusb, linux]
+    needs: [msi, mac, mac-libusb, mac-ventura, linux]
     runs-on: ubuntu-24.04
     timeout-minutes: 10 # a hanging step (e.g. a stuck package mirror) fails fast instead of blocking
     permissions:
@@ -352,6 +387,10 @@ jobs:
       - uses: actions/download-artifact@9000827ccba6bdab643e8b6fd33ac0654aef8333 # v8.0.2
         with:
           name: TI-Revive-mac-libusb
+          path: out
+      - uses: actions/download-artifact@9000827ccba6bdab643e8b6fd33ac0654aef8333 # v8.0.2
+        with:
+          name: TI-Revive-mac-ventura
           path: out
       - uses: actions/download-artifact@9000827ccba6bdab643e8b6fd33ac0654aef8333 # v8.0.2
         with:
@@ -382,6 +421,7 @@ jobs:
           - **Not affiliated:** the plug-in's welcome and What's New pages say at the bottom that TI Revive is not affiliated with or endorsed by Access Music or Kemper.
           - **Scrambled audio at the start:** when the Virus' audio arrives scrambled (about one start in 250), TI Revive now notices it within a few seconds after the start, also in silence, and restarts the stream before your first note (#37; before, only once you played, so the first notes sounded wrong and then dropped out). Checked against recordings of real scrambled and normal streams.
           - **Several Viruses on a Mac (#50):** the browser and the menus show which Virus an instance plays ("- Virus 2"), the log says which audio device each instance picked, to find why a second Virus stayed silent, and an instance on Virus 2 loads its own bank cache (before, it read all four RAM banks again at every start, about 9 minutes).
+          - **Test package for macOS 13 Ventura on Intel Macs (#52):** `TI-Revive-*-mac-ventura.zip`, the normal package built for Macs that stop at Ventura (iMac 2017 and older). Not tested by us (no Ventura Mac); please report how it runs.
           - **The project moved** to github.com/derpsn/ti-revive and its website to derpsn.github.io/ti-revive. Old links to the repository, issues, releases and the website forward; the update check of installed versions keeps working.
 
           Earlier versions: their own release pages, and every version's changes on one page in the
@@ -399,5 +439,5 @@ jobs:
           # LGPL: the source of the libusb the macOS/Linux brokers link statically goes with every release
           . repo/scripts/libusb.sh && libusb_fetch "out/libusb-$LIBUSB_VER.tar.bz2" # version + SHA-256 pinned there
           gh release create "$GITHUB_REF_NAME" out/TI-Revive-*-setup.exe out/TI-Revive-*.msi out/TI-Revive-*-mac.zip \
-            out/TI-Revive-*-mac-libusb.zip out/TI-Revive-*-linux.tar.gz repo/scripts/tirevive-usbinfo.ps1 "out/libusb-$LIBUSB_VER.tar.bz2" \
+            out/TI-Revive-*-mac-libusb.zip out/TI-Revive-*-mac-ventura.zip out/TI-Revive-*-linux.tar.gz repo/scripts/tirevive-usbinfo.ps1 "out/libusb-$LIBUSB_VER.tar.bz2" \
             --repo "$GITHUB_REPOSITORY" --title "TI Revive $v" --notes-file notes.md $pre
