@@ -776,6 +776,7 @@ private:
     // (E381, #22), which come from their cache file; returns the number of their programs still to read from the Virus
     int load_rom_banks();
     std::atomic<uint32_t> user_rom_{0}; // bit i = ROM bank A+i is a user bank (set by the sync thread, read by others)
+    std::string ram_cache_from_; // the folder banks_ RAM A..D came from (load_banks, sync_banks)
     std::string user_rom_dir_; // their cache folder <cache>/rom-<key> (userrom.h); only the sync thread uses it
     std::atomic<bool> syncing_{false};
     std::atomic<bool> downloading_{false}; // download_bank's thread is reading a bank

@@ -5,7 +5,7 @@ NEXT. At most 150 lines; the Stop hook (`.claude/hooks/handoff-check.sh`) refuse
 how goes into the dated log [`log/2026-11.md`](log/2026-11.md) (newest first); older logs are in [`log/`](log/).
 Device/protocol knowledge goes into [`evidence.md`](evidence.md). Update this file in the same commit as the work._
 
-Last update: 2026-11-20: **v0.8.43-rc1 tagged** on 606c265 (CI 44738967197 running) for the #50 reporter (two Viruses on a Mac); round fixes today: start-up slip in silence (#37, E561), Core Audio pick in diag.log + "- Virus N" (#50, E562); issues checked with the user (#48 E559, #49 E560, #37, #39, #50). 0.8.42 RELEASED 2026-11-19.
+Last update: 2026-11-20: **v0.8.43-rc2** tagged for the #50 reporter (RAM cache of Virus 2 fixed, E563); rc1 log: the second Virus' Core Audio start fails (kIOReturnError, follows the start order; hub bandwidth suspected, LOW). Round fixes today: start-up slip in silence (#37, E561), Core Audio pick in diag.log + "- Virus N" (#50, E562). 0.8.42 RELEASED 2026-11-19.
 
 ## Where things stand
 
@@ -66,7 +66,7 @@ Last update: 2026-11-20: **v0.8.43-rc1 tagged** on 606c265 (CI 44738967197 runni
 | #41 | (the #30 reporter, Snow, Logic) rc3: bus recording on the grid; log + project attached (new take not measured by us). Log also: RAM backup failed, cannot write ~/Documents/... .tmp (nothing written, safe) | reporter: Logic's Documents Folder permission in Privacy & Security (issuecomment-6900513133); 3085 -> 2816 log = E546 | 2026-11-15 |
 | #43 | original TI, OS 5.1.7, macOS: `tirevive-cc restore` stops at a fixed slot ("another patch after the restore"). CAUSE (E549): byte 10 (patch flags, E156) is not kept by the Virus on a RAM store, the read-back compared it; Rom A slot 7 = 0x76. FIX on round-0.8.42 (controlcenter.cpp patch_difference: byte 10 left out, a real mismatch names the byte; 3 new tests); original checked with REA (stores byte 10 unchanged, no read-back). Not run on hardware. rc6 RELEASED (pre-release, tag e84ded1, CI 44121551201 all 9 jobs green, 7 assets, 20:45 UTC); reply posted. Mutation on controlcenter.cpp not done (the copy ../tirevive-mut fails unmutated, rebuild there) | reporter: test rc6 (posted issuecomment-6960600649) | 2026-11-17 |
 | #42 | Snow, M4 Pro, macOS 15.8.2: vtibroker ~33 % CPU idle; cause E547 (Snow idle stream on bulk EP 0x85, ~3300/s). rc5 TESTED by the reporter (E550): ~830/s, 15-19 %, knobs fine; 33 sync reports in 6 min (asked if audible). Reply with why + how the original does it (E548) posted (issuecomment-6957394873). NEW (user 2026-11-17): option snow-idle-slow (off by default, Control Center Options; 4 ms after 1 s quiet; broker reads the flag file every 2 s; tests first; not run on a Snow). Sim confirmed from the Snow's USB chip code (E551, S147): idle packet armed on every read, no command switches it off 2026-11-18 reporter: no dropouts or timing problems in a quick Ableton test | reporter: 0.8.42 with the option on, CPU (issuecomment-7020102746) | 2026-11-19 |
-| #50 | NEW 2026-11-20: first real two-Virus test on macOS (TI2 Polar + TI2 Desktop, Logic, 0.8.42): slots right, but the Desktop's instance (Virus 1) never opens its Core Audio input (E562; reason only on stderr); no Virus number in the editor, Polar shown as "TI2 Desktop" | reporter: test v0.8.43-rc1 + log, Audio MIDI Setup Virus devices (issuecomment-7039814819, -7040109595); they are testing, rc1 re-read one Virus' RAM/ROM banks (our guess: slot numbers swapped, RAM cache is per slot; ROM re-read unexplained), asked to say if it repeats (-7042483374) | 2026-11-20 |
+| #50 | 2026-11-20: first real two-Virus test on macOS (TI2 Polar + TI2 Desktop, Logic): rc1 log: the Virus started second gets "start failed (-536870212)" from Core Audio (E563; pick by order, no serial in the UIDs); Virus 2 re-read all RAM at every start (our bug, fixed in rc2) | reporter: hub test (each Virus straight into the Mac) + log, then rc2 (issuecomment-7043408030) | 2026-11-20 |
 | #48 (dup #44) | M1, Sequoia, Ableton, TI2 Keyboard, 0.8.42: distorted after reopening a saved project, only through the Mac (unit outputs silent = parts on USB), output device a UMC1820 (two clocks), buffer change worse, project reload at 11:40 local fixed it. Log of 07:34: transport clean like #33 (E532), no AURA conflict, one full-scale window before a reload (E559); cause open | reporter: new log covering 11:35-11:40, UMC1820 sample rate (issuecomment-7038034557) | 2026-11-20 |
 | #45 | NEW: two Viruses (TI Keyboard + TI2 Desktop) at once, one plug-in instance each, in Live. TI Revive: one Virus only (first found). Original 5.1.7 plug-in: device list, one owner instance per Virus (E553, static; driver side unknown). Replies posted (not yet, later round, asked OS + can they test: issuecomment-6980767270; follow-up with E553, asked if they used two with the original: issuecomment-6981406654) 2026-11-18 reporter (French): two editors in Ableton were always buggy with the original; will beta test; asked OS again in French (issuecomment-6984586414). DECIDED: maintainer posted 2026-11-18 it is on the list, first test build to them by Fri/Sat (2026-11-20/21) IN WORK (round-0.8.42, user 2026-11-18: one broker per Virus, assignment like the original, all 3 OS, numbered MIDI ports, ASIO stays Virus 1): devslot.h/winslot.h (-slot N, -N names, key = USB port), slotpick.h (owner per Virus, empty slot 2+ given up after 3 s, project record TIRevive/Virus), RAM cache virus-N, Mac Core Audio by USB serial in UID (UNVERIFIED), systemd tirevive-broker@N. Review findings 1-7 fixed (findings/audit-2026-11-18-multidevice.md); dev build installed on Linux with tirevive-broker@2-4 (systemd starts broker 2: checked), hil.sh ALL PASS (H1, H2x2, H3, H6). Never run with two Viruses; mismatch question not done | reporter: test 0.8.42 with both Viruses (released 2026-11-19, issuecomment-7020102331) | 2026-11-19 |
 
@@ -102,9 +102,9 @@ unplug step on the Access driver, Mac "Virus TI MIDI" played through, Keyboard/P
 
 ## NEXT
 
-00. v0.8.43-rc1 is out (pre-release, CI 44738967197 all green incl. the first run of the fixed release job, 7 assets);
-   test request posted on #50 (issuecomment-7040109595). Waiting on the reporter's log ("audio input: ..." lines); also check in it why one Virus' banks were re-read (slot swap? ROM key change?).
-   rc1 is untested on our hardware (slip fix check open).
+00. v0.8.43-rc2 tagged (RAM cache of the chosen Virus, E563) on top of rc1; tell #50 when CI is green. Waiting on the
+   reporter: hub test (start failure of the second Virus, LOW hypothesis: USB bandwidth behind a hub) + rc2 log.
+   rc1/rc2 untested on our hardware (slip fix check open; the RAM cache fix needs two Viruses).
 0. TOMORROW (user 2026-11-19: "we finalize it tomorrow"): release 0.8.43. Order: Virus back to Linux (VM=win11
    scripts/vm.sh detach; systemctl --user start tirevive-broker.socket) + restart the VM for its sound card; risk.py
    --round 0.8.43 -> hil.sh (cold, reopen, export) + Mac sleep/wake and power by hand + checklist page
@@ -124,7 +124,8 @@ unplug step on the Access driver, Mac "Virus TI MIDI" played through, Keyboard/P
    (today only right-click > Size 100-200 %, viruseditor.h canResize false); a later round, not 0.8.43.
    3c. #50 (E562): DONE in code: Core Audio pick/open outcome into diag.log ("audio input: ..."), " - Virus N" after
    the model with several Viruses. Mac compile only in CI (not built locally); fix core_audio_pick itself from the
-   reporter's answer / the next log.
+   reporter's answer / the next log. rc1 log: pick by order works, the second start fails (E563); if not the hub,
+   look at AudioDeviceStart on two Virus devices in one process. RAM cache per Virus fixed in rc2.
 4. Open from the round: the 53 ms stall on the sim's Virus 2 (sim wants a rerun with VTISIM_WARMUP=1); two real
    Viruses, and two on Windows/macOS, untested (Mac Core Audio pick by USB serial unverified); Live on macOS may host
    waiting instances in another process ("another program's plug-in" lines, not checked); W2's largest ASIO buffer not

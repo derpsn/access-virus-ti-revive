@@ -381,7 +381,7 @@ jobs:
           - **Control Center:** the Burn To Flash ROM and OS Updater buttons are gone. TI Revive never offered these functions (they write the Virus' flash); before, they only said so.
           - **Not affiliated:** the plug-in's welcome and What's New pages say at the bottom that TI Revive is not affiliated with or endorsed by Access Music or Kemper.
           - **Scrambled audio at the start:** when the Virus' audio arrives scrambled (about one start in 250), TI Revive now notices it within a few seconds after the start, also in silence, and restarts the stream before your first note (#37; before, only once you played, so the first notes sounded wrong and then dropped out). Checked against recordings of real scrambled and normal streams.
-          - **Several Viruses on a Mac (#50):** the browser and the menus show which Virus an instance plays ("- Virus 2"), and the log says which audio device each instance picked, to find why a second Virus stayed silent.
+          - **Several Viruses on a Mac (#50):** the browser and the menus show which Virus an instance plays ("- Virus 2"), the log says which audio device each instance picked, to find why a second Virus stayed silent, and an instance on Virus 2 loads its own bank cache (before, it read all four RAM banks again at every start, about 9 minutes).
           - **The project moved** to github.com/derpsn/ti-revive and its website to derpsn.github.io/ti-revive. Old links to the repository, issues, releases and the website forward; the update check of installed versions keeps working.
 
           Earlier versions: their own release pages, and every version's changes on one page in the

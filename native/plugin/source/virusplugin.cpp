@@ -3326,9 +3326,7 @@ std::vector<KnobTemplate> VirusPlugin::knob_templates()
 // of several "virus-N" in it (#45), so two Viruses never write over each other's banks
 std::string VirusPlugin::bank_cache_dir() const
 {
-    const std::string d = own_cache_dir();
-    const int s = out_ ? out_->slot() : 0;
-    return s > 1 && !d.empty() ? d + "/virus-" + std::to_string(s) : d;
+    return vti::ram_cache_dir(own_cache_dir(), out_ ? out_->slot() : 0);
 }
 
 void VirusPlugin::load_banks()
@@ -3354,14 +3352,10 @@ void VirusPlugin::load_banks()
             lib_roots_.push_back(root.menu);
         }
     // like the original: only the plug-in's own cache; without one the first start syncs the whole RAM
-    std::string d = bank_cache_dir();
-    if (d.empty())
-        return;
-    for (int b = 0; b < 4; b++) {
-        Bank bank;
-        if (load_bank_file(d + "/RAM " + (char)('A' + b), bank))
-            banks_[b].assign(bank.begin(), bank.end());
-    }
+    // the Virus is not chosen yet: Virus 1's folder; sync_banks() loads the right one once it is (#50)
+    ram_cache_from_ = bank_cache_dir();
+    for (auto &[b, v] : vti::load_ram_cache(ram_cache_from_))
+        banks_[b] = std::move(v);
 }
 
 int VirusPlugin::load_rom_banks()
@@ -3603,16 +3597,6 @@ void VirusPlugin::sync_banks()
     // delay the Virus' notes by ~130 ms and the sync stalls - measured 2026-10-14)
     // a RAM bank without a cache file is read in full: its "Syncing memory" page follows "Starting up" directly,
     // without the editor in between (user, L4)
-    bool sync_expected = false;
-    {
-        std::lock_guard<std::mutex> lk(banks_mu_);
-        for (int b = 0; b < 4; b++) { // no cache file, or one an interrupted sync left with gaps
-            auto it = banks_.find(b);
-            if (it == banks_.end() || it->second.size() < 128 ||
-                std::any_of(it->second.begin(), it->second.end(), [](const std::vector<uint8_t> &p) { return p.empty(); }))
-                sync_expected = true;
-        }
-    }
     wait_virus_ready();
     starting_ = false;
     if (stop_warm_ || !out_ || !out_->connected()) { // no Virus: no sync, the editor as usual
@@ -3624,6 +3608,27 @@ void VirusPlugin::sync_banks()
     if (!dir.empty()) {
         std::error_code ec;
         std::filesystem::create_directories(vti::u8path(dir), ec);
+    }
+    if (dir != ram_cache_from_) { // this instance plays Virus 2..: its own RAM cache, not Virus 1's (#50)
+        auto ram = vti::load_ram_cache(dir);
+        std::lock_guard<std::mutex> lk(banks_mu_);
+        for (int b = 0; b < 4; b++)
+            banks_.erase(b);
+        for (auto &[b, v] : ram)
+            banks_[b] = std::move(v);
+        ram_cache_from_ = dir;
+        drop_.forget(); // an undo would write Virus 1's patches
+        ui_dirty_ = true;
+    }
+    bool sync_expected = false;
+    {
+        std::lock_guard<std::mutex> lk(banks_mu_);
+        for (int b = 0; b < 4; b++) { // no cache file, or one an interrupted sync left with gaps
+            auto it = banks_.find(b);
+            if (it == banks_.end() || it->second.size() < 128 ||
+                std::any_of(it->second.begin(), it->second.end(), [](const std::vector<uint8_t> &p) { return p.empty(); }))
+                sync_expected = true;
+        }
     }
     const int rom_missing = load_rom_banks();
     // "Starting up" ends here: straight to "Syncing memory" when a read is certain (as the original), else the editor

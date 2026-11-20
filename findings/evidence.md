@@ -5296,3 +5296,32 @@ CI only, not yet run with two Viruses.
 - **Method:** the plug-in log's per-Virus stats and events, the broker log, code reading
 - **Confidence:** HIGH (the Desktop's instance has no audio input open; slot choice correct) / open (why the Core Audio open fails)
 - **Hardware:** no (the reporter's units)
+
+### E563
+
+#50, rc1 test (same reporter and setup, v0.8.43-rc1, log TI-Revive-logs-2026-11-20-1459.txt). (1) The new log line
+shows why the second Virus is silent: the first instance "audio input: 2 Virus audio devices, Virus 1 taken by order
+(no serial match)" streams normally; the second "another instance uses Virus 1 - trying Virus 2", "audio input: 2
+Virus audio devices, Virus 2 taken by order (no serial match); start failed (-536870212)" (0xE00002BC,
+kIOReturnError, from AudioDeviceStart) and stays at `audio 0 ... host frames 0`. In the 0.8.42 log (E562) the Desktop
+was the instance that started second and was the silent one; now the Polar starts second and is silent: the failure
+follows the start order, not the unit. The broker places Virus 1 at USB location 001-001.001.001.001.003 (several hub
+levels). Hypothesis (LOW, not checked): both full-speed (USB 1.1) audio functions behind one hub exceed its
+isochronous bandwidth, as in #9 on Linux ("Not enough bandwidth", E285) and the original's own "USB bandwidth
+exceeded" page (E173); asked the reporter to connect each Virus to a port of the Mac itself (issuecomment-7043408030).
+"No serial match": Core Audio's UIDs do not carry the USB serial here, so the pick is by order. (2) The instance on
+Virus 2 fetched all four RAM banks at every start ("RAM A..D sync: 128 fetched", "bank sync done in 528.5 s"; user
+ROM "0 programs to read"). Cause (code): load_banks() runs in initialize(), before the device worker chooses the
+Virus, so bank_cache_dir() is Virus 1's folder; the sync then compares Virus 2's RAM with Virus 1's banks and saves
+the result to cache/virus-2, which no start ever loaded. Since f540fdb (#45 step 2).
+
+**Fix (round 0.8.43, rc2):** memsync ram_cache_dir / load_ram_cache; sync_banks() loads the RAM cache of the chosen
+Virus once it is known (bank_cache_dir differs from the folder load_banks used: RAM A..D replaced, bank-drop undo
+dropped) and only then decides whether a read is certain. Unit test memsync_ram_cache_per_virus; 847 tests pass on
+Linux. Not run with two Viruses (we have one); the reporter tests rc2.
+
+- **Date:** 2026-11-20
+- **Pointer:** issue #50 (issuecomment-7043408030); log in the session scratchpad only; native/plugin/source/virusplugin.cpp load_banks/sync_banks, native/src/device/memsync.cpp
+- **Method:** the plug-in log of rc1, code reading
+- **Confidence:** HIGH (RAM cache cause, start failure follows the start order) / LOW (hub bandwidth)
+- **Hardware:** no (the reporter's units)

@@ -12,6 +12,7 @@
 #include <condition_variable>
 #include <functional>
 #include <mutex>
+#include <map>
 #include <string>
 #include <vector>
 
@@ -22,6 +23,10 @@ using Bank = std::array<Dump, 128>; // empty dump = not cached
 
 bool load_bank_file(const std::string &path, Bank &bank);
 bool save_bank_file(const std::string &path, const Bank &bank);
+// the RAM bank cache of Virus `slot` (1-based): Virus 1 (or not chosen yet) in `base` itself, Virus 2.. in base/virus-N
+std::string ram_cache_dir(const std::string &base, int slot);
+// RAM A..D (0..3) from the "RAM X" files of `dir`; a bank whose file does not load completely is left out
+std::map<int, std::vector<Dump>> load_ram_cache(const std::string &dir);
 
 class MemorySync {
 public:
