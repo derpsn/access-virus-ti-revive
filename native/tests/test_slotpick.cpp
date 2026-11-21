@@ -49,6 +49,16 @@ TEST(slotpick_core_audio_device_by_usb_serial)
     CHECK(vti::core_audio_pick({}, "SERA", 1) == -1);
 }
 
+TEST(slotpick_core_audio_only_for_an_owned_virus) // round 0.8.43 Mac test: a waiting instance played along
+{
+    // macOS: Core Audio does not know which broker a device belongs to (one device = it for any slot), so the input
+    // opens only when this instance's broker has a Virus and gives it to us - not while trying an empty slot
+    CHECK(vti::core_audio_allowed(true, false));
+    CHECK(!vti::core_audio_allowed(false, false)); // an empty slot being tried: no Virus on that broker
+    CHECK(!vti::core_audio_allowed(true, true));   // the Virus is there, another program's plug-in has it
+    CHECK(!vti::core_audio_allowed(false, true));
+}
+
 TEST(slotpick_skips_the_slots_given_up) // audit 2026-11-18 #1, #5; round 0.8.42 test: no cycling
 {
     using vti::slot_bit;

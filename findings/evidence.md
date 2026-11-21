@@ -5386,3 +5386,26 @@ fire. That path stays checked by the unit tests on the real slipped captures onl
 - **Method:** hardware run (hil.sh), nativehost with the test switch, plug-in log
 - **Confidence:** HIGH (hil items, restart path on the TI2) / not shown on hardware (the marker line itself)
 - **Hardware:** yes (TI2 Desktop, Linux)
+
+### E566
+
+Round 0.8.43 Mac test (our TI2 Desktop, macOS 27.2.1, Ableton Live 12, final CI build 44890937850, one Virus): a
+second TI Revive instance that shows "Virus unavailable" sometimes played the Virus along with the owner (user). The
+plug-in log has the waiting instance cycling through the slots ("another instance uses Virus 1 - trying Virus 2",
+"another program uses Virus 1 - trying the others, waiting") and opening Core Audio on each try: "audio input: 1
+Virus audio device, taken for Virus 2", then 3, 4, 1, 2, ... every few seconds. Cause: on macOS the plug-in reads the
+Virus' audio from Core Audio itself, and DeviceOut::start_audio set the result to 1 without asking the broker; the
+start runs as soon as broker_.open() succeeds, which an empty slot's broker also allows, and core_audio_pick gives
+the only "Virus" device to any slot (n == 1). On Linux/Windows broker_.audio() refuses for a broker without a Virus or
+for a non-owner, so only macOS (Core Audio path, not the libusb package) was affected; since 0.8.42 (several Viruses).
+Fix: vti::core_audio_allowed(device_present, in_use_elsewhere) (slotpick.h) gates the Core Audio start; the 500 ms
+retry starts it once the broker's STATE says the Virus is ours. Unit test slotpick_core_audio_only_for_an_owned_virus
+(849 tests pass on Linux). Mac compile in CI; not yet re-run on the Mac. Open: why the waiting instance keeps cycling
+through the slots instead of giving them up (slotpick_skips_the_slots_given_up), possibly Live hosting it in another
+process ("another program uses Virus 1").
+
+- **Date:** 2026-11-21
+- **Pointer:** user report + Mac screenshot (Live, tracks 1/5/6); Mac plug-in diag.log lines 24545-30546; native/plugin/source/virusplugin.cpp start_audio, native/src/device/slotpick.h
+- **Method:** plug-in log over SSH, code reading, unit test
+- **Confidence:** HIGH (cause from the log + code) / not yet verified on the Mac (fix)
+- **Hardware:** yes (TI2 Desktop on the Mac: the bug); fix not yet run

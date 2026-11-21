@@ -300,7 +300,9 @@ int DeviceOut::start_audio()
         audio_.set_usb_serial(serial); // memory only, never logged (rule 5)
     }
     // macOS: the plug-in reads the Virus' Core Audio input itself (the broker carries MIDI), or the broker's ring
-    const int r = audio_.broker_ring() ? broker_.audio(true, 3000, (uint32_t)want_rate.load()) : 1;
+    // Core Audio only for a Virus this broker has and gives us (slotpick.h; the retry starts it once STATE arrives)
+    const int r = audio_.broker_ring() ? broker_.audio(true, 3000, (uint32_t)want_rate.load())
+                  : vti::core_audio_allowed(broker_.device_present(), broker_.in_use_elsewhere()) ? 1 : 0;
 #else
     const int r = broker_.audio(true, 3000, (uint32_t)want_rate.load()); // the broker sets it (rate following)
 #endif

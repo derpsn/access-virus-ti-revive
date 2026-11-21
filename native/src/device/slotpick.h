@@ -68,6 +68,11 @@ inline int core_audio_pick(const std::vector<std::string> &uids, const std::stri
     return slot >= 1 && slot <= n ? order[slot - 1] : -1;
 }
 
+// macOS: Core Audio cannot tell which broker a "Virus" device belongs to (with one device, core_audio_pick gives it to
+// any slot), so the input opens only when this instance's broker has a Virus and lets us have it. Before, an instance
+// trying an empty slot opened the only device and played another instance's Virus (round 0.8.43 Mac test, E566).
+inline bool core_audio_allowed(bool present, bool elsewhere) { return present && !elsewhere; }
+
 // macOS (#50, E562): the pick's outcome as one line for the plug-in log (it went to stderr only): how the device was
 // matched, never the serial (rule 5)
 inline std::string core_audio_note(int devices, int slot, int pick, bool by_serial)
