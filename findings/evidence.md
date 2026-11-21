@@ -5368,3 +5368,21 @@ range is wide; follow the drift with the resampler (reporter's suggestion).
 - **Confidence:** HIGH (pull-back = err past the 512 margin) / open (fix, whether 1024 removes the clicks)
 - **Hardware:** no (the reporter's setup); the switch checked in the win11 VM without a Virus
 
+
+### E565
+
+Final hardware run for 0.8.43 on our TI2 Desktop (Linux, CI build 44890937850 from 5bbb2ce, plug-in a603d89b, broker
+0fa955fd, installed with install.sh). `scripts/hil.sh` ALL PASS: H1 cold, H2 reopen x2, H3 export (1.00x real time),
+H6 broker killed while playing; no note lost, max 0.94 ms off the grid, jitter <= 0.18 ms, drift -2 ppm. The E561
+restart path with `VTI_NATIVE_FAKE_SLIP=1` (nativehost, 25 s with notes and 20 s in silence): "the Virus' audio
+arrives scrambled (byte slip, E488, ratio 0.966 / 0.948) - restarting the stream (1)" about 1 s after the stream
+start, then "Virus ready after 1.1-1.2 s" and "sync marker at frame ...", clean afterwards (drops 0). The ratio check
+decided first in both runs: our TI2's inputs carry enough noise in "silence", and the fake slip scrambles every frame,
+so the new marker path (which matters when the inputs read exactly zero, as on the #37 TI Desktop) did not get to
+fire. That path stays checked by the unit tests on the real slipped captures only (E561).
+
+- **Date:** 2026-11-21
+- **Pointer:** work/hil-0.8.43-final (hil.sh output, slip/ runs); plug-in diag.log; native/plugin/source/virusplugin.cpp:451 (the fake slip)
+- **Method:** hardware run (hil.sh), nativehost with the test switch, plug-in log
+- **Confidence:** HIGH (hil items, restart path on the TI2) / not shown on hardware (the marker line itself)
+- **Hardware:** yes (TI2 Desktop, Linux)
