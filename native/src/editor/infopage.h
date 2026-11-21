@@ -70,7 +70,9 @@ inline const std::vector<ChangeNote> &changelog()
           "silence, and restarts it before your first note (#37; before, only once you played).",
           "Several Viruses on a Mac (#50): the browser and the menus show which Virus an instance plays (\"- Virus "
           "2\"), the log says which audio device each instance picked, and an instance on Virus 2 keeps its own "
-          "bank cache (checked on Linux; on a Mac it still reads the banks again, being looked at)."}},
+          "bank cache (checked on Linux; on a Mac it still reads the banks again, being looked at).",
+          "macOS: a second instance that waits (\"Virus unavailable\") no longer plays the Virus of the first one along "
+          "with it (since 0.8.42 it could while it looked for another Virus)."}},
         {"0.8.42",
          {"Several Viruses at once (#45): each plug-in instance takes a free Virus, the one its project was saved "
           "with when that one is free. With one Virus nothing changes.",
