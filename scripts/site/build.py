@@ -258,7 +258,7 @@ def page_landing(latest, releases, sums):
                          "Connect the Virus, rescan plug-ins in your DAW and load <strong>TI Revive</strong>. "
                          "The ASIO device <strong>TI Revive Audio</strong> makes the Virus a "
                          "sound card."])
-    mac = os_card("macOS", "macOS 14.4 or newer, Apple Silicon and Intel (Intel since 0.8.39, not tested on an Intel Mac yet). For Intel Macs on macOS 13 Ventura there is a test package (<code>TI-Revive-&lt;version&gt;-mac-ventura.zip</code>) and for macOS 10.15 Catalina one with its own USB audio service (<code>-mac-libusb.zip</code>); neither is tested by us.", asset(latest, "-mac.zip"), None, sums,
+    mac = os_card("macOS", "macOS 14.4 or newer, Apple Silicon and Intel (Intel since 0.8.39, not tested on an Intel Mac yet). For Intel Macs on macOS 13 Ventura there is a test package (<code>TI-Revive-&lt;version&gt;-mac-ventura.zip</code>) and for macOS 10.15 Catalina one with its own USB audio service (<code>-mac-libusb.zip</code>); neither is tested by us, the Ventura package works for a user (Intel iMac, macOS 13.7.8, #52).", asset(latest, "-mac.zip"), None, sums,
                   ["Unpack the zip and open <code>TI Revive.pkg</code> (not signed: right-click <span class='sep'>&rsaquo;</span> "
                    "<em>Open</em>).",
                    "Put your Access <code>.pkg</code> next to <code>Set up Access Virus TI files.command</code> and "

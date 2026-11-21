@@ -5409,3 +5409,42 @@ process ("another program uses Virus 1").
 - **Method:** plug-in log over SSH, code reading, unit test
 - **Confidence:** HIGH (cause from the log + code) / not yet verified on the Mac (fix)
 - **Hardware:** yes (TI2 Desktop on the Mac: the bug); fix not yet run
+
+### E567
+
+Issue #52 (user report, 2026-11-21): the Ventura test package (0.8.43, `TI-Revive-0.8.43-mac-ventura.zip`, Core
+Audio path, built for macOS 13 x86_64) works on an Intel iMac (2017) with macOS Ventura 13.7.8, Ableton Live 12
+Suite and a TI2 Desktop, with the Access and AURA drivers still installed ("works a treat"). Their diag.log: build
+"TI Revive 0.8.43 (d06c2505)", "audio input: 1 Virus audio device, taken for Virus 1" (once "no Virus audio device"
+right at the connect, the next try found it), sync markers found (3697 and 1201 frames after the ping), 1 drop at the
+stream start and none after, no read pull-backs, timing safety net 16 stamps in ~18 min, 48 kHz block 512. First
+report of TI Revive on macOS 13; timing of recorded notes not checked by the reporter.
+
+- **Date:** 2026-11-21
+- **Pointer:** issue #52 (diag.log attachment of 2026-11-21 12:01 UTC)
+- **Method:** user report + plug-in log
+- **Confidence:** MED (one user, one session log)
+- **Hardware:** yes (user's TI2 Desktop, Intel iMac, Ventura 13.7.8)
+
+### E568
+
+Issue #37 (user, Catalina, Logic Pro, libusb package, TI with OS 5.0.8, 44.1 kHz block 2048): "out of sync when
+running Logic for the first time or after reopening the project", with crackling. Their log has the same pattern at
+both project opens (1795171041, 1795264022): "Virus ready" after ~1.8 s, then "no sync marker - time stamps relative
+to the ring" for 50-70 s, timeline err down to -9800 frames, sync error shown, drops 3 -> 20; raw peaks show sound on
+USB 1 (ring channels 2/3) and USB 2 silent. The marker is found only after the music pauses (raw peaks 1 1, then
+"sync marker at frame 3311078 ... 5053 frames later" and a second one 7 s later), followed by "pulled back 14 blocks,
+largest 2702 frames"; after that err stays within about +-250. Cause in the code: MarkerScan::candidate took a frame
+as the marker only while USB 1 was silent; the first ping goes at most 6 s after the stream start even when not
+quiet, and its retries need 1 s of quiet on USB 1/2 and 2 s without host playback, so a project that plays on USB 1
+right after opening finds no marker until it stops. The marker itself is on USB 2 only (protocol.md, 2026-10-14);
+the USB 1 condition has no recorded reason. Change (round 0.8.44): candidate looks at USB 2 only (the USB 2 silence
+check around the marker stays). Not yet run on hardware: whether the Virus' marker on USB 2 stays clean while a part
+plays on USB 1 needs a TI2 run (held note from the start, nativehost --hold 0). Whether the crackling comes from the
+drops in that phase or from the 2702-frame pull-back is not shown.
+
+- **Date:** 2026-11-21
+- **Pointer:** issue #37 (TI-Revive-logs-2026-11-21-1559.txt); native/src/device/markerscan.h candidate, native/plugin/source/virusplugin.cpp scan_audio + the anchor/retry rule in process()
+- **Method:** user log + code reading, unit test
+- **Confidence:** MED (cause from the log + code) / LOW until the TI2 run (fix)
+- **Hardware:** yes (user's TI, Catalina: the bug); fix not yet run

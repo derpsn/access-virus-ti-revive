@@ -12,7 +12,7 @@ const int R = 44100;
 // one worker pass with a marker at `at` (or none, -1), ending at ring frame `newest`
 bool pass(MarkerScan &m, int64_t at, int64_t newest)
 {
-    if (at >= 0 && m.candidate(at, false, true))
+    if (at >= 0 && m.candidate(at, true))
         m.take(at);
     return m.end(newest, R);
 }
@@ -22,7 +22,7 @@ TEST(markerscan_first_ping_finds_its_marker)
 {
     MarkerScan m;
     CHECK(m.marker.load() == -2);
-    CHECK(!m.candidate(1000, false, true)); // no ping yet: nothing is a marker
+    CHECK(!m.candidate(1000, true)); // no ping yet: nothing is a marker
     m.calibrate(0, true);
     CHECK(m.marker.load() == -1 && m.calibrating());
     pass(m, 1000, 2000);
@@ -30,14 +30,14 @@ TEST(markerscan_first_ping_finds_its_marker)
     CHECK(!m.calibrating());
 }
 
-TEST(markerscan_marker_needs_usb2_alone_after_the_ping)
+TEST(markerscan_marker_on_usb2_after_the_ping_while_usb1_plays) // #37 (E568)
 {
     MarkerScan m;
     m.calibrate(5000, true);
-    CHECK(!m.candidate(4999, false, true)); // before the ping
-    CHECK(!m.candidate(5000, true, true));  // USB 1 sounds too
-    CHECK(!m.candidate(5000, false, false));
-    CHECK(m.candidate(5000, false, true));
+    CHECK(!m.candidate(4999, true)); // before the ping
+    CHECK(!m.candidate(5000, false));
+    CHECK(m.candidate(5000, true));
+    // USB 1 is not looked at: a project that plays on USB 1 from the start (Logic, #37) found no marker for 50-70 s
 }
 
 TEST(markerscan_second_channel_of_a_marker_is_not_a_new_one)
@@ -46,8 +46,8 @@ TEST(markerscan_second_channel_of_a_marker_is_not_a_new_one)
     m.calibrate(0, true);
     m.calibrate(10, false); // two pings out
     m.take(100);
-    CHECK(!m.candidate(101, false, true)); // the marker's other channel, one frame later
-    CHECK(m.candidate(102, false, true));
+    CHECK(!m.candidate(101, true)); // the marker's other channel, one frame later
+    CHECK(m.candidate(102, true));
 }
 
 TEST(markerscan_ping_without_marker_times_out_after_5_s)
@@ -94,9 +94,9 @@ TEST(markerscan_resync_ping_during_a_pass_keeps_its_5_s)
     CHECK(m.marker.load() == 1000);
 
     const int64_t B = 10 * R;               // the re-sync ping, 10 s later
-    CHECK(!m.candidate(B - 500, false, true)); // a pass runs over frames before it: no ping waits
+    CHECK(!m.candidate(B - 500, true)); // a pass runs over frames before it: no ping waits
     m.calibrate(B, false);                  // process() pings during the pass
-    CHECK(!m.candidate(B - 400, false, true)); // later frames of the same pass are still before the new ping
+    CHECK(!m.candidate(B - 400, true)); // later frames of the same pass are still before the new ping
     CHECK(!m.end(B + 100, R));              // the pass ends 10 s after the OLD ping, 2 ms after the new one
     CHECK(m.calibrating());         // the new ping still waits
 

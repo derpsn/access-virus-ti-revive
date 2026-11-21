@@ -1,6 +1,7 @@
 // markerscan.h - the sync-marker bookkeeping of DeviceOut::scan_audio (docs/protocol.md "Sync marker"): process()
 // sends a ping and calls calibrate() with its ring frame; the worker's scan passes look for the Virus' answer, one
-// non-zero sample per channel on USB 2 with USB 1 silent, and give a ping 5 s before the marker counts as not found.
+// non-zero sample per channel on USB 2 (USB 1 may sound, E568), and give a ping 5 s before the marker counts as not
+// found.
 // calibrate() runs on the audio thread, everything else on the worker; a ping can arrive in the middle of a pass
 // (E497), so nothing here keeps the ping frame from the start of a pass.
 #pragma once
@@ -33,11 +34,12 @@ public:
     }
 
     // worker, per frame of a scan pass: f could be the marker (a ping waits, f is at or after the NEWEST ping, past
-    // the last marker, USB 2 only). The ping frame is read here, not once per pass (E497): a ping that process()
-    // sends during the pass must not take a frame from before it as its marker.
-    bool candidate(int64_t f, bool usb1, bool usb2) const
+    // the last marker, on USB 2). The ping frame is read here, not once per pass (E497): a ping that process()
+    // sends during the pass must not take a frame from before it as its marker. USB 1 may sound (#37, E568: a
+    // project playing on USB 1 from the start found no marker until the music paused).
+    bool candidate(int64_t f, bool usb2) const
     {
-        if (!usb2 || usb1 || pings_.load() <= 0)
+        if (!usb2 || pings_.load() <= 0)
             return false;
         const int64_t from = from_.load();
         return from >= 0 && f >= from && f > skip_;

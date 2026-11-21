@@ -426,7 +426,7 @@ void DeviceOut::scan_audio()
         for (int i = 0; i < n; i++) {
             int64_t f = scanned_ + i;
             bool usb1 = l1[i] != 0 || r1[i] != 0, usb2 = l2[i] != 0 || r2[i] != 0;
-            if (markers_.candidate(f, usb1, usb2)) {
+            if (markers_.candidate(f, usb2)) {
                 // the marker: one sample per channel, the rest of USB 2 silent around it
                 float ll[64], rr[64], a2[64], b2[64];
                 audio_.read_at(ll, rr, a2, b2, 64, f + 2);
