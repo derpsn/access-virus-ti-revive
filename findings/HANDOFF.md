@@ -53,13 +53,9 @@ Last update: 2026-11-21: joint issue check, #37 rc2 AU does not load in Logic on
 
 | Issue | Topic | Waits on | Last from us |
 |---|---|---|---|
-| #26 | Snow, Linux REAPER timing | reporter: pw-jack test; 0.8.41 note | 2026-11-14 |
 | #30 | knob automation in Logic fixed in rc2 (E542, confirmed); REOPENED audio 5.6 ms early in Logic (E540, E541, E545) SOLVED by rc3 per #41 (his log: Logic read 3085, re-announced 2816, 269 samples = 5.6 ms at 48k) | reporter, see #41; close #30 and #41 with the user once #41 is answered | 2026-11-15 |
-| #31 | Win10 VirtualBox, Snow, setup with the Access driver | reporter: setup unplug step report; 0.8.41 note | 2026-11-14 |
 | #32 | (no change since 11-10) | reporter | before 11-10 |
-| #33 | Intel Mac 0.8.39: Logic distorted until a buffer change; log clean on the way in, not a slip (E532) | reporter: Logic output device, distortion on the unit's outputs?, 0.8.41 log | 2026-11-14 |
 | #47 | NEW 2026-11-18: Snow "connected but not found" in Ableton; form says Windows 11 / TI Desktop, text macOS 27.0.1 / Snow; no logs, no version (E134 or E115 pattern?) | reporter: platform, model, version, Access/AURA, diag.log, broker log, ioreg, MIDI Drivers ls (issuecomment-7003657269) | 2026-11-19 |
-| #36 | Windows Cubase bank sync 0/128 | reporter: BC2001.syx, new log with 0.8.41 | 2026-11-14 |
 | #37 | libusb pkg on Catalina, round 2026-11-19 (E561): (1) dropouts at the first run = byte-slip restarts at the stream start on the libusb path too (fix in round 0.8.43, NEXT 3a); (2) out of sync after dragging the playhead: sync error + read pull-backs + safety net in the log, cause open; (3) automation: 128 steps expected, gaps open; (4)(6) MIDI ports stay / Virus stays off Apple's driver = by design of the libusb service; (5) no crackle | reporter: playhead recovers by itself (2026-11-20); out of sync after reopening the project until a buffer change - log asked, automation questions open (issuecomment-7043987936). 2026-11-20 rc2 libusb: Logic "Failed to load Audio Unit 'TI Revive V'"; log: no plug-in line after the install, CC + broker rc2 fine; rc2 AU checked (x86_64, min 10.15, codes kept). Suspected (LOW, not seen): Logic's stale AU cache still points at the removed "TI Revive Virus Control.component" (rename, E557 only on macOS 27). Asked to clear ~/Library/Caches/AudioUnitCache + com.apple.audiounits.cache, rescan; rename reason explained; promised: installer clears the cache if that fixes it (issuecomment-7058689290) | 2026-11-21 |
 | #38 | macOS 27 Live: AU/editor crash = SOLVED by the reporter (Access .pkg was missing; plug-in opens; Virus not connected yet) | reporter: note after connecting the Virus, then close (issuecomment-6948868845) | 2026-11-17 |
 | #40 | (ours) macOS libusb audio as an option? | #39 reporter; #37 = first real data point (works) | 2026-11-13 |
@@ -115,7 +111,7 @@ unplug step on the Access driver, Mac "Virus TI MIDI" played through, Keyboard/P
    rename; live site still says "looks and works like" until rebuilt); final CI from the round head; merge, tag, release
    (first run of the fixed release job), site rebuild on main.
 1. Mac: the 0.8.42 release push is obsolete (the Mac has the 0.8.43 test package, pkg 22ae6de3).
-2. Joint issue check from 2026-11-21: quiet-issue closings (#26 #31 #33 #36; #41 from 11-22; #32 #40 are ours);
+2. Quiet issues #26 #31 #33 #36 CLOSED 2026-11-21 (joint check, standard message); next: #41 from 11-22, #30 together with #41 (its last request 11-15); #32 #40 are ours. Still to read:
    replies from #45 (two real Viruses: first real-world test), #42 (snow-idle-slow CPU), #44 (recall), #47, #43, #37.
 3. Round 0.8.43 (started): the fixed release job (9049eec) runs for the first time at its tag - check it; rest of
    the round to discuss with the user (Windows MIDI ports, test automation, Linux MIDI with the sim's Keyboard).
