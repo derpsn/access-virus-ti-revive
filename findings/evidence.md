@@ -5439,12 +5439,18 @@ as the marker only while USB 1 was silent; the first ping goes at most 6 s after
 quiet, and its retries need 1 s of quiet on USB 1/2 and 2 s without host playback, so a project that plays on USB 1
 right after opening finds no marker until it stops. The marker itself is on USB 2 only (protocol.md, 2026-10-14);
 the USB 1 condition has no recorded reason. Change (round 0.8.44): candidate looks at USB 2 only (the USB 2 silence
-check around the marker stays). Not yet run on hardware: whether the Virus' marker on USB 2 stays clean while a part
-plays on USB 1 needs a TI2 run (held note from the start, nativehost --hold 0). Whether the crackling comes from the
-drops in that phase or from the 2702-frame pull-back is not shown.
+check around the marker stays). TI2 A/B on Linux (2026-11-21, nativehost, C4 held from 6 s on part 1 = USB 1, a ping
+every 4 s through a temporary local build where the S094 re-sync switch VTI_NATIVE_RESYNC=4 also pings while sound
+plays; never committed): old rule 0 of 5 pings found a marker while the note sounded (2 runs, the note audible in the
+recording), new rule 6 of 6. The marker on USB 2 stays a clean single sample while USB 1 plays. Seen in both variants,
+also without sound: consecutive re-sync pings alternate between ~600 and ~6300-9500 frames from ping to marker (the
+Virus acts on the ping's stamp 3072 on its own clock, E247; not caused by this change). In nativehost a note before
+"Virus ready" is lost and the first ping goes out at ready, so #37's exact start (sound before the first ping) was
+not reproduced. Whether the crackling comes from the drops in that phase or from the 2702-frame pull-back is not
+shown.
 
 - **Date:** 2026-11-21
 - **Pointer:** issue #37 (TI-Revive-logs-2026-11-21-1559.txt); native/src/device/markerscan.h candidate, native/plugin/source/virusplugin.cpp scan_audio + the anchor/retry rule in process()
-- **Method:** user log + code reading, unit test
-- **Confidence:** MED (cause from the log + code) / LOW until the TI2 run (fix)
-- **Hardware:** yes (user's TI, Catalina: the bug); fix not yet run
+- **Method:** user log + code reading, unit test, hardware A/B (nativehost)
+- **Confidence:** MED (cause from the log + code) / HIGH (marker found while USB 1 plays, TI2 A/B)
+- **Hardware:** yes (user's TI, Catalina: the bug; our TI2 Desktop, Linux: the A/B)

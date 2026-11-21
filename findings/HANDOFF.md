@@ -101,7 +101,7 @@ unplug step on the Access driver, Mac "Virus TI MIDI" played through, Keyboard/P
 
 ## NEXT
 
-1. #37 marker fix (E568, round 0.8.44): candidate() looks at USB 2 only (test markerscan_marker_on_usb2_after_the_ping_while_usb1_plays, 849 pass, plug-in builds). TODO: TI2 run on Linux (Virus not on this PC's USB on 2026-11-21, probably on the Mac): nativehost --hold 0 --seconds 20 with the plug-in log, expect "sync marker at frame" ~800 frames after the ping while USB 1 sounds; then hil.sh, CI test build for #37 (libusb package).
+1. #37 marker fix (E568, round 0.8.44, 45d439d): candidate() looks at USB 2 only. TI2 A/B DONE 2026-11-21 (temporary local build, re-sync every 4 s while C4 held on USB 1): old rule 0/5 markers, new 6/6; hil.sh ALL PASS on the fixed build (work/hil-0.8.44-e568). Next: CI test build (libusb package) for #37, post it there.
 
 00. #50: rc2 cache fix WORKS on Linux (sim repro, E563) but not on the reporter's Mac (Logic AU). Asked for an ls of
    cache + cache/virus-2 (issuecomment-7047279049). v0.8.43-rc3 out (CI 44792570714 green, 7 assets; diagnostics:

@@ -337,7 +337,7 @@ Entries: 565. Marks after an entry: its lowest confidence level when below HIGH,
 - [E565](evidence.md#e565) Final hardware run for 0.8.43 on our TI2 Desktop (Linux, CI build 44890937850 from 5bbb2ce, plug-in a603d89b, ...
 - [E566](evidence.md#e566) Round 0.8.43 Mac test (our TI2 Desktop, macOS 27.2.1, Ableton Live 12, final CI build 44890937850, one ...
 - [E567](evidence.md#e567) Issue #52 (user report, 2026-11-21): the Ventura test package (0.8.43, `TI-Revive-0.8.43-mac-ventura.zip`, ... (MED)
-- [E568](evidence.md#e568) Issue #37 (user, Catalina, Logic Pro, libusb package, TI with OS 5.0.8, 44.1 kHz block 2048): "out of sync ... (LOW)
+- [E568](evidence.md#e568) Issue #37 (user, Catalina, Logic Pro, libusb package, TI with OS 5.0.8, 44.1 kHz block 2048): "out of sync ... (MED)
 
 ## SysEx and parameter protocol (130)
 
@@ -867,7 +867,7 @@ Entries: 565. Marks after an entry: its lowest confidence level when below HIGH,
 - [E564](evidence.md#e564) #51 (edy013; Windows 11 Pro 25H2, TI Desktop, TI Revive 0.8.41, Fender Studio Pro 8.2 VST3 on a Universal ... (open; not on hardware)
 - [E565](evidence.md#e565) Final hardware run for 0.8.43 on our TI2 Desktop (Linux, CI build 44890937850 from 5bbb2ce, plug-in a603d89b, ...
 - [E567](evidence.md#e567) Issue #52 (user report, 2026-11-21): the Ventura test package (0.8.43, `TI-Revive-0.8.43-mac-ventura.zip`, ... (MED)
-- [E568](evidence.md#e568) Issue #37 (user, Catalina, Logic Pro, libusb package, TI with OS 5.0.8, 44.1 kHz block 2048): "out of sync ... (LOW)
+- [E568](evidence.md#e568) Issue #37 (user, Catalina, Logic Pro, libusb package, TI with OS 5.0.8, 44.1 kHz block 2048): "out of sync ... (MED)
 
 ## Sound problems: crackle, silence, dropouts (182)
 
@@ -1052,7 +1052,7 @@ Entries: 565. Marks after an entry: its lowest confidence level when below HIGH,
 - [E564](evidence.md#e564) #51 (edy013; Windows 11 Pro 25H2, TI Desktop, TI Revive 0.8.41, Fender Studio Pro 8.2 VST3 on a Universal ... (open; not on hardware)
 - [E565](evidence.md#e565) Final hardware run for 0.8.43 on our TI2 Desktop (Linux, CI build 44890937850 from 5bbb2ce, plug-in a603d89b, ...
 - [E567](evidence.md#e567) Issue #52 (user report, 2026-11-21): the Ventura test package (0.8.43, `TI-Revive-0.8.43-mac-ventura.zip`, ... (MED)
-- [E568](evidence.md#e568) Issue #37 (user, Catalina, Logic Pro, libusb package, TI with OS 5.0.8, 44.1 kHz block 2048): "out of sync ... (LOW)
+- [E568](evidence.md#e568) Issue #37 (user, Catalina, Logic Pro, libusb package, TI with OS 5.0.8, 44.1 kHz block 2048): "out of sync ... (MED)
 
 ## Access software (Virus Control, Control Center, installer) (229)
 
@@ -1698,9 +1698,9 @@ Entries: 565. Marks after an entry: its lowest confidence level when below HIGH,
 - [E563](evidence.md#e563) #50, rc1 test (same reporter and setup, v0.8.43-rc1, log TI-Revive-logs-2026-11-20-1459.txt) (LOW; not on hardware)
 - [E566](evidence.md#e566) Round 0.8.43 Mac test (our TI2 Desktop, macOS 27.2.1, Ableton Live 12, final CI build 44890937850, one ...
 - [E567](evidence.md#e567) Issue #52 (user report, 2026-11-21): the Ventura test package (0.8.43, `TI-Revive-0.8.43-mac-ventura.zip`, ... (MED)
-- [E568](evidence.md#e568) Issue #37 (user, Catalina, Logic Pro, libusb package, TI with OS 5.0.8, 44.1 kHz block 2048): "out of sync ... (LOW)
+- [E568](evidence.md#e568) Issue #37 (user, Catalina, Logic Pro, libusb package, TI with OS 5.0.8, 44.1 kHz block 2048): "out of sync ... (MED)
 
-## Linux (226)
+## Linux (227)
 
 - [E015](evidence.md#e015) Passthrough was not live during the p0 knob test: host kernel had all 5 interfaces (1-9:1.0..1.4) bound to ...
 - [E016](evidence.md#e016) Linux snd-usb-audio (host kernel 7.0.0-38) claims all 5 interfaces, including vendor-class MI_03/MI_04 (class ...
@@ -1928,6 +1928,7 @@ Entries: 565. Marks after an entry: its lowest confidence level when below HIGH,
 - [E563](evidence.md#e563) #50, rc1 test (same reporter and setup, v0.8.43-rc1, log TI-Revive-logs-2026-11-20-1459.txt) (LOW; not on hardware)
 - [E565](evidence.md#e565) Final hardware run for 0.8.43 on our TI2 Desktop (Linux, CI build 44890937850 from 5bbb2ce, plug-in a603d89b, ...
 - [E566](evidence.md#e566) Round 0.8.43 Mac test (our TI2 Desktop, macOS 27.2.1, Ableton Live 12, final CI build 44890937850, one ...
+- [E568](evidence.md#e568) Issue #37 (user, Catalina, Logic Pro, libusb package, TI with OS 5.0.8, 44.1 kHz block 2048): "out of sync ... (MED)
 
 ## Models: Snow, Polar, Keyboard, TI2 (264)
 
@@ -2194,7 +2195,7 @@ Entries: 565. Marks after an entry: its lowest confidence level when below HIGH,
 - [E565](evidence.md#e565) Final hardware run for 0.8.43 on our TI2 Desktop (Linux, CI build 44890937850 from 5bbb2ce, plug-in a603d89b, ...
 - [E566](evidence.md#e566) Round 0.8.43 Mac test (our TI2 Desktop, macOS 27.2.1, Ableton Live 12, final CI build 44890937850, one ...
 - [E567](evidence.md#e567) Issue #52 (user report, 2026-11-21): the Ventura test package (0.8.43, `TI-Revive-0.8.43-mac-ventura.zip`, ... (MED)
-- [E568](evidence.md#e568) Issue #37 (user, Catalina, Logic Pro, libusb package, TI with OS 5.0.8, 44.1 kHz block 2048): "out of sync ... (LOW)
+- [E568](evidence.md#e568) Issue #37 (user, Catalina, Logic Pro, libusb package, TI with OS 5.0.8, 44.1 kHz block 2048): "out of sync ... (MED)
 
 ## DAWs (247)
 
@@ -2444,7 +2445,7 @@ Entries: 565. Marks after an entry: its lowest confidence level when below HIGH,
 - [E564](evidence.md#e564) #51 (edy013; Windows 11 Pro 25H2, TI Desktop, TI Revive 0.8.41, Fender Studio Pro 8.2 VST3 on a Universal ... (open; not on hardware)
 - [E566](evidence.md#e566) Round 0.8.43 Mac test (our TI2 Desktop, macOS 27.2.1, Ableton Live 12, final CI build 44890937850, one ...
 - [E567](evidence.md#e567) Issue #52 (user report, 2026-11-21): the Ventura test package (0.8.43, `TI-Revive-0.8.43-mac-ventura.zip`, ... (MED)
-- [E568](evidence.md#e568) Issue #37 (user, Catalina, Logic Pro, libusb package, TI with OS 5.0.8, 44.1 kHz block 2048): "out of sync ... (LOW)
+- [E568](evidence.md#e568) Issue #37 (user, Catalina, Logic Pro, libusb package, TI with OS 5.0.8, 44.1 kHz block 2048): "out of sync ... (MED)
 
 ## User reports (GitHub issues, forums) (141)
 
@@ -2588,7 +2589,7 @@ Entries: 565. Marks after an entry: its lowest confidence level when below HIGH,
 - [E564](evidence.md#e564) #51 (edy013; Windows 11 Pro 25H2, TI Desktop, TI Revive 0.8.41, Fender Studio Pro 8.2 VST3 on a Universal ... (open; not on hardware)
 - [E565](evidence.md#e565) Final hardware run for 0.8.43 on our TI2 Desktop (Linux, CI build 44890937850 from 5bbb2ce, plug-in a603d89b, ...
 - [E567](evidence.md#e567) Issue #52 (user report, 2026-11-21): the Ventura test package (0.8.43, `TI-Revive-0.8.43-mac-ventura.zip`, ... (MED)
-- [E568](evidence.md#e568) Issue #37 (user, Catalina, Logic Pro, libusb package, TI with OS 5.0.8, 44.1 kHz block 2048): "out of sync ... (LOW)
+- [E568](evidence.md#e568) Issue #37 (user, Catalina, Logic Pro, libusb package, TI with OS 5.0.8, 44.1 kHz block 2048): "out of sync ... (MED)
 
 ## Safety (rule 2): sends that can hurt the Virus (63)
 
