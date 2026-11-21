@@ -30,7 +30,7 @@ contains no Access material. No kernel code of its own is installed.
 > **Testers wanted.** TI Revive is tested on a TI2 Desktop with Ableton Live, REAPER, GarageBand and Logic Pro. Help us
 > cover more: **Virus TI Snow** (first reports: it works with the plug-in - your test results help us make it
 > official),
-> **Polar and Keyboard** models, other DAWs (Cubase, Bitwig, FL Studio, Studio One), **Intel Macs**,
+> **Polar and Keyboard** models, other DAWs (Cubase, Bitwig, Studio One; FL Studio has one user report), **Intel Macs**,
 > other **Linux** distributions and **Windows 10**. No coding needed: follow the
 > [testing guide](.claude/skills/tirevive-test/SKILL.md) and post a
 > [test report](https://github.com/derpsn/ti-revive/issues/new?template=test_report.yml) - partial
@@ -120,7 +120,7 @@ shortcuts). Your patch libraries and the Access files stay.
 
 Requirements: macOS 14.4 or newer (Apple Silicon or Intel; Intel since 0.8.39, not tested on an Intel Mac yet), an Access Virus TI on USB, your own **Access "Virus TI
 Software Suite" installer** (`.pkg`, e.g. 5.1.7) and a VST3 or Audio Unit host. No Rosetta needed: the plug-in "TI
-Revive Virus Control" runs natively as VST3 and as Audio Unit.
+Revive" runs natively as VST3 and as Audio Unit. For Intel Macs on macOS 13 Ventura there is a test package (`TI-Revive-<version>-mac-ventura.zip`) and for macOS 10.15 Catalina one with its own USB audio service (`-mac-libusb.zip`); neither is tested by us.
 
 Unpack `TI-Revive-<version>-mac.zip`. Both parts are needed, in any order:
 
@@ -328,7 +328,7 @@ same with Access' own driver.
 
 #### On the Virus and in the DAW
 
-- **Several Viruses at once** (since 0.8.42, [issue #45](https://github.com/derpsn/ti-revive/issues/45): each Virus gets its own TI Revive service, numbered by the USB port it is plugged into (Virus 1, Virus 2, ...), and each plug-in instance takes a free Virus: the one its project was saved with when that one is free, as the original did. Their MIDI inputs carry the number ("TI Revive 2 Synth"). On Windows the ASIO driver plays Virus 1 only. With one Virus nothing changes: a second instance waits as before. Tested on Linux with our TI2 and a simulated TI2 as the second; not yet with two real Viruses, nor with two on Windows or macOS.)
+- **Several Viruses at once** (since 0.8.42, [issue #45](https://github.com/derpsn/ti-revive/issues/45): each Virus gets its own TI Revive service, numbered by the USB port it is plugged into (Virus 1, Virus 2, ...), and each plug-in instance takes a free Virus: the one its project was saved with when that one is free, as the original did. Their MIDI inputs carry the number ("TI Revive 2 Synth"). On Windows the ASIO driver plays Virus 1 only. With one Virus nothing changes: a second instance waits as before. Tested on Linux with our TI2 and a simulated TI2 as the second. On macOS a user plays two TI2s in Logic (issue #50): behind one USB hub the second stayed silent, in the Mac's own ports both play. Since 0.8.43 the browser and the menus show which Virus an instance plays ("- Virus 2"). Not yet tested with two Viruses on Windows.)
 - **Presets, soft knobs and the part selected on the Virus itself** are followed, as in the original (the part since
   0.8.33).
 - **Knobs on the Virus reach your DAW:** knobs you turn on the Virus reach your DAW like the plug-in's own knobs while the plug-in window is open (since 0.8.29, [issue #10](https://github.com/derpsn/ti-revive/issues/10)): Ableton Live's Configure mode adds them and automation records them. Tested in Ableton Live 11 (Windows 11, VM), Ableton Live 12 (macOS) and REAPER (Linux).
@@ -338,7 +338,7 @@ same with Access' own driver.
 - **REMOTE page** (since 0.8.22): the Virus' remote templates with their names, knob names and MIDI strings, the
   original's knob template list, template files to load and save, sent to the Virus like the original.
 - **The original's sync error message**, shown when the Virus reports late notes while your DAW plays.
-- **Scrambled audio restarts by itself (since 0.8.41):** in about one start in 250 the Virus sends its audio scrambled for a whole session (crackle, notes off time); the plug-in notices it and restarts the Virus' audio once, on Linux, Windows and macOS. A switch on the Control Center's Options page.
+- **Scrambled audio restarts by itself (since 0.8.41):** in about one start in 250 the Virus sends its audio scrambled for a whole session (crackle, notes off time); the plug-in notices it and restarts the Virus' audio once, on Linux, Windows and macOS. A switch on the Control Center's Options page. Since 0.8.43 it also catches it in silence, within a few seconds after the start, before your first note (checked on recordings of real scrambled streams, not yet on the Virus).
 - **When the Virus stops sending audio (since 0.8.41):** the plug-in tells you to switch the Virus off and on; in our tests only that helped.
 - **The arpeggiator follows a count-in (since 0.8.41, issue #30):** like with the original, the Virus' arpeggiator and clock-synced LFOs run in time with the bar when your DAW counts in before recording.
 - **A Keyboard or Polar plays its own keys again after the DAW closes (since 0.8.41):** TI Revive lets the Virus go when the last plug-in or the Control Center closes, as the original's driver does, and links it again for the next one. Checked on a simulated Keyboard. On Linux the kernel's USB audio driver can link it again (see the limits).
@@ -429,7 +429,7 @@ Where it is: Windows `C:\Program Files\TI Revive\tirevive-cc.exe`, macOS
 seconds when the plug-in's bank sync is current, otherwise about 2 minutes per bank. To open a backup in the plug-in,
 copy its `.mid` files into the `Patches` folder. Only `tirevive-cc restore` writes to the Virus, and only into its
 RAM (since 0.8.30). Firmware/OS updates, "Burn To Flash" and factory reset are not supported, on purpose: they write
-the Virus' flash and can brick it. Details: [native/docs/controlcenter.md](native/docs/controlcenter.md).
+the Virus' flash and can brick it. Since 0.8.43 their buttons are gone from the Control Center. Details: [native/docs/controlcenter.md](native/docs/controlcenter.md).
 
 **Windows**
 
@@ -502,7 +502,7 @@ Revive rebuilds that plug-in, and we want to fix its problems instead of copying
 - The Virus follows the project's sample rate (44.1 or 48 kHz) and shows "Audio clock changed" when it switches
   (since 0.8.32).
 - Owners advised a USB port directly on the computer instead of a hub
-  ([Gearspace](https://gearspace.com/threads/fixing-access-virus-sync-issues.839737/)). We have not tested hubs.
+  ([Gearspace](https://gearspace.com/threads/fixing-access-virus-sync-issues.839737/)). We have not tested hubs. A user's Polar works through a USB-C hub; with two Viruses behind one hub the second stayed silent until both were in the computer's own ports (issue #50).
 
 **What to report**
 
@@ -552,7 +552,7 @@ hardware (TI2 Desktop) - details and raw numbers in [`findings/evidence.md`](fin
   automation lanes) passes. One extreme note flood in a test of ours hung it too.
 - **macOS, after a sleep:** On macOS the Virus' audio can have dropouts after the Mac wakes from sleep: macOS's USB audio can leave it with gaps until the Virus is plugged in again. Since 0.8.39 the plug-in then reconnects the Virus by itself, at most once a minute. If dropouts remain after waking, unplug and replug the Virus.
 - **Dense projects:** with three heavy patches (Main LD, Hrd LD 1, Super Saw) on three channels some notes are lost; any two of them play cleanly. The original Virus Control loses the same notes on the same Virus, so this is the Virus' own limit, not TI Revive's.
-- Checked with ThreadSanitizer and AddressSanitizer (one race in the broker connection found and fixed); 627 unit
+- Checked with ThreadSanitizer and AddressSanitizer (one race in the broker connection found and fixed); 848 unit
   tests run with every release build on Windows and Linux, plus two end-to-end tests on Linux in a virtual display
   (two editors of a duplicated track; the Control Center's window and close button).
 

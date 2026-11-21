@@ -255,10 +255,10 @@ def page_landing(latest, releases, sums):
                          "64-bit <code>Virus Control.dll</code>, and the setup replaces the 32-bit one older setups could copy.",
                          "Run it. It is not code-signed: <em>More info <span class='sep'>&rsaquo;</span> Run anyway</em>. Your Access installer "
                          "is only unpacked, not installed. Since 0.8.38 the installer really removes the Access driver packages, so the original Access software no longer works on that PC until you reinstall it. Unplug and replug the Virus after installing.",
-                         "Connect the Virus, rescan plug-ins in your DAW and load <strong>TI Revive Virus "
-                         "Control</strong>. The ASIO device <strong>TI Revive Audio</strong> makes the Virus a "
+                         "Connect the Virus, rescan plug-ins in your DAW and load <strong>TI Revive</strong>. "
+                         "The ASIO device <strong>TI Revive Audio</strong> makes the Virus a "
                          "sound card."])
-    mac = os_card("macOS", "macOS 14.4 or newer, Apple Silicon and Intel (Intel since 0.8.39, not tested on an Intel Mac yet)", asset(latest, "-mac.zip"), None, sums,
+    mac = os_card("macOS", "macOS 14.4 or newer, Apple Silicon and Intel (Intel since 0.8.39, not tested on an Intel Mac yet). For Intel Macs on macOS 13 Ventura there is a test package (<code>TI-Revive-&lt;version&gt;-mac-ventura.zip</code>) and for macOS 10.15 Catalina one with its own USB audio service (<code>-mac-libusb.zip</code>); neither is tested by us.", asset(latest, "-mac.zip"), None, sums,
                   ["Unpack the zip and open <code>TI Revive.pkg</code> (not signed: right-click <span class='sep'>&rsaquo;</span> "
                    "<em>Open</em>).",
                    "Put your Access <code>.pkg</code> next to <code>Set up Access Virus TI files.command</code> and "
@@ -347,8 +347,8 @@ def page_landing(latest, releases, sums):
           <li>The Virus follows the project's sample rate (44.1 or 48 kHz) and shows &ldquo;Audio clock changed&rdquo;
           when it switches (since 0.8.32).</li>
           <li>Owners advised a USB port directly on the computer instead of a hub
-          (<a href="https://gearspace.com/threads/fixing-access-virus-sync-issues.839737/">Gearspace</a>). We have
-          not tested hubs.</li>
+          (<a href="https://gearspace.com/threads/fixing-access-virus-sync-issues.839737/">Gearspace</a>). 
+          We have not tested hubs. A user's Polar works through a USB-C hub; with two Viruses behind one hub the second stayed silent until both were in the computer's own ports (issue #50).</li>
         </ul>
       </div>
       <div class="stick">
@@ -582,7 +582,7 @@ def features_section():
       <h4>What it covers</h4>
       <ul>
         <li>All 16 parts, every parameter, the preset browser, RAM and ROM banks, patch libraries.</li>
-        <li>Several Viruses at once (since 0.8.42, <a href="{GH}/issues/45">issue #45</a>: each Virus gets its own TI Revive service, numbered by the USB port it is plugged into (Virus 1, Virus 2, ...), and each plug-in instance takes a free Virus: the one its project was saved with when that one is free, as the original did. Their MIDI inputs carry the number (&quot;TI Revive 2 Synth&quot;). On Windows the ASIO driver plays Virus 1 only. With one Virus nothing changes: a second instance waits as before. Tested on Linux with our TI2 and a simulated TI2 as the second; not yet with two real Viruses, nor with two on Windows or macOS.).</li>
+        <li>Several Viruses at once (since 0.8.42, <a href="{GH}/issues/45">issue #45</a>: each Virus gets its own TI Revive service, numbered by the USB port it is plugged into (Virus 1, Virus 2, ...), and each plug-in instance takes a free Virus: the one its project was saved with when that one is free, as the original did. Their MIDI inputs carry the number (&quot;TI Revive 2 Synth&quot;). On Windows the ASIO driver plays Virus 1 only. With one Virus nothing changes: a second instance waits as before. Tested on Linux with our TI2 and a simulated TI2 as the second. On macOS a user plays two TI2s in Logic (issue #50): behind one USB hub the second stayed silent, in the Mac's own ports both play. Since 0.8.43 the browser and the menus show which Virus an instance plays (&quot;- Virus 2&quot;). Not yet tested with two Viruses on Windows.).</li>
         <li>VST3 on Windows, macOS and Linux; Audio Unit for Logic and GarageBand. Native on Apple Silicon and Intel Macs (Intel since 0.8.39, not tested on an Intel Mac yet).</li>
       </ul>
       <h4>Projects and export</h4>
@@ -637,7 +637,7 @@ def features_section():
         <li>Audio from your DAW through the filters and effects of the Virus (sidechain input), as in the original.</li>
         <li>The REMOTE page (since 0.8.22): the Virus' remote templates with their names, knob names and MIDI strings, the original's knob template list, template files to load and save, sent to the Virus like the original.</li>
         <li>The original's sync error message, shown when the Virus reports late notes while your DAW plays.</li>
-        <li>Scrambled audio restarts by itself (since 0.8.41): in about one start in 250 the Virus sends its audio scrambled for a whole session (crackle, notes off time); the plug-in notices it and restarts the Virus' audio once, on Linux, Windows and macOS. A switch on the Control Center's Options page.</li>
+        <li>Scrambled audio restarts by itself (since 0.8.41): in about one start in 250 the Virus sends its audio scrambled for a whole session (crackle, notes off time); the plug-in notices it and restarts the Virus' audio once, on Linux, Windows and macOS. A switch on the Control Center's Options page. Since 0.8.43 it also catches it in silence, within a few seconds after the start, before your first note (checked on recordings of real scrambled streams, not yet on the Virus).</li>
         <li>When the Virus stops sending audio (since 0.8.41): the plug-in tells you to switch the Virus off and on; in our tests only that helped.</li>
         <li>The arpeggiator follows a count-in (since 0.8.41, issue #30): like with the original, the Virus' arpeggiator and clock-synced LFOs run in time with the bar when your DAW counts in before recording.</li>
         <li>A Keyboard or Polar plays its own keys again after the DAW closes (since 0.8.41): TI Revive lets the Virus go when the last plug-in or the Control Center closes, as the original's driver does, and links it again for the next one. Checked on a simulated Keyboard. On Linux the kernel's USB audio driver can link it again (see the limits).</li>
@@ -876,7 +876,7 @@ def page_changelog_landing(releases):
 SHARED_IMAGES = ["control-center.png", "control-center-nerd-mode.png", "plugin-help-mode.png", "plugin-help-inactive.png",
                  "plugin-menus.png", "plugin-library-drop.png",
                  "plugin-section-lock.png", "plugin-edit-menu.png", "plugin-help-menu.png"]
-TESTS = 838 # unit tests in native/tests (vtitests), as of 2026-11-19 (0.8.42)
+TESTS = 848 # unit tests in native/tests (vtitests), as of 2026-11-21 (0.8.43)
 
 # Important information shown at the top of the page, newest first (empty list = no box). The README starts with the
 # same text ("Important" block), keep both identical. Remove an entry when it no longer matters to users.
