@@ -2216,6 +2216,12 @@ private:
             ctx->setFillColor(CColor(70, 72, 76, 255));
             ctx->drawRect(CRect(t.x + 1, t.y + ty, t.x + t.w - 1, t.y + ty + th), kDrawFilled);
         }
+        SharedPointer<CFontDesc> foot = makeOwned<CFontDesc>(*kNormalFont); // its own size on every page
+        foot->setSize(11);
+        ctx->setFont(foot);
+        ctx->setFontColor(CColor(60, 60, 60, 255));
+        const vti::InfoRect &f = vti::kInfoFooter;
+        ctx->drawString(vti::kInfoNotice, CRect(f.x, f.y, f.x + f.w, f.y + f.h), kLeftText);
         if (void *ok = canvas_.image("BTN_Ok_Red.png"))
             canvas_.blit(ok, 0, 0, vti::kInfoOk.x, vti::kInfoOk.y, vti::kInfoOk.w, vti::kInfoOk.h, 1.0);
         if (dont_show_button)

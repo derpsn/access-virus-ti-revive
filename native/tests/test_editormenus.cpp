@@ -162,7 +162,7 @@ TEST(editormenus_help_menu_welcome_and_whats_new)
 
 TEST(editormenus_links)
 {
-    CHECK(std::string(issues_url()) == "https://github.com/derpsn/access-virus-ti-revive/issues");
+    CHECK(std::string(issues_url()) == "https://github.com/derpsn/ti-revive/issues");
 }
 
 // right-click where there is no control: Undo/Redo with what they take back, Panic, then the editor sizes (the

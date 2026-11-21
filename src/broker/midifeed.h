@@ -1,6 +1,6 @@
 // midifeed.h - Windows: what the broker writes to its MIDI port helper (tirevive-midiports.exe, src/midiports-win) on
 // the helper's standard input: the messages keyport.h's filters pass, one frame each. A frame is a marker byte
-// (0xA0 | port: 0 "Virus TI MIDI", 1 "Virus TI Synth", as on Linux), the length (1-3: one USB-MIDI packet's bytes)
+// (0xA0 | port: 0 "TI Revive MIDI", 1 "TI Revive Synth", as on Linux), the length (1-3: one USB-MIDI packet's bytes)
 // and the bytes. Virus to DAW only: the helper reads, it never writes back. Plain C, no I/O; the unit test calls it.
 #pragma once
 #include <stdint.h>

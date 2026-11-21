@@ -120,7 +120,7 @@ TEST(dinport_passes_system_and_single_bytes)
 
 TEST(dinport_only_cable_0_of_this_endpoint)
 {
-    CHECK(din(0x85, {0x19, 0x90, 60, 100}).empty()); // cable 1: the keys, "Virus TI Synth"
+    CHECK(din(0x85, {0x19, 0x90, 60, 100}).empty()); // cable 1: the keys, "TI Revive Synth"
     CHECK(din(0x86, {0x09, 0x90, 60, 100}).empty()); // the plug-in's interface
     CHECK(din(0x85, {0x00, 0, 0, 0, 0x01, 0, 0, 0}).empty()); // code index 0 and 1: reserved, padding
     CHECK(din(0x85, {0xFF, 0xFE, 0, 0}).empty());    // the Snow's idle packets (E387)

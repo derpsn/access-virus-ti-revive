@@ -9,7 +9,7 @@
 # Rule 2: sends only what the plug-in sends in a DAW (start-up, the part states, notes), never stores anything.
 set -uo pipefail
 here=$(cd "$(dirname "$0")" && pwd)
-plugin="/Library/Audio/Plug-Ins/VST3/TI Revive Virus Control.vst3"
+plugin="/Library/Audio/Plug-Ins/VST3/TI Revive.vst3"
 host="$here/nativehost"
 out="$here/results-$(date +%Y%m%d-%H%M%S)"
 fails=0

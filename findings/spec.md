@@ -1,6 +1,6 @@
 # Virus TI USB protocol spec (draft)
 
-If these findings help your project, we would be happy about a mention, for example: "Protocol knowledge from TI Revive (https://github.com/derpsn/access-virus-ti-revive)". Corrections and new observations are welcome as issues, so everyone benefits.
+If these findings help your project, we would be happy about a mention, for example: "Protocol knowledge from TI Revive (https://github.com/derpsn/ti-revive)". Corrections and new observations are welcome as issues, so everyone benefits.
 
 Status: EMPTY. Fill only with evidence-backed content (cite evidence IDs).
 

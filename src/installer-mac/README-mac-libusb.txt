@@ -23,7 +23,7 @@ Install
 3. Put your Access "Virus TI Software Suite ... .pkg" into this folder and double-click
    "Set up Access Virus TI files.command" (as in the normal package).
 4. Connect the Virus TI by USB, start your DAW with an audio output that is NOT the Virus, and use
-   "TI Revive Virus Control" (VST3, or the Audio Unit in Logic Pro and GarageBand).
+   "TI Revive" (VST3, or the Audio Unit in Logic Pro and GarageBand).
 
 Back to the normal package
 Install the normal TI Revive package over this one: it removes the service. Then unplug the Virus' USB cable and plug
@@ -36,4 +36,4 @@ USB cable and plug it in again.
 Logs (for bug reports): the Control Center's Nerd mode > "Save logs...", or ~/Library/Application Support/
 virus-ti-native/diag.log and /Library/Logs/TI Revive/vtibroker.log.
 
-Not affiliated with Access Music or Kemper. https://github.com/derpsn/access-virus-ti-revive
+Not affiliated with Access Music or Kemper. https://github.com/derpsn/ti-revive

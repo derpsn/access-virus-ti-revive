@@ -10,7 +10,7 @@ is not affiliated with Access Music Electronics GmbH or Kemper GmbH. VST is a re
 Technologies GmbH. Audio Unit is a trademark of Apple Inc.
 
 Component                 Version         License        Where
-VST3 SDK (Steinberg)      3.8.1           MIT            plug-in "TI Revive Virus Control" (all systems)
+VST3 SDK (Steinberg)      3.8.1           MIT            plug-in "TI Revive" (all systems)
 VSTGUI (Steinberg)        4 (VST3 SDK)    BSD-3-Clause   plug-in editor (all systems)
 pugixml                   1.15            MIT            plug-in, Control Center (all systems)
 AudioUnitSDK (Apple)      1.4.0           Apache-2.0     Audio Unit (macOS)
@@ -20,7 +20,7 @@ winpthreads (mingw-w64)   with mingw-w64  MIT, BSD-3     broker vtibroker.exe (W
 libusb and the LGPL: the broker links libusb statically. The complete source of that libusb version is at
 https://github.com/libusb/libusb/releases/tag/v1.0.30 and, from TI Revive 0.8.19 on, attached to every TI Revive
 release on GitHub (libusb-1.0.30.tar.bz2). The complete source of the broker is in the TI Revive repository
-(https://github.com/derpsn/access-virus-ti-revive, src/broker/), so you can rebuild and relink it with a modified
+(https://github.com/derpsn/ti-revive, src/broker/), so you can rebuild and relink it with a modified
 libusb: scripts/linux-build-release.sh and scripts/mac-build-release.sh show the exact build. The libusb copyright
 holders are listed in its AUTHORS file.
 

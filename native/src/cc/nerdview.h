@@ -4,10 +4,23 @@
 // fits a line into the LCD font's columns (ASCII 32..127). Header only, no drawing: unit-tested.
 #pragma once
 #include <algorithm>
+#include <cstring>
 #include <string>
 #include <vector>
 
 namespace vti::cc {
+
+// the broker's client names (owner.h: the plug-in and the ASIO driver are recognised by them, so they stay) as the
+// products are called since 0.8.43
+inline std::string shown_client_names(std::string s)
+{
+    static const std::pair<const char *, const char *> kNames[] = {
+        {"TI Revive Virus Control", "TI Revive"}, {"TI Revive Virus Audio", "TI Revive Audio"}};
+    for (const auto &n : kNames)
+        for (size_t at = 0; (at = s.find(n.first, at)) != std::string::npos; at += strlen(n.second))
+            s.replace(at, strlen(n.first), n.second);
+    return s;
+}
 
 class LogScroll {
 public:

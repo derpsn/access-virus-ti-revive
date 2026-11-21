@@ -41,6 +41,28 @@ bool load_bank_file(const std::string &path, Bank &bank)
     return ok;
 }
 
+std::string ram_cache_dir(const std::string &base, int slot)
+{
+    return slot > 1 && !base.empty() ? base + "/virus-" + std::to_string(slot) : base;
+}
+
+std::map<int, std::vector<Dump>> load_ram_cache(const std::string &dir)
+{
+    std::map<int, std::vector<Dump>> out;
+    for (int b = 0; b < 4 && !dir.empty(); b++) {
+        Bank bank;
+        if (load_bank_file(dir + "/RAM " + (char)('A' + b), bank))
+            out[b].assign(bank.begin(), bank.end());
+    }
+    return out;
+}
+
+std::string ram_cache_note(int slot, int banks)
+{
+    const std::string whose = slot > 1 ? "Virus " + std::to_string(slot) + "'s own" : "Virus 1's";
+    return "RAM cache: " + whose + " folder, " + std::to_string(banks) + " of 4 banks";
+}
+
 bool save_bank_file(const std::string &path, const Bank &bank)
 {
     std::string tmp = path + ".tmp";

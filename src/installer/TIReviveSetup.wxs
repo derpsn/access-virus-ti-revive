@@ -8,7 +8,7 @@
 -->
 <Wix xmlns="http://wixtoolset.org/schemas/v4/wxs" xmlns:bal="http://wixtoolset.org/schemas/v4/wxs/bal">
   <Bundle Name="TI Revive" Manufacturer="TI Revive" Version="$(var.Version)" UpgradeCode="B785EEA0-32B6-4B72-BD0E-62ADA99417BA"
-          AboutUrl="https://github.com/derpsn/access-virus-ti-revive">
+          AboutUrl="https://github.com/derpsn/ti-revive">
     <BootstrapperApplication>
       <bal:WixInternalUIBootstrapperApplication />
     </BootstrapperApplication>

@@ -52,8 +52,8 @@ TEST(keyporthelper_helper_takes_only_a_user_number)
     CHECK(vti_keyport_helper_uid("99999999999") == 0);
 }
 
-// midifeed.h numbers the ports as Linux and Windows (0 "Virus TI MIDI", 1 "Virus TI Synth"); the Mac's sources are
-// [0] "Virus TI Synth", [1] "Virus TI MIDI"
+// midifeed.h numbers the ports as Linux and Windows (0 "TI Revive MIDI", 1 "TI Revive Synth"); the Mac's sources are
+// [0] "TI Revive Synth", [1] "TI Revive MIDI"
 TEST(keyporthelper_feed_port_to_mac_source)
 {
     CHECK(vti_keyport_mac_source(1) == 0);

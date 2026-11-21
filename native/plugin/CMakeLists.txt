@@ -16,8 +16,9 @@ list(JOIN VTI_CID_OLD "\", \"" VTI_CID_OLD_JSON)
 file(WRITE ${CMAKE_CURRENT_BINARY_DIR}/compatibility.json "[{\"New\": \"${VTI_CID_NEW}\", \"Old\": [\"${VTI_CID_OLD_JSON}\"]}]\n")
 file(RELATIVE_PATH VTI_COMPAT_JSON ${CMAKE_CURRENT_SOURCE_DIR} ${CMAKE_CURRENT_BINARY_DIR}/compatibility.json) # the SDK wants it relative
 
-# bundle "TI Revive Virus Control.vst3" (the product name; the build target stays VirusTINative)
-smtg_add_vst3plugin(VirusTINative PACKAGE_NAME "TI Revive Virus Control"
+# bundle "TI Revive.vst3" (the product name, "TI Revive Virus Control.vst3" until 0.8.42: the installers remove that
+# one; the build target stays VirusTINative)
+smtg_add_vst3plugin(VirusTINative PACKAGE_NAME "TI Revive"
     MODULEINFO_COMPATIBILITY ${VTI_COMPAT_JSON} SOURCES_LIST
     source/entry.cpp
     source/virusplugin.cpp
@@ -27,6 +28,14 @@ smtg_add_vst3plugin(VirusTINative PACKAGE_NAME "TI Revive Virus Control"
 )
 target_link_libraries(VirusTINative PRIVATE sdk vstgui_support vticore)
 target_compile_definitions(VirusTINative PRIVATE TIREVIVE_VERSION="${PROJECT_VERSION}") # welcome / What's New
+# the commit in diag.log, so test builds of one version can be told apart (#50, E563)
+# shortcut: read at configure time only; a local build reconfigured later keeps the old commit (CI configures fresh)
+execute_process(COMMAND git rev-parse --short=8 HEAD WORKING_DIRECTORY ${CMAKE_CURRENT_SOURCE_DIR}
+                OUTPUT_VARIABLE VTI_GIT_REV OUTPUT_STRIP_TRAILING_WHITESPACE ERROR_QUIET)
+if(NOT VTI_GIT_REV)
+    set(VTI_GIT_REV "unknown")
+endif()
+target_compile_definitions(VirusTINative PRIVATE VTI_GIT_REV="${VTI_GIT_REV}")
 # the popup menus' own top-level windows (source/popupwindow.h)
 if(WIN32)
     target_sources(VirusTINative PRIVATE source/popupwindow_win.cpp)

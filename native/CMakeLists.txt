@@ -1,6 +1,6 @@
 # virus-ti-native - native rewrite of the Access Virus TI plug-in (docs/plan.md)
 cmake_minimum_required(VERSION 3.25)
-project(virus-ti-native VERSION 0.8.42 LANGUAGES C CXX) # = the TI Revive release it ships with
+project(virus-ti-native VERSION 0.8.43 LANGUAGES C CXX) # = the TI Revive release it ships with
 set(CMAKE_CXX_STANDARD 17)
 set(CMAKE_CXX_STANDARD_REQUIRED ON)
 # Windows: static C/C++ runtime, so the plug-in and the ASIO driver run without the VC++ redistributable
@@ -146,9 +146,10 @@ if(APPLE AND VTI_NATIVE_AU)
                 COMMAND ${CMAKE_COMMAND} -E touch "${res}/plugin.vst3/Contents/Resources/snow-first" VERBATIM)
         endif()
     endfunction()
-    vti_add_au(VirusTINative_AU "TI Revive Virus Control" VTIr io.github.derpsn.tirevive.virus-control.au
+    vti_add_au(VirusTINative_AU "TI Revive" VTIr # names until 0.8.42: "TI Revive Virus Control (...)"; ids and codes kept
+               io.github.derpsn.tirevive.virus-control.au
                TIReviveVirusControlAUCocoaView OFF)
-    vti_add_au(VirusTINative_AU_Snow "TI Revive Virus Control (Snow)" VTIs io.github.derpsn.tirevive.virus-control-snow.au
+    vti_add_au(VirusTINative_AU_Snow "TI Revive (Snow)" VTIs io.github.derpsn.tirevive.virus-control-snow.au
                TIReviveVirusControlSnowAUCocoaView ON)
 endif()
 

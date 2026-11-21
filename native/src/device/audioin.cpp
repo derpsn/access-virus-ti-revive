@@ -181,7 +181,7 @@ static int input_channels(AudioObjectID id)
 
 // the Virus as Core Audio input device: name contains "Virus", at least 6 input channels (E082 order); with several
 // (#45) the one of this broker's Virus (slotpick.h)
-static AudioObjectID find_virus(const std::string &serial, int slot)
+static AudioObjectID find_virus(const std::string &serial, int slot, std::string &note)
 {
     AudioObjectPropertyAddress a{kAudioHardwarePropertyDevices, kAudioObjectPropertyScopeGlobal,
                                  kAudioObjectPropertyElementMain};
@@ -200,11 +200,9 @@ static AudioObjectID find_virus(const std::string &serial, int slot)
             uids.push_back(cf_string(id, kAudioDevicePropertyDeviceUID));
         }
     const int pick = vti::core_audio_pick(uids, serial, slot);
-    if (found.size() > 1) { // the UID may carry the serial: say only how it was matched (rule 5)
-        bool by_serial = pick >= 0 && !serial.empty() && uids[pick].find(serial) != std::string::npos;
-        fprintf(stderr, "audioin: %d Virus audio devices, Virus %d %s\n", (int)found.size(), slot,
-                pick < 0 ? "not among them" : by_serial ? "found by its USB serial" : "taken by order (no serial match)");
-    }
+    // the UID may carry the serial: the note says only how it was matched (rule 5); the plug-in logs it (#50)
+    const bool by_serial = pick >= 0 && !serial.empty() && uids[pick].find(serial) != std::string::npos;
+    note = vti::core_audio_note((int)found.size(), slot, pick, by_serial);
     return pick >= 0 ? found[pick] : kAudioObjectUnknown;
 }
 
@@ -345,7 +343,7 @@ bool AudioIn::open(const char *linux_name, int rate)
     return true;
 #elif defined(__APPLE__)
     auto *m = new MacAudio;
-    m->dev = find_virus(usb_serial_, slot_);
+    m->dev = find_virus(usb_serial_, slot_, open_note_);
     if (m->dev == kAudioObjectUnknown) {
         delete m;
         return false;
@@ -359,7 +357,12 @@ bool AudioIn::open(const char *linux_name, int rate)
     m->ring->rate = nominal_rate(m->dev) == 48000 ? 48000 : 44100;
     m->gaps.set_rate((int)m->ring->rate);
     m->ring->in_ch = VTI_AUDIO_IN_CH, m->ring->out_ch = VTI_AUDIO_OUT_CH, m->ring->ring_frames = VTI_AUDIO_RING;
-    if (AudioDeviceCreateIOProcID(m->dev, io_proc, m, &m->proc) || AudioDeviceStart(m->dev, m->proc)) {
+    OSStatus st = AudioDeviceCreateIOProcID(m->dev, io_proc, m, &m->proc);
+    const bool created = st == noErr;
+    if (created)
+        st = AudioDeviceStart(m->dev, m->proc);
+    if (st != noErr) {
+        open_note_ += std::string(created ? "; start failed (" : "; IOProc not created (") + std::to_string((int)st) + ")";
         if (m->proc)
             AudioDeviceDestroyIOProcID(m->dev, m->proc);
         delete m->ring;

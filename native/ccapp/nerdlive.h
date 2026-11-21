@@ -7,6 +7,7 @@
 #include "access/accessfiles.h"
 #include "cc/capture.h"
 #include "cc/decode.h"
+#include "cc/nerdview.h"
 #include "device/broker.h"
 #include "model/remotedevice.h"
 #include "vtiproto.h"
@@ -181,9 +182,9 @@ private:
             i = e + 1;
         }
         return std::string("Virus: ") + (f["device"] == "1" ? "connected" : "not connected") + "   Owner: " +
-               (f["owner"] == "-" ? "nobody" : f["owner"]) + "   Audio: " + (f["audio"] == "1" ? "streaming" : "off") +
+               (f["owner"] == "-" ? "nobody" : vti::cc::shown_client_names(f["owner"])) + "   Audio: " + (f["audio"] == "1" ? "streaming" : "off") +
                "   Packets to / from the Virus: " + f["to_device"] + " / " + f["from_device"] + "   Dropped here: " +
-               f["dropped"] + "\nClients: " + f["clients"];
+               f["dropped"] + "\nClients: " + vti::cc::shown_client_names(f["clients"]);
     }
     void connect()
     {

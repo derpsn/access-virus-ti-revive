@@ -1,6 +1,6 @@
 #!/bin/bash
 # mac-build-release.sh - build the macOS release of TI Revive on a Mac (Xcode; the release workflow's macOS runner):
-#   TI-Revive-<version>-mac.zip = TI Revive.pkg (plug-in "TI Revive Virus Control" as VST3 + Audio Unit, universal;
+#   TI-Revive-<version>-mac.zip = TI Revive.pkg (plug-in "TI Revive" as VST3 + Audio Unit, universal;
 #     the broker) + "Set up Access Virus TI files.command" + "Uninstall TI Revive.command" + README-mac.txt
 # usage: mac-build-release.sh <repo dir> <version> [out dir]
 # needs: Xcode (the plug-in: native/, VST3 SDK submodule; the AudioUnitSDK is fetched by CMake), curl (libusb).
@@ -9,12 +9,13 @@ set -euo pipefail
 REPO="$(cd "${1:?repo dir}" && pwd)"
 VERSION="${2:?version}"
 OUT="$(mkdir -p "${3:-$REPO/../release}" && cd "${3:-$REPO/../release}" && pwd)"
-# the defaults are the release; a Catalina test build (#37) sets MAC_MIN=10.15 MAC_ARCHS=x86_64 PLUGIN_MIN=10.15
+# the defaults are the release; a Catalina test build (#37) sets MAC_MIN=10.15 MAC_ARCHS=x86_64 PLUGIN_MIN=10.15,
+# the Ventura build (#52) MAC_MIN=13.0 MAC_ARCHS=x86_64 PKG_SUFFIX=mac-ventura
 MAC_MIN="${MAC_MIN:-14.4}"; MAC_ARCHS="${MAC_ARCHS:-arm64 x86_64}"; PLUGIN_MIN="${PLUGIN_MIN:-11.0}"
 # LIBUSB_AUDIO=1: the libusb package (#37, E511) - TI Revive's root service takes the Virus' audio instead of Apple's
 # driver (postinstall installs it when the package carries a "libusb-audio" file); its own zip name and README
 LIBUSB_AUDIO="${LIBUSB_AUDIO:-0}"
-PKG_SUFFIX=$([ "$LIBUSB_AUDIO" = 1 ] && echo mac-libusb || echo mac)
+PKG_SUFFIX="${PKG_SUFFIX:-$([ "$LIBUSB_AUDIO" = 1 ] && echo mac-libusb || echo mac)}"
 export VERSION MACOSX_DEPLOYMENT_TARGET="$MAC_MIN"
 # a stale MacOSX27.0.sdk in some Command Line Tools installs breaks ld (E098): use a working SDK
 if [ -z "${SDKROOT:-}" ]; then
@@ -56,16 +57,16 @@ done
 echo "broker: $ARCHS"
 codesign --force --sign - "$BUILD/mac/vtibroker"
 
-echo "== plug-in TI Revive Virus Control: VST3 + Audio Unit ($MAC_ARCHS)"
+echo "== plug-in TI Revive: VST3 + Audio Unit ($MAC_ARCHS)"
 # the VST3 SDK's SMTG_BUILD_UNIVERSAL_BINARY (default ON) sets ARCHS = standard (arm64 + x86_64) on its targets and
 # overrides CMAKE_OSX_ARCHITECTURES: a one-arch build (Catalina, x86_64) then links arm64 against an x86_64 vticore
 UNIV=$([ "$(echo $MAC_ARCHS | wc -w)" -gt 1 ] && echo ON || echo OFF)
 cmake -S "$REPO/native" -B "$BUILD/native" -G Xcode -DCMAKE_OSX_ARCHITECTURES="${MAC_ARCHS// /;}" -DSMTG_BUILD_UNIVERSAL_BINARY=$UNIV \
     -DCMAKE_OSX_DEPLOYMENT_TARGET="$PLUGIN_MIN" ${SDKROOT:+-DCMAKE_OSX_SYSROOT="$SDKROOT"} >/dev/null
 cmake --build "$BUILD/native" --config Release --target VirusTINative VirusTINative_AU VirusTINative_AU_Snow tirevive-cc TIReviveControlCenter -- -quiet
-VST3="$BUILD/native/VST3/Release/TI Revive Virus Control.vst3"
-AU="$BUILD/native/AU/Release/TI Revive Virus Control.component"
-AU_SNOW="$BUILD/native/AU/Release/TI Revive Virus Control (Snow).component" # the Snow unit (E374)
+VST3="$BUILD/native/VST3/Release/TI Revive.vst3"
+AU="$BUILD/native/AU/Release/TI Revive.component"
+AU_SNOW="$BUILD/native/AU/Release/TI Revive (Snow).component" # the Snow unit (E374)
 codesign --force --deep --sign - "$VST3"
 codesign --force --deep --sign - "$AU"
 codesign --force --deep --sign - "$AU_SNOW"
@@ -110,10 +111,10 @@ pkgbuild --root "$ROOT" --component-plist "$BUILD/components.plist" --identifier
 # a build for an older macOS (Catalina test build, #37) ships the plain component package: Catalina's Installer cannot
 # open the product archive below ("can't instantiate package", pagecontroller error -1, #37 log 2026-11-10), while the
 # plain package of 0.8.40 installed there
-if [ "$MAC_MIN" != 14.4 ]; then
+if [ "${MAC_MIN%%.*}" = 10 ]; then
 cp "$BUILD/tirevive-component.pkg" "$STAGE/TI Revive.pkg"
 else
-# a product archive around it that refuses macOS older than 14.4 with Installer's own message: on Catalina the old
+# a product archive around it that refuses macOS older than MAC_MIN (14.4 for the release) with Installer's own message: on Catalina the old
 # package installed and the plug-in then failed to load (#37: UniformTypeIdentifiers missing); the broker and libusb
 # are built for 14.4 (MACOSX_DEPLOYMENT_TARGET above). TI Revive is for systems where the original no longer runs.
 productbuild --synthesize --package "$BUILD/tirevive-component.pkg" "$BUILD/distribution.xml"
@@ -133,6 +134,8 @@ README="$REPO/src/installer-mac/README-mac.txt"
 [ "$LIBUSB_AUDIO" != 1 ] || README="$REPO/src/installer-mac/README-mac-libusb.txt"
 cp "$REPO/src/installer-mac/Set up Access Virus TI files.command" "$REPO/src/installer-mac/Uninstall TI Revive.command" \
     "$README" "$REPO/LICENSE" "$REPO/THIRD-PARTY-NOTICES.txt" "$STAGE/"
+# the README names the release's minimum; a build for an older macOS names its own
+[ "$MAC_MIN" = 14.4 ] || [ "$LIBUSB_AUDIO" = 1 ] || sed -i '' "s/^- macOS 14.4 or newer, Apple Silicon or Intel\./- macOS $MAC_MIN or newer, Intel (test build)./" "$STAGE/README-mac.txt"
 chmod +x "$STAGE"/*.command
 if [ "$PKG_SUFFIX" != mac ]; then rm -rf "$BUILD/TI-Revive-$VERSION-$PKG_SUFFIX"; mv "$STAGE" "$BUILD/TI-Revive-$VERSION-$PKG_SUFFIX"; fi
 (cd "$BUILD" && ditto -c -k --keepParent "TI-Revive-$VERSION-$PKG_SUFFIX" "$OUT/TI-Revive-$VERSION-$PKG_SUFFIX.zip")

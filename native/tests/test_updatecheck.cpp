@@ -81,7 +81,7 @@ TEST(updatecheck_plugin_note_once_per_version)
 TEST(updatecheck_bug_report_link_prefills_the_versions_field)
 {
     const std::string u = bug_report_url("0.8.42", "Linux");
-    CHECK(u.rfind("https://github.com/derpsn/access-virus-ti-revive/issues/new?", 0) == 0);
+    CHECK(u.rfind("https://github.com/derpsn/ti-revive/issues/new?", 0) == 0);
     CHECK(u.find("template=bug_report.yml") != std::string::npos);
     CHECK(u.find("versions=TI%20Revive%200.8.42%2C%20Linux") != std::string::npos);
     CHECK(bug_report_url("0.8.42 & x", "Linux").find("%26") != std::string::npos); // encoded, never raw

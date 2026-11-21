@@ -6,9 +6,9 @@
 
 TEST(factoryorder_marker_next_to_the_binary)
 {
-    CHECK(vti::snow_first_marker("/L/C/TI Revive Virus Control (Snow).component/Contents/Resources/plugin.vst3/"
-                                 "Contents/MacOS/TI Revive Virus Control") ==
-          "/L/C/TI Revive Virus Control (Snow).component/Contents/Resources/plugin.vst3/Contents/Resources/snow-first");
+    CHECK(vti::snow_first_marker("/L/C/TI Revive (Snow).component/Contents/Resources/plugin.vst3/"
+                                 "Contents/MacOS/TI Revive") ==
+          "/L/C/TI Revive (Snow).component/Contents/Resources/plugin.vst3/Contents/Resources/snow-first");
     CHECK(vti::snow_first_marker("no-folders").empty()); // not inside a bundle: no marker
     CHECK(vti::snow_first_marker("/a/b").empty());
 }

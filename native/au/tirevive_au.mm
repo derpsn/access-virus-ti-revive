@@ -1,4 +1,4 @@
-// tirevive_au.mm - the Audio Unit (AUv2) of "TI Revive Virus Control" for Logic Pro / GarageBand: Steinberg's AU
+// tirevive_au.mm - the Audio Unit (AUv2) of "TI Revive" for Logic Pro / GarageBand: Steinberg's AU
 // wrapper (VST3 SDK, MIT; compiled as part of this file) around the VST3 plug-in, which the component carries as
 // Contents/Resources/plugin.vst3.
 //

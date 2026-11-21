@@ -24,17 +24,17 @@ welcome. Many people use AI assistants for this, and that is fine: the rules bel
 Tests on setups we do not have are the most useful contribution: the **Virus TI Snow** (works per user reports, not tested by us),
 Polar and Keyboard models, Logic Pro and other DAWs, Intel Macs, other Linux distributions, Windows 10. Follow the
 [testing guide](.claude/skills/tirevive-test/SKILL.md) (plain text, also used by AI coding agents) and post a
-[test report](https://github.com/derpsn/access-virus-ti-revive/issues/new?template=test_report.yml). Report each
+[test report](https://github.com/derpsn/ti-revive/issues/new?template=test_report.yml). Report each
 stage as pass, fail or not tested - partial results help.
 
 ## Reporting a bug
 
-Open an [issue](https://github.com/derpsn/access-virus-ti-revive/issues/new/choose) and attach the logs for your
+Open an [issue](https://github.com/derpsn/ti-revive/issues/new/choose) and attach the logs for your
 platform. They are what makes a quick answer possible:
 
 | Platform | Logs |
 |---|---|
-| all (plug-in "TI Revive Virus Control") | the plug-in log is on by default since 0.8.41 (with 0.8.40 or older create an empty file `diag.on` first): reproduce the problem, then *Save logs...* in the Control Center's Nerd mode, or attach `diag.log` from the plug-in's folder (Windows `%LOCALAPPDATA%\virus-ti-native`, macOS `~/Library/Application Support/virus-ti-native`, Linux `~/.local/share/virus-ti-native`) |
+| all (plug-in "TI Revive") | the plug-in log is on by default since 0.8.41 (with 0.8.40 or older create an empty file `diag.on` first): reproduce the problem, then *Save logs...* in the Control Center's Nerd mode, or attach `diag.log` from the plug-in's folder (Windows `%LOCALAPPDATA%\virus-ti-native`, macOS `~/Library/Application Support/virus-ti-native`, Linux `~/.local/share/virus-ti-native`) |
 | Windows | run [`scripts/tirevive-usbinfo.ps1`](scripts/tirevive-usbinfo.ps1) (right-click → *Run with PowerShell*, or `powershell -ExecutionPolicy Bypass -File tirevive-usbinfo.ps1`) with the Virus connected; attach `TI-Revive-usbinfo.txt` from your Desktop. It also lists the newest `vtiemu-*.log`; `%TEMP%\vtibroker.log` helps too |
 | macOS | `/tmp/tirevive-bridge.log`, `/tmp/tirevive-helper.log`, `/tmp/tirevive-libvirususb.log`, `/tmp/tirevive-vtibroker.log`; for "not connected": `ioreg -p IOUSB -l -w0 \| grep -i -A30 virus` and `ls "/Library/Audio/MIDI Drivers" "/Library/Audio/Plug-Ins/HAL"` |
 | Linux | `journalctl --user -u tirevive-broker -b` |

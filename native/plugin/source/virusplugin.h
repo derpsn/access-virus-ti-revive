@@ -19,6 +19,7 @@
 #include "device/memsync.h"
 #include "device/resync.h"
 #include "device/slipwatch.h"
+#include "device/slotpick.h"
 #include "device/freezewatch.h"
 #include "device/noteprobe.h"
 #include "device/sendbudget.h"
@@ -141,6 +142,7 @@ public:
     bool waiting() const { return wait_reported_.load() || broker_.in_use_elsewhere(); }
     // the Virus this instance claimed when several are connected (#45): 1.., 0 = none yet
     int slot() const { return slot_.load(); }
+    bool other_owner() const; // another instance of this process talks to another Virus (#50: show the numbers)
     int preferred_slot() const { return slot_pref_.load(); }
     // the slot where a Virus answered this instance (0 = none yet, or given up): what a project keeps
     int found_slot() const { return found_slot_.load(); }
@@ -162,6 +164,7 @@ public:
     bool slip_fired_ = false;       // worker: scan_audio saw a slip, the loop acts on it
     FreezeWatch freeze_;            // worker (scan_audio): the stream froze (E493), only a power cycle helped
     int slip_rate_ = 0;             // worker: the rate slip_ was set for
+    std::string audio_note_;        // worker: AudioIn::open_note last logged (#50: once per change, not per retry)
     bool connected() const { return broker_.device_present(); }
     void stop_worker(); // the worker and the broker's reader have ended when it returns; the destructor does it too
     void leave_virus(); // what the Virus is left with when the plug-in closes (closeseq.h); blocks 350 ms, up to ~1.5 s
@@ -556,8 +559,10 @@ public:
     bool is_snow() const { return type_ == DeviceType::Snow || model_ == 2; } // the Snow plug-in or a Snow connected
     std::string device_name() const // as the original shows it in the browser and the menus
     {
-        return model_ == 1 ? "Virus TI (Virus TI Desktop)" : model_ == 2 ? "Virus TI Snow (Virus TI Snow)"
-                                                                          : "Virus TI2 (Virus TI2 Desktop)";
+        // with several Viruses which one this instance plays (#50): the browser names the model only
+        const std::string n = out_ ? vti::slot_label(out_->slot(), out_->other_owner()) : std::string();
+        return (model_ == 1 ? "Virus TI (Virus TI Desktop)" : model_ == 2 ? "Virus TI Snow (Virus TI Snow)"
+                                                                           : "Virus TI2 (Virus TI2 Desktop)") + n;
     }
     std::string bank_title(int bank) // browser title
     {
@@ -771,6 +776,7 @@ private:
     // (E381, #22), which come from their cache file; returns the number of their programs still to read from the Virus
     int load_rom_banks();
     std::atomic<uint32_t> user_rom_{0}; // bit i = ROM bank A+i is a user bank (set by the sync thread, read by others)
+    std::string ram_cache_from_; // the folder banks_ RAM A..D came from (load_banks, sync_banks)
     std::string user_rom_dir_; // their cache folder <cache>/rom-<key> (userrom.h); only the sync thread uses it
     std::atomic<bool> syncing_{false};
     std::atomic<bool> downloading_{false}; // download_bank's thread is reading a bank

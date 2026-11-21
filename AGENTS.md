@@ -1,8 +1,8 @@
 # Instructions for AI coding agents
 
 You are working on **TI Revive**: it makes the Access Virus TI (Desktop, Polar, Keyboard; the Snow per user reports) work
-on Windows 11, macOS and Linux without the old Access drivers. Since 0.8.0 its plug-in is "TI Revive Virus Control"
-(`native/`), a rewrite that looks and works like the original "Virus Control" and loads the Access files from the
+on Windows 11, macOS and Linux without the old Access drivers. Since 0.8.0 its plug-in is "TI Revive"
+(`native/`), a rewrite that works like the original "Virus Control" and loads the Access files from the
 user's own installer at runtime.
 Read this file completely before changing anything. Human contributors: see [CONTRIBUTING.md](CONTRIBUTING.md).
 The findings are free to use elsewhere; the maintainers would be happy about a mention (credit line in the README,
@@ -56,7 +56,7 @@ The findings are free to use elsewhere; the maintainers would be happy about a m
 | `findings/testing.md` | testing strategy: risk classes per path (`scripts/risk.py`), the automated hardware run (`scripts/hil.sh`), checklist rotation, mutation score |
 | `findings/HANDOFF.md` | the current state only (at most 150 lines, rewritten, not appended): round, machines, who waits on whom, open tasks, next steps |
 | `findings/log/` | the maintainers' dated working log (newest month first), run IDs and details; older logs archived there |
-| `native/` | **the plug-in since 0.8.0**: "TI Revive Virus Control" (VST3, all platforms) and the Windows ASIO driver "TI Revive Virus Audio"; `native/docs/architecture.md`, `native/docs/protocol.md` (timing, stamp clock), `native/docs/formats.md` |
+| `native/` | **the plug-in since 0.8.0**: "TI Revive" (VST3, all platforms) and the Windows ASIO driver "TI Revive Audio"; `native/docs/architecture.md`, `native/docs/protocol.md` (timing, stamp clock), `native/docs/formats.md` |
 | `src/broker/` | device access + broker: owns the Virus' USB interfaces, serves plug-in clients (WinUSB on Windows, libusb on macOS/Linux) |
 | `src/wrapper/` | the classic Windows plug-in of 0.7.x (emulation of the Access driver interface `vtiemu`, VST3 wrapper, ASIO wrapper); not shipped since 0.8.0, kept for reference |
 | `src/inf/`, `src/installer/` | Windows driver package (WinUSB) and MSI |

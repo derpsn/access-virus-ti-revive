@@ -19,6 +19,9 @@ inline constexpr InfoRect kInfoPage{0, 45, 907, 426};            // BG_Page_Info
 inline constexpr InfoRect kInfoText{52, 45 + 25, 786, 340};      // where the original's text image sits
 inline constexpr InfoRect kInfoOk{688, 45 + 376, 123, 23};       // BTN_Ok_Red.png (two 23-pixel frames)
 inline constexpr InfoRect kInfoDontShow{548, 45 + 376, 123, 23}; // BTN_Dont_Show_Again.png
+// ours: a footer left of the buttons on every Info page, outside the text's room (the Access look needs the notice)
+inline constexpr InfoRect kInfoFooter{52, 45 + 376, 488, 23};
+inline constexpr const char *kInfoNotice = "Not affiliated with or endorsed by Access Music or Kemper.";
 
 struct InfoPara {
     std::string text;
@@ -56,6 +59,20 @@ struct ChangeNote {
 inline const std::vector<ChangeNote> &changelog()
 {
     static const std::vector<ChangeNote> notes = {
+        {"0.8.43",
+         {"New names: the plug-in is \"TI Revive\" (before \"TI Revive Virus Control\"), the Windows ASIO driver \"TI "
+          "Revive Audio\" and the MIDI inputs \"TI Revive Synth\" and \"TI Revive MIDI\". Projects open as before; if a "
+          "track used one of the MIDI inputs, choose it there once more.",
+          "Control Center: the Burn To Flash ROM and OS Updater buttons are gone (TI Revive never offered them).",
+          "These Info pages say at the bottom that TI Revive is not affiliated with Access Music or Kemper.",
+          "TI Revive moved to github.com/derpsn/ti-revive and derpsn.github.io/ti-revive; the old links forward.",
+          "When the Virus' audio arrives scrambled at the start, TI Revive notices it within a few seconds, also in "
+          "silence, and restarts it before your first note (#37; before, only once you played).",
+          "Several Viruses on a Mac (#50): the browser and the menus show which Virus an instance plays (\"- Virus "
+          "2\"), the log says which audio device each instance picked, and an instance on Virus 2 keeps its own "
+          "bank cache (checked on Linux; on a Mac it still reads the banks again, being looked at).",
+          "macOS: a second instance that waits (\"Virus unavailable\") no longer plays the Virus of the first one along "
+          "with it (since 0.8.42 it could while it looked for another Virus)."}},
         {"0.8.42",
          {"Several Viruses at once (#45): each plug-in instance takes a free Virus, the one its project was saved "
           "with when that one is free. With one Virus nothing changes.",

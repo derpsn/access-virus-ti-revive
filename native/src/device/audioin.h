@@ -24,6 +24,8 @@ public:
     // macOS with several Viruses: the USB serial string of this broker's Virus, to find its Core Audio device
     // (slotpick.h core_audio_pick); kept in memory only, never logged (rule 5)
     void set_usb_serial(const std::string &s) { usb_serial_ = s; }
+    // macOS: how the last open() picked its Core Audio device, or why it failed (#50, E562); empty elsewhere
+    const std::string &open_note() const { return open_note_; }
     bool streaming() const;
     // n frames into usb1 (L, R) and usb2 (L, R); missing data -> silence. `latency` = target distance in frames.
     // usb3l/usb3r (optional): raw channels 0/1, the third USB output while the Virus' USB IO configuration has 3
@@ -69,6 +71,7 @@ private:
     bool broker_ring_ = false; // macOS: map the broker's ring instead (use_broker_ring)
     int slot_ = 1;
     std::string usb_serial_;
+    std::string open_note_;
     int64_t pos_ = -1, drops_ = 0;
     int64_t rate_gen_seen_ = -1; // -1: not looked at since open
 };

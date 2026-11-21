@@ -9,7 +9,7 @@ This is the technical overview for anyone who wants to understand the plug-in. B
  DAW (REAPER, Ableton, ...)
   │  VST3: notes, automation, audio buffers, project state
   ▼
- TI Revive Virus Control.vst3 ──────────────────────────────────────────────────────────────┐
+ TI Revive.vst3 ──────────────────────────────────────────────────────────────┐
   │ plugin/  VirusPlugin (VST3 component + controller)   VirusEditor (VSTGUI)       │
   │ src/model    RemoteDevice: parameters, MIDI/SysEx encoding, dumps  ◄── remotedevice.xml, editordevice.xml,
   │ src/editor   EditorLayout + EditorRenderer: the original UI         ◄── editor.xml + PNG skin   automation.xml
@@ -164,7 +164,7 @@ Access is installed or registered. These are the files it loads:
   drivers (E134); the broker log shows `LIBUSB_ERROR_ACCESS` when another driver owns them.
 
 ### Identity and old projects
-- Name **"TI Revive Virus Control"**, vendor **TI Revive**, bundle `TI Revive Virus Control.vst3`, version = the TI
+- Name **"TI Revive"**, vendor **TI Revive**, bundle `TI Revive.vst3`, version = the TI
   Revive release (CMake project version).
 - Class id = the one of the TI Revive plug-in it replaced in 0.8.0, so DAW projects saved with "Virus TI (TI
   Revive)" open with it: Windows/Linux the wrapper's id (the original's with byte 15 XOR 0x5A), macOS the bridge's id.
@@ -191,7 +191,7 @@ editor or a switch to another window closes the menu. Submenus open, switch and 
 ### Linux (tested in REAPER 7.82 at 44.1 and 48 kHz)
 | topic | how |
 |---|---|
-| plug-in format | VST3 bundle `~/.vst3/TI Revive Virus Control.vst3` (`x86_64-linux`) |
+| plug-in format | VST3 bundle `~/.vst3/TI Revive.vst3` (`x86_64-linux`) |
 | UI | VSTGUI on X11; uses the host's `IRunLoop` (from the plug frame or host context) and `X11::FrameConfig`; the host maps the XEmbed window |
 | menus | our own popup (above) in override-redirect X11 windows (`popupwindow_x11.cpp`); the work area is that of the monitor at the menu (`src/editor/workarea.h`): mutter's `_GTK_WORKAREAS_D<n>`, else the RandR monitors cut to `_NET_WORKAREA`, else `_NET_WORKAREA` |
 | drawing speed | VSTGUI keeps bitmaps as CPU (cairo image) surfaces and uploads their pixels on every draw into the X back buffer - ~70 ms per full repaint on a real X server/XWayland. The editor keeps X pixmap copies of all bitmaps (`cairo_surface_create_similar` on the frame window) and caches the static layer (backgrounds, panels, labels) as a pixmap; repaints become server-side composites (GPU with glamor): full repaint ~1-7 ms, knob step < 1 ms. `VTI_NATIVE_NO_PIXMAPS=1` disables the copies |
@@ -206,7 +206,7 @@ editor or a switch to another window closes the menu. Submenus open, switch and 
 ### Windows (tested in Ableton Live 11 on a Windows 11 PC and in a VM)
 | topic | how |
 |---|---|
-| plug-in format | VST3 bundle in `C:\Program Files\Common Files\VST3\TI Revive Virus Control.vst3` (`x86_64-win`), built with MSVC in CI (`.github/workflows/build.yml`, artifacts `VirusTINative-windows` + `tools-windows`) |
+| plug-in format | VST3 bundle in `C:\Program Files\Common Files\VST3\TI Revive.vst3` (`x86_64-win`), built with MSVC in CI (`.github/workflows/build.yml`, artifacts `VirusTINative-windows` + `tools-windows`) |
 | UI | VSTGUI with Direct2D; our own popup (above) in WS_POPUP windows that never activate (`popupwindow_win.cpp`); images taller than 16384 px (Direct2D's limit; the cutoff knob filmstrips are 16512 px) are split into tiles when loaded |
 | broker | named pipe `\\.\pipe\vtibroker`; like TI Revive's own clients the plug-in starts `vtibroker.exe` on demand (path from `HKLM\SOFTWARE\TI Revive\InstallDir`, else `%ProgramW6432%\TI Revive`), detached from the DAW's job object; the broker exits by itself when idle |
 | USB | TI Revive's WinUSB binding (MSI); no Access driver |
@@ -225,7 +225,7 @@ through the broker.
 
 | topic | how |
 |---|---|
-| identity | COM in-proc server, CLSID `{F1DA6F3F-7A48-49A9-97F8-C3A8C008EABD}`, ASIO name "TI Revive Virus Audio" (registration removes the test builds' "Virus TI (native)" entry); `regsvr32` writes `HKLM\SOFTWARE\Classes\CLSID\...` and `HKLM\SOFTWARE\ASIO\TI Revive Virus Audio` |
+| identity | COM in-proc server, CLSID `{F1DA6F3F-7A48-49A9-97F8-C3A8C008EABD}`, ASIO name "TI Revive Audio" (registration removes the test builds' "Virus TI (native)" entry); `regsvr32` writes `HKLM\SOFTWARE\Classes\CLSID\...` and `HKLM\SOFTWARE\ASIO\TI Revive Audio` |
 | channels | 6 in (Analog In L/R, USB 1 L/R, USB 2 L/R), 2 out (Virus Out L/R); Int32LSB |
 | sample rate | 44.1 or 48 kHz (round 0.8.32, not yet tested on hardware): `setSampleRate` asks the broker, which switches only while no plug-in owns the Virus (`owner.h` `vti_rate_setter`); a rate it keeps is refused (`ASE_NoClock`). Init asks for no rate (keeps the one that is set). A switch by the owning plug-in gives the host `sampleRateDidChange` and `kAsioResetRequest` |
 | buffers | 64-2048 frames, preferred 256 |
@@ -240,7 +240,7 @@ output crackles because QEMU's USB passthrough corrupts isochronous OUT data (TI
 ### macOS (universal arm64 + x86_64, tested in Ableton Live 12 on an M3)
 | topic | how |
 |---|---|
-| plug-in format | VST3 bundle `~/Library/Audio/Plug-Ins/VST3/TI Revive Virus Control.vst3`, universal (runs natively on Apple Silicon, no Rosetta), built with Xcode in CI (artifacts `VirusTINative-macos`, `tools-macos`) |
+| plug-in format | VST3 bundle `~/Library/Audio/Plug-Ins/VST3/TI Revive.vst3`, universal (runs natively on Apple Silicon, no Rosetta), built with Xcode in CI (artifacts `VirusTINative-macos`, `tools-macos`) |
 | UI | VSTGUI with Cocoa / CoreGraphics; our own popup (above) in non-activating NSPanels (`popupwindow_mac.mm`) |
 | permissions | the DAW needs microphone access (System Settings > Privacy > Microphone): without it Core Audio delivers silent input buffers |
 | broker | same program and protocol as on Linux (`/tmp/vtibroker-<uid>.sock`); no socket activation on macOS, so the plug-in starts `/Library/Application Support/TI Revive/vtibroker` itself when nobody answers (like TI Revive's libVirusUSB; `$TIREVIVE_BROKER` overrides) |
@@ -248,7 +248,7 @@ output crackles because QEMU's USB passthrough corrupts isochronous OUT data (TI
 | cache | `~/Library/Application Support/virus-ti-native/cache` |
 | Access files | `/Library/Application Support/Access Music/Virus TI/Common/Virus Control.bundle/Contents/Resources` (+ `firmware.bin` next to it); only read, the Intel-only Access plug-in is never loaded |
 | Personal Libraries | `~/Documents/Access Music/Virus TI/Patches` |
-| Audio Unit | `au/tirevive_au.mm` (targets `VirusTINative_AU` and, since 0.8.35, `VirusTINative_AU_Snow` = "TI Revive Virus Control (Snow).component", `aumu`/`VTIs`/`TIRv`, its own Cocoa view class; its copy of the VST3 plug-in carries `Contents/Resources/snow-first`, so that copy lists the Snow class first - the wrapper takes the first class; `src/device/factoryorder.h`, E374): Steinberg's AUv2 wrapper (VST3 SDK, MIT, compiled into this file) around the VST3 plug-in, which the component carries as `Contents/Resources/plugin.vst3`; Apple's AudioUnitSDK 1.4 (Apache 2.0) built from source by CMake (C++23). Codes of the classic TI Revive Audio Unit (`aumu`/`VTIr`/`TIRv`), version major<<16 \| minor<<8 \| patch; `RestoreState` translates the classic unit's state (AU preset key `data`) to the wrapper's `Processor State`, so old Logic / GarageBand projects open. Checked: `auval` passes (CI), GarageBand plays and shows the editor, an old-format state restores part 1's patch (`tools/autest.mm`: loads a component in-process, ClassInfo load/save, render, view PNG) |
+| Audio Unit | `au/tirevive_au.mm` (targets `VirusTINative_AU` and, since 0.8.35, `VirusTINative_AU_Snow` = "TI Revive (Snow).component", `aumu`/`VTIs`/`TIRv`, its own Cocoa view class; its copy of the VST3 plug-in carries `Contents/Resources/snow-first`, so that copy lists the Snow class first - the wrapper takes the first class; `src/device/factoryorder.h`, E374): Steinberg's AUv2 wrapper (VST3 SDK, MIT, compiled into this file) around the VST3 plug-in, which the component carries as `Contents/Resources/plugin.vst3`; Apple's AudioUnitSDK 1.4 (Apache 2.0) built from source by CMake (C++23). Codes of the classic TI Revive Audio Unit (`aumu`/`VTIr`/`TIRv`), version major<<16 \| minor<<8 \| patch; `RestoreState` translates the classic unit's state (AU preset key `data`) to the wrapper's `Processor State`, so old Logic / GarageBand projects open. Checked: `auval` passes (CI), GarageBand plays and shows the editor, an old-format state restores part 1's patch (`tools/autest.mm`: loads a component in-process, ClassInfo load/save, render, view PNG) |
 | install | TI Revive's pkg (`scripts/mac-build-release.sh`): VST3 into `/Library/Audio/Plug-Ins/VST3`, the Audio Unit into `.../Components`, ad-hoc signed; the classic bridge (VST3 + AU, Rosetta helper, libVirusUSB) is removed. `Set up Access Virus TI files.command` unpacks the Access `.pkg` (`pkgutil --expand-full`) instead of installing it |
 
 ## 4. Building and testing

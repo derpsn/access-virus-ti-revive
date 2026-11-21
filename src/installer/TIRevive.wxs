@@ -8,11 +8,11 @@
      xmlns:ui="http://wixtoolset.org/schemas/v4/wxs/ui">
   <Package Name="TI Revive" Manufacturer="TI Revive" Version="$(var.Version)" UpgradeCode="248B1670-6464-4F0A-965F-9CA56380C1AD"
            Scope="perMachine" Compressed="yes" Language="1033">
-    <SummaryInformation Description="TI Revive - Total Integration for Access Virus TI on Windows 11" />
+    <SummaryInformation Description="TI Revive - the Access Virus TI on Windows 11" />
     <!-- the same version replaces too (release candidates, rebuilds), never two entries side by side -->
     <MajorUpgrade AllowSameVersionUpgrades="yes" DowngradeErrorMessage="A newer version of TI Revive is already installed." />
     <MediaTemplate EmbedCab="yes" />
-    <Property Id="ARPCOMMENTS" Value="Total Integration for Access Virus TI on Windows 11 (WinUSB bridge)" />
+    <Property Id="ARPCOMMENTS" Value="The Access Virus TI on Windows 11 (WinUSB bridge)" />
 
     <StandardDirectory Id="ProgramFiles64Folder">
       <Directory Id="INSTALLFOLDER" Name="TI Revive" />
@@ -32,7 +32,7 @@
         <RegistryValue Root="HKLM" Key="Software\TI Revive" Name="InstallDir" Type="string" Value="[INSTALLFOLDER]" />
       </Component>
       <!-- 0.8.0: the classic plug-in "Virus TI (TI Revive)" (wrapper of the Access plug-in), its ASIO wrapper and the
-           Control Center launcher are gone - "TI Revive Virus Control" (native.wxs) replaces them; an upgrade
+           Control Center launcher are gone - "TI Revive" (native.wxs) replaces them; an upgrade
            removes their files because they are no longer part of the package -->
       <Component><File Source="$(var.Src)\inf\vti_winusb.inf" /></Component>
       <Component><File Id="driverps1" Source="$(var.Src)\installer\tirevive-driver.ps1" />
@@ -60,7 +60,7 @@
       <ComponentGroupRef Id="Core" />
       <ComponentGroupRef Id="Menu" />
 <?if $(var.Native) = "1" ?>
-      <!-- the native plug-in "TI Revive Virus Control" + ASIO driver "TI Revive Virus Audio" (native/packaging/windows/native.wxs) -->
+      <!-- the native plug-in "TI Revive" + ASIO driver "TI Revive Audio" (native/packaging/windows/native.wxs) -->
       <ComponentGroupRef Id="Native" />
 <?endif?>
     </Feature>

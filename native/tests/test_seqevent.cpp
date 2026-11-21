@@ -1,5 +1,5 @@
 // Linux: what the broker's MIDI ports hand to the ALSA sequencer (seqevent.h) for the bytes keyport.h passes on, the
-// Virus keys (port 1 "Virus TI Synth") and its DIN MIDI In (port 0 "Virus TI MIDI"). Hardware-free; Linux only (the
+// Virus keys (port 1 "TI Revive Synth") and its DIN MIDI In (port 0 "TI Revive MIDI"). Hardware-free; Linux only (the
 // kernel's sequencer header).
 #include "check.h"
 #ifdef __linux__

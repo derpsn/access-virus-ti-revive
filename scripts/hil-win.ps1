@@ -6,7 +6,7 @@
 # a run over ssh would start a broker the session's plug-in cannot see (E047).
 # Needs next to it: nativehost.exe, hil_check.py, timing_analysis.py (the CI artifact TI-Revive-hil-windows).
 # Rule 2: sends only what the plug-in sends in a DAW (start-up, the part states, notes), never stores anything.
-param([string]$Plugin = "$env:CommonProgramFiles\VST3\TI Revive Virus Control.vst3", [string]$Out = "")
+param([string]$Plugin = "$env:CommonProgramFiles\VST3\TI Revive.vst3", [string]$Out = "")
 $ErrorActionPreference = 'Continue'
 $here = Split-Path -Parent $MyInvocation.MyCommand.Path
 $hostExe = Join-Path $here 'nativehost.exe'

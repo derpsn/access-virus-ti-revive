@@ -1,4 +1,4 @@
-// asiodriver.cpp - "TI Revive Virus Audio" ASIO driver: the Virus as a sound card in any ASIO host (Windows), without the
+// asiodriver.cpp - "TI Revive Audio" ASIO driver: the Virus as a sound card in any ASIO host (Windows), without the
 // Access/Ploytec ASIO driver. It talks to the TI Revive broker like the plug-in does: the Virus' 6 input channels
 // come from the broker's shared input ring, the 2 outputs go into its output ring (played towards the synth at the
 // synth's rate). The synth is the clock master: a buffer switch happens whenever `buffer size` new frames have
@@ -12,7 +12,7 @@
 //
 // The IASIO interface is declared here from the ASIO ABI (a COM-style vtable; the CLSID doubles as the interface id,
 // as every ASIO host expects). Registration: regsvr32 (DllRegisterServer) writes the COM class and
-// HKLM\SOFTWARE\ASIO\TI Revive Virus Audio.
+// HKLM\SOFTWARE\ASIO\TI Revive Audio (until 0.8.42 "TI Revive Virus Audio").
 #include "device/audioin.h"
 #include "device/broker.h"
 #ifndef NOMINMAX
@@ -105,8 +105,9 @@ struct IASIO : public IUnknown {
 
 // {F1DA6F3F-7A48-49A9-97F8-C3A8C008EABD}
 const CLSID CLSID_VTI_ASIO = {0xf1da6f3f, 0x7a48, 0x49a9, {0x97, 0xf8, 0xc3, 0xa8, 0xc0, 0x08, 0xea, 0xbd}};
-const char *DRIVER_NAME = "TI Revive Virus Audio";
-const char *OLD_DRIVER_NAME = "Virus TI (native)"; // test builds before 2026-10-14
+const char *DRIVER_NAME = "TI Revive Audio";
+// earlier names, removed so a DAW does not list the driver twice: test builds before 2026-10-14, then 0.8.0-0.8.42
+const char *const OLD_DRIVER_NAMES[] = {"Virus TI (native)", "TI Revive Virus Audio"};
 const char *CLSID_STR = "{F1DA6F3F-7A48-49A9-97F8-C3A8C008EABD}";
 
 HINSTANCE g_module;
@@ -215,7 +216,7 @@ public:
         if (inited_)
             return 1;
         std::string err;
-        broker_.set_name("TI Revive Virus Audio (ASIO)");
+        broker_.set_name("TI Revive Virus Audio (ASIO)"); // the broker's internal name for it (owner.h): unchanged
         if (!broker_.open(err)) { // starts vtibroker.exe on demand, like the plug-in
             error_ = "TI Revive broker not available: " + err;
             return 0;
@@ -382,7 +383,7 @@ public:
     ASIOError controlPanel() override
     {
         MessageBoxA(nullptr,
-                    "TI Revive Virus Audio (ASIO)\n\n44.1 kHz, the buffer size is set in your DAW (256 recommended).\n"
+                    "TI Revive Audio (ASIO)\n\n44.1 kHz, the buffer size is set in your DAW (256 recommended).\n"
                     "Inputs: Virus analog in, USB 1, USB 2. Outputs: the Virus outputs.\n\n"
                     "The Virus is the clock master; the audio runs through the TI Revive broker.",
                     DRIVER_NAME, MB_OK | MB_ICONINFORMATION);
@@ -563,8 +564,9 @@ STDAPI DllRegisterServer()
     if (!GetModuleFileNameA(g_module, path, sizeof path))
         return E_FAIL;
     std::string clsid = std::string("SOFTWARE\\Classes\\CLSID\\") + CLSID_STR, asio = std::string("SOFTWARE\\ASIO\\") + DRIVER_NAME;
-    RegDeleteTreeA(HKEY_LOCAL_MACHINE, (std::string("SOFTWARE\\ASIO\\") + OLD_DRIVER_NAME).c_str()); // no second entry
-    LONG r = set_value(HKEY_LOCAL_MACHINE, clsid.c_str(), nullptr, "TI Revive Virus Audio ASIO driver");
+    for (const char *old : OLD_DRIVER_NAMES) // no second entry
+        RegDeleteTreeA(HKEY_LOCAL_MACHINE, (std::string("SOFTWARE\\ASIO\\") + old).c_str());
+    LONG r = set_value(HKEY_LOCAL_MACHINE, clsid.c_str(), nullptr, "TI Revive Audio ASIO driver");
     r |= set_value(HKEY_LOCAL_MACHINE, (clsid + "\\InprocServer32").c_str(), nullptr, path);
     r |= set_value(HKEY_LOCAL_MACHINE, (clsid + "\\InprocServer32").c_str(), "ThreadingModel", "Apartment");
     r |= set_value(HKEY_LOCAL_MACHINE, asio.c_str(), "CLSID", CLSID_STR);
@@ -577,6 +579,7 @@ STDAPI DllUnregisterServer()
     std::string clsid = std::string("SOFTWARE\\Classes\\CLSID\\") + CLSID_STR, asio = std::string("SOFTWARE\\ASIO\\") + DRIVER_NAME;
     RegDeleteTreeA(HKEY_LOCAL_MACHINE, clsid.c_str());
     RegDeleteTreeA(HKEY_LOCAL_MACHINE, asio.c_str());
-    RegDeleteTreeA(HKEY_LOCAL_MACHINE, (std::string("SOFTWARE\\ASIO\\") + OLD_DRIVER_NAME).c_str());
+    for (const char *old : OLD_DRIVER_NAMES)
+        RegDeleteTreeA(HKEY_LOCAL_MACHINE, (std::string("SOFTWARE\\ASIO\\") + old).c_str());
     return S_OK;
 }

@@ -230,3 +230,68 @@ TEST(slipwatch_noise_in_the_low_bytes_alone_is_decided)
     CHECK(w.last_state() == 0);
     CHECK(w.last_ratio() == 0.0);
 }
+
+// #37 (E561): in silence the windows decide nothing, so a slipped stream ran unnoticed until the first notes (71 s on
+// the reporter's TI Desktop, whose analog inputs are digital zero). The sync marker (USB 2: 0/511, then 511/0) comes
+// right after the start in every session; in a slipped stream it arrives in the slipped layout, where the marker scan
+// misses it. Read back through the slip it is the exact marker shape: that fires at once. Real captures: the
+// unslipped view finds it in both slipped streams (s070-59, s070-60) and nowhere in 9.1 million normal frames.
+namespace {
+
+// silence (analog `a0`/`a1`, USB 1 and 2 zero) with the marker at `at` and `at + 1`; slipped if asked
+int feed_marker(SlipWatch &w, long n, long at, bool slipped, int16_t a0 = 0, int16_t a1 = 0)
+{
+    int fired = 0;
+    for (long f = 0; f < n; f++) {
+        int16_t fr[6] = {a0, a1, 0, 0, 0, 0}, s[6];
+        if (f == at)
+            fr[5] = 511;
+        if (f == at + 1)
+            fr[4] = 511;
+        if (slipped) {
+            slip(fr, s);
+            fired += w.feed(s);
+        } else
+            fired += w.feed(fr);
+        if (fired && f == at + 1)
+            return 1000 + fired; // fired exactly on the marker's second frame
+    }
+    return fired;
+}
+
+} // namespace
+
+TEST(slipwatch_the_marker_in_the_slipped_layout_fires_at_once)
+{
+    SlipWatch w;
+    w.set_rate(44100);
+    CHECK_EQ(feed_marker(w, 44100 * 3, 30000, true), 1001); // TI Desktop: analog inputs digital zero
+    CHECK(w.marker_seen());
+    SlipWatch t;
+    t.set_rate(44100);
+    CHECK_EQ(feed_marker(t, 44100 * 3, 30000, true, -4, -1), 1001); // TI2: the ADC's noise floor
+}
+
+TEST(slipwatch_the_normal_marker_does_not_fire)
+{
+    SlipWatch w;
+    w.set_rate(44100);
+    CHECK_EQ(feed_marker(w, 44100 * 3, 30000, false), 0);
+    CHECK_EQ(feed_marker(w, 44100 * 3, 30000, false, -4, -1), 0);
+    CHECK(!w.marker_seen());
+}
+
+TEST(slipwatch_reset_forgets_half_a_marker)
+{
+    // the marker's first frame at the end of one stream and a frame looking like its second at the start of the next
+    // are not one marker
+    SlipWatch w;
+    w.set_rate(44100);
+    int16_t a[6] = {0, 0, 0, 0, 0, 511}, b[6] = {0, 0, 0, 0, 511, 0}, s[6];
+    slip(a, s);
+    CHECK(!w.feed(s));
+    w.reset();
+    slip(b, s);
+    CHECK(!w.feed(s));
+    CHECK(!w.marker_seen());
+}

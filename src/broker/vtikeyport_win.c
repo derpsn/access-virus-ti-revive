@@ -13,8 +13,8 @@
 #include <wchar.h>
 
 static HANDLE g_pipe = INVALID_HANDLE_VALUE; // the helper's standard input
-static volatile LONG g_sent[2], g_failed[2];  // [0] "Virus TI MIDI" (cable 0), [1] "Virus TI Synth" (cable 1)
-static char g_name[2][32] = {"Virus TI MIDI", "Virus TI Synth"}; // Virus N of several: "Virus TI N MIDI" (#45)
+static volatile LONG g_sent[2], g_failed[2];  // [0] "TI Revive MIDI" (cable 0), [1] "TI Revive Synth" (cable 1)
+static char g_name[2][32] = {"TI Revive MIDI", "TI Revive Synth"}; // Virus N of several: "TI Revive N MIDI" (#45)
 
 void vti_keyport_start(void)
 {

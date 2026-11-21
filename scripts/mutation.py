@@ -60,9 +60,9 @@ def main():
     build = ["cmake", "--build", a.build, "--target", "vtitests", "-j", str(os.cpu_count() or 4)]
     if run(build, 1800) != 0:
         sys.exit("mutation.py: the unmutated copy does not build")
-    tests = os.path.join(a.build, "bin", "Release", "vtitests")  # after the build: a fresh folder has none before
-    if not os.path.exists(tests):
-        tests = os.path.join(a.build, "vtitests")
+    # after the build: a fresh folder has none before; multi-config, single-config (bin/) or an old flat layout
+    tests = next((p for p in (os.path.join(a.build, *d, "vtitests") for d in (("bin", "Release"), ("bin",), ()))
+                  if os.path.exists(p)), os.path.join(a.build, "vtitests"))
     if run([tests], 600) != 0:
         sys.exit("mutation.py: the unmutated copy's tests fail")
     results = []

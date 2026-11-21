@@ -168,6 +168,15 @@ static const char *const VIRUS_SLOT_RECORD = "TIRevive/Virus"; // the project's 
 static std::mutex g_owner_mu;
 static const DeviceOut *g_owner[VTI_SLOTS_MAX]; // per Virus: the instance of this process that talks to it (#45)
 
+bool DeviceOut::other_owner() const
+{
+    std::lock_guard<std::mutex> g(g_owner_mu);
+    for (const DeviceOut *o : g_owner)
+        if (o && o != this)
+            return true;
+    return false;
+}
+
 bool DeviceOut::claim_owner()
 {
     std::lock_guard<std::mutex> g(g_owner_mu);
@@ -291,7 +300,9 @@ int DeviceOut::start_audio()
         audio_.set_usb_serial(serial); // memory only, never logged (rule 5)
     }
     // macOS: the plug-in reads the Virus' Core Audio input itself (the broker carries MIDI), or the broker's ring
-    const int r = audio_.broker_ring() ? broker_.audio(true, 3000, (uint32_t)want_rate.load()) : 1;
+    // Core Audio only for a Virus this broker has and gives us (slotpick.h; the retry starts it once STATE arrives)
+    const int r = audio_.broker_ring() ? broker_.audio(true, 3000, (uint32_t)want_rate.load())
+                  : vti::core_audio_allowed(broker_.device_present(), broker_.in_use_elsewhere()) ? 1 : 0;
 #else
     const int r = broker_.audio(true, 3000, (uint32_t)want_rate.load()); // the broker sets it (rate following)
 #endif
@@ -299,6 +310,12 @@ int DeviceOut::start_audio()
     if (r == 1 && audio_.open(nullptr, want_rate.load())) { // macOS: the Core Audio rate
         rate = audio_.rate(); // the Virus' current rate (E323; 44100 from an older broker)
         audio_gate_.open();
+    }
+    // macOS: which Core Audio device, or why none opened (#50, E562); the retry runs every 500 ms, so once per change
+    if (audio_.open_note() != audio_note_) {
+        audio_note_ = audio_.open_note();
+        if (!audio_note_.empty())
+            log("Virus TI native: audio input: %s\n", audio_note_.c_str());
     }
     return r;
 }
@@ -640,7 +657,7 @@ void DeviceOut::run()
                 report_status();
             }
             absent_since_ = std::chrono::steady_clock::time_point{};
-            broker_.set_name("TI Revive Virus Control");
+            broker_.set_name("TI Revive Virus Control"); // the broker's internal name for the plug-in (owner.h): unchanged
             open_ = broker_.open(err);
             if (open_ && !audio_ok()) { // the owner starts the Virus audio stream (Linux: shm ring)
                 const int r = start_audio();
@@ -811,18 +828,24 @@ void DeviceOut::run()
             slip_fired_ = false;
             const int64_t now = std::chrono::duration_cast<std::chrono::milliseconds>(
                                     std::chrono::steady_clock::now().time_since_epoch()).count();
+            // the slipped sync marker found it in silence (E561), else two slipped windows (ratio)
+            char how[48];
+            if (slip_.marker_seen())
+                snprintf(how, sizeof how, "marker");
+            else
+                snprintf(how, sizeof how, "ratio %.3f", slip_.last_ratio());
             if (!vti::cc::plugin_option("slip-restart"))
-                log("Virus TI native: the Virus' audio arrives scrambled (byte slip, E488, ratio %.3f) - slip-restart is "
-                    "off, not restarted\n", slip_.last_ratio());
+                log("Virus TI native: the Virus' audio arrives scrambled (byte slip, E488, %s) - slip-restart is "
+                    "off, not restarted\n", how);
             else if (!slip_gate_.allow(now))
-                log("Virus TI native: the Virus' audio arrives scrambled (byte slip, E488, ratio %.3f) - %s\n",
-                    slip_.last_ratio(), slip_gate_.count() >= 5 ? "restarted 5 times already, giving up"
+                log("Virus TI native: the Virus' audio arrives scrambled (byte slip, E488, %s) - %s\n",
+                    how, slip_gate_.count() >= 5 ? "restarted 5 times already, giving up"
                                                                  : "restarted less than 10 s ago, waiting");
             else {
                 // the broker's normal stop and start (alt 0/1 + SET_CUR, as at every session start), then a new
                 // timeline and sync ping on the new stream, as after a rate change
-                log("Virus TI native: the Virus' audio arrives scrambled (byte slip, E488, ratio %.3f) - restarting "
-                    "the stream (%d)\n", slip_.last_ratio(), slip_gate_.count());
+                log("Virus TI native: the Virus' audio arrives scrambled (byte slip, E488, %s) - restarting "
+                    "the stream (%d)\n", how, slip_gate_.count());
                 close_audio();
 #ifdef __APPLE__
                 if (audio_.broker_ring()) // the libusb-audio test: the broker restarts it as on Linux (E511)
@@ -1289,6 +1312,7 @@ tresult PLUGIN_API VirusPlugin::initialize(FUnknown *context)
         vti::cc::rotate_log(own_cache_dir() + "/../diag.log", vti::cc::kPluginLogLimit); // on for everyone: kept small
         out_->set_diag_path(own_cache_dir() + "/../diag.log");
     }
+    out_->log("Virus TI native: TI Revive %s (%s)\n", TIREVIVE_VERSION, VTI_GIT_REV); // which build (E563)
     if (live_notes_) { // after set_diag_path, or the line never reaches diag.log
         char later[64] = "";
         if (out_->live_later.load())
@@ -3305,9 +3329,7 @@ std::vector<KnobTemplate> VirusPlugin::knob_templates()
 // of several "virus-N" in it (#45), so two Viruses never write over each other's banks
 std::string VirusPlugin::bank_cache_dir() const
 {
-    const std::string d = own_cache_dir();
-    const int s = out_ ? out_->slot() : 0;
-    return s > 1 && !d.empty() ? d + "/virus-" + std::to_string(s) : d;
+    return vti::ram_cache_dir(own_cache_dir(), out_ ? out_->slot() : 0);
 }
 
 void VirusPlugin::load_banks()
@@ -3333,14 +3355,10 @@ void VirusPlugin::load_banks()
             lib_roots_.push_back(root.menu);
         }
     // like the original: only the plug-in's own cache; without one the first start syncs the whole RAM
-    std::string d = bank_cache_dir();
-    if (d.empty())
-        return;
-    for (int b = 0; b < 4; b++) {
-        Bank bank;
-        if (load_bank_file(d + "/RAM " + (char)('A' + b), bank))
-            banks_[b].assign(bank.begin(), bank.end());
-    }
+    // the Virus is not chosen yet: Virus 1's folder; sync_banks() loads the right one once it is (#50)
+    ram_cache_from_ = bank_cache_dir();
+    for (auto &[b, v] : vti::load_ram_cache(ram_cache_from_))
+        banks_[b] = std::move(v);
 }
 
 int VirusPlugin::load_rom_banks()
@@ -3582,16 +3600,6 @@ void VirusPlugin::sync_banks()
     // delay the Virus' notes by ~130 ms and the sync stalls - measured 2026-10-14)
     // a RAM bank without a cache file is read in full: its "Syncing memory" page follows "Starting up" directly,
     // without the editor in between (user, L4)
-    bool sync_expected = false;
-    {
-        std::lock_guard<std::mutex> lk(banks_mu_);
-        for (int b = 0; b < 4; b++) { // no cache file, or one an interrupted sync left with gaps
-            auto it = banks_.find(b);
-            if (it == banks_.end() || it->second.size() < 128 ||
-                std::any_of(it->second.begin(), it->second.end(), [](const std::vector<uint8_t> &p) { return p.empty(); }))
-                sync_expected = true;
-        }
-    }
     wait_virus_ready();
     starting_ = false;
     if (stop_warm_ || !out_ || !out_->connected()) { // no Virus: no sync, the editor as usual
@@ -3603,6 +3611,39 @@ void VirusPlugin::sync_banks()
     if (!dir.empty()) {
         std::error_code ec;
         std::filesystem::create_directories(vti::u8path(dir), ec);
+    }
+    if (dir != ram_cache_from_) { // this instance plays Virus 2..: its own RAM cache, not Virus 1's (#50)
+        auto ram = vti::load_ram_cache(dir);
+        std::lock_guard<std::mutex> lk(banks_mu_);
+        for (int b = 0; b < 4; b++)
+            banks_.erase(b);
+        for (auto &[b, v] : ram)
+            banks_[b] = std::move(v);
+        ram_cache_from_ = dir;
+        drop_.forget(); // an undo would write Virus 1's patches
+        ui_dirty_ = true;
+    }
+    {
+        int loaded = 0; // E563: which cache this sync starts from (the reporter's Mac re-read Virus 2 at every start)
+        std::lock_guard<std::mutex> lk(banks_mu_);
+        for (int b = 0; b < 4; b++)
+            loaded += banks_.count(b) ? 1 : 0;
+        out_->log("Virus TI native: %s\n", vti::ram_cache_note(out_->slot(), loaded).c_str());
+    }
+    // a failed save was silent: the next start then reads the whole bank again (E563)
+    const auto save_ram = [&](int b, const Bank &bank) {
+        if (!dir.empty() && !save_bank_file(dir + "/RAM " + (char)('A' + b), bank))
+            out_->log("Virus TI native: RAM %c: saving the bank cache failed (Virus %d)\n", 'A' + b, out_->slot());
+    };
+    bool sync_expected = false;
+    {
+        std::lock_guard<std::mutex> lk(banks_mu_);
+        for (int b = 0; b < 4; b++) { // no cache file, or one an interrupted sync left with gaps
+            auto it = banks_.find(b);
+            if (it == banks_.end() || it->second.size() < 128 ||
+                std::any_of(it->second.begin(), it->second.end(), [](const std::vector<uint8_t> &p) { return p.empty(); }))
+                sync_expected = true;
+        }
     }
     const int rom_missing = load_rom_banks();
     // "Starting up" ends here: straight to "Syncing memory" when a read is certain (as the original), else the editor
@@ -3670,8 +3711,8 @@ void VirusPlugin::sync_banks()
                 lcd_dirty_ = true; // only the progress on the LCD (a full repaint costs ~77 ms in REAPER)
         }, &stop_warm_);
         out_->log("Virus TI native: RAM %c sync: %d fetched\n", 'A' + b, n); // also diag.log: the sync's duration
-        if (n == -2 && !dir.empty()) // closed while syncing: keep what was fetched, the next start continues
-            save_bank_file(dir + "/RAM " + (char)('A' + b), bank);
+        if (n == -2) // closed while syncing: keep what was fetched, the next start continues
+            save_ram(b, bank);
         result = n;
         if (n < 0)
             break;
@@ -3681,8 +3722,7 @@ void VirusPlugin::sync_banks()
             if (n > 0)
                 drop_.forget(); // the Virus' RAM changed elsewhere: an undo could write over it
         }
-        if (!dir.empty())
-            save_bank_file(dir + "/RAM " + (char)('A' + b), bank);
+        save_ram(b, bank);
         ui_dirty_ = true;
     }
     // user ROM banks (E381/E382): their programs not cached yet, read like the original - no bank info, each request

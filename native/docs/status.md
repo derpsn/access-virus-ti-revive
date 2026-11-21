@@ -32,7 +32,7 @@ empty-cache test on the real PC.
 
 ## First release - state (2026-10-14 evening)
 
-Decisions (user): name "TI Revive Virus Control" (vendor TI Revive), ASIO "TI Revive Virus Audio", own class id,
+Decisions (user): name "TI Revive" (vendor TI Revive), ASIO "TI Revive Audio", own class id,
 Snow "not supported yet", no Control Center in release 1. Version 0.8.0 (= TI Revive release).
 Done:
 - host rates != 44.1 kHz (resampler; user: REAPER at 48 kHz works)

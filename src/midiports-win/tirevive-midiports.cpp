@@ -1,5 +1,5 @@
-// tirevive-midiports.exe - Windows: the Virus as two MIDI inputs for every MIDI program, "Virus TI Synth" (its keys,
-// cable 1) and "Virus TI MIDI" (its DIN MIDI In, cable 0), as the Access driver had them and as TI Revive offers on
+// tirevive-midiports.exe - Windows: the Virus as two MIDI inputs for every MIDI program, "TI Revive Synth" (its keys,
+// cable 1) and "TI Revive MIDI" (its DIN MIDI In, cable 0), as the Access driver had them and as TI Revive offers on
 // macOS and Linux (src/broker/vtikeyport.h). Windows MIDI Services (Windows 11 25H2 and later) lets an app create a
 // virtual MIDI device without a driver; this helper does that and sends what the broker writes to its standard input
 // (src/broker/midifeed.h), as UMP (umpconv.h). Read-only (user 2026-11-15): both function blocks are outputs of the
@@ -144,7 +144,7 @@ midi2::MidiEndpointConnection open_port(midi2::MidiSession const &session, const
 
 // the stream from the broker: frame by frame to its port's device, as UMP
 struct Feed {
-    midi2::MidiEndpointConnection conn[2] = {nullptr, nullptr}; // [0] "Virus TI MIDI", [1] "Virus TI Synth"
+    midi2::MidiEndpointConnection conn[2] = {nullptr, nullptr}; // [0] "TI Revive MIDI", [1] "TI Revive Synth"
     vti::UmpConv conv[2] = {vti::UmpConv(0), vti::UmpConv(0)};  // group 1 on each device
     unsigned sent = 0, failed = 0;
 };

@@ -1,6 +1,6 @@
 # Evidence log
 
-If these findings help your project, we would be happy about a mention, for example: "Protocol knowledge from TI Revive (https://github.com/derpsn/access-virus-ti-revive)". Corrections and new observations are welcome as issues, so everyone benefits.
+If these findings help your project, we would be happy about a mention, for example: "Protocol knowledge from TI Revive (https://github.com/derpsn/ti-revive)". Corrections and new observations are welcome as issues, so everyone benefits.
 
 Every conclusion gets an entry, one `### Ennn` section each, numbered in order. The topic index is
 [evidence-index.md](evidence-index.md) (generated). Before a commit, `python3 -I scripts/evidence.py check` must pass
@@ -5132,3 +5132,280 @@ heard both ("works"). Not shown: a reopen after a save with this build (straight
 - **Method:** broker journal (connects per systemd unit) during the user's test and the rerun with the fix; unit tests
 - **Confidence:** HIGH (the cycling and its cause, the fix with one Virus, two Viruses on Linux with one simulated) / open (two real Viruses, Windows, macOS)
 - **Hardware:** yes (TI2 Desktop on Linux; plus the simulator's virtual TI2 as Virus 2)
+
+### E556
+
+The rename of 0.8.43 ("TI Revive Virus Control" -> "TI Revive", bundle "TI Revive Virus Control.vst3" -> "TI
+Revive.vst3", class ids unchanged) keeps REAPER projects working on Linux. Test (2026-11-19, REAPER portable install,
+Xvfb, scripted with two ReaScripts; TI2 Desktop on USB): with 0.8.42 installed, REAPER made a project with one track
+and the plug-in and saved it; its FX line names the old file: `<VST "VST3i: TI Revive Virus Control (TI Revive)" "TI
+Revive Virus Control.vst3" 0 "" 135376116{B49F90D9735F4305AC5397BE8958CD6B} "">`. Then the round-0.8.43 Linux
+package (local build, 0bd56d8) was installed with its install.sh, which removed the old bundle (~/.vst3 then held
+only "TI Revive.vst3"). REAPER opened the project: one FX, not offline, 4626 parameters, the first 40 parameter
+values identical to those read before the save. So REAPER finds a VST3 whose file is gone by its class id in the
+newly scanned bundle. The slot keeps the name stored in the project ("VST3i: TI Revive Virus Control (TI Revive)");
+a newly added instance is "TI Revive". Not tested: Ableton Live, Logic (Audio Unit codes unchanged), Cubase, other
+hosts; a project saved with the renamed build on 0.8.42.
+
+- **Date:** 2026-11-19
+- **Pointer:** native/plugin/CMakeLists.txt (PACKAGE_NAME), src/installer-linux/install.sh (old bundle removed); scripts/reaper-projcompat/make.lua and check.lua
+- **Method:** hardware test in REAPER on Linux, scripted (TrackFX_GetFXName, TrackFX_GetOffline, TrackFX_GetNumParams, TrackFX_GetParamNormalized before and after)
+- **Confidence:** HIGH (REAPER on Linux) / open (other hosts and platforms)
+- **Hardware:** yes (TI2 Desktop on Linux)
+
+### E557
+
+Logic Pro on macOS after the rename of 0.8.43 (see E556): the user saved a Logic project with the Audio Unit "TI
+Revive Virus Control" (0.8.41 CI build installed) and a track whose MIDI input was "Virus TI Synth", then installed the
+round-0.8.43 package (CI 44613895602, 3ff1a00, pkg 22ae6de3) with its double-click installer. Checked over SSH: the
+postinstall removed the old bundles; /Library/Audio/Plug-Ins held only "TI Revive.vst3", "TI Revive.component" and
+"TI Revive (Snow).component" (component 0.8.43, Audio Unit aumu/VTIr/TIRv as before, name "TI Revive: TI Revive").
+In Logic (user, 2026-11-19): the plug-in loads fine, its slot is named "TI Revive"; the track's MIDI input became a
+generic input. So Logic finds the Audio Unit by its codes, but remembers a MIDI input by its name, not by the port's
+CoreMIDI unique ID (kept as "VTI1"): after the rename the input has to be chosen once more, as the release notes say.
+Ableton Live on the same Mac (VST3, a project saved before the update): works with the renamed build too (user, same
+evening; no details beyond "worked").
+
+- **Date:** 2026-11-19
+- **Pointer:** native/CMakeLists.txt (vti_add_au: names changed, codes and bundle ids kept), src/installer-mac/scripts/postinstall (old bundles removed), src/broker/devslot.h (vti_slot_port_name, vti_slot_port_id)
+- **Method:** hardware test on our Mac (MacBook Air M3, macOS 27.2.1, TI2 Desktop) by the user in Logic Pro; installed files checked over SSH
+- **Confidence:** HIGH (Logic on macOS 27) / MED (Ableton Live on macOS: the user's short report)
+- **Hardware:** yes (TI2 Desktop, Mac)
+
+### E558
+
+Windows after the rename of 0.8.43 (see E556, E557): win11 VM (Windows 11, no Virus attached), a project saved in
+Ableton Live by the user with "TI Revive Virus Control" (the 0.8.42 code of CI 44588173936 installed), then the
+round-0.8.43 setup.exe (CI 44615094701, f3d612e, d45048c3) installed with /quiet: exit 0, product version 0.8.43;
+Common Files\VST3 held only "TI Revive.vst3" (file version 0.8.43), the old "TI Revive Virus Control.vst3" was gone;
+HKLM\SOFTWARE\ASIO listed "TI Revive Audio" and no longer "TI Revive Virus Audio". In Live (user, 2026-11-19): the
+plug-in was there in the saved project, and the ASIO driver showed with the new name. Then the TI2 was passed
+through to the VM (Windows: "Virus TI" devices OK) and the user played it in Live through "TI Revive Audio": "works".
+
+- **Date:** 2026-11-19
+- **Pointer:** native/packaging/windows/native.wxs (VCBUNDLE removal, ASIO registry key), native/asio/asiodriver.cpp (OLD_DRIVER_NAMES)
+- **Method:** silent install in the win11 VM checked over SSH (PowerShell); project reopened in Ableton Live by the user
+- **Confidence:** HIGH (Windows 11 VM, Ableton Live: project reopen, ASIO name, sound through TI Revive Audio)
+- **Hardware:** yes (TI2 Desktop passed through to the win11 VM for the sound check)
+
+### E559
+
+#48 / #44 "distorted after reopening a saved project" (Mac mini M1, macOS Sequoia, Ableton Live, TI2 Keyboard, Virus
+OS 5.1.7.00, AURA Virus Editor installed): the log collected 2026-11-20 by the 0.8.42 Control Center (plug-in diag.log
+2026-11-18 to 2026-11-20, broker log) shows the same picture as #33 (E532), the Virus' audio reaches the plug-in clean.
+Broker: the plug-in owns the Virus in every session, no LIBUSB_ERROR_ACCESS (so no E134 driver conflict in this log);
+the `read ep 85/86: LIBUSB_ERROR_IO` ... `giving up on the device` bursts come 6-9 s after the last client
+disconnected (the Virus switched off after work, not a fault). Plug-in: 44.1 kHz, block 512, Mode SINGLE; Virus
+frames against host frames per 10 s within 1 % in all 516 full windows; drops 0 in 531 of 536 windows (1-2 in the
+rest), no stream restarts, process time at most 45 us, over block time 0; raw peaks noise floor 4-5 and third pair
+0 throughout (no E488 slip). One window, 11-19 03:12:03 UTC, has the sound pair at full scale (32767 32767, the
+windows before it 4000-7000, the next 13373), and the plug-in is reloaded 2 s later (setActive(0), close sequence,
+setState "e.synth 08"): the Virus' own output was at full scale before USB, cause unknown (a loud patch or knob, or a
+patch recalled wrongly). The sessions of 11-20 (three reopens in a row) peak at most 7095 with 0 drops; whether they
+sounded distorted is not known. Asked: distortion on the unit's own outputs too, Ableton's output device, buffer
+change instead of reopen, time of the distortion.
+
+- **Date:** 2026-11-20
+- **Pointer:** issue #48 (TI-Revive-logs-2026-11-20-0734.txt, in the session scratchpad only), #44
+- **Method:** the plug-in log's stats lines (raw peaks, host/virus frames, drops, read margin) and the broker log per session
+- **Confidence:** HIGH (no driver conflict, no slip, no rate mismatch, no dropouts in the log) / open (the cause, the full-scale window)
+- **Hardware:** no (the reporter's unit)
+
+### E560
+
+#49 test report (2026-11-20): Virus TI2 Polar, Virus OS 5.0.8.00, MacBook Pro M1, macOS Sequoia 15, FL Studio
+26.1.7, TI Revive 0.8.41, Access installer 5.1.7.00, connected through a USB-C hub (AXAGON HMC-5). Setup: audio input
+"Virus TI", audio output the Mac's headphones (a second device, so the Virus and the output run on separate clocks),
+48 kHz, buffer 128, MIDI input "Virus TI Synth" on, "Virus TI MIDI" off, plug-in main out USB 1 L+R. Reported working:
+load and connect, RAM and ROM banks, MIDI keyboard input, USB audio, factory presets, automation, project save and
+reopen, audio export; timing "no noticeable delay" (the grid check was not done). First report for FL Studio and for
+the Polar.
+
+- **Date:** 2026-11-20
+- **Pointer:** issue #49
+- **Method:** the reporter's test report (form and text), no log
+- **Confidence:** MED (user report without a log)
+- **Hardware:** no (the reporter's unit)
+
+### E561
+
+#37 round of 2026-11-19 (packman83, TI Desktop, Intel MacBook, macOS 10.15.7 Catalina, Logic, the libusb package;
+logs TI-Revive-logs-2026-11-19-2204.txt and -2026-11-20-0154.txt, collected by the 0.8.42 Control Center). (1) "About
+three audio dropouts during the first run": the plug-in log has byte-slip restarts (E488) at the start of the stream on
+the libusb path too: session 11-19 17:54:20 UTC, "no sync marker" four times, then 17:55:31 "the Virus' audio arrives
+scrambled (byte slip, E488, ratio 0.993) - restarting the stream (1)", clean afterwards (host/virus frames 441000 per
+10 s, drops unchanged); session 11-15 01:41:12, restarts at 01:41:38 and 01:41:50 with "restarted less than 10 s ago,
+waiting" in between (ratio 0.992-0.993). The broker's usbaudio lines show no errors and no stalls (`errors 0, stalled 0
+ms`), so the slip is in the stream from its start, not a transfer error. (2) "Out of sync after dragging the playhead
+while playing": session 11-19 21:31-22:24 UTC: "sync error shown (4 late events since Play, 10 in total)" at 22:03:58,
+"pulled back 4-27 blocks, largest 3584 frames" (E472 read clamp) several times between 22:04 and 22:16, "timing safety
+net moved 32 stamp(s) forward (36 in total)" at 22:13:42, err between -5703 and +2484; Logic block 2048. Not analysed
+further. (3) Automation recorded from the Virus' knob is coarse (screenshot: Filter1 Cutoff points 0.13, 0.18, 0.28,
+0.38, 0.42): the 128 steps are expected (7-bit parameters, value/127); the gaps are open (version, Logic automation
+mode, editor open not known; recording itself was fixed in 0.8.42, E542). (4) "Virus TI MIDI" / "Virus TI Synth" stay
+in Logic and (6) the Virus does not go back to Apple's driver after a replug: by design of the libusb package (the
+root service runs with -stay and keeps the Virus while the Mac runs, src/installer-mac/README-mac-libusb.txt). (5) No
+crackle at small and large buffers.
+**Fix (round 0.8.43, same day):** why the restart came 71 s late: the first stats window after the start had
+`raw peaks 255 0 | 0 0 | 1024 1024` (the slipped marker) and then digital silence (`0 0 | 0 0 | 0 0`, the TI Desktop's
+analog inputs read zero), where SlipWatch decides no window; it fired with the first notes. The sync marker comes
+right after every start (USB 2: 0/511, then 511/0, E451/S119); read back through the slip (word k = low byte of word
+k as high byte, high byte of word k-2 as low byte, all within one frame for USB 2) it is that exact shape. Checked on
+the simulator's exports of our real captures (virus-ti-sim/local/slipraw): the unslipped view finds it in both
+slipped streams (s070-59 at frame 576933, s070-60 at 558607; the raw view finds no marker there) and in none of the
+normal ones (a768-1, s070-58, frozen/live r48000, zero-orig-patchchange-1: 9.1 million frames, 0 hits). SlipWatch now
+fires at once on that shape (native/src/device/slipwatch.h, tests in test_slipwatch.cpp), the restart path is
+unchanged, and the log line names "marker" instead of the ratio. Built on Linux, 844 unit tests pass; not yet run on
+hardware (VTI_NATIVE_FAKE_SLIP on our TI2 exercises it: the fake slip turns the first stream's marker into the slipped
+shape).
+
+- **Date:** 2026-11-20
+- **Pointer:** issue #37 (2026-11-19 22:48 UTC, issuecomment-7038371621); logs in the session scratchpad only
+- **Method:** the plug-in log's event and stats lines, the broker's usbaudio summary, code reading (hostgestures.h, macgiveback.h, the libusb postinstall)
+- **Confidence:** HIGH (1) the restarts at the stream start and their timing, (4)(6) by design / MED (2) the cause / open (3) the gaps
+- **Hardware:** no (the reporter's unit)
+
+### E562
+
+#50 (sbostock76, the #22 reporter; macOS 15.7.7, Apple Silicon, Logic 12.3.1, TI Revive 0.8.42, 48 kHz, block 1024;
+TI2 Polar + TI2 Desktop, two TI Revive instances in one project): the first real two-Virus test on macOS. Log
+TI-Revive-logs-2026-11-20-1217.txt: slot choice works ("the project used Virus 2 - switching over from Virus 1",
+"another instance uses Virus 1 - trying Virus 2", "this instance uses Virus 2"; the broker of Virus 1 logs "2 Viruses
+connected, this broker has Virus 1"); each instance syncs its own banks (Virus 2: user ROM banks A-Z = the Polar,
+Virus 1: A-L = the Desktop, as in #22). The Virus 2 instance streams normally (audio 1, host/virus frames per 10 s
+complete); the Virus 1 instance (the Desktop) never opens its Core Audio input: 340 of its 349 stats lines read
+`audio 0 drops -1 filled -1 distance -1 ... host frames 0 / virus frames -1`. The plug-in retries start_audio every
+500 ms (virusplugin.cpp), and the reasons from AudioIn::open / find_virus ("audioin: N Virus audio devices, Virus 1
+... found by its USB serial / taken by order / not among them") go to stderr, not to diag.log, so the log cannot show
+which step fails. Reporter: only the Polar is heard; with the Polar's instance removed the Desktop plays. Suspects
+(open): core_audio_pick (slotpick.h; its own note: Apple's UID format with two Viruses unverified) picks the same
+device for both or none, or the second open fails. Also reported: the editor does not show which Virus an instance
+uses, and both browsers name the model "Virus TI2 Desktop" (the Polar is not told apart from the Desktop over USB so
+far; not checked against the Polar's USB strings).
+
+**Round 0.8.43 (same day):** the pick's outcome now reaches diag.log ("Virus TI native: audio input: 2 Virus audio
+devices, Virus 1 found by its USB serial" / "taken by order (no serial match)" / "not among them" / "no Virus audio
+device in Core Audio", plus "; start failed (OSStatus)" or "; IOProc not created (...)"), once per change, not per
+500 ms retry (slotpick.h core_audio_note, audioin.cpp find_virus/open, virusplugin.cpp start_audio); and with several
+Viruses the model name in the browser and the menus ends in " - Virus N" (slot_label: this instance on Virus 2+, or
+another instance of this process holding another Virus). Unit tests on Linux (846 pass); the macOS part is compiled by
+CI only, not yet run with two Viruses.
+
+- **Date:** 2026-11-20
+- **Pointer:** issue #50 (issuecomment-7039814819); log in the session scratchpad only; native/src/device/slotpick.h, audioin.cpp find_virus
+- **Method:** the plug-in log's per-Virus stats and events, the broker log, code reading
+- **Confidence:** HIGH (the Desktop's instance has no audio input open; slot choice correct) / open (why the Core Audio open fails)
+- **Hardware:** no (the reporter's units)
+
+### E563
+
+#50, rc1 test (same reporter and setup, v0.8.43-rc1, log TI-Revive-logs-2026-11-20-1459.txt). (1) The new log line
+shows why the second Virus is silent: the first instance "audio input: 2 Virus audio devices, Virus 1 taken by order
+(no serial match)" streams normally; the second "another instance uses Virus 1 - trying Virus 2", "audio input: 2
+Virus audio devices, Virus 2 taken by order (no serial match); start failed (-536870212)" (0xE00002BC,
+kIOReturnError, from AudioDeviceStart) and stays at `audio 0 ... host frames 0`. In the 0.8.42 log (E562) the Desktop
+was the instance that started second and was the silent one; now the Polar starts second and is silent: the failure
+follows the start order, not the unit. The broker places Virus 1 at USB location 001-001.001.001.001.003 (several hub
+levels). Hypothesis (LOW, not checked): both full-speed (USB 1.1) audio functions behind one hub exceed its
+isochronous bandwidth, as in #9 on Linux ("Not enough bandwidth", E285) and the original's own "USB bandwidth
+exceeded" page (E173); asked the reporter to connect each Virus to a port of the Mac itself (issuecomment-7043408030).
+"No serial match": Core Audio's UIDs do not carry the USB serial here, so the pick is by order. (2) The instance on
+Virus 2 fetched all four RAM banks at every start ("RAM A..D sync: 128 fetched", "bank sync done in 528.5 s"; user
+ROM "0 programs to read"). Cause (code): load_banks() runs in initialize(), before the device worker chooses the
+Virus, so bank_cache_dir() is Virus 1's folder; the sync then compares Virus 2's RAM with Virus 1's banks and saves
+the result to cache/virus-2, which no start ever loaded. Since f540fdb (#45 step 2).
+
+**Fix (round 0.8.43, rc2):** memsync ram_cache_dir / load_ram_cache; sync_banks() loads the RAM cache of the chosen
+Virus once it is known (bank_cache_dir differs from the folder load_banks used: RAM A..D replaced, bank-drop undo
+dropped) and only then decides whether a read is certain. Unit test memsync_ram_cache_per_virus; 847 tests pass on
+Linux. Not run with two Viruses (we have one); the reporter tests rc2.
+
+**rc2 on the reporter's Mac (log 17:04, Logic, AU):** the hub was the cause of the silent second Virus: with both
+TI2s in the Mac mini's own ports both instances open Core Audio ("Virus 1 / Virus 2 taken by order", no start
+failure) and stream (host = virus frames, err 0..0). But in both rc2 starts the Virus 2 instance again fetched 128 x 4
+(512-513 s). **Linux check of rc2 (2026-11-20 19:05-19:10, REAPER VST3 728916c9, real TI2 + the sim's virtual TI2 over
+USB/IP, battery local/m4/multi):** the two units' RAM is identical (copy), so a normal start cannot tell the caches
+apart; with cache/virus-2/RAM D deleted, the Virus 2 instance fetched exactly RAM D ("RAM D sync: 128 fetched",
+131.8 s; A-C 0) and wrote the file again - the fix works here (the old code would have compared with Virus 1's
+identical RAM D and fetched 0). Nothing in the plug-in deletes cache files and the save result is not checked, so on
+the Mac either the save fails silently or the files do not persist (open); reporter asked for a listing of cache and
+cache/virus-2 (issuecomment-7047279049). The AU is Steinberg's wrapper around the same code (native/au).
+
+**rc3 (diagnostics, same day):** diag.log now names the build at start ("TI Revive 0.8.43 (<commit>)", CMake reads
+the commit at configure time), the RAM cache each sync starts from ("RAM cache: Virus 2's own folder, 4 of 4 banks",
+memsync ram_cache_note, no path) and a failed bank save ("RAM X: saving the bank cache failed (Virus N)"; before,
+save_bank_file's result was ignored). Unit test memsync_ram_cache_note_names_the_folder; 848 tests pass; nativehost
+smoke test on our TI2 (Linux): the build and cache lines appear, 0 fetched. The failure line was not triggered.
+
+- **Date:** 2026-11-20
+- **Pointer:** issue #50 (issuecomment-7043408030); log in the session scratchpad only; native/plugin/source/virusplugin.cpp load_banks/sync_banks, native/src/device/memsync.cpp
+- **Method:** the plug-in log of rc1, code reading
+- **Confidence:** HIGH (RAM cache cause, start failure follows the start order) / LOW (hub bandwidth)
+- **Hardware:** no (the reporter's units)
+
+### E564
+
+#51 (edy013; Windows 11 Pro 25H2, TI Desktop, TI Revive 0.8.41, Fender Studio Pro 8.2 VST3 on a Universal Audio
+Apollo Twin USB, ASIO 48 kHz / 256, "3 Outs / No Input"): a small click every ~2 min (sometimes 10 s apart, sometimes
+5-18 min). Only excerpts of the diag.log reached us (no attachment in the issue): 33 lines "stats: pulled back 1-3
+blocks, largest 20-32 frames" in ~1.5 h, each with "read margin min 0" and err ranges like -543..85, -544..97,
+-542..-30; drops 0, filled 0; the reporter measured ~90 ppm between the Apollo and the Virus. Reading (code,
+HIGH for the mechanism): the stamp-aligned read sits timing_m() = 512 frames behind the newest frame
+(virusplugin.h:818); TimelineFollow steps the timeline only once the mean error is past STEP = 256 and holds at 128
+(timelinefollow.h:19-20); with two clocks the mean drifts to that band and the Windows delivery jitter (a few hundred
+frames) adds on top, so err reaches -543 = 31 frames past the margin and the read is pulled back to avail - n
+(virusplugin.cpp:2240): the reported jump sizes match err + 512 (31, 32, 30, 20). One clock (TI Revive Audio as the
+DAW's device) does not drift. Test asked: setx VTI_NATIVE_MARGIN 1024 (issuecomment-7044953063). Checked in the win11
+VM (0.8.42, Ableton Live 11, no Virus): setx in the console session is stored (HKCU\Environment), a program started by
+Explorer afterwards sees it, Live reads latency 4352 = A 3072 + block 256 + margin 1024 (default 3840,
+stamprule.h reported_frames), reg delete removes it. Not tested: whether 1024 removes the clicks (no second interface
+here). Fix options (open): keep the drift centred/away from the margin in TimelineFollow; a wider margin when the err
+range is wide; follow the drift with the resampler (reporter's suggestion).
+
+- **Date:** 2026-11-20
+- **Pointer:** issue #51 (issuecomment-7044953063); native/src/device/timelinefollow.h, native/plugin/source/virusplugin.cpp read clamp
+- **Method:** the reporter's log excerpts, code reading, win11 VM check of the switch
+- **Confidence:** HIGH (pull-back = err past the 512 margin) / open (fix, whether 1024 removes the clicks)
+- **Hardware:** no (the reporter's setup); the switch checked in the win11 VM without a Virus
+
+
+### E565
+
+Final hardware run for 0.8.43 on our TI2 Desktop (Linux, CI build 44890937850 from 5bbb2ce, plug-in a603d89b, broker
+0fa955fd, installed with install.sh). `scripts/hil.sh` ALL PASS: H1 cold, H2 reopen x2, H3 export (1.00x real time),
+H6 broker killed while playing; no note lost, max 0.94 ms off the grid, jitter <= 0.18 ms, drift -2 ppm. The E561
+restart path with `VTI_NATIVE_FAKE_SLIP=1` (nativehost, 25 s with notes and 20 s in silence): "the Virus' audio
+arrives scrambled (byte slip, E488, ratio 0.966 / 0.948) - restarting the stream (1)" about 1 s after the stream
+start, then "Virus ready after 1.1-1.2 s" and "sync marker at frame ...", clean afterwards (drops 0). The ratio check
+decided first in both runs: our TI2's inputs carry enough noise in "silence", and the fake slip scrambles every frame,
+so the new marker path (which matters when the inputs read exactly zero, as on the #37 TI Desktop) did not get to
+fire. That path stays checked by the unit tests on the real slipped captures only (E561).
+
+- **Date:** 2026-11-21
+- **Pointer:** work/hil-0.8.43-final (hil.sh output, slip/ runs); plug-in diag.log; native/plugin/source/virusplugin.cpp:451 (the fake slip)
+- **Method:** hardware run (hil.sh), nativehost with the test switch, plug-in log
+- **Confidence:** HIGH (hil items, restart path on the TI2) / not shown on hardware (the marker line itself)
+- **Hardware:** yes (TI2 Desktop, Linux)
+
+### E566
+
+Round 0.8.43 Mac test (our TI2 Desktop, macOS 27.2.1, Ableton Live 12, final CI build 44890937850, one Virus): a
+second TI Revive instance that shows "Virus unavailable" sometimes played the Virus along with the owner (user). The
+plug-in log has the waiting instance cycling through the slots ("another instance uses Virus 1 - trying Virus 2",
+"another program uses Virus 1 - trying the others, waiting") and opening Core Audio on each try: "audio input: 1
+Virus audio device, taken for Virus 2", then 3, 4, 1, 2, ... every few seconds. Cause: on macOS the plug-in reads the
+Virus' audio from Core Audio itself, and DeviceOut::start_audio set the result to 1 without asking the broker; the
+start runs as soon as broker_.open() succeeds, which an empty slot's broker also allows, and core_audio_pick gives
+the only "Virus" device to any slot (n == 1). On Linux/Windows broker_.audio() refuses for a broker without a Virus or
+for a non-owner, so only macOS (Core Audio path, not the libusb package) was affected; since 0.8.42 (several Viruses).
+Fix: vti::core_audio_allowed(device_present, in_use_elsewhere) (slotpick.h) gates the Core Audio start; the 500 ms
+retry starts it once the broker's STATE says the Virus is ours. Unit test slotpick_core_audio_only_for_an_owned_virus
+(849 tests pass on Linux). Mac compile in CI; not yet re-run on the Mac. Open: why the waiting instance keeps cycling
+through the slots instead of giving them up (slotpick_skips_the_slots_given_up), possibly Live hosting it in another
+process ("another program uses Virus 1").
+
+- **Date:** 2026-11-21
+- **Pointer:** user report + Mac screenshot (Live, tracks 1/5/6); Mac plug-in diag.log lines 24545-30546; native/plugin/source/virusplugin.cpp start_audio, native/src/device/slotpick.h
+- **Method:** plug-in log over SSH, code reading, unit test
+- **Confidence:** HIGH (cause from the log + code) / not yet verified on the Mac (fix)
+- **Hardware:** yes (TI2 Desktop on the Mac: the bug); fix not yet run

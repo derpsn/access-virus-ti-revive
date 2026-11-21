@@ -55,7 +55,7 @@ if [ -e "$AURA" ]; then
     [yY]*) sudo mkdir -p "/Library/Application Support/Aura driver (parked)"
            sudo mv "$AURA" "/Library/Application Support/Aura driver (parked)/"
            echo "Parked. Please RESTART your Mac afterwards." ;;
-    *) echo "Left active - disable it before using \"TI Revive Virus Control\"." ;;
+    *) echo "Left active - disable it before using \"TI Revive\"." ;;
     esac
 fi
 echo "Unpacking $PKG ..."
@@ -119,6 +119,6 @@ if [ ${#ORIG[@]} -gt 0 ]; then
     esac
 fi
 echo
-echo "Done. In your DAW use \"TI Revive Virus Control\" (VST3, or the Audio Unit in Logic / GarageBand)."
+echo "Done. In your DAW use \"TI Revive\" (VST3, or the Audio Unit in Logic / GarageBand)."
 echo "Allow your DAW to use the microphone (System Settings > Privacy & Security > Microphone): macOS gives"
 echo "the Virus' audio only to apps with that permission."

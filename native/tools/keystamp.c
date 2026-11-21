@@ -1,5 +1,5 @@
 // keystamp.c - macOS test sender for #39: a CoreMIDI source that plays a steady note grid, stamped the way the
-// broker's "Virus TI Synth" port stamps the Virus' keys (mach_absolute_time() at the moment of MIDIReceived,
+// broker's "TI Revive Synth" port stamps the Virus' keys (mach_absolute_time() at the moment of MIDIReceived,
 // src/broker/vtikeyport_mac.c). Record it in a DAW and compare where the notes land with the send log: a constant
 // offset is latency, a drift or a step after some seconds is what #39 describes.
 //

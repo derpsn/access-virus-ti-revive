@@ -49,6 +49,16 @@ TEST(slotpick_core_audio_device_by_usb_serial)
     CHECK(vti::core_audio_pick({}, "SERA", 1) == -1);
 }
 
+TEST(slotpick_core_audio_only_for_an_owned_virus) // round 0.8.43 Mac test: a waiting instance played along
+{
+    // macOS: Core Audio does not know which broker a device belongs to (one device = it for any slot), so the input
+    // opens only when this instance's broker has a Virus and gives it to us - not while trying an empty slot
+    CHECK(vti::core_audio_allowed(true, false));
+    CHECK(!vti::core_audio_allowed(false, false)); // an empty slot being tried: no Virus on that broker
+    CHECK(!vti::core_audio_allowed(true, true));   // the Virus is there, another program's plug-in has it
+    CHECK(!vti::core_audio_allowed(false, true));
+}
+
 TEST(slotpick_skips_the_slots_given_up) // audit 2026-11-18 #1, #5; round 0.8.42 test: no cycling
 {
     using vti::slot_bit;
@@ -88,4 +98,26 @@ TEST(slotpick_saves_the_preferred_slot_between_tries) // audit 2026-11-18 #2
     CHECK(vti::slot_to_save(2, 1) == 2); // the Virus in use
     CHECK(vti::slot_to_save(0, 2) == 2); // between two tries, or no Virus found yet: the project's own
     CHECK(vti::slot_to_save(0, 0) == 0); // nothing known: no record
+}
+
+// #50 (E562): with two Viruses on a Mac the second instance never opened its Core Audio input and the reason went to
+// stderr only. The pick's outcome is now one line for the plug-in log - how it was matched, never the serial (rule 5)
+TEST(slotpick_core_audio_note_names_the_outcome_without_the_serial)
+{
+    CHECK(vti::core_audio_note(0, 1, -1, false) == "no Virus audio device in Core Audio (Virus 1)");
+    CHECK(vti::core_audio_note(1, 1, 0, false) == "1 Virus audio device, taken for Virus 1");
+    CHECK(vti::core_audio_note(2, 1, 1, true) == "2 Virus audio devices, Virus 1 found by its USB serial");
+    CHECK(vti::core_audio_note(2, 2, 0, false) == "2 Virus audio devices, Virus 2 taken by order (no serial match)");
+    CHECK(vti::core_audio_note(2, 3, -1, false) == "2 Virus audio devices, Virus 3 not among them");
+}
+
+// #50: which Virus an instance plays, next to the model in the browser and the menus - only with several Viruses
+// (this instance on Virus 2+, or another instance of this process on another Virus), so one Virus looks as before
+TEST(slotpick_label_only_with_several_viruses)
+{
+    CHECK(vti::slot_label(0, false) == "");
+    CHECK(vti::slot_label(1, false) == "");         // one Virus: as before
+    CHECK(vti::slot_label(1, true) == " - Virus 1"); // another instance has Virus 2
+    CHECK(vti::slot_label(2, false) == " - Virus 2");
+    CHECK(vti::slot_label(0, true) == "");          // not connected yet: no number
 }

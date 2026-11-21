@@ -1,5 +1,5 @@
-TI Revive for macOS - Access Virus TI Total Integration without the old Access drivers
-=====================================================================================
+TI Revive for macOS - the Access Virus TI without the old Access drivers
+=========================================================================
 
 Requirements
 - macOS 14.4 or newer, Apple Silicon or Intel. No Rosetta needed.
@@ -18,12 +18,12 @@ Install
 3. Connect the Virus TI by USB. Start your DAW and allow it to use the microphone when macOS asks
    (System Settings > Privacy & Security > Microphone): macOS only gives the Virus' audio to apps with that
    permission; without it the plug-in stays silent.
-4. Rescan plug-ins and use "TI Revive Virus Control" (vendor "TI Revive"): VST3 in Ableton, Cubase, Bitwig, REAPER,
-   ...; the Audio Unit in Logic Pro and GarageBand. It looks and works like the original Virus Control and runs
+4. Rescan plug-ins and use "TI Revive" (vendor "TI Revive"): VST3 in Ableton, Cubase, Bitwig, REAPER,
+   ...; the Audio Unit in Logic Pro and GarageBand. It works like the original Virus Control and runs
    natively. Projects saved with "Virus TI (TI Revive)" of earlier versions (VST3 and Audio Unit) open with it.
 
 How it works
-"TI Revive Virus Control" reads the skin, the parameter descriptions and the ROM banks from the files set up in step
+"TI Revive" reads the skin, the parameter descriptions and the ROM banks from the files set up in step
 2 and talks to the Virus through TI Revive's broker (vtibroker, started on demand by the plug-in, ends 30 s after the
 last use). Audio comes from macOS' built-in USB audio driver (the "Virus TI" audio device, 44.1 kHz).
 
@@ -41,4 +41,4 @@ your patch libraries stay.
 Logs (for bug reports): the Control Center's Nerd mode > "Save logs...", or diag.log in ~/Library/Application
 Support/virus-ti-native (on by default since 0.8.41) and /tmp/tirevive-vtibroker.log.
 
-Not affiliated with Access Music or Kemper. https://github.com/derpsn/access-virus-ti-revive
+Not affiliated with Access Music or Kemper. https://github.com/derpsn/ti-revive

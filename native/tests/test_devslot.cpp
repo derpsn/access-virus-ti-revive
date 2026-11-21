@@ -50,11 +50,11 @@ TEST(slot_names_the_midi_ports_like_the_first_virus)
 {
     char n[32];
     vti_slot_port_name(n, sizeof n, "Synth", 1);
-    CHECK(strcmp(n, "Virus TI Synth") == 0); // DAWs know Virus 1's ports by these names: unchanged
+    CHECK(strcmp(n, "TI Revive Synth") == 0); // was "Virus TI Synth" until 0.8.42 (branding cleanup, 2026-11-19)
     vti_slot_port_name(n, sizeof n, "MIDI", 2);
-    CHECK(strcmp(n, "Virus TI 2 MIDI") == 0);
+    CHECK(strcmp(n, "TI Revive 2 MIDI") == 0);
     vti_slot_port_name(n, sizeof n, "", 3);
-    CHECK(strcmp(n, "Virus TI 3") == 0); // the Linux sequencer client
+    CHECK(strcmp(n, "TI Revive 3") == 0); // the Linux sequencer client
 }
 
 TEST(slot_port_ids_never_collide)

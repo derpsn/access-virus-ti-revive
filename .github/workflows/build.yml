@@ -1,4 +1,4 @@
-# Build TI Revive: the plug-in "TI Revive Virus Control" (native/) on Windows (MSVC, + ASIO driver), macOS (VST3 + AU,
+# Build TI Revive: the plug-in "TI Revive" (native/) on Windows (MSVC, + ASIO driver), macOS (VST3 + AU,
 # universal) and Linux (Ubuntu 22.04); the Windows broker cross-compiled with mingw-w64 and the MSI with WiX 5; the
 # macOS zip (scripts/mac-build-release.sh) and the Linux tarball (scripts/linux-build-release.sh).
 # Runs when a version tag v<major>.<minor>.<build> (e.g. v0.2.3) is pushed: builds everything and creates a GitHub
@@ -45,7 +45,7 @@ jobs:
           path: work/build/vtibroker.exe
           if-no-files-found: error
 
-  native-windows: # the native plug-in "TI Revive Virus Control" + ASIO driver "TI Revive Virus Audio" (native/, MSVC)
+  native-windows: # the native plug-in "TI Revive" + ASIO driver "TI Revive Audio" (native/, MSVC)
     runs-on: windows-2022
     timeout-minutes: 25 # a hanging step (e.g. a stuck package mirror) fails fast instead of blocking
     steps:
@@ -91,8 +91,8 @@ jobs:
         shell: pwsh
         run: |
           New-Item -ItemType Directory nativebin | Out-Null
-          Copy-Item -Recurse "native-build\VST3\Release\TI Revive Virus Control.vst3" nativebin\
-          Remove-Item "nativebin\TI Revive Virus Control.vst3\Contents\x86_64-win\*.map" -ErrorAction SilentlyContinue
+          Copy-Item -Recurse "native-build\VST3\Release\TI Revive.vst3" nativebin\
+          Remove-Item "nativebin\TI Revive.vst3\Contents\x86_64-win\*.map" -ErrorAction SilentlyContinue
           Copy-Item native-build\bin\Release\VirusTINative_ASIO.dll nativebin\
           Copy-Item native-build\bin\Release\tirevive-cc.exe nativebin\
           Copy-Item native-build\ccapp\TIReviveControlCenter.exe nativebin\
@@ -223,7 +223,7 @@ jobs:
           set -x
           B=out/build
           lipo -info "$B/mac/vtibroker"
-          P="$B/native/VST3/Release/TI Revive Virus Control.vst3/Contents/MacOS/TI Revive Virus Control"
+          P="$B/native/VST3/Release/TI Revive.vst3/Contents/MacOS/TI Revive"
           otool -l "$P" | grep -A4 -E "LC_BUILD_VERSION|LC_VERSION_MIN_MACOSX" | head -12
           # Catalina has no UniformTypeIdentifiers (#37): it must not be linked
           if otool -L "$P" | grep -q UniformTypeIdentifiers; then echo "still links UniformTypeIdentifiers"; exit 1; fi
@@ -242,6 +242,41 @@ jobs:
         with:
           name: TI-Revive-mac-libusb
           path: out/TI-Revive-*-mac-libusb.zip
+          if-no-files-found: error
+
+  # the Ventura package (#52): the normal Core Audio package for Intel Macs that stop at macOS 13 (iMac 2017 and older).
+  # Not tested by us (no Ventura Mac): its reporter tests.
+  mac-ventura:
+    runs-on: macos-15-intel # x86_64 build; Macs that stop at Ventura are Intel
+    timeout-minutes: 25
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          path: repo
+          submodules: recursive # native/external/vst3sdk
+      - name: Build
+        env:
+          MAC_MIN: "13.0"
+          MAC_ARCHS: x86_64
+          PKG_SUFFIX: mac-ventura
+        run: |
+          v="${VERSION:-${GITHUB_REF_NAME#v}}"
+          bash repo/scripts/mac-build-release.sh repo "${v%%-rc*}" "$PWD/out"
+      - name: Check the targets and the package
+        run: |
+          set -x
+          B=out/build
+          P="$B/native/VST3/Release/TI Revive.vst3/Contents/MacOS/TI Revive"
+          otool -l "$P" | grep -A4 -E "LC_BUILD_VERSION|LC_VERSION_MIN_MACOSX" | head -12
+          K=$(mktemp -d) && ditto -x -k out/TI-Revive-*-mac-ventura.zip "$K"
+          PKG=$(ls "$K"/*/"TI Revive.pkg")
+          # a product archive that refuses macOS older than 13.0, without the libusb service
+          X=$(mktemp -d) && (cd "$X" && xar -xf "$PKG" Distribution && grep -q 'os-version min="13.0"' Distribution)
+          grep -q "macOS 13.0 or newer" "$K"/*/README-mac.txt
+      - uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
+        with:
+          name: TI-Revive-mac-ventura
+          path: out/TI-Revive-*-mac-ventura.zip
           if-no-files-found: error
 
   native-linux: # the native plug-in for Linux, on Ubuntu 22.04 (glibc 2.35: runs on Ubuntu 22.04 / Debian 12 and newer)
@@ -277,8 +312,8 @@ jobs:
             -DCMAKE_C_COMPILER_LAUNCHER=ccache -DCMAKE_CXX_COMPILER_LAUNCHER=ccache # a new warning in our code fails here (E13)
           cmake --build native-build --target VirusTINative tirevive-cc TIReviveControlCenter vtitests nativehost xclose
           ccache --show-stats --verbose
-          strip "native-build/VST3/Release/TI Revive Virus Control.vst3/Contents/x86_64-linux/TI Revive Virus Control.so"
-          mkdir native-linux && cp -R "native-build/VST3/Release/TI Revive Virus Control.vst3" native-linux/
+          strip "native-build/VST3/Release/TI Revive.vst3/Contents/x86_64-linux/TI Revive.so"
+          mkdir native-linux && cp -R "native-build/VST3/Release/TI Revive.vst3" native-linux/
           install -m 0755 -s native-build/bin/Release/tirevive-cc native-linux/
           install -m 0755 -s native-build/ccapp/TIReviveControlCenter native-linux/
       - name: Unit tests
@@ -326,7 +361,7 @@ jobs:
       - name: Build
         run: |
           v="${VERSION:-${GITHUB_REF_NAME#v}}"
-          NATIVE_PREBUILT="$PWD/native-linux/TI Revive Virus Control.vst3" NATIVE_CC="$PWD/native-linux/tirevive-cc" NATIVE_CCAPP="$PWD/native-linux/TIReviveControlCenter" bash scripts/linux-build-release.sh "$PWD" "${v%%-rc*}" "$PWD/out"
+          NATIVE_PREBUILT="$PWD/native-linux/TI Revive.vst3" NATIVE_CC="$PWD/native-linux/tirevive-cc" NATIVE_CCAPP="$PWD/native-linux/TIReviveControlCenter" bash scripts/linux-build-release.sh "$PWD" "${v%%-rc*}" "$PWD/out"
       - uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
         with:
           name: TI-Revive-linux
@@ -335,7 +370,7 @@ jobs:
 
   release:
     if: startsWith(github.ref, 'refs/tags/v')
-    needs: [msi, mac, mac-libusb, linux]
+    needs: [msi, mac, mac-libusb, mac-ventura, linux]
     runs-on: ubuntu-24.04
     timeout-minutes: 10 # a hanging step (e.g. a stuck package mirror) fails fast instead of blocking
     permissions:
@@ -355,6 +390,10 @@ jobs:
           path: out
       - uses: actions/download-artifact@9000827ccba6bdab643e8b6fd33ac0654aef8333 # v8.0.2
         with:
+          name: TI-Revive-mac-ventura
+          path: out
+      - uses: actions/download-artifact@9000827ccba6bdab643e8b6fd33ac0654aef8333 # v8.0.2
+        with:
           name: TI-Revive-linux
           path: out
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
@@ -371,29 +410,23 @@ jobs:
           v="${GITHUB_REF_NAME#v}"
           # only this version's "New in" part: earlier releases keep their own text, the site's changelog lists them all
           cat > notes.md <<EOF_NOTES
-          **TI Revive $v** - Total Integration for the Access Virus TI without the old Access drivers, now with the
-          native plug-in **"TI Revive Virus Control"**: looks and works like the original Virus Control and runs
+          **TI Revive $v** - the Access Virus TI without the old Access drivers, with the
+          native plug-in **"TI Revive"**: works like the original Virus Control and runs
           natively on Windows, macOS (Apple Silicon and Intel) and Linux - no Rosetta, Wine or yabridge.
 
-          **New in 0.8.42: several Viruses at once, Virus knobs as Logic automation with the window closed, the Control Center's pages in the Access look, an opt-in update check, MIDI inputs on Linux and Windows.**
+          **New in 0.8.43: new names (the plug-in is now "TI Revive"), the Control Center without the Burn and OS Updater buttons, and a new home for the project.**
 
-          - **Several Viruses at once (#45).** Each Virus gets its own TI Revive service, numbered by the USB port it is plugged into (Virus 1, Virus 2, ...), and each plug-in instance takes a free Virus: the one its project was saved with when that one is free, as the original did. Their MIDI inputs carry the number ("Virus TI 2 Synth"). On Windows the ASIO driver plays Virus 1 only. With one Virus nothing changes: a second instance waits as before. Tested on Linux with our TI2 and a simulated TI2 as the second; not yet with two real Viruses, nor with two on Windows or macOS.
-          - **Knobs turned on the Virus are recorded as automation in Logic also with the plug-in window closed (#30).** Before, Logic got them only while the window was open (Ableton Live recorded them anyway). Tested on our Mac with Logic and a TI2 Desktop.
-          - **Control Center:** Nerd mode, the Options and the RAM banks (now on BACKUP & RESTORE) are pages of the Access look; the PLAIN VIEW button is gone (the plain window stays for a setup without the Access files). Nerd mode has a scrolling table with the traffic and the logs, and draws several times faster. Checked on Linux and macOS.
-          - **Check for updates (opt-in):** switch it on in the Control Center's Options. Once a day the Control Center asks GitHub for the newest release, nothing about you or your setup; the plug-in never goes online itself, it shows a note once and a Download entry in its ? menu. Checked on Linux, macOS and Windows.
-          - **? > Prepare a Bug Report:** saves the logs (home folder and user name replaced) and opens GitHub's bug form with your version filled in; nothing is sent by TI Revive.
-          - **What's New** scrolls when a version's notes are long.
-          - **Linux: MIDI inputs "Virus TI Synth" and "Virus TI MIDI"** for the keys of a Keyboard or Polar and the Virus' MIDI In, as on macOS. They show up; not yet tested with a Virus that has keys.
-          - **Windows 11 25H2 and later: the same two MIDI inputs**, once Windows has its own MIDI Services (they come with the Windows update from the end of November 2026). The installer adds them only on a Windows that supports them. Tested in a Windows 11 VM with Microsoft's preview package.
-          - **macOS: a separate package for Macs where Apple's USB audio driver crackles, TI-Revive-0.8.42-mac-libusb.zip (#37).** TI Revive's service takes the Virus' audio itself over USB, as on Linux. For Intel Macs with macOS 10.15 or newer; everyone else keeps the normal package. Not tested by us on Catalina (no such Mac here).
-          - **macOS libusb package: the MIDI inputs "Virus TI Synth" and "Virus TI MIDI" now show up there too (#37).** Its service runs as an administrator service, outside your login session, where macOS does not show MIDI ports; a small helper in your session now makes them. Not tested by us on Catalina.
-          - **Latency in Logic after loading (#37, #33):** if the host read the plug-in's latency before its final setup, the plug-in announces it again, and the log shows which latency the host uses. Meant for the slight offset some Intel Macs see after inserting the plug-in or opening a project until the buffer size is changed; not confirmed yet.
-          - **Virus TI Snow: much less CPU for the TI Revive service while idle (#42).** The Snow answers every MIDI read with an empty "idle" message, about 3300 a second, and each one cost a full USB read (a third of a CPU core on an M4 Pro). Idle reads are now spaced 1 ms apart, and any real MIDI data brings back full speed at once. The TI/TI2 is not affected. Not tested by us on a Snow (we have none). Tested by the reporter with an earlier test build: about 4 times fewer reads, the service at 15-19 % of one core instead of 33 %, knobs as quick as before.
-          - **Virus TI Snow, new option "Snow: less CPU while idle" (Control Center > Options, off by default, macOS and Linux, #42).** After a quiet second the service asks the Snow every 4 ms instead of every 1 ms; the first MIDI message after a pause can then come up to 3 ms later. It applies within a few seconds. Not tested by us on a Snow.
-          - **Control Center: restoring a library into a RAM bank no longer stops at a fixed patch with "the Virus has another patch after the restore" (#43).** Many library files carry a patch flag byte the Virus does not store, so the check after each write failed although the patch was written; that byte is now left out, and a real mismatch names the byte that differs. A backup and restore of the RAM banks runs through on our TI2; the reporter's library not tested by us.
+          - **New names.** The plug-in is "TI Revive" (before "TI Revive Virus Control"), the Windows ASIO driver "TI Revive Audio" (before "TI Revive Virus Audio") and the MIDI inputs "TI Revive Synth" and "TI Revive MIDI" (before "Virus TI Synth" and "Virus TI MIDI"; with several Viruses "TI Revive 2 Synth" and so on). The installers remove the plug-in under its old name, so your DAW does not list it twice. Projects saved with the old name open with it (same plug-in ID; checked in REAPER on Linux, where the slot keeps its old name, in Logic and Ableton Live on macOS, and in Ableton Live on Windows, where the ASIO driver shows up once as "TI Revive Audio" and plays the Virus). If a track used one of the MIDI inputs, choose it there once more.
+          - **Control Center:** the Burn To Flash ROM and OS Updater buttons are gone. TI Revive never offered these functions (they write the Virus' flash); before, they only said so.
+          - **Not affiliated:** the plug-in's welcome and What's New pages say at the bottom that TI Revive is not affiliated with or endorsed by Access Music or Kemper.
+          - **Scrambled audio at the start:** when the Virus' audio arrives scrambled (about one start in 250), TI Revive now notices it within a few seconds after the start, also in silence, and restarts the stream before your first note (#37; before, only once you played, so the first notes sounded wrong and then dropped out). Checked against recordings of real scrambled and normal streams.
+          - **Several Viruses on a Mac (#50):** the browser and the menus show which Virus an instance plays ("- Virus 2"), the log says which audio device each instance picked, to find why a second Virus stayed silent, and an instance on Virus 2 loads its own bank cache (before, it read all four RAM banks again at every start, about 9 minutes; checked on Linux, on the reporter's Mac it still reads them again, being looked at).
+          - **macOS: a waiting instance stays silent:** a second plug-in instance that shows "Virus unavailable" could play the first instance's Virus along with it since 0.8.42, while it looked for another Virus. It now opens the Virus' audio only when the Virus is its own. Found and checked on our Mac (Ableton Live 12, three instances).
+          - **Test package for macOS 13 Ventura on Intel Macs (#52):** TI-Revive-0.8.43-mac-ventura.zip, the normal package built for Macs that stop at Ventura (iMac 2017 and older). Not tested by us (no Ventura Mac); please report how it runs.
+          - **The project moved** to github.com/derpsn/ti-revive and its website to derpsn.github.io/ti-revive. Old links to the repository, issues, releases and the website forward; the update check of installed versions keeps working.
 
           Earlier versions: their own release pages, and every version's changes on one page in the
-          [changelog](https://derpsn.github.io/access-virus-ti-revive/changelog.html).
+          [changelog](https://derpsn.github.io/ti-revive/changelog.html).
 
           Not affiliated with Access Music or Kemper. Contains no Access software. See the
           [README](https://github.com/$GITHUB_REPOSITORY#readme) for how it works, limitations and uninstall.
@@ -407,5 +440,5 @@ jobs:
           # LGPL: the source of the libusb the macOS/Linux brokers link statically goes with every release
           . repo/scripts/libusb.sh && libusb_fetch "out/libusb-$LIBUSB_VER.tar.bz2" # version + SHA-256 pinned there
           gh release create "$GITHUB_REF_NAME" out/TI-Revive-*-setup.exe out/TI-Revive-*.msi out/TI-Revive-*-mac.zip \
-            out/TI-Revive-*-mac-libusb.zip out/TI-Revive-*-linux.tar.gz repo/scripts/tirevive-usbinfo.ps1 "out/libusb-$LIBUSB_VER.tar.bz2" \
+            out/TI-Revive-*-mac-libusb.zip out/TI-Revive-*-mac-ventura.zip out/TI-Revive-*-linux.tar.gz repo/scripts/tirevive-usbinfo.ps1 "out/libusb-$LIBUSB_VER.tar.bz2" \
             --repo "$GITHUB_REPOSITORY" --title "TI Revive $v" --notes-file notes.md $pre

@@ -1,11 +1,11 @@
 cff-version: 1.2.0
 message: "If these findings help your project, we would be happy about a mention. Corrections and new observations are welcome as issues."
 title: "TI Revive"
-abstract: "Access Virus TI on Windows 11, macOS and Linux without the old Access drivers: a user-mode USB driver replacement, the native plug-in TI Revive Virus Control, and the documented USB/MIDI protocol of the Virus TI."
+abstract: "Access Virus TI on Windows 11, macOS and Linux without the old Access drivers: a user-mode USB driver replacement, the native plug-in TI Revive, and the documented USB/MIDI protocol of the Virus TI."
 type: software
 authors:
   - alias: derpsn
-repository-code: "https://github.com/derpsn/access-virus-ti-revive"
+repository-code: "https://github.com/derpsn/ti-revive"
 license: MIT
 keywords:
   - Access Virus TI

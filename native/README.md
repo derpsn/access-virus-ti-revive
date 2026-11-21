@@ -1,9 +1,9 @@
-# TI Revive Virus Control (native plug-in)
+# TI Revive (native plug-in)
 
-A plug-in for the Access Virus TI, written from scratch: it looks and works like the original "Virus Control"
+A plug-in for the Access Virus TI, written from scratch: it works like the original "Virus Control"
 (same pages, browser, libraries, automation IDs, project state) but runs natively on Windows, macOS (Apple Silicon
 and Intel) and Linux - without the Intel-only Access plug-in, Rosetta, Wine or yabridge. The Virus is reached
-through the TI Revive broker (USB MIDI and audio). On Windows, the ASIO driver "TI Revive Virus Audio" also makes
+through the TI Revive broker (USB MIDI and audio). On Windows, the ASIO driver "TI Revive Audio" also makes
 the Virus a sound card without the Access driver.
 
 Users install it with TI Revive (MSI, Mac pkg, Linux `install.sh`); this folder (`native/` in the TI Revive
@@ -40,7 +40,7 @@ ctest --test-dir build-native -C Release        # unit tests, no Virus needed
   `native-linux`).
 - The broker headers come from `../src/broker`. Users get the plug-in through TI Revive's installers (MSI, Mac pkg,
   Linux `install.sh`); the release workflow builds it on a version tag.
-- Development install on Linux: `cp -r "build-native/VST3/Release/TI Revive Virus Control.vst3" ~/.vst3/` (the TI
+- Development install on Linux: `cp -r "build-native/VST3/Release/TI Revive.vst3" ~/.vst3/` (the TI
   Revive broker must be installed; the Access files are found through `~/.config/tirevive/access-dir` or the Wine
   prefix).
 
@@ -48,7 +48,7 @@ ctest --test-dir build-native -C Release        # unit tests, no Virus needed
 
 1. Close every other program that uses the Virus: only one session can own it.
 2. Start REAPER (any sample rate; 44.1 kHz avoids the conversion). With PipeWire for example `pw-jack reaper`.
-3. Insert "TI Revive Virus Control". On the first start it syncs RAM A–D from the Virus. That takes about 8 minutes;
+3. Insert "TI Revive". On the first start it syncs RAM A–D from the Virus. That takes about 8 minutes;
    the progress bar shows it, and you can play meanwhile (the sync pauses while notes arrive). The banks are cached in `~/.local/share/virus-ti-native/cache`; rename that folder
    to force a new sync.
 4. Where the other banks come from:

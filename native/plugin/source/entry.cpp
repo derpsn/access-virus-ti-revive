@@ -31,7 +31,7 @@ struct KeepLoaded {
 #ifdef VTI_NATIVE_DROPIN
 #define VTI_NATIVE_NAME "Virus TI"
 #else
-#define VTI_NATIVE_NAME "TI Revive Virus Control"
+#define VTI_NATIVE_NAME "TI Revive" // "TI Revive Virus Control" until 0.8.42 (branding cleanup)
 #endif
 
 // The factory written out (what BEGIN_FACTORY_DEF / DEF_CLASS2 / END_FACTORY expand to), so the class order can
@@ -57,7 +57,7 @@ SMTG_EXPORT_SYMBOL IPluginFactory *PLUGIN_API GetPluginFactory()
         gPluginFactory->addRef();
         return gPluginFactory;
     }
-    static PFactoryInfo factoryInfo("TI Revive", "https://github.com/derpsn/access-virus-ti-revive", "",
+    static PFactoryInfo factoryInfo("TI Revive", "https://github.com/derpsn/ti-revive", "",
                                     Vst::kDefaultFactoryFlags);
     gPluginFactory = new CPluginFactory(factoryInfo);
     TUID ti = INLINE_UID_FROM_FUID(vti::kVirusTIClassId);

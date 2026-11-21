@@ -380,7 +380,7 @@ class Factory : public IPluginFactory2 {
     {
         *info = PFactoryInfo();
         strcpy(info->vendor, "TI Revive");
-        strcpy(info->url, "https://github.com/derpsn/access-virus-ti-revive");
+        strcpy(info->url, "https://github.com/derpsn/ti-revive");
         info->flags = PFactoryInfo::kUnicode;
         return kResultOk;
     }

@@ -16,7 +16,7 @@ struct SystemInfo {
 };
 
 // the TI Revive website: the INFO box's link opens it (the original's link points to access-music.de)
-inline const char *website_url() { return "https://derpsn.github.io/access-virus-ti-revive/"; }
+inline const char *website_url() { return "https://derpsn.github.io/ti-revive/"; }
 
 // the text for one of the INFO box's parameters (versions, the website link), or "" for any other parameter
 std::string system_info_text(const std::string &param, const SystemInfo &info);

@@ -17,7 +17,7 @@
    "paths": ["native/tests/*", "native/tools/*", "scripts/tests/*", "scripts/checklists/*", "scripts/*.py",
              "scripts/capture.sh", "scripts/ts.sh", "scripts/mac.sh", "scripts/mac-recon.sh", "scripts/mac-install-poc.sh",
              "scripts/vm.sh", "scripts/vm-start-cc.cmd", "scripts/vm-winusb-install.ps1", "scripts/win11/*", "scripts/win10ref/*",
-             "scripts/virus.xml", "scripts/linux-usb-bounce.sh", "scripts/giveback-loop.sh", "scripts/hil.sh", "scripts/reaper-open.sh", "scripts/hil-win.ps1", "scripts/hil-win.cmd",
+             "scripts/virus.xml", "scripts/linux-usb-bounce.sh", "scripts/giveback-loop.sh", "scripts/hil.sh", "scripts/reaper-open.sh", "scripts/reaper-projcompat/*", "scripts/hil-win.ps1", "scripts/hil-win.cmd",
              "scripts/hil-mac.command", "scripts/mac-libusb-test.command", "scripts/mutation.sh", "scripts/latency-orig.sh", "scripts/latency-native.sh", "scripts/latency-wine.sh",
              ".github/workflows/dev-mac.yml"],
    "class": "A"},

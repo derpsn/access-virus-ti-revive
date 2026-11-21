@@ -27,7 +27,7 @@ static inline void vti_keyport_filter(uint8_t ep, const uint8_t *packets, int le
     }
 }
 
-// The Virus' DIN MIDI In, "Virus TI MIDI" (E517, #39): with the plug-in link up the Virus sends what arrives there only
+// The Virus' DIN MIDI In, "TI Revive MIDI" (E517, #39): with the plug-in link up the Virus sends what arrives there only
 // to USB, EP 0x85 cable 0, and plays none of it itself. The original's Mac driver gave cable 0 its own source and
 // passed every code index but 0 and 1 (E521 (4)): SysEx in its pieces and single bytes too, as they come from a
 // keyboard or another device. `cb` gets the packet's MIDI bytes; a SysEx piece is not a whole message.

@@ -90,3 +90,14 @@ TEST(nerdview_wrap_text_for_the_option_rows)
     CHECK(w[0].size() == 10);
     CHECK(wrap_text("", 10, 2).empty());
 }
+
+// the broker knows the plug-in and the ASIO driver by their internal client names (owner.h, unchanged since 0.8.0);
+// Nerd mode shows the product names of 0.8.43 (branding cleanup, 2026-11-19)
+TEST(nerdview_client_names_shown_as_products)
+{
+    CHECK(shown_client_names("TI Revive Virus Control") == "TI Revive");
+    CHECK(shown_client_names("TI Revive Virus Control (owner), TI Revive Control Center (Nerd mode) (observer)") ==
+          "TI Revive (owner), TI Revive Control Center (Nerd mode) (observer)");
+    CHECK(shown_client_names("TI Revive Virus Audio (ASIO), tirevive-cc") == "TI Revive Audio (ASIO), tirevive-cc");
+    CHECK(shown_client_names("-") == "-");
+}

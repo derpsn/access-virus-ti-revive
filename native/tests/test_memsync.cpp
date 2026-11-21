@@ -783,3 +783,36 @@ TEST(memsync_bank_file_save_errors)
     }
 #endif
 }
+
+// #50: the RAM cache is per Virus number - Virus 1 in the cache folder itself, Virus 2.. in virus-N below it - and an
+// instance on Virus 2 must load that folder's banks, not Virus 1's (it re-read all 512 programs at every start)
+TEST(memsync_ram_cache_per_virus)
+{
+    TempDir t("vtitests-ramcache");
+    const std::string base = t.dir.string();
+    CHECK(ram_cache_dir(base, 0) == base);
+    CHECK(ram_cache_dir(base, 1) == base);
+    CHECK(ram_cache_dir(base, 2) == base + "/virus-2");
+    CHECK(ram_cache_dir("", 2).empty());
+    Bank one, two;
+    one[0] = Dump(524, 1);
+    two[0] = Dump(524, 2);
+    CHECK(save_bank_file(base + "/RAM A", one));
+    std::filesystem::create_directories(t.dir / "virus-2");
+    CHECK(save_bank_file(base + "/virus-2/RAM B", two));
+    auto v1 = load_ram_cache(ram_cache_dir(base, 1));
+    CHECK_EQ(v1.size(), 1u);
+    CHECK(v1.count(0) && v1[0].size() == 128 && v1[0][0] == one[0]);
+    auto v2 = load_ram_cache(ram_cache_dir(base, 2));
+    CHECK_EQ(v2.size(), 1u); // not Virus 1's RAM A
+    CHECK(v2.count(1) && v2[1][0] == two[0]);
+    CHECK(load_ram_cache("").empty());
+}
+
+// #50 (E563): the log names the RAM cache an instance loaded - whose folder, how many banks - without the path
+TEST(memsync_ram_cache_note_names_the_folder)
+{
+    CHECK(ram_cache_note(0, 4) == "RAM cache: Virus 1's folder, 4 of 4 banks");
+    CHECK(ram_cache_note(1, 0) == "RAM cache: Virus 1's folder, 0 of 4 banks");
+    CHECK(ram_cache_note(2, 3) == "RAM cache: Virus 2's own folder, 3 of 4 banks");
+}

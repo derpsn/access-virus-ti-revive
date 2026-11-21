@@ -34,3 +34,21 @@ TEST(ccskin_parse)
           page.children[0].parameter == "X/Text");
     CHECK(!parse_skin(std::vector<uint8_t>{'<', 'x', '/', '>'}, l, err));
 }
+
+// Burn To Flash ROM and OS Updater are not offered (they write the Virus' flash); since 2026-11-19 their tab buttons
+// are not even drawn (user: "We remove the Burn/OS thing"), Backup & Restore and everything else stays
+TEST(ccskin_burn_and_os_tabs_not_offered)
+{
+    SkinNode tab;
+    tab.type = "radio";
+    tab.parameter = "ControlCenter/Tabs/ActiveTab";
+    tab.value = 0;
+    CHECK(skin_node_offered(tab)); // Backup & Restore
+    tab.value = 1;
+    CHECK(!skin_node_offered(tab)); // Burn To Flash ROM
+    tab.value = 2;
+    CHECK(!skin_node_offered(tab)); // OS Updater
+    SkinNode other = tab;
+    other.parameter = "ControlCenter/SelectVirus/SelectedRow";
+    CHECK(skin_node_offered(other));
+}
